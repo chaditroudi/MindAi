@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Mind Platform - Qatar Municipal Analytics Review</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: linear-gradient(180deg, #08111f 0%, #0d1728 100%); color: #e5e7eb; margin: 0; padding: 32px;
+    }
+    h1 { margin: 0 0 8px; font-weight: 600; }
+    .subtitle { opacity: .6; margin: 0 0 32px; }
+    .row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    input, select, button, textarea {
+      background: #1a1d24; color: #e5e7eb; border: 1px solid #2a2e38;
+      border-radius: 8px; padding: 10px 14px; font-size: 14px; font-family: inherit;
+    }
+    input { flex: 1; min-width: 320px; }
+    button { cursor: pointer; background: #0f766e; border-color: #0f766e; font-weight: 600; }
+    button:hover { background: #149083; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .examples { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .examples button { background: #1a1d24; border-color: #2a2e38; font-weight: 400; }
+    .examples button:hover { background: #232730; }
+    #chart { width: 100%; height: 480px; background: #0f1218; border-radius: 12px; padding: 16px; box-sizing: border-box; }
+    #audit { margin-top: 24px; }
+    details summary { cursor: pointer; opacity: .7; padding: 8px 0; }
+    pre { background: #0f1218; padding: 16px; border-radius: 8px; overflow: auto; font-size: 12px; color: #a5b4fc; }
+    .endpoint-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .endpoint-tabs button { background: #1a1d24; border-color: #2a2e38; }
+    .endpoint-tabs button.active { background: #0f766e; border-color: #0f766e; }
+    #output-text { background: #0f1218; padding: 20px; border-radius: 12px; min-height: 100px; line-height: 1.6; }
+    .record-link { display: inline-block; background: #1a1d24; padding: 6px 12px; border-radius: 6px; margin: 4px 4px 0 0; font-size: 13px; color: #a5b4fc; }
+    .error { color: #f87171; background: #1a1d24; padding: 12px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Mind Platform · Qatar Municipal Analytics</h1>
+  <p class="subtitle">Review the production flow across inquiry, report, and dashboard outputs using seeded municipal operations, permits, inspections, and project data.</p>
+
+  <div class="endpoint-tabs">
+    <button class="active" data-endpoint="/api/dashboard">Dashboard Page</button>
+    <button data-endpoint="/api/report">Report Page</button>
+    <button data-endpoint="/api/inquiry">Home Page Inquiry</button>
+  </div>
+
+  <div class="row">
+    <input id="prompt" placeholder="e.g. service requests by municipality this month" />
+    <button id="go">Run</button>
+  </div>
+
+  <div class="examples" id="examples"></div>
+
+  <div id="chart"></div>
+  <div id="output-text" style="display:none"></div>
+
+  <div id="audit">
+    <details>
+      <summary>Audit (plan, pipeline, timing)</summary>
+      <pre id="audit-pre">—</pre>
+    </details>
+  </div>
+
+  <script>
+    const SCOPE = {
+      userId: 'u_review',
+      tenantId: 't_mind_qatar',
+      allowedBlueprintIds: ['bp_municipal_operations', 'bp_urban_planning'],
+    };
+
+    const chartDiv = document.getElementById('chart');
+    const outputText = document.getElementById('output-text');
+    const auditPre = document.getElementById('audit-pre');
+    const promptInput = document.getElementById('prompt');
+    const goBtn = document.getElementById('go');
+    const examplesDiv = document.getElementById('examples');
+
+    let chart = echarts.init(chartDiv, 'dark');
+    window.addEventListener('resize', () => chart.resize());
+
+    let currentEndpoint = '/api/dashboard';
+
+    const EXAMPLES = {
+      '/api/dashboard': {
+        placeholder: 'e.g. show average inspection score by municipality',
+        prompts: [
+          { label: 'Request status by municipality', prompt: 'Show service request status by municipality' },
+          { label: 'Inspection score by municipality', prompt: 'Show average inspection score by municipality' },
+          { label: 'Violations by zone', prompt: 'Show inspection violations by zone' },
+          { label: 'Open permits by municipality', prompt: 'Show permits with status submitted or under_review by municipality' },
+          { label: 'Project budget by municipality', prompt: 'Show total project budget by municipality' },
+          { label: 'Project completion by contractor', prompt: 'Show average project completion percentage by contractor' },
+        ],
+      },
+      '/api/report': {
+        placeholder: 'e.g. create a report on inspection outcomes by municipality over the last 30 days',
+        prompts: [
+          { label: 'Service request operations', prompt: 'Create a report on service requests by municipality, status, and priority over the last 30 days' },
+          { label: 'Inspection compliance', prompt: 'Create a report on inspection outcomes by municipality over the last 30 days' },
+          { label: 'Permit bottlenecks', prompt: 'Create a report on permits by applicantType, status, and municipality over the last 30 days' },
+          { label: 'Project delivery', prompt: 'Create a report on project stage, contractor, and completionPercent by municipality' },
+        ],
+      },
+      '/api/inquiry': {
+        placeholder: 'e.g. find recent inspections with outcome violation',
+        prompts: [
+          { label: 'New service requests', prompt: 'Find recent service requests where status is new' },
+          { label: 'Urgent in-progress requests', prompt: 'Find service requests where priority is urgent and status is in_progress' },
+          { label: 'Inspection violations', prompt: 'Find recent inspections where outcome is violation' },
+          { label: 'Permits under review', prompt: 'Find permits where status is under_review and include municipality and applicantType' },
+          { label: 'Completed projects', prompt: 'Find projects where stage is completed and include municipality and contractor' },
+        ],
+      },
+    };
+
+    function renderExamples() {
+      const config = EXAMPLES[currentEndpoint];
+      promptInput.placeholder = config.placeholder;
+      examplesDiv.innerHTML = config.prompts
+        .map(({ label, prompt }) => `<button data-prompt="${escapeAttr(prompt)}">${escape(label)}</button>`)
+        .join('');
+
+      examplesDiv.querySelectorAll('button').forEach(b => {
+        b.addEventListener('click', () => {
+          promptInput.value = b.dataset.prompt;
+          run();
+        });
+      });
+    }
+
+    document.querySelectorAll('.endpoint-tabs button').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.endpoint-tabs button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        currentEndpoint = b.dataset.endpoint;
+        renderExamples();
+      });
+    });
+
+    promptInput.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+    goBtn.addEventListener('click', run);
+    renderExamples();
+
+    async function run() {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+      goBtn.disabled = true; goBtn.textContent = 'Running…';
+      auditPre.textContent = '—';
+      try {
+        const res = await fetch(currentEndpoint, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ prompt, scope: SCOPE }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Request failed');
+        render(data);
+      } catch (err) {
+        chartDiv.style.display = 'none';
+        outputText.style.display = 'block';
+        outputText.innerHTML = `<div class="error">Error: ${err.message}</div>`;
+      } finally {
+        goBtn.disabled = false; goBtn.textContent = 'Run';
+      }
+    }
+
+    function render(data) {
+      auditPre.textContent = JSON.stringify(data.audit, null, 2);
+
+      if (data.intent === 'dashboard' && data.chart) {
+        chartDiv.style.display = 'block';
+        outputText.style.display = 'none';
+        chart.clear();
+        chart.setOption(data.chart.option);
+      } else if (data.intent === 'report') {
+        chartDiv.style.display = data.charts?.[0] ? 'block' : 'none';
+        outputText.style.display = 'block';
+        outputText.innerHTML = (data.reportSections || [])
+          .map(s => `<h3>${escape(s.heading)}</h3><p>${escape(s.body)}</p>`)
+          .join('');
+        if (data.charts?.[0]) { chart.clear(); chart.setOption(data.charts[0].option); }
+      } else if (data.intent === 'general_question') {
+        chartDiv.style.display = 'none';
+        outputText.style.display = 'block';
+        outputText.innerHTML = `<p>${escape(data.summary || '')}</p>` +
+          (data.recordLinks || []).map(l =>
+            `<span class="record-link">${escape(l.label)}</span>`,
+          ).join('');
+      }
+    }
+
+    function escape(s) {
+      return String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    }
+
+    function escapeAttr(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>

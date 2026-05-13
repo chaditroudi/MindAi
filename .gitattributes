@@ -1,0 +1,24 @@
+# Normalize line endings: LF in the repo, OS-default in the working tree.
+* text=auto eol=lf
+
+# Force LF for known text files
+*.ts        text eol=lf
+*.js        text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.html      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.env*      text eol=lf
+*.http      text eol=lf
+
+# Windows scripts should keep CRLF — that's what cmd / PowerShell expect.
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+*.bat       text eol=crlf
+
+# Binary
+*.png       binary
+*.jpg       binary
+*.gz        binary
+*.tar       binary

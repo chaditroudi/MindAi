@@ -1,0 +1,90 @@
+### Mind Platform — multi-agent viz sample requests
+### Open this file in VS Code with the "REST Client" extension installed, then click "Send Request" above each block.
+
+@baseUrl = http://localhost:3000
+
+### Health check
+GET {{baseUrl}}/health
+
+### ── Home page: general inquiry ───────────────────────────────────────────
+POST {{baseUrl}}/api/inquiry
+Content-Type: application/json
+
+{
+  "prompt": "find recent service requests where status is new",
+  "scope": {
+    "userId": "u_demo",
+    "tenantId": "t_mind_qatar",
+    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+  }
+}
+
+### ── Report page: deep analysis ────────────────────────────────────────────
+POST {{baseUrl}}/api/report
+Content-Type: application/json
+
+{
+  "prompt": "analyze service request volume by municipality over the last 90 days and surface key trends",
+  "blueprintId": "bp_municipal_operations",
+  "scope": {
+    "userId": "u_demo",
+    "tenantId": "t_mind_qatar",
+    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+  }
+}
+
+### ── Dashboard widget: service requests by municipality this month ────────
+POST {{baseUrl}}/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "service request count by municipality this month",
+  "blueprintId": "bp_municipal_operations",
+  "scope": {
+    "userId": "u_demo",
+    "tenantId": "t_mind_qatar",
+    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+  }
+}
+
+### ── Dashboard: service request trend over 30 days ────────────────────────
+POST {{baseUrl}}/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "daily service request count over the last 30 days",
+  "blueprintId": "bp_municipal_operations",
+  "scope": {
+    "userId": "u_demo",
+    "tenantId": "t_mind_qatar",
+    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+  }
+}
+
+### ── Dashboard: inspection score by municipality ──────────────────────────
+POST {{baseUrl}}/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "inspection score by municipality",
+  "blueprintId": "bp_municipal_operations",
+  "scope": {
+    "userId": "u_demo",
+    "tenantId": "t_mind_qatar",
+    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+  }
+}
+
+### ── Dashboard: open permits by municipality ───────────────────────────────
+POST {{baseUrl}}/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "open permits by municipality",
+  "blueprintId": "bp_urban_planning",
+  "scope": {
+    "userId": "u_demo",
+    "tenantId": "t_mind_qatar",
+    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+  }
+}
