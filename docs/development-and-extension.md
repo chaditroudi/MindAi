@@ -101,11 +101,13 @@ Then update `getProvider()` to select it from environment configuration.
 
 Important:
 
-The current repo includes a placeholder `BRAVE_API_KEY` env variable, but not a Brave provider implementation.
+The current repo already includes both Tavily and Brave provider implementations.
 
 ### Add vector search
 
-Wire `vectorSearchTool` in `src/mastra/tools/search-tools.ts` to your actual vector store.
+The current repo already performs semantic retrieval by embedding exported knowledge chunks with OpenRouter and storing them in MongoDB.
+
+If you outgrow this Mongo-backed semantic store, wire `vectorSearchTool` in `src/mastra/tools/search-tools.ts` to a dedicated vector database.
 
 Suggested targets:
 
@@ -174,7 +176,7 @@ If you want to mature the system beyond the demo stage, the highest-value improv
 
 1. add automated tests for workflow outputs and tool guarantees
 2. move `scope` derivation into auth middleware
-3. wire a real search provider and vector backend
+3. strengthen retrieval with a dedicated vector backend if the Mongo-backed semantic corpus becomes too limiting
 4. add structured logging and request correlation IDs
 5. define timeout and retry policies for model and search calls
 6. extract report writing into a dedicated writer agent or deterministic formatter
@@ -183,6 +185,6 @@ If you want to mature the system beyond the demo stage, the highest-value improv
 
 - `mergeResultsTool` exists, but the dashboard workflow currently merges enrichment inline in the workflow step
 - `scatter` is declared in chart schema, but not emitted by the current chart builder
-- the search stack is partly scaffolded rather than complete
+- the search stack is usable, but the internal knowledge index still computes similarity in application code rather than using a native vector database
 
 Those are good places to focus if you are continuing system development.

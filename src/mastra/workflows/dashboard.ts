@@ -1,16 +1,14 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
+import { log } from '../../observability/log.js';
 import { permissionScopeSchema } from '../schemas/blueprint.js';
 import { taskPlanSchema, datasetSchema } from '../schemas/intent.js';
 import { chartResultSchema } from '../schemas/chart.js';
-import { blueprintRepo } from '../../db/blueprint.repository.js';
-import { finalizeTaskPlan } from '../task-plan.js';
-import {
-  buildAggregationFromPlan,
-  executePipeline,
-  validateRows,
-} from '../tools/mongodb-tools.js';
-import { buildChartFromDataset } from '../tools/chart-tools.js';
+import { mergeDatasets } from '../tools/merge-tools.js';
+import { runChartRuntime } from '../runtime/chart-runtime.js';
+import { runMongoDatasetQuery } from '../runtime/mongodb-runtime.js';
+import { runSearchEnrichment } from '../runtime/search-runtime.js';
+import { runSupervisorPlan } from '../runtime/supervisor-runtime.js';
 
 const planStep = createStep({
   id: 'plan',
@@ -27,35 +25,15 @@ const planStep = createStep({
     prompt: z.string(),
   }),
   execute: async ({ inputData, mastra }) => {
-    const supervisor = mastra!.getAgent('supervisorAgent');
-    const bps = await blueprintRepo.listAccessible(inputData.scope.allowedBlueprintIds);
-
-    const planResult = await supervisor.generate(
-      [
-        {
-          role: 'user',
-          content: JSON.stringify({
-            prompt: inputData.prompt,
-            intent: inputData.intent ?? 'dashboard',
-            currentDate: new Date().toISOString(),
-            topic: inputData.topic,
-            blueprintId: inputData.blueprintId,
-            platform: { blueprints: bps },
-            scope: { tenantId: inputData.scope.tenantId, allowedBlueprintIds: inputData.scope.allowedBlueprintIds },
-          }),
-        },
-      ],
-      { output: taskPlanSchema },
-    );
-    const plan = planResult.object;
-    const finalizedPlan = finalizeTaskPlan({
-      plan,
-      prompt: inputData.prompt,
-      availableBlueprints: bps,
-      forcedIntent: inputData.intent ?? 'dashboard',
-    }) as z.infer<typeof taskPlanSchema>;
     return {
-      plan: finalizedPlan,
+      plan: await runSupervisorPlan({
+        mastra: mastra!,
+        prompt: inputData.prompt,
+        intent: inputData.intent ?? 'dashboard',
+        scope: inputData.scope,
+        topic: inputData.topic,
+        blueprintId: inputData.blueprintId,
+      }),
       scope: inputData.scope,
       prompt: inputData.prompt,
     };
@@ -77,30 +55,15 @@ const queryStep = createStep({
     executedPipeline: z.array(z.record(z.unknown())),
   }),
   execute: async ({ inputData, mastra }) => {
-    const { plan, scope } = inputData;
-    if (!plan.needsData || !plan.query.blueprintId || !plan.query.dataStoreName) {
-      return {
-        ...inputData,
-        primary: { rows: [], schema: {}, source: 'mongodb' as const },
-        executedPipeline: [],
-      };
-    }
-
-    const dataStore = await blueprintRepo.findDataStore(plan.query.blueprintId, plan.query.dataStoreName);
-    if (!dataStore) throw new Error(`Data store ${plan.query.dataStoreName} not found`);
-
-    const { pipeline } = buildAggregationFromPlan({ plan, dataStore, scope });
-    const executed = await executePipeline({
-      pipeline,
-      collection: dataStore.collection,
-      scope,
+    const queryResult = await runMongoDatasetQuery({
+      plan: inputData.plan,
+      scope: inputData.scope,
+      mastra,
     });
-    const validated = validateRows({ rows: executed.rows, dataStore });
-
     return {
       ...inputData,
-      primary: { rows: validated.rows, schema: validated.schema, source: 'mongodb' as const },
-      executedPipeline: pipeline,
+      primary: queryResult.dataset,
+      executedPipeline: queryResult.executedPipeline,
     };
   },
 });
@@ -126,23 +89,26 @@ const enrichStep = createStep({
       return { plan, prompt: inputData.prompt, dataset: primary, executedPipeline: inputData.executedPipeline };
     }
 
-    const search = mastra!.getAgent('searchAgent');
-    const res = await search.generate(
-      [{ role: 'user', content: JSON.stringify(plan.enrichment) }],
-      { output: datasetSchema },
-    );
-
     const joinKey = plan.query.dimensions?.[0] ?? Object.keys(primary.schema)[0];
-    const secondaryByKey = new Map<unknown, number>();
-    for (const r of res.object.rows) {
-      secondaryByKey.set(r[joinKey], Number(r.value ?? 0));
-    }
-    const merged = {
-      rows: primary.rows.map((r) => ({ ...r, benchmark: secondaryByKey.get(r[joinKey]) ?? null })),
-      schema: { ...primary.schema, benchmark: 'number' },
-      source: 'merged' as const,
-      citations: res.object.citations,
-    };
+    const enrichment = await runSearchEnrichment({
+      mastra: mastra!,
+      enrichment: plan.enrichment,
+      joinKey,
+    });
+    const merged = mergeDatasets({
+      primary,
+      secondary: enrichment,
+      joinKey,
+      secondaryLabel: 'benchmark',
+    });
+    log.info('workflow.dashboard.merged', {
+      workflow: 'dashboard',
+      step: 'enrich',
+      joinKey,
+      primaryRowCount: primary.rows.length,
+      secondaryRowCount: enrichment.rows.length,
+      mergedRowCount: merged.rows.length,
+    });
     return { plan, prompt: inputData.prompt, dataset: merged, executedPipeline: inputData.executedPipeline };
   },
 });
@@ -162,13 +128,13 @@ const chartStep = createStep({
     executedPipeline: z.array(z.record(z.unknown())),
   }),
   execute: async ({ inputData, mastra }) => {
-    const chart = chartResultSchema.parse(
-      buildChartFromDataset({
-        dataset: inputData.dataset,
-        intentHint: inputData.plan.chartHint,
-        title: inputData.prompt,
-      }),
-    );
+    const chart = await runChartRuntime({
+      mastra: mastra!,
+      dataset: inputData.dataset,
+      intentHint: inputData.plan.chartHint,
+      title: inputData.prompt,
+      theme: 'light',
+    });
     return {
       chart,
       dataset: inputData.dataset,

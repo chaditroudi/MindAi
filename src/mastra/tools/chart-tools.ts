@@ -33,7 +33,7 @@ export function buildChartFromDataset({
   const { rows, schema } = dataset;
 
   if (rows.length === 0) {
-    return emptyChart(title ?? 'No data');
+    return emptyChart(title ?? 'لا توجد بيانات');
   }
 
   const fields = Object.keys(schema).filter((field) => !isTechnicalField(field));
@@ -43,13 +43,14 @@ export function buildChartFromDataset({
     fields.find((f) => f === 'value') ??
     fields.find((f) => schema[f] === 'number' || schema[f] === 'integer');
   const dimensionFields = fields.filter((f) => f !== valueField && f !== temporalField);
+  const numericFields = fields.filter((f) => schema[f] === 'number' || schema[f] === 'integer');
 
   if (geoField || intentHint === 'geo') {
     return buildMap(
       rows,
       geoField ?? dimensionFields[0],
       valueField ?? 'value',
-      title ?? 'By location',
+      title ?? 'حسب الموقع',
       theme,
     );
   }
@@ -61,17 +62,32 @@ export function buildChartFromDataset({
       tField,
       valueField ?? 'value',
       dimensionFields.filter((d) => d !== tField),
-      title ?? 'Trend over time',
+      title ?? 'الاتجاه عبر الزمن',
       theme,
     );
   }
 
   if (intentHint === 'part_of_whole' && rows.length < 7) {
-    return buildDonut(rows, dimensionFields[0], valueField ?? 'value', title ?? 'Share', theme);
+    return buildDonut(rows, dimensionFields[0], valueField ?? 'value', title ?? 'الحصة', theme);
   }
 
   if (intentHint === 'distribution') {
-    return buildHistogram(rows, valueField ?? 'value', title ?? 'Distribution', theme);
+    return buildHistogram(rows, valueField ?? 'value', title ?? 'التوزيع', theme);
+  }
+
+  // Scatter: two independent numeric fields, no temporal axis, no explicit
+  // categorical/part-of-whole hint. Useful for correlation views like
+  // "permits issued vs inspections passed by zone".
+  if (!temporalField && !intentHint && numericFields.length >= 2) {
+    const [xField, yField] = numericFields;
+    return buildScatter(
+      rows,
+      xField,
+      yField,
+      dimensionFields[0],
+      title ?? `${yField} vs ${xField}`,
+      theme,
+    );
   }
 
   if (rows.length > 12) {
@@ -79,7 +95,7 @@ export function buildChartFromDataset({
       rows,
       dimensionFields[0],
       valueField ?? 'value',
-      title ?? 'Comparison',
+      title ?? 'المقارنة',
       theme,
       true,
     );
@@ -89,7 +105,7 @@ export function buildChartFromDataset({
     rows,
     dimensionFields[0] ?? fields[0],
     valueField ?? 'value',
-    title ?? 'Comparison',
+    title ?? 'المقارنة',
     theme,
     false,
   );
@@ -99,7 +115,7 @@ function baseOption(theme: string) {
   return {
     backgroundColor: 'transparent',
     textStyle: {
-      fontFamily: 'Inter, system-ui, sans-serif',
+      fontFamily: '"Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif',
       color: theme === 'dark' ? '#e5e7eb' : '#111827',
     },
     grid: { left: 48, right: 24, top: 48, bottom: 48, containLabel: true },
@@ -130,7 +146,73 @@ function buildBar(
     chartType: horizontal ? ('horizontalBar' as const) : ('bar' as const),
     option,
     title,
-    accessibility: { description: `Bar chart comparing ${val} across ${cats.length} ${dim} values.` },
+    accessibility: { description: `مخطط أعمدة يقارن ${val} عبر ${cats.length} من قيم ${dim}.` },
+  };
+}
+
+function buildScatter(
+  rows: any[],
+  xField: string,
+  yField: string,
+  groupField: string | undefined,
+  title: string,
+  theme: string,
+) {
+  // If a categorical dimension is present, build one series per category so
+  // points are distinguishable on the plot. Otherwise emit a single series.
+  if (groupField) {
+    const groups = new Map<string, Array<[number, number]>>();
+    for (const r of rows) {
+      const x = Number(r[xField]);
+      const y = Number(r[yField]);
+      if (Number.isNaN(x) || Number.isNaN(y)) continue;
+      const key = String(r[groupField] ?? 'unspecified');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push([x, y]);
+    }
+    const series = [...groups.entries()].map(([name, data]) => ({
+      name,
+      type: 'scatter',
+      data,
+      symbolSize: 10,
+    }));
+    return {
+      chartType: 'scatter' as const,
+      option: {
+        ...baseOption(theme),
+        title: { text: title, left: 0 },
+        xAxis: { type: 'value', name: xField, scale: true },
+        yAxis: { type: 'value', name: yField, scale: true },
+        series,
+        tooltip: { trigger: 'item' },
+      },
+      title,
+      accessibility: {
+        description: `مخطط مبعثر لـ ${yField} مقابل ${xField} عبر ${series.length} مجموعات من ${groupField}.`,
+      },
+    };
+  }
+
+  const data: Array<[number, number]> = [];
+  for (const r of rows) {
+    const x = Number(r[xField]);
+    const y = Number(r[yField]);
+    if (!Number.isNaN(x) && !Number.isNaN(y)) data.push([x, y]);
+  }
+  return {
+    chartType: 'scatter' as const,
+    option: {
+      ...baseOption(theme),
+      title: { text: title, left: 0 },
+      xAxis: { type: 'value', name: xField, scale: true },
+      yAxis: { type: 'value', name: yField, scale: true },
+      series: [{ type: 'scatter', data, symbolSize: 10 }],
+      tooltip: { trigger: 'item' },
+    },
+    title,
+    accessibility: {
+      description: `مخطط مبعثر لـ ${yField} مقابل ${xField} عبر ${data.length} نقاط.`,
+    },
   };
 }
 
@@ -171,7 +253,7 @@ function buildLine(
         tooltip: { trigger: 'axis' },
       },
       title,
-      accessibility: { description: `Line chart of ${val} over time, ${series.length} series.` },
+      accessibility: { description: `مخطط خطي لـ ${val} عبر الزمن، بعدد ${series.length} سلاسل.` },
     };
   }
   return {
@@ -185,7 +267,7 @@ function buildLine(
       tooltip: { trigger: 'axis' },
     },
     title,
-    accessibility: { description: `Line chart of ${val} over ${rows.length} time points.` },
+    accessibility: { description: `مخطط خطي لـ ${val} عبر ${rows.length} نقاط زمنية.` },
   };
 }
 
@@ -204,7 +286,7 @@ function buildDonut(rows: any[], dim: string, val: string, title: string, theme:
       ],
     },
     title,
-    accessibility: { description: `Donut chart of ${rows.length} ${dim} slices.` },
+    accessibility: { description: `مخطط دائري حلقي يوضح ${rows.length} فئات من ${dim}.` },
   };
 }
 
@@ -228,11 +310,11 @@ function buildHistogram(rows: any[], val: string, title: string, theme: string) 
       title: { text: title, left: 0 },
       xAxis: { type: 'category', data: labels },
       yAxis: { type: 'value' },
-      series: [{ type: 'bar', data: buckets, name: 'frequency', barCategoryGap: '0%' }],
+      series: [{ type: 'bar', data: buckets, name: 'التكرار', barCategoryGap: '0%' }],
       tooltip: { trigger: 'axis' },
     },
     title,
-    accessibility: { description: `Histogram of ${val} across ${bins} bins.` },
+    accessibility: { description: `مدرج تكراري لـ ${val} عبر ${bins} فواصل.` },
   };
 }
 
@@ -252,7 +334,7 @@ function buildMap(rows: any[], geoField: string, val: string, title: string, the
       ],
     },
     title,
-    accessibility: { description: `Choropleth map of ${val} by ${geoField}.` },
+    accessibility: { description: `خريطة تدرج لوني لـ ${val} حسب ${geoField}.` },
   };
 }
 
@@ -261,7 +343,7 @@ function emptyChart(title: string) {
     chartType: 'table' as const,
     option: { title: { text: title }, series: [] },
     title,
-    accessibility: { description: 'No data available.' },
+    accessibility: { description: 'لا توجد بيانات متاحة.' },
   };
 }
 

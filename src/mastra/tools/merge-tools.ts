@@ -2,6 +2,37 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { datasetSchema } from '../schemas/intent.js';
 
+export function mergeDatasets({
+  primary,
+  secondary,
+  joinKey,
+  secondaryLabel,
+}: {
+  primary: z.infer<typeof datasetSchema>;
+  secondary?: z.infer<typeof datasetSchema>;
+  joinKey: string;
+  secondaryLabel: string;
+}) {
+  if (!secondary || secondary.rows.length === 0) return primary;
+
+  const secondaryByKey = new Map<unknown, number>();
+  for (const row of secondary.rows) {
+    secondaryByKey.set(row[joinKey], Number(row.value ?? row[secondaryLabel] ?? 0));
+  }
+
+  const mergedRows = primary.rows.map((row) => ({
+    ...row,
+    [secondaryLabel]: secondaryByKey.get(row[joinKey]) ?? null,
+  }));
+
+  return {
+    rows: mergedRows,
+    schema: { ...primary.schema, [secondaryLabel]: 'number' },
+    source: 'merged' as const,
+    citations: [...(primary.citations ?? []), ...(secondary.citations ?? [])],
+  };
+}
+
 export const mergeResultsTool = createTool({
   id: 'merge-results',
   description: 'Merge a primary (MongoDB) dataset with a secondary (Search) dataset on the shared dimension key. Adds the external series alongside the internal one.',
@@ -13,24 +44,6 @@ export const mergeResultsTool = createTool({
   }),
   outputSchema: datasetSchema,
   execute: async ({ context }) => {
-    const { primary, secondary, joinKey, secondaryLabel } = context;
-    if (!secondary || secondary.rows.length === 0) return primary;
-
-    const secondaryByKey = new Map<unknown, number>();
-    for (const r of secondary.rows) {
-      secondaryByKey.set(r[joinKey], Number(r.value ?? r[secondaryLabel] ?? 0));
-    }
-
-    const mergedRows = primary.rows.map((r) => ({
-      ...r,
-      [secondaryLabel]: secondaryByKey.get(r[joinKey]) ?? null,
-    }));
-
-    return {
-      rows: mergedRows,
-      schema: { ...primary.schema, [secondaryLabel]: 'number' },
-      source: 'merged' as const,
-      citations: [...(primary.citations ?? []), ...(secondary.citations ?? [])],
-    };
+    return mergeDatasets(context);
   },
 });

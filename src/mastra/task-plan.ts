@@ -207,29 +207,46 @@ function inferPromptFilters(prompt: string, dataStore: DataStore): TaskPlan['que
 
   const statusField = dataStore.fields.find((field) => field.name === 'status');
   if (statusField?.enumValues) {
-    const statusMatch = lower.match(/status\s+is\s+([a-z_ -]+)/i);
+    const statusMatch = lower.match(/(?:status\s+is|الحالة(?:\s+هي)?|حالتها|حالته)\s+([a-z_ \-\u0600-\u06ff]+)/i);
     if (statusMatch) {
-      const enumValue = matchEnumValue(statusMatch[1], statusField.enumValues);
+      const enumValue = resolveEnumQueryValue(statusMatch[1], statusField.enumValues);
       if (enumValue) {
         inferred.push({ field: 'status', op: 'eq', value: enumValue });
       }
     }
   }
 
-  if (lower.includes('open permits') && statusField) {
+  if ((lower.includes('open permits') || lower.includes('التصاريح المفتوحة')) && statusField) {
     inferred.push({ field: 'status', op: 'in', value: ['submitted', 'under_review'] });
   }
 
-  if (lower.includes('open service requests') && statusField) {
+  if ((lower.includes('open service requests') || lower.includes('طلبات الخدمة المفتوحة')) && statusField) {
     inferred.push({ field: 'status', op: 'in', value: ['new', 'in_review', 'in_progress'] });
   }
 
-  if (lower.includes('violations') && dataStore.fields.some((field) => field.name === 'outcome')) {
+  if ((lower.includes('violations') || lower.includes('مخالفة') || lower.includes('مخالفات'))
+    && dataStore.fields.some((field) => field.name === 'outcome')) {
     inferred.push({ field: 'outcome', op: 'eq', value: 'violation' });
   }
 
-  if (lower.includes('completed projects') && dataStore.fields.some((field) => field.name === 'stage')) {
+  if ((lower.includes('completed projects') || lower.includes('المشاريع المكتملة'))
+    && dataStore.fields.some((field) => field.name === 'stage')) {
     inferred.push({ field: 'stage', op: 'eq', value: 'completed' });
+  }
+
+  if (statusField?.enumValues) {
+    for (const term of ['قيد المراجعة', 'تحت المراجعة', 'قيد التنفيذ', 'جديد', 'مكتمل', 'مكتملة']) {
+      if (!lower.includes(term)) continue;
+      const enumValue = resolveEnumQueryValue(term, statusField.enumValues);
+      if (enumValue) inferred.push({ field: 'status', op: 'eq', value: enumValue });
+    }
+  }
+
+  const priorityField = dataStore.fields.find((field) => field.name === 'priority');
+  if ((lower.includes('urgent') || lower.includes('عاجل') || lower.includes('عاجلة'))
+    && priorityField?.enumValues) {
+    const enumValue = resolveEnumQueryValue('urgent', priorityField.enumValues);
+    if (enumValue) inferred.push({ field: 'priority', op: 'eq', value: enumValue });
   }
 
   return inferred.length > 0 ? inferred : undefined;
@@ -239,22 +256,39 @@ function inferPromptDimensions(prompt: string, dataStore: DataStore) {
   const lower = prompt.toLowerCase();
   const aliases: Array<{ pattern: RegExp; field: string }> = [
     { pattern: /\bby\s+municipalit(?:y|ies)\b/, field: 'municipality' },
+    { pattern: /حسب\s+البلدية/, field: 'municipality' },
     { pattern: /\bby\s+zone\b/, field: 'zone' },
+    { pattern: /حسب\s+المنطقة/, field: 'zone' },
     { pattern: /\bby\s+district\b/, field: 'district' },
+    { pattern: /حسب\s+الحي/, field: 'district' },
     { pattern: /\bby\s+contractor\b/, field: 'contractor' },
+    { pattern: /حسب\s+المقاول/, field: 'contractor' },
     { pattern: /\bby\s+status\b/, field: 'status' },
+    { pattern: /حسب\s+الحالة/, field: 'status' },
     { pattern: /\bby\s+outcome\b/, field: 'outcome' },
+    { pattern: /حسب\s+النتيجة/, field: 'outcome' },
     { pattern: /\bby\s+inspection\s+type\b/, field: 'inspectionType' },
+    { pattern: /حسب\s+نوع\s+التفتيش/, field: 'inspectionType' },
     { pattern: /\bby\s+inspector\s+team\b/, field: 'inspectorTeam' },
+    { pattern: /حسب\s+فريق\s+التفتيش/, field: 'inspectorTeam' },
     { pattern: /\bby\s+project\s+type\b/, field: 'projectType' },
+    { pattern: /حسب\s+نوع\s+المشروع/, field: 'projectType' },
     { pattern: /\bby\s+permit\s+type\b/, field: 'permitType' },
+    { pattern: /حسب\s+نوع\s+التصريح/, field: 'permitType' },
     { pattern: /\bby\s+topic\b/, field: 'topic' },
+    { pattern: /حسب\s+الموضوع/, field: 'topic' },
     { pattern: /\bby\s+channel\b/, field: 'channel' },
+    { pattern: /حسب\s+القناة/, field: 'channel' },
     { pattern: /\bby\s+priority\b/, field: 'priority' },
+    { pattern: /حسب\s+الأولوية/, field: 'priority' },
     { pattern: /\bby\s+stage\b/, field: 'stage' },
+    { pattern: /حسب\s+المرحلة/, field: 'stage' },
     { pattern: /\bby\s+applicant\s+type\b/, field: 'applicantType' },
+    { pattern: /حسب\s+نوع\s+مقدم\s+الطلب/, field: 'applicantType' },
     { pattern: /\bby\s+service\s+type\b/, field: 'serviceType' },
+    { pattern: /حسب\s+نوع\s+الخدمة/, field: 'serviceType' },
     { pattern: /\bby\s+name\b/, field: 'name' },
+    { pattern: /حسب\s+الاسم/, field: 'name' },
   ];
 
   const inferred: string[] = [];
@@ -293,7 +327,7 @@ function inferRelativeTimeRange(prompt: string, field: string) {
   const lower = prompt.toLowerCase();
   const now = new Date();
 
-  if (lower.includes('today')) {
+  if (lower.includes('today') || lower.includes('اليوم')) {
     return {
       field,
       from: startOfDay(now).toISOString(),
@@ -301,7 +335,7 @@ function inferRelativeTimeRange(prompt: string, field: string) {
     };
   }
 
-  if (lower.includes('yesterday')) {
+  if (lower.includes('yesterday') || lower.includes('أمس') || lower.includes('امس')) {
     const day = shiftDays(now, -1);
     return {
       field,
@@ -320,7 +354,17 @@ function inferRelativeTimeRange(prompt: string, field: string) {
     };
   }
 
-  if (lower.includes('recent')) {
+  const lastArabicDays = lower.match(/(?:آخر|خلال\s+آخر)\s+(\d+)\s+يو(?:م|ما|ماً|مًا)/i);
+  if (lastArabicDays) {
+    const days = Number(lastArabicDays[1]);
+    return {
+      field,
+      from: startOfDay(shiftDays(now, -days)).toISOString(),
+      to: endOfDay(now).toISOString(),
+    };
+  }
+
+  if (lower.includes('recent') || lower.includes('حديثة') || lower.includes('حديث') || lower.includes('مؤخراً') || lower.includes('مؤخرا')) {
     return {
       field,
       from: startOfDay(shiftDays(now, -30)).toISOString(),
@@ -328,7 +372,7 @@ function inferRelativeTimeRange(prompt: string, field: string) {
     };
   }
 
-  if (lower.includes('this month')) {
+  if (lower.includes('this month') || lower.includes('هذا الشهر')) {
     return {
       field,
       from: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
@@ -336,7 +380,7 @@ function inferRelativeTimeRange(prompt: string, field: string) {
     };
   }
 
-  if (lower.includes('this year') || /\bytd\b/i.test(lower)) {
+  if (lower.includes('this year') || /\bytd\b/i.test(lower) || lower.includes('هذا العام') || lower.includes('منذ بداية العام')) {
     return {
       field,
       from: new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).toISOString(),
@@ -362,13 +406,43 @@ function endOfDay(date: Date) {
 }
 
 function normalizeToken(value: string | undefined) {
-  return value?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return value?.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
 
 function matchEnumValue(rawValue: string, enumValues: string[]) {
   const normalized = normalizeToken(rawValue.trim());
   if (!normalized) return undefined;
   return enumValues.find((value) => normalizeToken(value) === normalized);
+}
+
+function resolveEnumQueryValue(rawValue: string, enumValues: string[]) {
+  return matchEnumValue(localizeEnumValue(rawValue.trim()), enumValues)
+    ?? matchEnumValue(rawValue.trim(), enumValues);
+}
+
+function localizeEnumValue(rawValue: string) {
+  const normalized = normalizeToken(rawValue) ?? '';
+  const synonyms: Record<string, string> = {
+    جديد: 'new',
+    جديدة: 'new',
+    عاجل: 'urgent',
+    عاجلة: 'urgent',
+    قيدالمراجعة: 'under_review',
+    تحتالمراجعة: 'under_review',
+    قيدالتنفيذ: 'in_progress',
+    قيدالعمل: 'in_progress',
+    مكتمل: 'completed',
+    مكتملة: 'completed',
+    مخالفة: 'violation',
+    مخالفه: 'violation',
+    مقدم: 'submitted',
+    مرسل: 'submitted',
+    معتمد: 'approved',
+    مرفوض: 'rejected',
+    منتهي: 'expired',
+  };
+
+  return synonyms[normalized] ?? rawValue;
 }
 
 function normalizeChartHint(

@@ -67,9 +67,9 @@ Responsibilities:
 
 Current reality:
 
-- public search defaults to a stub provider
-- Tavily is only partially wired
-- vector search is a placeholder
+- public web enrichment requires an explicitly configured provider
+- Tavily and Brave are wired for external enrichment
+- internal knowledge retrieval uses OpenRouter embeddings plus a Mongo-backed semantic index built from the exported knowledge corpus
 
 #### Chart Agent
 

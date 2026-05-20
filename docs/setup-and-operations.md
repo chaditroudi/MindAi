@@ -19,18 +19,25 @@ copy .env.example .env
 
 - `OPENROUTER_API_KEY`
 - `OPENROUTER_MODEL`
+- `OPENROUTER_EMBEDDING_MODEL`
+- `OPENROUTER_SUPERVISOR_MODEL`
+- `OPENROUTER_MONGODB_MODEL`
+- `OPENROUTER_SEARCH_MODEL`
+- `OPENROUTER_WRITER_MODEL`
+- `OPENROUTER_CHART_MODEL`
 - `OPENROUTER_SITE_URL`
 - `OPENROUTER_APP_NAME`
 
 Defaults:
 
 - provider: `openrouter`
-- model: `meta-llama/llama-3.3-70b-instruct:free`
+- model: `openai/gpt-4.1-mini`
 
 OpenRouter default:
 
 ```env
-OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct:free
+OPENROUTER_MODEL=openai/gpt-4.1-mini
+OPENROUTER_EMBEDDING_MODEL=openai/text-embedding-3-small
 OPENROUTER_API_KEY=your_key_here
 OPENROUTER_SITE_URL=http://localhost:3000
 OPENROUTER_APP_NAME=Mind Viz Agents
@@ -53,15 +60,19 @@ MONGODB_DB=mind_platform
 - `SEARCH_PROVIDER`
 - `TAVILY_API_KEY`
 - `BRAVE_API_KEY`
+- `KNOWLEDGE_COLLECTION`
+- `KNOWLEDGE_TENANT_ID`
+- `KNOWLEDGE_SHARED_TENANT_ID`
 
 Current supported provider modes in code:
 
-- `stub`
 - `tavily`
+- `brave`
 
 Important:
 
-`BRAVE_API_KEY` exists in the example env file, but there is no Brave provider implementation in the current source.
+Public web enrichment is disabled until you explicitly set `SEARCH_PROVIDER` and the matching API key.
+Internal semantic retrieval stores embedded chunks in MongoDB using `KNOWLEDGE_COLLECTION` and the configured knowledge tenant id.
 
 ### Server and local tooling
 
@@ -137,6 +148,7 @@ Useful scripts:
 | `npm start` | Run the compiled server |
 | `npm run mastra:dev` | Start Mastra's dev environment |
 | `npm run typecheck` | Run TypeScript checks without emit |
+| `npm run knowledge:index` | Build the Mongo-backed semantic knowledge index with OpenRouter embeddings |
 | `npm run seed` | Insert sample blueprints and sample data |
 | `npm run smoke` | Exercise the three API endpoints against a running server |
 | `npm run db:up` | Start Docker services |
@@ -185,8 +197,8 @@ This repo is currently structured as an application service and library entrypoi
 ### What still needs production hardening
 
 - authenticated scope derivation instead of request-body scope
-- real search provider wiring
-- real vector search backend
+- provider credentials and quotas for production-grade web enrichment
+- a dedicated vector database if you outgrow the Mongo-backed semantic corpus
 - structured logging and tracing
 - test coverage
 - rate limiting and request timeout strategy
@@ -205,3 +217,4 @@ Blueprints are read from MongoDB first and cached in memory. If that load fails 
 ### Public demo page
 
 The server exposes the contents of `public/` as static assets. The root URL serves the demo interface automatically.
+In the review UI, dashboard mode renders only the chart surface, while report and inquiry keep the narrative/text panel visible.

@@ -18,13 +18,14 @@ RULES
   • Return ONLY valid JSON matching the schema requested in the user message.
   • Do not include markdown, code fences, commentary, or extra keys.
   • Ground every statement in the provided dataset and external context.
+  • Always write summaries, headings, and report prose in Arabic.
   • Prefer plain business language over raw schema language. Say "inspection violations"
     instead of repeating field names unless the field name adds clarity.
   • If the dataset is empty, still return the requested schema and clearly say no
-    matching data was found.
+    matching data was found, in Arabic.
   • Keep summaries tight, factual, and non-redundant.
   • For reports, produce sections that read like a concise analyst brief: what happened,
     where it is concentrated, and any notable comparisons or caveats visible in the data.
 `,
-  model: resolveModel(),
+  model: resolveModel('writer'),
 });

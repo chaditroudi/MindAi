@@ -3,14 +3,11 @@ import { z } from 'zod';
 import { permissionScopeSchema } from '../schemas/blueprint.js';
 import { taskPlanSchema, datasetSchema } from '../schemas/intent.js';
 import { chartResultSchema } from '../schemas/chart.js';
-import { blueprintRepo } from '../../db/blueprint.repository.js';
-import { finalizeTaskPlan } from '../task-plan.js';
-import {
-  buildAggregationFromPlan,
-  executePipeline,
-  validateRows,
-} from '../tools/mongodb-tools.js';
-import { buildChartFromDataset } from '../tools/chart-tools.js';
+import { runChartRuntime } from '../runtime/chart-runtime.js';
+import { runMongoDatasetQuery } from '../runtime/mongodb-runtime.js';
+import { runSearchEnrichment } from '../runtime/search-runtime.js';
+import { runSupervisorPlan } from '../runtime/supervisor-runtime.js';
+import { runReportWriter } from '../runtime/writer-runtime.js';
 
 const planStep = createStep({
   id: 'plan-report',
@@ -26,34 +23,15 @@ const planStep = createStep({
     prompt: z.string(),
   }),
   execute: async ({ inputData, mastra }) => {
-    const supervisor = mastra!.getAgent('supervisorAgent');
-    const bps = await blueprintRepo.listAccessible(inputData.scope.allowedBlueprintIds);
-    const planResult = await supervisor.generate(
-      [
-        {
-          role: 'user',
-          content: JSON.stringify({
-            prompt: inputData.prompt,
-            intent: 'report',
-            currentDate: new Date().toISOString(),
-            topic: inputData.topic,
-            blueprintId: inputData.blueprintId,
-            platform: { blueprints: bps },
-            scope: { tenantId: inputData.scope.tenantId, allowedBlueprintIds: inputData.scope.allowedBlueprintIds },
-          }),
-        },
-      ],
-      { output: taskPlanSchema },
-    );
-    const plan = planResult.object;
-    const finalizedPlan = finalizeTaskPlan({
-      plan,
-      prompt: inputData.prompt,
-      availableBlueprints: bps,
-      forcedIntent: 'report',
-    }) as z.infer<typeof taskPlanSchema>;
     return {
-      plan: finalizedPlan,
+      plan: await runSupervisorPlan({
+        mastra: mastra!,
+        prompt: inputData.prompt,
+        intent: 'report',
+        scope: inputData.scope,
+        topic: inputData.topic,
+        blueprintId: inputData.blueprintId,
+      }),
       scope: inputData.scope,
       prompt: inputData.prompt,
     };
@@ -71,35 +49,27 @@ const gatherStep = createStep({
     enrichment: datasetSchema.optional(),
   }),
   execute: async ({ inputData, mastra }) => {
-    const { plan, scope } = inputData;
-    const empty: z.infer<typeof datasetSchema> = { rows: [], schema: {}, source: 'mongodb' };
-
-    let dataset = empty;
-    if (plan.needsData && plan.query.blueprintId && plan.query.dataStoreName) {
-      const ds = await blueprintRepo.findDataStore(plan.query.blueprintId, plan.query.dataStoreName);
-      if (ds) {
-        const { pipeline } = buildAggregationFromPlan({ plan, dataStore: ds, scope });
-        const executed = await executePipeline({
-          pipeline,
-          collection: ds.collection,
-          scope,
-        });
-        const validated = validateRows({ rows: executed.rows, dataStore: ds });
-        dataset = { rows: validated.rows, schema: validated.schema, source: 'mongodb' };
-      }
-    }
-
+    const queryResult = await runMongoDatasetQuery({
+      plan: inputData.plan,
+      scope: inputData.scope,
+      mastra,
+    });
     let enrichment: z.infer<typeof datasetSchema> | undefined;
-    if (plan.needsEnrichment && plan.enrichment) {
-      const search = mastra!.getAgent('searchAgent');
-      const r = await search.generate(
-        [{ role: 'user', content: JSON.stringify(plan.enrichment) }],
-        { output: datasetSchema },
-      );
-      enrichment = r.object;
+    if (inputData.plan.needsEnrichment && inputData.plan.enrichment) {
+      enrichment = await runSearchEnrichment({
+        mastra: mastra!,
+        enrichment: inputData.plan.enrichment,
+        joinKey: inputData.plan.query.dimensions?.[0],
+      });
     }
 
-    return { plan, scope, prompt: inputData.prompt, dataset, enrichment };
+    return {
+      plan: inputData.plan,
+      scope: inputData.scope,
+      prompt: inputData.prompt,
+      dataset: queryResult.dataset,
+      enrichment,
+    };
   },
 });
 
@@ -112,40 +82,23 @@ const writeStep = createStep({
     plan: taskPlanSchema,
   }),
   execute: async ({ inputData, mastra }) => {
-    const writer = mastra!.getAgent('writerAgent');
-    const reportOutputSchema = z.object({
-      reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
+    const writePayload = await runReportWriter({
+      mastra: mastra!,
+      prompt: inputData.prompt,
+      dataset: inputData.dataset,
+      enrichment: inputData.enrichment,
     });
-    const writeResult = await writer.generate(
-      [
-        {
-          role: 'system',
-          content:
-            'Return only a JSON object with the shape { "reportSections": [{ "heading": string, "body": string }] }. Do not return a task plan.',
-        },
-        {
-          role: 'user',
-          content: `Write a structured report based on the following data. Return JSON with reportSections: [{heading, body}].
-
-User prompt: ${inputData.prompt}
-Dataset: ${JSON.stringify(inputData.dataset).slice(0, 8000)}
-External context: ${JSON.stringify(inputData.enrichment ?? null).slice(0, 4000)}`,
-        },
-      ],
-      { output: reportOutputSchema },
-    );
-    const writePayload = writeResult.object;
 
     let charts: z.infer<typeof chartResultSchema>[] | undefined;
     if (inputData.plan.needsChart && inputData.dataset.rows.length > 0) {
       charts = [
-        chartResultSchema.parse(
-          buildChartFromDataset({
-            dataset: inputData.dataset,
-            intentHint: inputData.plan.chartHint,
-            title: inputData.prompt,
-          }),
-        ),
+        await runChartRuntime({
+          mastra: mastra!,
+          dataset: inputData.dataset,
+          intentHint: inputData.plan.chartHint,
+          title: inputData.prompt,
+          theme: 'light',
+        }),
       ];
     }
 

@@ -1,0 +1,1 @@
+[{"_id":{"$oid":"000000000000000000000001"},"user":"sample-user-1","last_modified":{"$date":"2026-01-01T00:00:00.000Z"},"password":"ARGON2_PASSWORD_HASH_PLACEHOLDER"}]

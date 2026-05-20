@@ -154,9 +154,17 @@ export function buildAggregationFromPlan({
     pipeline.push({ $sort: sortStage });
   }
 
-  pipeline.push({ $limit: plan.query.limit ?? 1000 });
+  pipeline.push({ $limit: normalizeLimit(plan.query.limit) });
 
   return { pipeline, collection: dataStore.collection };
+}
+
+function normalizeLimit(limit: z.infer<typeof taskPlanSchema>['query']['limit']) {
+  const defaultLimit = 1000;
+  const maxLimit = 5000;
+
+  if (typeof limit !== 'number' || !Number.isInteger(limit) || limit <= 0) return defaultLimit;
+  return Math.min(limit, maxLimit);
 }
 
 export async function executePipeline({

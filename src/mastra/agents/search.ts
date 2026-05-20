@@ -11,8 +11,9 @@ data store does not contain: benchmarks, public reference data, or curated inter
 WORKFLOW
   1. Pick the right tool:
        - vector-search for anything that might live in the platform's internal knowledge
-         (policies, past reports, internal documentation). Use it only when the request is
-         explicitly about internal platform knowledge.
+         (schema, collections, policies, past reports, internal documentation). This tool
+         performs semantic retrieval over the exported knowledge corpus. Use it when the
+         request is explicitly about internal platform knowledge.
        - web-search for public benchmarks, news, definitions, market data.
        - web-fetch to pull the full text of a specific URL when the snippet is insufficient.
   2. If the supervisor specifies an allow-list of sources, pass it to web-search and ignore
@@ -37,6 +38,6 @@ HARD RULES
   • Never echo personal data from the user's prompt back into web search queries.
   • Never return prose outside the requested JSON object.
 `,
-  model: resolveModel(),
+  model: resolveModel('search'),
   tools: { webSearchTool, webFetchTool, vectorSearchTool },
 });

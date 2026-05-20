@@ -58,40 +58,43 @@ Checks:
 
 ## Search and enrichment caveats
 
-### Search results are obviously fake or generic
+### Search enrichment does not run
 
 Cause:
 
-- `SEARCH_PROVIDER=stub` is the default
+- `SEARCH_PROVIDER` is unset
+- or the selected provider key is missing
 
 Effect:
 
-- the search layer returns placeholder content from a stub provider
+- the Search Agent cannot call the public web provider
 
 Fix:
 
-- implement and configure a real provider, such as the partial Tavily path in `src/mastra/tools/search-tools.ts`
+- set `SEARCH_PROVIDER=tavily` or `SEARCH_PROVIDER=brave`
+- set the matching API key in `.env`
 
 ### Tavily is configured but enrichment still feels incomplete
 
 Cause:
-
-- only search is wired
-- `fetch(url)` in the Tavily provider path is still a placeholder
+- the query may be better served by internal knowledge retrieval than public web search
+- the target page may still return low-signal content after extraction
 
 Effect:
 
-- full-page fetch behavior is not complete
+- enrichment may be thin even though the provider is working
 
 ### Internal knowledge retrieval returns nothing
 
 Cause:
 
-- `vectorSearchTool` currently returns an empty chunk list
+- the local export knowledge corpus is missing or the query does not match the exported schema/context
 
 Fix:
 
-- connect it to a real vector database or retrieval backend
+- verify `samples/db-export` exists or provide your own export corpus
+- run `npm run knowledge:index` to build or refresh the Mongo-backed semantic index
+- later, replace the Mongo-backed index with a dedicated embedding/vector store if needed
 
 ## Documentation-worthy implementation gaps
 

@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
     "smoke": "tsx scripts/smoke.ts",
+    "knowledge:index": "tsx scripts/build-knowledge-index.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:wait": "node -e \"setTimeout(() => process.exit(0), 5000)\"",

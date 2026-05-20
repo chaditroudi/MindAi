@@ -99,8 +99,8 @@ The application has a strong architecture for a blueprint-aware, agent-assisted 
 
 ### What is incomplete
 
-- Search enrichment defaults to a stub provider.
-- Vector search is not implemented yet.
+- Search enrichment requires a real configured provider.
+- Internal knowledge retrieval uses OpenRouter embeddings plus a Mongo-backed semantic index built from the exported knowledge corpus.
 - There are no automated tests in `tests/`.
 - Report writing currently reuses the supervisor instead of using a dedicated writer layer.
 - Some declared chart capabilities are ahead of implementation, such as `scatter`.
@@ -391,9 +391,9 @@ Available tool paths:
 
 Current reality:
 
-- stub provider is the default
-- Tavily path exists but is only partly completed
-- vector search returns empty results today
+- public web enrichment requires an explicitly configured provider
+- Tavily and Brave are wired for external enrichment
+- internal knowledge retrieval uses OpenRouter embeddings and a Mongo-backed semantic index over the exported knowledge corpus
 
 ## Chart Agent
 
@@ -542,11 +542,11 @@ Fetches full content for a URL.
 
 ### `vector-search`
 
-Planned internal semantic retrieval.
+Internal semantic retrieval over the exported knowledge corpus.
 
 Current limitation:
 
-- returns empty chunks until wired to a real vector store
+- it currently uses a Mongo-backed embedding index with similarity computed in application code rather than a dedicated vector database
 
 ## Merge tool
 
@@ -782,6 +782,7 @@ Features:
 - switch between inquiry, report, and dashboard
 - type prompts or use examples
 - render charts with ECharts
+- keep dashboard mode chart-only while report and inquiry show narrative content
 - inspect audit data
 
 This page is useful for testing, but it is not a production UI.
@@ -904,7 +905,7 @@ You can extend the app by:
 
 ## 20. Known limitations
 
-- Search uses a stub by default.
+- Search requires an explicit provider configuration for public web enrichment.
 - Tavily support is partial.
 - Vector search is not implemented.
 - No automated tests are currently present in `tests/`.
@@ -922,7 +923,7 @@ If this app is being prepared for production, the highest-value next steps are:
 1. move `scope` derivation into auth middleware
 2. add automated tests for workflows and tool guarantees
 3. implement a real search provider fully
-4. connect vector retrieval
+4. move the Mongo-backed semantic index to a dedicated vector database if scale or native ANN search becomes necessary
 5. add structured logging and tracing
 6. add timeouts and retry strategy
 7. separate report writing from supervisor planning
@@ -1040,13 +1041,13 @@ Check:
 
 Cause:
 
-- stub search provider is active
+- `SEARCH_PROVIDER` is unset or the provider API key is missing
 
 ## Problem: internal knowledge retrieval is empty
 
 Cause:
 
-- vector search is not connected yet
+- the exported knowledge corpus is missing or too sparse for the query
 
 ## Problem: TypeScript validation fails after future changes
 
@@ -1071,7 +1072,7 @@ Its biggest strengths are:
 
 Its biggest current gaps are:
 
-- incomplete search and vector integrations
+- application-level vector similarity over Mongo-backed embeddings rather than a dedicated vector database
 - lack of automated tests
 - demo-style auth handling
 
