@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Docs - Mind Viz Agents</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-top: #f8f3e7;
+      --bg-bottom: #ece2d2;
+      --panel: rgba(255, 251, 245, 0.92);
+      --panel-strong: rgba(255, 255, 255, 0.96);
+      --text: #17263a;
+      --muted: #5f6d80;
+      --line: rgba(23, 38, 58, 0.12);
+      --accent: #0f766e;
+      --accent-dark: #0b5954;
+      --accent-soft: rgba(15, 118, 110, 0.12);
+      --warn-soft: rgba(213, 155, 45, 0.16);
+      --shadow: 0 20px 50px rgba(23, 38, 58, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      direction: rtl;
+      text-align: right;
+      background:
+        radial-gradient(circle at top left, rgba(218, 166, 57, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 24%),
+        linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+    }
+
+    a { color: inherit; }
+
+    code {
+      direction: ltr;
+      unicode-bidi: embed;
+      background: rgba(23, 38, 58, 0.08);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+    }
+
+    .page {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 28px 18px 52px;
+    }
+
+    .hero,
+    .toc,
+    .doc-section,
+    .side-note {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 28px;
+      border-radius: var(--radius-xl);
+      margin-bottom: 20px;
+    }
+
+    .app-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .app-nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-strong);
+      color: var(--text);
+      text-decoration: none;
+      transition: 160ms ease;
+    }
+
+    .app-nav a:hover,
+    .app-nav a.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      transform: translateY(-1px);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.3rem);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.45rem;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      font-size: 1.08rem;
+      margin: 18px 0 8px;
+    }
+
+    p,
+    li {
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .subtitle {
+      max-width: 92ch;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      border-radius: var(--radius-lg);
+      padding: 18px;
+    }
+
+    .toc-title {
+      font-weight: 800;
+      margin-bottom: 12px;
+      color: var(--accent-dark);
+    }
+
+    .toc a {
+      display: block;
+      padding: 9px 10px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .toc a:hover {
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+    }
+
+    .content {
+      display: grid;
+      gap: 18px;
+    }
+
+    .doc-section {
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      scroll-margin-top: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.62);
+      min-height: 100%;
+    }
+
+    .card strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .callout {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(15, 118, 110, 0.18);
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      line-height: 1.75;
+    }
+
+    .warning {
+      border-color: rgba(213, 155, 45, 0.26);
+      background: var(--warn-soft);
+      color: #705319;
+    }
+
+    pre {
+      margin: 14px 0 0;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      background: #142230;
+      color: #dbe8f5;
+      direction: ltr;
+      text-align: left;
+      overflow: auto;
+      line-height: 1.6;
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      overflow: hidden;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    th {
+      color: var(--text);
+      background: rgba(15, 118, 110, 0.08);
+      font-weight: 800;
+    }
+
+    ul,
+    ol {
+      margin: 12px 0 0;
+      padding: 0 22px 0 0;
+    }
+
+    .english {
+      direction: ltr;
+      text-align: left;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 16px 12px 32px;
+      }
+
+      .hero,
+      .doc-section,
+      .toc {
+        padding: 18px;
+        border-radius: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <nav class="app-nav" aria-label="Main navigation">
+        <a href="/">App</a>
+        <a class="active" href="/docs.html">Docs</a>
+      </nav>
+      <h1>Docs · Mind Viz Agents</h1>
+      <p class="subtitle">
+        هذه صفحة توثيق كاملة داخل الواجهة للفريق. الهدف منها شرح التطبيق، الواجهة، الباكند، مسار الطلب، الفرق بين JSON export و MongoDB query، أماكن الملفات، الأخطاء المعروفة، وخطوات التطوير القادمة.
+      </p>
+    </header>
+
+    <div class="layout">
+      <aside class="toc" aria-label="Documentation navigation">
+        <div class="toc-title">محتوى التوثيق</div>
+        <a href="#overview">1. Overview</a>
+        <a href="#architecture">2. Architecture</a>
+        <a href="#request-flow">3. Request Flow</a>
+        <a href="#json-vs-query">4. JSON Export vs Query</a>
+        <a href="#ui">5. UI Documentation</a>
+        <a href="#api">6. API</a>
+        <a href="#agents">7. Agents</a>
+        <a href="#workflows">8. Workflows</a>
+        <a href="#tools">9. Tools</a>
+        <a href="#data">10. Data Model</a>
+        <a href="#setup">11. Setup</a>
+        <a href="#env">12. Env Vars</a>
+        <a href="#errors">13. Errors</a>
+        <a href="#security">14. Security</a>
+        <a href="#files">15. Files</a>
+        <a href="#manager">16. Manager Answers</a>
+        <a href="#next">17. Next Steps</a>
+      </aside>
+
+      <main class="content">
+        <section id="overview" class="doc-section">
+          <h2>1. Overview</h2>
+          <p>
+            Mind Viz Agents is a TypeScript and Node.js analytics service for Mind Platform. It lets a user ask natural-language questions and receive a dashboard chart, structured report, or inquiry summary.
+          </p>
+          <div class="grid">
+            <div class="card">
+              <strong>What the app does</strong>
+              Turns prompts into structured analytics output using Mastra workflows, LLM agents, MongoDB, and ECharts.
+            </div>
+            <div class="card">
+              <strong>Current demo domain</strong>
+              Qatar municipal operations: service requests, inspections, permits, and projects.
+            </div>
+            <div class="card">
+              <strong>Important design</strong>
+              The LLM creates a plan. Backend code builds and executes the actual MongoDB query.
+            </div>
+          </div>
+        </section>
+
+        <section id="architecture" class="doc-section">
+          <h2>2. Architecture</h2>
+          <pre>Browser UI or API client
+  -> Express API route
+  -> AnalyticsService
+  -> Mastra workflow
+  -> Supervisor Agent creates TaskPlan
+  -> MongoDB runtime builds and executes safe aggregation pipeline
+  -> Optional search enrichment
+  -> Writer Agent or Chart runtime
+  -> JSON response</pre>
+          <div class="callout">
+            Key idea: The LLM does not directly query MongoDB. It returns structured JSON. The backend validates and translates that JSON into a safe pipeline.
+          </div>
+        </section>
+
+        <section id="request-flow" class="doc-section">
+          <h2>3. Runtime Request Flow</h2>
+          <ol>
+            <li>User selects dashboard/report/inquiry and enters a prompt.</li>
+            <li>Frontend sends <code>{ prompt, scope }</code> to the selected endpoint.</li>
+            <li>Express validates the request.</li>
+            <li>AnalyticsService starts the matching Mastra workflow.</li>
+            <li>Supervisor creates a <code>TaskPlan</code>.</li>
+            <li><code>finalizeTaskPlan</code> normalizes fields, filters, dates, and chart hints.</li>
+            <li>MongoDB runtime resolves the selected Data Store.</li>
+            <li><code>buildAggregationFromPlan()</code> creates the MongoDB pipeline.</li>
+            <li><code>executePipeline()</code> runs the query with tenant guard.</li>
+            <li>Writer/chart/search steps format the result.</li>
+            <li>Frontend renders chart, report, summary, or error.</li>
+          </ol>
+        </section>
+
+        <section id="json-vs-query" class="doc-section">
+          <h2>4. JSON Export vs Runtime MongoDB Query</h2>
+          <p>
+            The JSON export under <code>samples/db-export</code> is not the live database query. It is a static knowledge/schema corpus. The real MongoDB query is generated at runtime.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Purpose</th>
+                <th>Where</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>JSON export</td>
+                <td>Knowledge context: collections, fields, row counts, sample values.</td>
+                <td><code>samples/db-export</code></td>
+              </tr>
+              <tr>
+                <td>TaskPlan</td>
+                <td>LLM interpretation of prompt into query intent.</td>
+                <td><code>src/mastra/schemas/intent.ts</code></td>
+              </tr>
+              <tr>
+                <td>MongoDB query</td>
+                <td>Runtime aggregation pipeline built by backend code.</td>
+                <td><code>buildAggregationFromPlan()</code></td>
+              </tr>
+              <tr>
+                <td>Audit pipeline</td>
+                <td>Visible generated query pipeline for dashboard responses.</td>
+                <td><code>audit.pipeline</code></td>
+              </tr>
+            </tbody>
+          </table>
+          <pre>User prompt
+  -> TaskPlan from LLM
+  -> buildAggregationFromPlan()
+  -> MongoDB aggregation pipeline
+  -> executePipeline()</pre>
+          <div class="callout warning">
+            Current gap: dashboard exposes <code>audit.pipeline</code>. Report and inquiry expose <code>audit.plan</code> and <code>elapsedMs</code>, but not the executed pipeline yet.
+          </div>
+        </section>
+
+        <section id="ui" class="doc-section">
+          <h2>5. UI Documentation</h2>
+          <p>
+            The UI is a static page in <code>public/index.html</code>. It is a demo/review interface, not a production frontend shell.
+          </p>
+          <h3>UI Areas</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Area</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Navigation</td>
+                <td>Switch between App and Docs pages.</td>
+              </tr>
+              <tr>
+                <td>Endpoint tabs</td>
+                <td>Select dashboard, report, or inquiry workflow.</td>
+              </tr>
+              <tr>
+                <td>Prompt composer</td>
+                <td>User writes a question and clicks <code>تشغيل</code>.</td>
+              </tr>
+              <tr>
+                <td>Examples</td>
+                <td>Ready prompts per endpoint.</td>
+              </tr>
+              <tr>
+                <td>Progress</td>
+                <td>Estimated stages while backend runs.</td>
+              </tr>
+              <tr>
+                <td>Result</td>
+                <td>Chart, report, inquiry summary, or error.</td>
+              </tr>
+              <tr>
+                <td>Audit</td>
+                <td>Raw <code>data.audit</code> JSON from backend.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>UI Request Lifecycle</h3>
+          <pre>User clicks تشغيل
+  -> run()
+  -> startProgress()
+  -> fetch(currentEndpoint, { prompt, scope })
+  -> backend workflow runs
+  -> render(data)
+  -> audit panel prints data.audit
+  -> resetControls()</pre>
+
+          <h3>Important UI Variables</h3>
+          <div class="grid">
+            <div class="card">
+              <strong><code>SCOPE</code></strong>
+              Demo-only scope sent with the request. Production must derive this server-side.
+            </div>
+            <div class="card">
+              <strong><code>currentEndpoint</code></strong>
+              Stores the selected workflow endpoint.
+            </div>
+            <div class="card">
+              <strong><code>EXAMPLES</code></strong>
+              Stores endpoint-specific placeholders and example prompts.
+            </div>
+            <div class="card">
+              <strong><code>PROGRESS_STAGES</code></strong>
+              Stores estimated UI progress stages per endpoint.
+            </div>
+          </div>
+
+          <h3>Rendering Rules</h3>
+          <ul>
+            <li>Dashboard: render <code>data.chart.option</code> with ECharts.</li>
+            <li>Report: render <code>data.reportSections</code> and optional first chart.</li>
+            <li>Inquiry: render <code>data.summary</code> and <code>data.recordLinks</code>.</li>
+            <li>Error: hide chart and show error message.</li>
+          </ul>
+
+          <div class="callout">
+            Progress is estimated client-side. The backend currently returns only final JSON, not live workflow events.
+          </div>
+        </section>
+
+        <section id="api" class="doc-section">
+          <h2>6. API</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>Purpose</th>
+                <th>Main output</th>
+                <th>Audit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>GET /health</code></td>
+                <td>Liveness check</td>
+                <td><code>{ ok: true }</code></td>
+                <td>None</td>
+              </tr>
+              <tr>
+                <td><code>POST /api/dashboard</code></td>
+                <td>One chart</td>
+                <td><code>chart</code></td>
+                <td><code>plan</code>, <code>pipeline</code>, <code>elapsedMs</code></td>
+              </tr>
+              <tr>
+                <td><code>POST /api/report</code></td>
+                <td>Report sections</td>
+                <td><code>reportSections</code>, optional <code>charts</code></td>
+                <td><code>plan</code>, <code>elapsedMs</code></td>
+              </tr>
+              <tr>
+                <td><code>POST /api/inquiry</code></td>
+                <td>Quick answer</td>
+                <td><code>summary</code>, <code>recordLinks</code></td>
+                <td><code>plan</code>, <code>elapsedMs</code></td>
+              </tr>
+            </tbody>
+          </table>
+          <pre>{
+  "prompt": "service request count by municipality this month",
+  "scope": {
+    "userId": "u_review",
+    "tenantId": "t_mind_qatar",
+    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+  }
+}</pre>
+        </section>
+
+        <section id="agents" class="doc-section">
+          <h2>7. Agents</h2>
+          <div class="grid">
+            <div class="card">
+              <strong>Supervisor Agent</strong>
+              Classifies intent and creates the TaskPlan.
+            </div>
+            <div class="card">
+              <strong>MongoDB Agent</strong>
+              Optional audit/notes path. Deterministic runtime is source of truth for data.
+            </div>
+            <div class="card">
+              <strong>Search Agent</strong>
+              Uses web search or internal knowledge retrieval for enrichment.
+            </div>
+            <div class="card">
+              <strong>Writer Agent</strong>
+              Writes inquiry summaries and report sections as strict JSON.
+            </div>
+            <div class="card">
+              <strong>Chart Agent</strong>
+              Improves chart title, annotations, and accessibility metadata.
+            </div>
+          </div>
+        </section>
+
+        <section id="workflows" class="doc-section">
+          <h2>8. Workflows</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Workflow</th>
+                <th>Steps</th>
+                <th>Output</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Dashboard</td>
+                <td><code>plan -> query -> enrich -> chart</code></td>
+                <td>One chart plus audit pipeline.</td>
+              </tr>
+              <tr>
+                <td>Report</td>
+                <td><code>plan-report -> gather -> write-report</code></td>
+                <td>Report sections and optional charts.</td>
+              </tr>
+              <tr>
+                <td>Inquiry</td>
+                <td><code>plan-q -> fetch-records -> retrieve-context -> summarize</code></td>
+                <td>Summary and record links.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="tools" class="doc-section">
+          <h2>9. Tools</h2>
+          <div class="grid">
+            <div class="card">
+              <strong>MongoDB tools</strong>
+              <code>resolve-blueprint</code>, <code>build-aggregation</code>, <code>execute-pipeline</code>, <code>validate-rows</code>.
+            </div>
+            <div class="card">
+              <strong>Search tools</strong>
+              <code>web-search</code>, <code>web-fetch</code>, <code>vector-search</code>.
+            </div>
+            <div class="card">
+              <strong>Chart tool</strong>
+              Builds deterministic ECharts options from normalized datasets.
+            </div>
+            <div class="card">
+              <strong>Merge tool</strong>
+              Merges primary and secondary datasets by join key.
+            </div>
+          </div>
+        </section>
+
+        <section id="data" class="doc-section">
+          <h2>10. Data Model</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Concept</th>
+                <th>Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Blueprint</td>
+                <td>Configurable domain model with Data Stores.</td>
+              </tr>
+              <tr>
+                <td>Data Store</td>
+                <td>Maps to one MongoDB collection.</td>
+              </tr>
+              <tr>
+                <td>Field</td>
+                <td>Defines field name, type, and optional role.</td>
+              </tr>
+              <tr>
+                <td>Permission Scope</td>
+                <td>User, tenant, allowed blueprints, optional row filter.</td>
+              </tr>
+              <tr>
+                <td>TaskPlan</td>
+                <td>Intermediate plan between LLM and query execution.</td>
+              </tr>
+              <tr>
+                <td>Dataset</td>
+                <td>Normalized rows, schema, source, optional citations.</td>
+              </tr>
+              <tr>
+                <td>ChartResult</td>
+                <td>ECharts option plus title and accessibility description.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="setup" class="doc-section">
+          <h2>11. Setup</h2>
+          <pre>copy .env.example .env
+npm install
+npm run db:up
+npm run seed
+npm run dev</pre>
+          <p>Open the app:</p>
+          <pre>http://localhost:3000</pre>
+          <p>Open this docs page:</p>
+          <pre>http://localhost:3000/docs.html</pre>
+        </section>
+
+        <section id="env" class="doc-section">
+          <h2>12. Environment Variables</h2>
+          <div class="grid">
+            <div class="card">
+              <strong>OpenRouter</strong>
+              <code>OPENROUTER_API_KEY</code>, <code>OPENROUTER_MODEL</code>, role-specific model vars.
+            </div>
+            <div class="card">
+              <strong>MongoDB</strong>
+              <code>MONGODB_URI</code>, <code>MONGODB_DB</code>.
+            </div>
+            <div class="card">
+              <strong>Search</strong>
+              <code>SEARCH_PROVIDER</code>, <code>TAVILY_API_KEY</code>, <code>BRAVE_API_KEY</code>.
+            </div>
+            <div class="card">
+              <strong>Knowledge</strong>
+              <code>KNOWLEDGE_COLLECTION</code>, <code>KNOWLEDGE_TENANT_ID</code>, <code>KNOWLEDGE_SHARED_TENANT_ID</code>.
+            </div>
+          </div>
+        </section>
+
+        <section id="errors" class="doc-section">
+          <h2>13. Errors</h2>
+          <h3>Invalid JSON response</h3>
+          <p>Mastra asked the model for structured JSON, but the provider returned invalid or non-JSON output.</p>
+          <h3>Provider returned error</h3>
+          <p>OpenRouter or the selected provider failed, timed out, rate-limited, rejected the model, or returned an error body.</p>
+          <h3>Slow button/result</h3>
+          <p>The workflow can call multiple LLM/provider steps. The UI progress exists to show users that the app is still working.</p>
+        </section>
+
+        <section id="security" class="doc-section">
+          <h2>14. Security</h2>
+          <ul>
+            <li>Tenant guard is inserted into MongoDB pipeline.</li>
+            <li>Execution path checks tenant guard again.</li>
+            <li>Blueprint access is limited by <code>allowedBlueprintIds</code>.</li>
+            <li>Rows are normalized before downstream agent use.</li>
+          </ul>
+          <div class="callout warning">
+            Production gap: the demo currently accepts <code>scope</code> from the browser. In production, scope must come from auth middleware.
+          </div>
+        </section>
+
+        <section id="files" class="doc-section">
+          <h2>15. Important Files</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Path</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>public/index.html</code></td><td>Main demo UI.</td></tr>
+              <tr><td><code>public/docs.html</code></td><td>Browser documentation page.</td></tr>
+              <tr><td><code>src/server.ts</code></td><td>Express server and static serving.</td></tr>
+              <tr><td><code>src/services/analytics-service.ts</code></td><td>Starts Mastra workflows and shapes API response.</td></tr>
+              <tr><td><code>src/mastra/workflows/*</code></td><td>Dashboard, report, inquiry workflows.</td></tr>
+              <tr><td><code>src/mastra/runtime/*</code></td><td>Runtime wrappers for agents and deterministic execution.</td></tr>
+              <tr><td><code>src/mastra/tools/mongodb-tools.ts</code></td><td>Builds and executes MongoDB pipeline.</td></tr>
+              <tr><td><code>src/knowledge/export-knowledge.ts</code></td><td>Builds knowledge corpus from JSON export.</td></tr>
+              <tr><td><code>docs/full-application-documentation.md</code></td><td>Main Markdown team handover doc.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="manager" class="doc-section">
+          <h2>16. Manager Answers</h2>
+          <h3>Where is the query?</h3>
+          <p>The query is generated at runtime from the TaskPlan. It is built in <code>buildAggregationFromPlan()</code>. Dashboard exposes it in <code>audit.pipeline</code>.</p>
+          <h3>Why do we have JSON export?</h3>
+          <p>The JSON export is only knowledge/schema context. It helps the app understand collections and fields. It is not the live query.</p>
+          <h3>Why is the button sometimes slow?</h3>
+          <p>The request can involve several LLM calls, MongoDB query execution, optional search enrichment, and retry after invalid JSON.</p>
+          <h3>Is this production-ready?</h3>
+          <p>It is a strong prototype/demo. Before production, move scope to auth middleware, add tests, timeouts, tracing, and backend progress streaming.</p>
+        </section>
+
+        <section id="next" class="doc-section">
+          <h2>17. Recommended Next Steps</h2>
+          <ol>
+            <li>Expose <code>audit.pipeline</code> for report and inquiry.</li>
+            <li>Move request scope from browser body to auth middleware.</li>
+            <li>Reduce LLM payload sizes, especially chart metadata calls.</li>
+            <li>Add tests for tenant guard and TaskPlan-to-pipeline conversion.</li>
+            <li>Add backend progress streaming with SSE, WebSocket, or polling.</li>
+            <li>Add copy/export buttons for plan, pipeline, report, chart PNG, and ECharts option JSON.</li>
+            <li>Add request timeout and retry policy.</li>
+            <li>Add structured tracing with run IDs across all workflow steps.</li>
+          </ol>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

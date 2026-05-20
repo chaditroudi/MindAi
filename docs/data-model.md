@@ -234,7 +234,7 @@ Declared chart types:
 
 Implementation note:
 
-The schema allows `scatter`, but the current deterministic chart builder in `src/mastra/tools/chart-tools.ts` does not generate scatter charts yet.
+The deterministic chart builder can emit scatter charts when a dataset has two independent numeric fields and no stronger temporal or categorical hint is selected.
 
 ## Local demo model
 

@@ -19,6 +19,7 @@ const PORT = Number(process.env.PORT ?? 3000);
 app.listen(PORT, () => {
   console.log(`Mind viz agents listening on http://localhost:${PORT}`);
   console.log(`  Review UI            http://localhost:${PORT}/`);
+  console.log(`  Team Docs            http://localhost:${PORT}/docs.html`);
   console.log(`  POST /api/inquiry    — home page search / inquiry`);
   console.log(`  POST /api/report     — report page`);
   console.log(`  POST /api/dashboard  — dashboard page single chart`);

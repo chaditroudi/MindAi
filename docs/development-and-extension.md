@@ -179,12 +179,12 @@ If you want to mature the system beyond the demo stage, the highest-value improv
 3. strengthen retrieval with a dedicated vector backend if the Mongo-backed semantic corpus becomes too limiting
 4. add structured logging and request correlation IDs
 5. define timeout and retry policies for model and search calls
-6. extract report writing into a dedicated writer agent or deterministic formatter
+6. continue improving the dedicated writer agent prompts and schemas
 
 ## What is currently not wired exactly as the design suggests
 
 - `mergeResultsTool` exists, but the dashboard workflow currently merges enrichment inline in the workflow step
-- `scatter` is declared in chart schema, but not emitted by the current chart builder
+- report and inquiry do not yet expose the executed MongoDB pipeline in their audit response
 - the search stack is usable, but the internal knowledge index still computes similarity in application code rather than using a native vector database
 
 Those are good places to focus if you are continuing system development.

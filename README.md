@@ -115,8 +115,9 @@ The repository is functional as a local demo and integration base, but some part
 
 - web enrichment requires a real configured provider such as Tavily or Brave
 - internal knowledge retrieval now uses OpenRouter embeddings plus a Mongo-backed semantic index over the exported knowledge corpus
-- the report workflow uses the supervisor agent for report writing as well as planning
+- the report workflow now uses the dedicated writer agent for report sections
 - the dashboard workflow merges enrichment inline instead of using the dedicated merge tool
+- report and inquiry audits expose the generated plan, while dashboard audit also exposes the executed MongoDB pipeline
 - there are no automated tests checked into `tests/` yet
 
 Those details are documented in [Troubleshooting and known limitations](docs/troubleshooting.md).

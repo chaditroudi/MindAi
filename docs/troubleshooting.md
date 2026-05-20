@@ -108,17 +108,17 @@ There is a `tests/` directory, but it is currently empty. Validation today is ma
 - smoke tests
 - manual use of the demo UI
 
-### Report writing is handled by the supervisor
+### Report writing is handled by the writer agent
 
-The report workflow reuses the supervisor agent to write structured report sections. That works, but it couples planning and writing concerns.
+The report workflow uses the writer agent for structured report sections. The supervisor remains focused on planning.
 
 ### Merge logic is duplicated
 
 There is a dedicated `mergeResultsTool`, but the dashboard workflow currently performs enrichment merging inline instead of calling that tool.
 
-### Chart schema is ahead of chart implementation
+### Report and inquiry do not expose the pipeline in audit
 
-The chart schema declares `scatter`, but the current chart builder does not generate scatter charts.
+Dashboard responses expose `audit.pipeline`. Report and inquiry currently expose `audit.plan` and `audit.elapsedMs`, but not the executed MongoDB pipeline. The pipeline exists internally and can be added to those response contracts if full query traceability is required.
 
 ### Request-body scope is for demo use only
 
@@ -129,6 +129,8 @@ The server accepts `scope` from the request body. That should not remain true in
 ### No request streaming
 
 The current endpoints return a final JSON response only. There is no streaming progress or partial result delivery.
+
+The frontend shows estimated client-side progress states, but those are not backend step events.
 
 ### Minimal observability
 

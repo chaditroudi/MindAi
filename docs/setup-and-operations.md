@@ -218,3 +218,36 @@ Blueprints are read from MongoDB first and cached in memory. If that load fails 
 
 The server exposes the contents of `public/` as static assets. The root URL serves the demo interface automatically.
 In the review UI, dashboard mode renders only the chart surface, while report and inquiry keep the narrative/text panel visible.
+
+### Demo UI behavior for reviewers
+
+The demo UI is in `public/index.html`.
+
+It has:
+
+- endpoint tabs for dashboard, report, and inquiry
+- a prompt input and run button
+- endpoint-specific example prompts
+- a result area for chart/text/error output
+- an audit panel that prints the backend `audit` object
+- client-side loading/progress states
+
+When the user clicks `تشغيل`, the UI:
+
+1. disables the prompt, tabs, examples, and run button
+2. shows elapsed time
+3. shows estimated workflow stages
+4. sends `fetch(currentEndpoint, { prompt, scope })`
+5. renders the response based on `data.intent`
+6. prints `data.audit` in the audit panel
+7. re-enables controls
+
+The progress UI is estimated. The backend currently returns only a final response, not live step events.
+
+For demos, the audit panel is the fastest way to show what happened:
+
+- dashboard shows `plan`, `pipeline`, and `elapsedMs`
+- report shows `plan` and `elapsedMs`
+- inquiry shows `plan` and `elapsedMs`
+
+If report/inquiry later add `audit.pipeline`, the existing UI will show it automatically because it prints the full audit JSON.

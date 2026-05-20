@@ -54,7 +54,8 @@
     .hero,
     .panel,
     .results-panel,
-    .audit-panel {
+    .audit-panel,
+    .docs-panel {
       background: var(--panel);
       border: 1px solid rgba(255, 255, 255, 0.65);
       box-shadow: var(--shadow);
@@ -64,6 +65,35 @@
     .hero {
       padding: 28px;
       border-radius: var(--radius-xl);
+    }
+
+    .app-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .app-nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-strong);
+      color: var(--text);
+      text-decoration: none;
+      transition: 160ms ease;
+    }
+
+    .app-nav a:hover,
+    .app-nav a.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      transform: translateY(-1px);
     }
 
     h1,
@@ -179,6 +209,149 @@
       opacity: 0.65;
       cursor: not-allowed;
       box-shadow: none;
+    }
+
+    .run-status {
+      display: none;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(15, 118, 110, 0.16);
+      border-radius: 18px;
+      background: rgba(15, 118, 110, 0.08);
+    }
+
+    .run-status.active {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(15, 118, 110, 0.18);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 900ms linear infinite;
+    }
+
+    .status-copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .status-title {
+      font-weight: 700;
+      color: var(--accent-dark);
+    }
+
+    .status-detail {
+      color: var(--muted);
+      font-size: 0.92rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .elapsed {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      text-align: left;
+      min-width: 54px;
+    }
+
+    .progress-bar {
+      position: relative;
+      height: 8px;
+      margin-bottom: 18px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(23, 38, 58, 0.08);
+      display: none;
+    }
+
+    .progress-bar.active {
+      display: block;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), #d59b2d);
+      transition: width 420ms ease;
+    }
+
+    .progress-steps {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .progress-steps.active {
+      display: grid;
+    }
+
+    .progress-step {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.62);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .progress-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(95, 109, 128, 0.32);
+    }
+
+    .progress-step.active {
+      border-color: rgba(15, 118, 110, 0.34);
+      background: rgba(15, 118, 110, 0.1);
+      color: var(--accent-dark);
+      font-weight: 700;
+    }
+
+    .progress-step.active .progress-dot {
+      background: var(--accent);
+      box-shadow: 0 0 0 5px rgba(15, 118, 110, 0.12);
+    }
+
+    .progress-step.done {
+      color: var(--text);
+    }
+
+    .progress-step.done .progress-dot {
+      background: #d59b2d;
+    }
+
+    .busy-overlay {
+      position: relative;
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      color: var(--muted);
+      text-align: center;
+      border: 1px dashed rgba(15, 118, 110, 0.22);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .examples {
@@ -305,6 +478,71 @@
       text-align: left;
     }
 
+    .docs-panel {
+      padding: 22px;
+      border-radius: var(--radius-lg);
+    }
+
+    .docs-panel details {
+      border-top: 1px solid var(--line);
+      padding: 14px 0;
+    }
+
+    .docs-panel details:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .docs-panel summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--accent-dark);
+      user-select: none;
+    }
+
+    .docs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .docs-note {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.62);
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .docs-note strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .docs-list {
+      margin: 12px 0 0;
+      padding: 0 20px 0 0;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .docs-code {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 14px;
+      background: #142230;
+      color: #dbe8f5;
+      direction: ltr;
+      text-align: left;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
     .error {
       color: var(--error);
       background: rgba(182, 61, 44, 0.08);
@@ -327,7 +565,8 @@
       .hero,
       .panel,
       .results-panel,
-      .audit-panel {
+      .audit-panel,
+      .docs-panel {
         padding: 18px;
         border-radius: 20px;
       }
@@ -349,24 +588,46 @@
 <body>
   <div class="page">
     <div class="shell">
+      <!-- Demo header: explains the local review surface. -->
       <header class="hero">
+        <nav class="app-nav" aria-label="Main navigation">
+          <a class="active" href="/">App</a>
+          <a href="/docs.html">Docs</a>
+        </nav>
         <h1>منصة مايند · التحليلات البلدية في قطر</h1>
         <p class="subtitle">استعرض مسار العمل الكامل بين الاستعلام والتقرير ولوحة المعلومات باستخدام بيانات تشغيلية مزروعة للبلديات والتصاريح والتفتيشات والمشاريع.</p>
       </header>
 
       <section class="workspace">
         <div class="panel">
+          <!-- Endpoint selector: controls which backend workflow the prompt calls. -->
           <div class="endpoint-tabs">
             <button class="active" data-endpoint="/api/dashboard">لوحة المعلومات</button>
             <button data-endpoint="/api/report">التقرير</button>
             <button data-endpoint="/api/inquiry">الاستعلام</button>
           </div>
 
+          <!-- Prompt composer: user input plus the primary run action. -->
           <div class="composer">
             <textarea id="prompt" placeholder="مثال: طلبات الخدمة حسب البلدية خلال هذا الشهر" rows="2"></textarea>
             <button id="go" type="button">تشغيل</button>
           </div>
 
+          <!-- Client-side progress: estimated stages while the backend returns final JSON. -->
+          <div class="run-status" id="run-status" aria-live="polite">
+            <div class="spinner" aria-hidden="true"></div>
+            <div class="status-copy">
+              <div class="status-title" id="status-title">جارٍ التشغيل</div>
+              <div class="status-detail" id="status-detail">تهيئة الطلب</div>
+            </div>
+            <div class="elapsed" id="elapsed">0s</div>
+          </div>
+          <div class="progress-bar" id="progress-bar" aria-hidden="true">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <div class="progress-steps" id="progress-steps"></div>
+
+          <!-- Example prompts are rebuilt when the active endpoint changes. -->
           <div class="examples" id="examples"></div>
         </div>
 
@@ -374,9 +635,11 @@
           <section class="results-panel">
             <h2 class="section-title">النتيجة</h2>
             <div class="surface">
+              <!-- Dashboard/report charts render here with ECharts. -->
               <div id="chart-wrap">
                 <div id="chart"></div>
               </div>
+              <!-- Report sections, inquiry summaries, and errors render here. -->
               <div id="output-text" style="display:none"></div>
             </div>
           </section>
@@ -385,15 +648,157 @@
             <h2 class="section-title">التدقيق</h2>
             <details open>
               <summary>الخطة وخط التنفيذ والمدة</summary>
+              <!-- Prints the backend audit object exactly as returned by the API. -->
               <pre id="audit-pre">—</pre>
             </details>
           </aside>
         </div>
       </section>
+
+      <!--
+        Team UI Documentation
+        This visible documentation mirrors the docs/ UI sections so reviewers can
+        understand the page directly from http://localhost:3000 without opening
+        Markdown files. Keep this section updated when UI behavior changes.
+      -->
+      <section class="docs-panel" aria-label="توثيق الواجهة للفريق">
+        <h2 class="section-title">توثيق الواجهة للفريق</h2>
+
+        <details open>
+          <summary>هدف الصفحة وطريقة استخدامها</summary>
+          <div class="docs-grid">
+            <div class="docs-note">
+              <strong>الغرض</strong>
+              هذه صفحة مراجعة محلية لاختبار مسارات التحليلات: لوحة المعلومات، التقرير، والاستعلام.
+            </div>
+            <div class="docs-note">
+              <strong>التقنية</strong>
+              الصفحة ملف واحد: <code>public/index.html</code>. لا يوجد React أو build frontend. يتم تحميل ECharts من CDN.
+            </div>
+            <div class="docs-note">
+              <strong>مهم</strong>
+              هذه ليست واجهة إنتاجية. هي أداة demo/review لعرض النتائج وفحص الـ audit.
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>أجزاء الواجهة</summary>
+          <ul class="docs-list">
+            <li><strong>التبويبات:</strong> تختار endpoint: <code>/api/dashboard</code> أو <code>/api/report</code> أو <code>/api/inquiry</code>.</li>
+            <li><strong>مربع النص:</strong> يرسل prompt المستخدم إلى backend.</li>
+            <li><strong>أمثلة جاهزة:</strong> تتغير حسب التبويب وتستدعي الطلب مباشرة عند الضغط.</li>
+            <li><strong>منطقة التقدم:</strong> تعرض مراحل تقديرية ووقت الانتظار أثناء تنفيذ workflow.</li>
+            <li><strong>منطقة النتيجة:</strong> تعرض chart أو report sections أو inquiry summary أو error.</li>
+            <li><strong>لوحة التدقيق:</strong> تعرض <code>data.audit</code> كما يرجع من API.</li>
+          </ul>
+        </details>
+
+        <details>
+          <summary>مسار الطلب من الواجهة إلى الباكند</summary>
+          <div class="docs-code">User clicks تشغيل
+  -> run()
+  -> startProgress()
+  -> fetch(currentEndpoint, { prompt, scope })
+  -> backend workflow runs
+  -> frontend receives final JSON
+  -> render(data)
+  -> audit panel prints data.audit
+  -> resetControls()</div>
+          <ul class="docs-list">
+            <li><code>currentEndpoint</code> يحدد أي workflow سيتم استدعاؤه.</li>
+            <li><code>SCOPE</code> موجود داخل الصفحة لأغراض demo فقط.</li>
+            <li>في الإنتاج يجب أن يأتي scope من authentication في السيرفر، وليس من المتصفح.</li>
+          </ul>
+        </details>
+
+        <details>
+          <summary>قواعد عرض النتائج</summary>
+          <div class="docs-grid">
+            <div class="docs-note">
+              <strong>Dashboard</strong>
+              يعرض <code>data.chart.option</code> داخل ECharts ويخفي النصوص. الـ audit يحتوي على plan و pipeline و elapsedMs.
+            </div>
+            <div class="docs-note">
+              <strong>Report</strong>
+              يعرض <code>data.reportSections</code>، وإذا وجدت charts يعرض أول chart. حالياً audit يعرض plan و elapsedMs.
+            </div>
+            <div class="docs-note">
+              <strong>Inquiry</strong>
+              يخفي الرسم، ويعرض summary وروابط السجلات. حالياً audit يعرض plan و elapsedMs.
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>التحميل والتقدم</summary>
+          <ul class="docs-list">
+            <li>التقدم المعروض في الواجهة تقديري client-side وليس streaming من الباكند.</li>
+            <li>الـ API يرجع final JSON فقط بعد انتهاء workflow.</li>
+            <li><code>PROGRESS_STAGES</code> يحتوي مراحل مختلفة لكل endpoint.</li>
+            <li>عند بدء الطلب يتم تعطيل الزر، مربع النص، التبويبات، وأزرار الأمثلة لمنع طلبات مكررة.</li>
+            <li>للحصول على تقدم حقيقي لاحقاً نحتاج SSE أو WebSocket أو polling باستخدام <code>runId</code>.</li>
+          </ul>
+        </details>
+
+        <details>
+          <summary>لوحة التدقيق: أين الخطة وأين query؟</summary>
+          <ul class="docs-list">
+            <li><code>audit.plan</code> هو TaskPlan الناتج من LLM بعد التطبيع.</li>
+            <li><code>audit.pipeline</code> هو MongoDB aggregation pipeline الحقيقي، وهو ظاهر حالياً في dashboard فقط.</li>
+            <li>الـ JSON export ليس query. هو knowledge/schema context فقط.</li>
+            <li>الـ query الحقيقي يتم إنشاؤه في backend داخل <code>buildAggregationFromPlan()</code>.</li>
+            <li>إذا أضفنا <code>audit.pipeline</code> للتقرير والاستعلام، هذه الواجهة ستعرضه تلقائياً لأنها تطبع audit كامل.</li>
+          </ul>
+        </details>
+
+        <details>
+          <summary>أهم متغيرات ودوال JavaScript</summary>
+          <div class="docs-grid">
+            <div class="docs-note">
+              <strong><code>SCOPE</code></strong>
+              صلاحيات demo المرسلة مع الطلب. لا تستخدم بهذا الشكل في الإنتاج.
+            </div>
+            <div class="docs-note">
+              <strong><code>EXAMPLES</code></strong>
+              أمثلة و placeholders لكل endpoint.
+            </div>
+            <div class="docs-note">
+              <strong><code>PROGRESS_STAGES</code></strong>
+              مراحل التقدم التقديرية لكل workflow.
+            </div>
+            <div class="docs-note">
+              <strong><code>run()</code></strong>
+              الدالة الرئيسية التي ترسل الطلب وتعرض النتيجة أو الخطأ.
+            </div>
+            <div class="docs-note">
+              <strong><code>render(data)</code></strong>
+              تختار طريقة العرض حسب <code>data.intent</code>.
+            </div>
+            <div class="docs-note">
+              <strong><code>escape()</code></strong>
+              تمنع إدخال HTML غير آمن عند عرض نصوص الLLM أو الأخطاء.
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>قيود الواجهة الحالية وخطوات التطوير</summary>
+          <ul class="docs-list">
+            <li>لا يوجد login أو session في الواجهة.</li>
+            <li>لا يوجد زر إلغاء الطلب أثناء التنفيذ.</li>
+            <li>لا يوجد history للطلبات السابقة.</li>
+            <li>لا يوجد export للـ chart أو report من الواجهة.</li>
+            <li>كل الكود داخل ملف HTML واحد، وهذا مناسب للdemo فقط.</li>
+            <li>أفضل تحسينات قادمة: backend progress حقيقي، copy buttons للplan/pipeline، export chart PNG/JSON، واستبدال SCOPE hardcoded بمستخدم حقيقي.</li>
+          </ul>
+        </details>
+      </section>
     </div>
   </div>
 
   <script>
+    // Demo-only permission scope. Production should derive this server-side from auth.
     const SCOPE = {
       userId: 'u_review',
       tenantId: 't_mind_qatar',
@@ -407,12 +812,44 @@
     const promptInput = document.getElementById('prompt');
     const goBtn = document.getElementById('go');
     const examplesDiv = document.getElementById('examples');
+    const runStatus = document.getElementById('run-status');
+    const statusTitle = document.getElementById('status-title');
+    const statusDetail = document.getElementById('status-detail');
+    const elapsed = document.getElementById('elapsed');
+    const progressBar = document.getElementById('progress-bar');
+    const progressFill = document.getElementById('progress-fill');
+    const progressSteps = document.getElementById('progress-steps');
 
     let chart = echarts.init(chartDiv, 'dark');
     window.addEventListener('resize', () => chart.resize());
 
     let currentEndpoint = '/api/dashboard';
+    let progressTimer = null;
+    let progressStartedAt = 0;
+    let progressStageIndex = 0;
 
+    // Estimated UI stages. These are not backend streaming events.
+    const PROGRESS_STAGES = {
+      '/api/dashboard': [
+        { label: 'فهم الطلب', detail: 'تحويل السؤال إلى خطة بيانات', at: 0 },
+        { label: 'جلب البيانات', detail: 'تنفيذ الاستعلام وتجهيز النتائج', at: 2500 },
+        { label: 'بناء الرسم', detail: 'اختيار الشكل وتجهيز خيارات العرض', at: 6500 },
+        { label: 'تحسين العرض', detail: 'صياغة العنوان والوصف', at: 10500 },
+      ],
+      '/api/report': [
+        { label: 'فهم الطلب', detail: 'تحويل السؤال إلى خطة تقرير', at: 0 },
+        { label: 'جلب البيانات', detail: 'تجميع السجلات والمؤشرات', at: 3000 },
+        { label: 'إثراء السياق', detail: 'إضافة سياق داعم عند الحاجة', at: 8500 },
+        { label: 'كتابة التقرير', detail: 'صياغة الأقسام النهائية', at: 13500 },
+      ],
+      '/api/inquiry': [
+        { label: 'فهم الطلب', detail: 'تحديد نوع السجلات المطلوبة', at: 0 },
+        { label: 'جلب السجلات', detail: 'تطبيق المرشحات وحدود الصلاحية', at: 2200 },
+        { label: 'تلخيص النتيجة', detail: 'صياغة الإجابة وروابط السجلات', at: 6500 },
+      ],
+    };
+
+    // Endpoint-specific examples and placeholders for the review UI.
     const EXAMPLES = {
       '/api/dashboard': {
         placeholder: 'مثال: متوسط درجة التفتيش حسب البلدية',
@@ -446,6 +883,7 @@
       },
     };
 
+    // Rebuilds prompt examples whenever the user switches workflow tabs.
     function renderExamples() {
       const config = EXAMPLES[currentEndpoint];
       promptInput.placeholder = config.placeholder;
@@ -480,12 +918,12 @@
     goBtn.addEventListener('click', run);
     renderExamples();
 
+    // Main request lifecycle: show progress, call the selected endpoint, render output.
     async function run() {
       const prompt = promptInput.value.trim();
       if (!prompt) return;
 
-      goBtn.disabled = true;
-      goBtn.textContent = 'جارٍ التشغيل...';
+      startProgress();
       auditPre.textContent = '—';
 
       try {
@@ -496,17 +934,116 @@
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error ?? 'فشل الطلب');
+        completeProgress();
         render(data);
       } catch (error) {
+        stopProgress();
         chartWrap.style.display = 'none';
         outputText.style.display = 'block';
         outputText.innerHTML = `<div class="error">خطأ: ${escape(error.message)}</div>`;
       } finally {
-        goBtn.disabled = false;
-        goBtn.textContent = 'تشغيل';
+        resetControls();
       }
     }
 
+    // Locks the UI and starts estimated progress while the backend workflow runs.
+    function startProgress() {
+      const stages = PROGRESS_STAGES[currentEndpoint];
+      progressStartedAt = Date.now();
+      progressStageIndex = 0;
+      goBtn.disabled = true;
+      goBtn.textContent = 'جارٍ التشغيل...';
+      promptInput.disabled = true;
+      setExampleButtonsDisabled(true);
+      setTabButtonsDisabled(true);
+      runStatus.classList.add('active');
+      progressBar.classList.add('active');
+      progressSteps.classList.add('active');
+      chartWrap.style.display = currentEndpoint === '/api/inquiry' ? 'none' : 'block';
+      outputText.style.display = 'block';
+      outputText.innerHTML = '<div class="busy-overlay">جارٍ تجهيز النتيجة...</div>';
+      chart.clear();
+      renderProgressSteps(stages);
+      updateProgress();
+      progressTimer = window.setInterval(updateProgress, 500);
+    }
+
+    // Advances the visible progress state based on elapsed time.
+    function updateProgress() {
+      const stages = PROGRESS_STAGES[currentEndpoint];
+      const ms = Date.now() - progressStartedAt;
+      const nextIndex = stages.findLastIndex((stage) => ms >= stage.at);
+      progressStageIndex = Math.max(0, Math.min(nextIndex, stages.length - 1));
+      const current = stages[progressStageIndex];
+      statusTitle.textContent = current.label;
+      statusDetail.textContent = current.detail;
+      elapsed.textContent = `${Math.floor(ms / 1000)}s`;
+
+      const stageStart = current.at;
+      const stageEnd = stages[progressStageIndex + 1]?.at ?? stageStart + 9000;
+      const stageRatio = Math.min(0.9, Math.max(0, (ms - stageStart) / Math.max(1, stageEnd - stageStart)));
+      const progress = ((progressStageIndex + stageRatio) / stages.length) * 100;
+      progressFill.style.width = `${Math.min(92, Math.max(6, progress))}%`;
+      renderProgressSteps(stages);
+    }
+
+    // Renders the progress step cards and marks done/active/upcoming stages.
+    function renderProgressSteps(stages) {
+      progressSteps.innerHTML = stages
+        .map((stage, index) => {
+          const state = index < progressStageIndex ? 'done' : index === progressStageIndex ? 'active' : '';
+          return `<div class="progress-step ${state}"><span class="progress-dot"></span><span>${escape(stage.label)}</span></div>`;
+        })
+        .join('');
+    }
+
+    // Shows a brief completion state before the progress area is cleared.
+    function completeProgress() {
+      if (progressTimer) window.clearInterval(progressTimer);
+      progressTimer = null;
+      const stages = PROGRESS_STAGES[currentEndpoint];
+      progressStageIndex = stages.length - 1;
+      progressFill.style.width = '100%';
+      statusTitle.textContent = 'اكتملت النتيجة';
+      statusDetail.textContent = 'تم تجهيز العرض';
+      renderProgressSteps(stages);
+    }
+
+    // Hides progress UI and clears the timer.
+    function stopProgress() {
+      if (progressTimer) window.clearInterval(progressTimer);
+      progressTimer = null;
+      runStatus.classList.remove('active');
+      progressBar.classList.remove('active');
+      progressSteps.classList.remove('active');
+      progressFill.style.width = '0%';
+    }
+
+    // Restores controls after success or failure.
+    function resetControls() {
+      window.setTimeout(() => {
+        stopProgress();
+      }, 650);
+      goBtn.disabled = false;
+      goBtn.textContent = 'تشغيل';
+      promptInput.disabled = false;
+      setExampleButtonsDisabled(false);
+      setTabButtonsDisabled(false);
+    }
+
+    function setExampleButtonsDisabled(disabled) {
+      examplesDiv.querySelectorAll('button').forEach((button) => {
+        button.disabled = disabled;
+      });
+    }
+
+    function setTabButtonsDisabled(disabled) {
+      document.querySelectorAll('.endpoint-tabs button').forEach((button) => {
+        button.disabled = disabled;
+      });
+    }
+
+    // Renders the response according to the backend intent.
     function render(data) {
       auditPre.textContent = JSON.stringify(data.audit, null, 2);
 

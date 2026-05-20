@@ -25,7 +25,7 @@ Endpoints:
 
 The Mastra instance in `src/mastra/index.ts` registers:
 
-- 4 agents
+- 5 agents
 - 3 workflows
 
 The workflows provide deterministic sequencing. Agents do not call each other directly.
@@ -77,9 +77,19 @@ Defined in `src/mastra/agents/chart.ts`.
 
 Responsibilities:
 
-- inspect normalized dataset shape
-- call the deterministic chart builder once
-- return an ECharts option object with accessibility metadata
+- improve chart presentation metadata
+- return JSON for title, annotations, and accessibility description
+- leave the main chart option structure to the deterministic chart runtime/tool path
+
+#### Writer Agent
+
+Defined in `src/mastra/agents/writer.ts`.
+
+Responsibilities:
+
+- write inquiry summaries
+- write report sections
+- return strict JSON matching the requested schema
 
 ## Workflow design
 
@@ -90,7 +100,7 @@ Defined in `src/mastra/workflows/dashboard.ts`.
 Flow:
 
 1. `plan` asks the supervisor for a `TaskPlan`
-2. `query` asks the MongoDB agent for data and the executed pipeline
+2. `query` uses the MongoDB runtime to build data and the executed pipeline
 3. `enrich` optionally calls the Search agent
 4. `chart` asks the Chart agent for a single `ChartResult`
 
@@ -108,7 +118,7 @@ Flow:
 
 1. `plan-report` creates the `TaskPlan`
 2. `gather` collects MongoDB data and optional enrichment
-3. `write-report` asks the supervisor to write structured report sections
+3. `write-report` asks the writer agent to write structured report sections
 4. optional chart generation happens in the same final step
 
 Output:
@@ -119,7 +129,7 @@ Output:
 
 Important note:
 
-The current implementation does not use a dedicated writer agent. The supervisor is reused for report writing.
+The report path uses the dedicated writer runtime, but the API audit currently exposes only the plan and elapsed time, not the executed pipeline.
 
 ### General-question workflow
 
@@ -129,7 +139,8 @@ Flow:
 
 1. `plan-q` builds the `TaskPlan`
 2. `fetch-records` runs a raw-record style query by overriding aggregation fields
-3. `summarize` asks the supervisor for a short summary
+3. `retrieve-context` optionally retrieves internal context
+4. `summarize` asks the writer agent for a short summary
 
 Output:
 
@@ -152,7 +163,7 @@ Workflow asks Supervisor for TaskPlan
    ->
 Workflow decides whether data, enrichment, or charting are required
    ->
-MongoDB Agent resolves schema and runs safe pipeline if needed
+MongoDB runtime resolves schema and runs safe pipeline if needed
    ->
 Search Agent enriches if needed
    ->
@@ -171,7 +182,7 @@ The supervisor receives accessible blueprints and is instructed not to invent fi
 
 ### Deterministic pipeline construction
 
-The MongoDB agent is instructed to use `build-aggregation` rather than writing raw pipelines. Pipeline construction happens in `src/mastra/tools/mongodb-tools.ts`.
+Pipeline construction happens in `src/mastra/tools/mongodb-tools.ts`. The LLM returns a structured TaskPlan; backend code translates that plan into a tenant-safe MongoDB aggregation pipeline.
 
 ### Tenant isolation
 
@@ -209,6 +220,7 @@ The chart agent uses `build-echarts` instead of composing ECharts options freeha
 - tenant enforcement
 - row normalization
 - chart option structure
+- runtime MongoDB pipeline construction
 
 ## Providers and infrastructure
 
@@ -249,5 +261,121 @@ The demo UI in `public/index.html` is a static page that:
 - posts to the API directly
 - renders ECharts output for chart responses
 - exposes audit data in a collapsible panel
+- shows client-side loading/progress states while a request is running
 
 It is a validation aid, not a production frontend.
+
+### UI architecture
+
+The UI is intentionally lightweight:
+
+- one file: `public/index.html`
+- no frontend framework
+- no frontend build pipeline
+- ECharts loaded from CDN
+- plain JavaScript for state and rendering
+
+Main JavaScript state:
+
+| Variable | Purpose |
+| --- | --- |
+| `currentEndpoint` | Selected API endpoint |
+| `EXAMPLES` | Endpoint-specific placeholder text and example prompts |
+| `SCOPE` | Demo-only request scope |
+| `progressTimer` | Timer for estimated progress updates |
+| `progressStageIndex` | Current estimated progress step |
+| `PROGRESS_STAGES` | Stage labels/details per endpoint |
+
+Main UI functions:
+
+| Function | Purpose |
+| --- | --- |
+| `renderExamples()` | Rebuild example prompt buttons for the active endpoint |
+| `run()` | Send the API request and handle success/error |
+| `startProgress()` | Disable inputs and display loading/progress UI |
+| `updateProgress()` | Update elapsed seconds, progress bar, and active step |
+| `completeProgress()` | Mark progress complete when response arrives |
+| `stopProgress()` | Hide progress UI |
+| `resetControls()` | Re-enable inputs after completion/error |
+| `render(data)` | Render dashboard/report/inquiry response |
+
+### UI request flow
+
+```text
+User selects endpoint tab
+  ->
+UI updates examples and placeholder
+  ->
+User enters prompt or clicks example
+  ->
+run()
+  ->
+startProgress()
+  ->
+fetch(currentEndpoint, { prompt, scope })
+  ->
+render response based on intent
+  ->
+show audit JSON
+  ->
+reset controls
+```
+
+### UI rendering rules
+
+Dashboard:
+
+- render `data.chart.option` with ECharts
+- hide narrative text
+- show audit JSON
+
+Report:
+
+- render `data.reportSections`
+- render optional `data.charts[0]`
+- show audit JSON
+
+Inquiry:
+
+- render `data.summary`
+- render `data.recordLinks`
+- hide chart
+- show audit JSON
+
+Error:
+
+- hide chart
+- show error box
+- reset controls
+
+### Progress behavior
+
+The frontend progress UI is estimated. It does not receive real backend step events.
+
+Why:
+
+- current API endpoints return one final JSON response
+- there is no SSE, WebSocket, or polling endpoint for live workflow status
+
+What the progress UI does:
+
+- makes long LLM requests feel active instead of frozen
+- shows endpoint-specific stages
+- shows elapsed time
+- disables controls to prevent duplicate runs
+
+Production recommendation:
+
+Replace estimated progress with backend-driven progress using a `runId` plus Server-Sent Events, WebSocket, or polling.
+
+### UI audit behavior
+
+The audit panel prints `data.audit` exactly as returned by the API.
+
+Current audit visibility:
+
+- dashboard includes `plan`, `pipeline`, and `elapsedMs`
+- report includes `plan` and `elapsedMs`
+- inquiry includes `plan` and `elapsedMs`
+
+If the team adds `audit.pipeline` to report/inquiry, the UI will already display it because it renders the full audit object generically.
