@@ -3,7 +3,7 @@ export type ReviewEndpoint = '/api/dashboard' | '/api/report' | '/api/inquiry';
 export interface ReviewPromptDefinition {
   label: string;
   prompt: string;
-  blueprintId?: string;
+  dataStoreName?: string;
   topic?: string;
 }
 
@@ -15,52 +15,34 @@ export interface ReviewModeDefinition {
   prompts: ReviewPromptDefinition[];
 }
 
-export const reviewModes: ReviewModeDefinition[] = [
+export const reviewModeShells: ReviewModeDefinition[] = [
   {
     endpoint: '/api/dashboard',
     label: 'لوحة المعلومات',
     description: 'إجابات مرئية بمخطط واحد لطلبات المقارنة والاتجاهات ومؤشرات الأداء.',
-    placeholder: 'اعرض مخالفات التفتيش حسب المنطقة',
-    prompts: [
-      { label: 'حالة طلبات الخدمة حسب البلدية', prompt: 'اعرض حالة طلبات الخدمة حسب البلدية' },
-      { label: 'درجة التفتيش حسب البلدية', prompt: 'اعرض متوسط درجة التفتيش حسب البلدية' },
-      { label: 'المخالفات حسب المنطقة', prompt: 'اعرض مخالفات التفتيش حسب المنطقة' },
-      { label: 'التصاريح المفتوحة حسب البلدية', prompt: 'اعرض التصاريح المفتوحة حسب البلدية' },
-      { label: 'ميزانية المشاريع حسب البلدية', prompt: 'اعرض إجمالي ميزانية المشاريع حسب البلدية' },
-      { label: 'نسبة إنجاز المشاريع حسب المقاول', prompt: 'اعرض متوسط نسبة إنجاز المشاريع حسب المقاول' },
-    ],
+    placeholder: 'اكتب سؤالاً للوحة المعلومات',
+    prompts: [],
   },
   {
     endpoint: '/api/report',
     label: 'التقرير',
     description: 'تحليل سردي مع مخططات داعمة عند الحاجة.',
-    placeholder: 'أنشئ تقريراً عن نتائج التفتيش حسب البلدية خلال آخر 30 يوماً',
-    prompts: [
-      { label: 'عمليات طلبات الخدمة', prompt: 'أنشئ تقريراً عن طلبات الخدمة حسب البلدية والحالة والأولوية خلال آخر 30 يوماً' },
-      { label: 'الامتثال في التفتيش', prompt: 'أنشئ تقريراً عن نتائج التفتيش حسب البلدية خلال آخر 30 يوماً' },
-      { label: 'اختناقات التصاريح', prompt: 'أنشئ تقريراً عن التصاريح حسب نوع مقدم الطلب والحالة والبلدية خلال آخر 30 يوماً' },
-      { label: 'تسليم المشاريع', prompt: 'أنشئ تقريراً عن مرحلة المشروع والمقاول ونسبة الإنجاز حسب البلدية' },
-    ],
+    placeholder: 'اكتب طلب تقرير',
+    prompts: [],
   },
   {
     endpoint: '/api/inquiry',
     label: 'الاستعلام',
     description: 'بحث سريع في السجلات مع ملخص نصي وروابط مباشرة للعناصر.',
-    placeholder: 'اعرض التفتيشات الحديثة التي نتيجتها مخالفة',
-    prompts: [
-      { label: 'طلبات الخدمة الجديدة', prompt: 'اعرض طلبات الخدمة الحديثة التي حالتها جديد' },
-      { label: 'الطلبات العاجلة قيد التنفيذ', prompt: 'اعرض طلبات الخدمة التي أولويتها عاجل وحالتها قيد التنفيذ' },
-      { label: 'مخالفات التفتيش', prompt: 'اعرض التفتيشات الحديثة التي نتيجتها مخالفة' },
-      { label: 'التصاريح قيد المراجعة', prompt: 'اعرض التصاريح التي حالتها قيد المراجعة مع البلدية ونوع مقدم الطلب' },
-      { label: 'المشاريع المكتملة', prompt: 'اعرض المشاريع التي مرحلتها مكتملة مع البلدية والمقاول' },
-    ],
+    placeholder: 'اكتب سؤال بحث أو استعلام',
+    prompts: [],
   },
 ];
 
 export const capabilityMatrix = {
   done: [
     'تنسيق سير العمل عبر Mastra',
-    'استعلامات MongoDB الواعية بالمخططات',
+    'وكيل MongoDB للاستعلامات التحليلية وبناء aggregation آمن',
     'أدوار المشرف والبحث والكاتب والمخططات',
     'واجهات لوحة المعلومات والتقرير والاستعلام',
     'مسار رسم حتمي وآمن للمخططات',
@@ -77,9 +59,6 @@ export const capabilityMatrix = {
     'بث التقدم مباشرة إلى الواجهة',
     'نطاق صلاحيات محقون عبر المصادقة',
     'بحث متجهي داخلي وخرائط جغرافية مهيأة',
+    'عمليات MongoDB للإنشاء والتحديث والربط خارج نطاق خدمة التحليلات الحالية',
   ],
 };
-
-export function getModeByEndpoint(endpoint: ReviewEndpoint) {
-  return reviewModes.find((mode) => mode.endpoint === endpoint);
-}

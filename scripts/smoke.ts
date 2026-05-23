@@ -5,7 +5,7 @@ const BASE = process.env.SMOKE_BASE_URL ?? 'http://localhost:3000';
 const SCOPE = {
   userId: 'u_review',
   tenantId: 't_mind_qatar',
-  allowedBlueprintIds: ['bp_municipal_operations', 'bp_urban_planning'],
+  allowedDataStores: ['ServiceRequests', 'Inspections', 'Permits', 'Projects'],
 };
 
 interface TestCase {
@@ -26,7 +26,7 @@ const cases: TestCase[] = [
     body: {
       prompt: 'analyze service request volume by municipality over the last 90 days and surface key trends',
       scope: SCOPE,
-      blueprintId: 'bp_municipal_operations',
+      dataStoreName: 'ServiceRequests',
     },
   },
   {
@@ -35,7 +35,7 @@ const cases: TestCase[] = [
     body: {
       prompt: 'service request count by municipality this month',
       scope: SCOPE,
-      blueprintId: 'bp_municipal_operations',
+      dataStoreName: 'ServiceRequests',
     },
   },
   {
@@ -44,7 +44,7 @@ const cases: TestCase[] = [
     body: {
       prompt: 'daily service request count over the last 30 days',
       scope: SCOPE,
-      blueprintId: 'bp_municipal_operations',
+      dataStoreName: 'ServiceRequests',
     },
   },
   {
@@ -53,7 +53,7 @@ const cases: TestCase[] = [
     body: {
       prompt: 'open permits by municipality',
       scope: SCOPE,
-      blueprintId: 'bp_urban_planning',
+      dataStoreName: 'Permits',
     },
   },
 ];

@@ -9,57 +9,46 @@ export type FieldType =
   | 'reference'
   | 'array'
   | 'object'
-  | 'geo';
+  | 'geo'
+  | 'text';
 
-export interface BlueprintField {
+export interface DataStoreField {
   name: string;
+  label?: string;
   description?: string;
   type: FieldType;
+  role?: 'dimension' | 'measure' | 'temporal' | 'id' | 'text';
   enumValues?: string[];
   referenceTo?: string;
-  role?: 'id';
+  sampleValues?: unknown[];
+  searchable?: boolean;
+  tags?: string[];
+}
+
+export interface DataStoreJoin {
+  from: string;
+  localField: string;
+  foreignField: string;
+  as: string;
 }
 
 export interface DataStore {
   name: string;
   collection: string;
   description?: string;
-  fields: BlueprintField[];
-}
-
-export interface Blueprint {
-  id: string;
-  name: string;
-  description?: string;
-  dataStores: DataStore[];
-}
-
-export interface PlatformDefinition {
-  blueprints: Blueprint[];
+  tags?: string[];
+  fields: DataStoreField[];
+  joins?: DataStoreJoin[];
 }
 
 export interface PermissionScope {
   userId: string;
   tenantId: string;
-  allowedBlueprintIds: string[];
+  allowedDataStores?: string[];
   rowFilter?: Record<string, unknown>;
 }
 
-export type IntentKind =
-  | 'general_question'
-  | 'report'
-  | 'dashboard';
-
-export interface RequestContext {
-  prompt: string;
-  intent?: IntentKind;
-  topic?: string;
-  blueprintId?: string;
-  dataStoreName?: string;
-  scope: PermissionScope;
-  locale?: string;
-  theme?: 'light' | 'dark' | 'brand';
-}
+export type IntentKind = 'general_question' | 'report' | 'dashboard';
 
 export type DatasetRow = Record<string, string | number | boolean | null>;
 
@@ -76,49 +65,27 @@ export interface Citation {
   snippet?: string;
 }
 
-export interface ChartResult {
-  chartType:
-    | 'line'
-    | 'bar'
-    | 'horizontalBar'
-    | 'scatter'
-    | 'donut'
-    | 'map'
-    | 'histogram'
-    | 'table';
-  option: Record<string, unknown>;
-  title: string;
-  annotations?: string[];
-  accessibility: { description: string };
-}
-
-export interface SupervisorResponse {
-  intent: IntentKind;
-  summary?: string;
-  recordLinks?: Array<{ collection: string; id: string; label: string }>;
-  reportSections?: Array<{ heading: string; body: string }>;
-  charts?: ChartResult[];
-  audit: {
-    plan: TaskPlan;
-    pipeline?: object[];
-    citations?: Citation[];
-    elapsedMs: number;
-  };
-}
-
 export interface TaskPlan {
   intent: IntentKind;
   needsData: boolean;
   needsEnrichment: boolean;
   needsChart: boolean;
   query: {
-    blueprintId?: string;
     dataStoreName?: string;
     metric?: string;
+    metrics?: string[];
     aggregation?: 'sum' | 'avg' | 'count' | 'min' | 'max';
     dimensions?: string[];
+    topN?: number;
+    percentOf?: string;
+    having?: { field: string; op: 'gt' | 'gte' | 'lt' | 'lte' | 'eq'; value: number };
+    lookups?: Array<{ from: string; localField: string; foreignField: string; as: string }>;
     timeRange?: { field: string; from?: string; to?: string };
-    filters?: Array<{ field: string; op: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in'; value: unknown }>;
+    filters?: Array<{
+      field: string;
+      op: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'nin' | 'regex';
+      value: unknown;
+    }>;
     sort?: Array<{ field: string; dir: 'asc' | 'desc' }>;
     limit?: number;
   };
@@ -127,5 +94,5 @@ export interface TaskPlan {
     dimensions: string[];
     sources?: string[];
   };
-  chartHint?: 'compare' | 'trend' | 'distribution' | 'part_of_whole' | 'geo';
+  chartHint?: 'compare' | 'trend' | 'distribution' | 'part_of_whole' | 'geo' | 'ranking';
 }

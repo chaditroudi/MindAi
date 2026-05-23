@@ -1,7 +1,7 @@
 {
   "name": "mind-viz-agents",
   "version": "0.1.0",
-  "description": "Multi-agent data visualization system for a configurable Mind Platform — Mastra.js orchestration of Supervisor, MongoDB, Search, and Chart agents.",
+  "description": "Datastore-driven analytics service for Mind Platform with Mastra Supervisor, MongoDB, Search, Writer, and deterministic chart runtime.",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -13,24 +13,24 @@
     "seed": "tsx scripts/seed.ts",
     "smoke": "tsx scripts/smoke.ts",
     "knowledge:index": "tsx scripts/build-knowledge-index.ts",
-    "db:up": "docker compose up -d",
+    "db:check": "tsx scripts/check-mongo.ts",
+    "db:up": "docker compose up -d mongo mongo-express",
     "db:down": "docker compose down",
-    "db:wait": "node -e \"setTimeout(() => process.exit(0), 5000)\"",
-    "db:reset": "npm run db:down -- -v && npm run db:up && npm run db:wait && npm run seed"
+    "db:wait": "npm run db:check",
+    "db:reset": "npm run db:up && npm run db:wait && npm run seed"
   },
   "dependencies": {
-    "@mastra/core": "^0.10.0",
-    "@mastra/memory": "^0.10.0",
     "@ai-sdk/openai": "^1.0.0",
-    "mongodb": "^6.10.0",
-    "zod": "^3.23.8",
-    "express": "^4.21.0",
+    "@mastra/core": "^0.10.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "mongodb": "^6.10.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
     "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "mastra": "^0.10.0",
     "tsx": "^4.19.0",

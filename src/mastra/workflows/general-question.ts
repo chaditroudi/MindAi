@@ -1,6 +1,6 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
-import { permissionScopeSchema } from '../schemas/blueprint.js';
+import { permissionScopeSchema } from '../schemas/datastore.js';
 import { taskPlanSchema, datasetSchema } from '../schemas/intent.js';
 import { runMongoRecordFetch } from '../runtime/mongodb-runtime.js';
 import { runSearchEnrichment } from '../runtime/search-runtime.js';
@@ -13,6 +13,7 @@ const planStep = createStep({
     prompt: z.string(),
     scope: permissionScopeSchema,
     topic: z.string().optional(),
+    dataStoreName: z.string().optional(),
   }),
   outputSchema: z.object({
     plan: taskPlanSchema,
@@ -27,6 +28,7 @@ const planStep = createStep({
         intent: 'general_question',
         scope: inputData.scope,
         topic: inputData.topic,
+        dataStoreName: inputData.dataStoreName,
       }),
       scope: inputData.scope,
       prompt: inputData.prompt,
@@ -59,14 +61,17 @@ const fetchStep = createStep({
 
 const enrichStep = createStep({
   id: 'retrieve-context',
-  inputSchema: fetchStep.outputSchema,
-  outputSchema: fetchStep.outputSchema,
+  inputSchema: planStep.outputSchema,
+  outputSchema: z.object({
+    dataset: datasetSchema.optional(),
+    collection: z.string().optional(),
+  }),
   execute: async ({ inputData, mastra }) => {
     const shouldRetrieveContext =
       inputData.plan.needsEnrichment && Boolean(inputData.plan.enrichment?.topic);
 
     if (!shouldRetrieveContext) {
-      return inputData;
+      return {};
     }
 
     const knowledgeDataset = await runSearchEnrichment({
@@ -76,20 +81,49 @@ const enrichStep = createStep({
     });
 
     if (knowledgeDataset.rows.length === 0) {
-      return inputData;
+      return {};
     }
 
     return {
-      ...inputData,
       dataset: knowledgeDataset,
       collection: 'knowledge',
     };
   },
 });
 
+const chooseContextStep = createStep({
+  id: 'choose-context',
+  inputSchema: z.object({
+    'fetch-records': z.object({
+      plan: taskPlanSchema,
+      prompt: z.string(),
+      dataset: datasetSchema,
+      collection: z.string().optional(),
+    }),
+    'retrieve-context': z.object({
+      dataset: datasetSchema.optional(),
+      collection: z.string().optional(),
+    }),
+  }),
+  outputSchema: fetchStep.outputSchema,
+  execute: async ({ inputData }) => {
+    const retrieved = inputData['retrieve-context'];
+
+    if (retrieved.dataset) {
+      return {
+        ...inputData['fetch-records'],
+        dataset: retrieved.dataset,
+        collection: retrieved.collection,
+      };
+    }
+
+    return inputData['fetch-records'];
+  },
+});
+
 const summarizeStep = createStep({
   id: 'summarize',
-  inputSchema: enrichStep.outputSchema,
+  inputSchema: chooseContextStep.outputSchema,
   outputSchema: z.object({
     summary: z.string(),
     recordLinks: z.array(z.object({ collection: z.string(), id: z.string(), label: z.string() })),
@@ -118,7 +152,7 @@ export const generalQuestionWorkflow = createWorkflow({
   outputSchema: summarizeStep.outputSchema,
 })
   .then(planStep)
-  .then(fetchStep)
-  .then(enrichStep)
+  .parallel([fetchStep, enrichStep])
+  .then(chooseContextStep)
   .then(summarizeStep)
   .commit();

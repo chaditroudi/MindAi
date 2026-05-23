@@ -1,253 +1,32 @@
 # Setup and Operations
 
-## Prerequisites
-
-- Node.js 20.9 or newer
-- npm
-- MongoDB 7+ locally, or Docker Desktop for the included container setup
-- An OpenRouter API key
-
-## Environment variables
+## Environment
 
 Copy `.env.example` to `.env`.
 
-```powershell
-copy .env.example .env
-```
+Core settings:
 
-### Model provider
+- `LLM_PROVIDER=ollama`
+- `OLLAMA_BASE_URL=http://127.0.0.1:11434/v1`
+- `OLLAMA_MODEL=gpt-oss:20b`
+- `MONGODB_URI=mongodb://127.0.0.1:27017/mind_platform`
+- `MONGODB_DB=mind_platform`
 
-- `OPENROUTER_API_KEY`
-- `OPENROUTER_MODEL`
-- `OPENROUTER_EMBEDDING_MODEL`
-- `OPENROUTER_SUPERVISOR_MODEL`
-- `OPENROUTER_MONGODB_MODEL`
-- `OPENROUTER_SEARCH_MODEL`
-- `OPENROUTER_WRITER_MODEL`
-- `OPENROUTER_CHART_MODEL`
-- `OPENROUTER_SITE_URL`
-- `OPENROUTER_APP_NAME`
-
-Defaults:
-
-- provider: `openrouter`
-- model: `openai/gpt-4.1-mini`
-
-OpenRouter default:
-
-```env
-OPENROUTER_MODEL=openai/gpt-4.1-mini
-OPENROUTER_EMBEDDING_MODEL=openai/text-embedding-3-small
-OPENROUTER_API_KEY=your_key_here
-OPENROUTER_SITE_URL=http://localhost:3000
-OPENROUTER_APP_NAME=Mind Viz Agents
-```
-
-### MongoDB
-
-- `MONGODB_URI`
-- `MONGODB_DB`
-
-Defaults:
-
-```env
-MONGODB_URI=mongodb://localhost:27017
-MONGODB_DB=mind_platform
-```
-
-### Search
-
-- `SEARCH_PROVIDER`
-- `TAVILY_API_KEY`
-- `BRAVE_API_KEY`
-- `KNOWLEDGE_COLLECTION`
-- `KNOWLEDGE_TENANT_ID`
-- `KNOWLEDGE_SHARED_TENANT_ID`
-
-Current supported provider modes in code:
-
-- `tavily`
-- `brave`
-
-Important:
-
-Public web enrichment is disabled until you explicitly set `SEARCH_PROVIDER` and the matching API key.
-Internal semantic retrieval stores embedded chunks in MongoDB using `KNOWLEDGE_COLLECTION` and the configured knowledge tenant id.
-
-### Server and local tooling
-
-- `PORT`
-- `NODE_ENV`
-- `SMOKE_BASE_URL`
-- `MASTRA_TELEMETRY_DISABLED`
-
-## Local setup paths
-
-### Option 1: Windows helper script
-
-PowerShell:
-
-```powershell
-.\setup.ps1
-```
-
-CMD:
-
-```cmd
-setup.cmd
-```
-
-What the helper does:
-
-- checks for Node.js
-- creates `.env` if needed
-- installs npm dependencies
-- optionally starts Docker services
-- optionally seeds sample data
-
-### Option 2: Manual setup
+## Commands
 
 ```powershell
 npm install
-copy .env.example .env
 npm run db:up
+npm run db:wait
 npm run seed
 npm run dev
 ```
 
-Then open:
+MongoDB must be running and seeded. The app does not fall back to local sample files.
 
-- `http://localhost:3000`
-
-## Docker stack
-
-`docker-compose.yml` starts:
-
-- `mongo` on port `27017`
-- `mongo-express` on port `8081`
-
-Useful scripts:
-
-- `npm run db:up`
-- `npm run db:down`
-- `npm run db:reset`
-
-`db:reset` will:
-
-1. stop and remove the Docker volume
-2. restart MongoDB
-3. wait briefly
-4. reseed sample data
-
-## Application scripts
-
-| Script | Purpose |
-| --- | --- |
-| `npm run dev` | Run the Express server with `tsx watch` |
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run the compiled server |
-| `npm run mastra:dev` | Start Mastra's dev environment |
-| `npm run typecheck` | Run TypeScript checks without emit |
-| `npm run knowledge:index` | Build the Mongo-backed semantic knowledge index with OpenRouter embeddings |
-| `npm run seed` | Insert sample blueprints and sample data |
-| `npm run smoke` | Exercise the three API endpoints against a running server |
-| `npm run db:up` | Start Docker services |
-| `npm run db:down` | Stop Docker services |
-| `npm run db:wait` | Simple wait helper used by reset flow |
-| `npm run db:reset` | Recreate local DB and reseed |
-
-## Runbook for local development
-
-### Start from scratch
+## Docker MongoDB
 
 ```powershell
-npm install
-copy .env.example .env
 npm run db:up
 npm run seed
-npm run dev
 ```
-
-### Rebuild the DB state
-
-```powershell
-npm run db:reset
-```
-
-### Verify the service manually
-
-Use any of the following:
-
-- open `http://localhost:3000`
-- call `GET /health`
-- run `npm run smoke`
-- use [requests.http](../requests.http)
-
-## Deployment considerations
-
-This repo is currently structured as an application service and library entrypoint.
-
-### What is production-ready in shape
-
-- clear API surface
-- isolated workflow orchestration
-- deterministic query and chart tool layers
-- environment-based provider selection
-
-### What still needs production hardening
-
-- authenticated scope derivation instead of request-body scope
-- provider credentials and quotas for production-grade web enrichment
-- a dedicated vector database if you outgrow the Mongo-backed semantic corpus
-- structured logging and tracing
-- test coverage
-- rate limiting and request timeout strategy
-- deployment-specific secrets management
-
-## Operational behavior
-
-### MongoDB connection lifecycle
-
-The service uses a singleton client from `src/db/mongo.client.ts`. The client is created lazily when a query path first needs it.
-
-### Blueprint loading
-
-Blueprints are read from MongoDB first and cached in memory. If that load fails or returns no documents, the repository falls back to `samples/blueprints.json`.
-
-### Public demo page
-
-The server exposes the contents of `public/` as static assets. The root URL serves the demo interface automatically.
-In the review UI, dashboard mode renders only the chart surface, while report and inquiry keep the narrative/text panel visible.
-
-### Demo UI behavior for reviewers
-
-The demo UI is in `public/index.html`.
-
-It has:
-
-- endpoint tabs for dashboard, report, and inquiry
-- a prompt input and run button
-- endpoint-specific example prompts
-- a result area for chart/text/error output
-- an audit panel that prints the backend `audit` object
-- client-side loading/progress states
-
-When the user clicks `تشغيل`, the UI:
-
-1. disables the prompt, tabs, examples, and run button
-2. shows elapsed time
-3. shows estimated workflow stages
-4. sends `fetch(currentEndpoint, { prompt, scope })`
-5. renders the response based on `data.intent`
-6. prints `data.audit` in the audit panel
-7. re-enables controls
-
-The progress UI is estimated. The backend currently returns only a final response, not live step events.
-
-For demos, the audit panel is the fastest way to show what happened:
-
-- dashboard shows `plan`, `pipeline`, and `elapsedMs`
-- report shows `plan` and `elapsedMs`
-- inquiry shows `plan` and `elapsedMs`
-
-If report/inquiry later add `audit.pipeline`, the existing UI will show it automatically because it prints the full audit JSON.

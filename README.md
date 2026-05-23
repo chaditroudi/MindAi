@@ -1,62 +1,47 @@
 # Mind Viz Agents
 
-Mind Viz Agents is a Node.js and TypeScript service for **Mind Platform**, a configurable enterprise platform for data management, workflow automation, reporting, and analytics.
+Mind Viz Agents is a Node.js and TypeScript analytics service for Mind Platform.
 
-In this demo, the app is seeded as a **municipal data-visualization system for municipalities in Qatar**. It reflects the way Mind Platform lets organizations define their own `Blueprints`, store operational records in `Data Stores`, manage workflows, and generate dashboards and reports through natural-language requests instead of hand-written aggregation pipelines.
+The platform model is intentionally simple:
 
-The service turns prompts into:
+```text
+Platform
+  -> dataStores[]
+    -> name
+    -> collection
+    -> description
+    -> fields[]
+      -> name
+      -> description
+      -> type
+```
 
-- summaries and record links for inquiry-style questions
-- structured report sections for analysis requests
-- render-ready ECharts configurations for dashboard widgets
+The app turns client prompts into one of three outputs:
 
-The system is built on Mastra workflows and four specialized agents:
+- `POST /api/inquiry`: summary plus record links
+- `POST /api/report`: report sections with optional charts
+- `POST /api/dashboard`: one chart
 
-- `Supervisor Agent` plans the job
-- `MongoDB Agent` turns the plan into a safe aggregation pipeline
-- `Search Agent` enriches with external or internal context when needed
-- `Chart Agent` converts normalized data into ECharts output
+## Runtime Flow
 
-This repository also includes:
+```text
+Client prompt
+  -> Express API
+  -> Supervisor Agent plans intent/data store/fields
+  -> MongoDB Agent builds and executes aggregation
+  -> Writer or Chart Agent/runtime formats the response
+  -> JSON response
+```
 
-- an Express API server
-- a static demo UI in `public/`
-- sample blueprints and seeded MongoDB data
-- Windows setup helpers
-- smoke-test scripts for the three main endpoints
+Prompt suggestions in the UI are generated from the current data stores and fields through `/api/meta`; they are not static examples.
 
-## Mind Platform context
-
-Mind Platform is designed for organizations that need to:
-
-- organize operational data in a structured way
-- manage users, memberships, groups, org units, and permissions
-- configure workflows and approval processes
-- create dashboards and reports for decision-making
-- automate reminders, triggers, and notifications
-- expose selected data securely to external consumers or integrations
-
-In simple terms, this project is not just a website. It is closer to a low-code internal operations and analytics platform.
-
-## Documentation map
-
-- [Full application documentation](docs/full-application-documentation.md)
-- [System architecture](docs/architecture.md)
-- [API reference](docs/api-reference.md)
-- [Data model and schemas](docs/data-model.md)
-- [Setup and operations](docs/setup-and-operations.md)
-- [Development and extension guide](docs/development-and-extension.md)
-- [Troubleshooting and known limitations](docs/troubleshooting.md)
-
-## Quick start
+## Quick Start
 
 Prerequisites:
 
 - Node.js 20.9+
-- MongoDB, or Docker Desktop for the bundled local MongoDB stack
-- An OpenRouter API key
-
-Install and run:
+- Docker Desktop for local MongoDB, or MongoDB on `127.0.0.1:27017`
+- Ollama or an Ollama-compatible OpenAI-style endpoint
 
 ```powershell
 copy .env.example .env
@@ -66,60 +51,32 @@ npm run seed
 npm run dev
 ```
 
-Then open `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-The repo uses OpenRouter with a single LLM path. The default template points to:
+Default model settings:
 
-- model: `openai/gpt-4.1-mini`
-- embedding model: `openai/text-embedding-3-small`
+- `LLM_PROVIDER=ollama`
+- `OLLAMA_BASE_URL=http://127.0.0.1:11434/v1`
+- `OLLAMA_MODEL=gpt-oss:20b`
 
-The seeded demo uses Qatar municipality data examples such as:
+## Data
 
-- service requests by municipality
-- inspection scores by zone
-- open permits by municipality
-- project budget by municipality
+Datastore metadata lives in:
 
-## System at a glance
+- MongoDB collection: `data_stores`
 
-```text
-Client prompt
-   ->
-Express endpoint
-   ->
-Mastra workflow
-   ->
-Supervisor plan
-   ->
-MongoDB data fetch
-   -> optional Search enrichment
-   ->
-Chart generation or summary/report writing
-   ->
-JSON response for the caller
-```
+Seeded record collections:
 
-The three public endpoints are:
+- `service_requests`
+- `inspections`
+- `permits`
+- `projects`
 
-- `POST /api/inquiry`
-- `POST /api/report`
-- `POST /api/dashboard`
+## Documentation
 
-There is also a health endpoint:
-
-- `GET /health`
-
-## Current implementation status
-
-The repository is functional as a local demo and integration base, but some parts are intentionally incomplete:
-
-- web enrichment requires a real configured provider such as Tavily or Brave
-- internal knowledge retrieval now uses OpenRouter embeddings plus a Mongo-backed semantic index over the exported knowledge corpus
-- the report workflow now uses the dedicated writer agent for report sections
-- the dashboard workflow merges enrichment inline instead of using the dedicated merge tool
-- report and inquiry audits expose the generated plan, while dashboard audit also exposes the executed MongoDB pipeline
-- there are no automated tests checked into `tests/` yet
-
-Those details are documented in [Troubleshooting and known limitations](docs/troubleshooting.md).
-"# TaskAi" 
-# TaskAi
+- [Architecture](docs/architecture.md)
+- [API Reference](docs/api-reference.md)
+- [Data Model](docs/data-model.md)
+- [Setup and Operations](docs/setup-and-operations.md)
+- [Development Guide](docs/development-and-extension.md)
+- [Troubleshooting](docs/troubleshooting.md)

@@ -1,7 +1,7 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { log } from '../../observability/log.js';
-import { permissionScopeSchema } from '../schemas/blueprint.js';
+import { permissionScopeSchema } from '../schemas/datastore.js';
 import { taskPlanSchema, datasetSchema } from '../schemas/intent.js';
 import { chartResultSchema } from '../schemas/chart.js';
 import { mergeDatasets } from '../tools/merge-tools.js';
@@ -10,6 +10,8 @@ import { runMongoDatasetQuery } from '../runtime/mongodb-runtime.js';
 import { runSearchEnrichment } from '../runtime/search-runtime.js';
 import { runSupervisorPlan } from '../runtime/supervisor-runtime.js';
 
+const themeSchema = z.enum(['light', 'dark', 'brand']).default('light');
+
 const planStep = createStep({
   id: 'plan',
   inputSchema: z.object({
@@ -17,12 +19,14 @@ const planStep = createStep({
     intent: z.enum(['general_question', 'report', 'dashboard']).optional(),
     scope: permissionScopeSchema,
     topic: z.string().optional(),
-    blueprintId: z.string().optional(),
+    dataStoreName: z.string().optional(),
+    theme: themeSchema,
   }),
   outputSchema: z.object({
     plan: taskPlanSchema,
     scope: permissionScopeSchema,
     prompt: z.string(),
+    theme: themeSchema,
   }),
   execute: async ({ inputData, mastra }) => {
     return {
@@ -32,10 +36,11 @@ const planStep = createStep({
         intent: inputData.intent ?? 'dashboard',
         scope: inputData.scope,
         topic: inputData.topic,
-        blueprintId: inputData.blueprintId,
+        dataStoreName: inputData.dataStoreName,
       }),
       scope: inputData.scope,
       prompt: inputData.prompt,
+      theme: inputData.theme,
     };
   },
 });
@@ -46,11 +51,13 @@ const queryStep = createStep({
     plan: taskPlanSchema,
     scope: permissionScopeSchema,
     prompt: z.string(),
+    theme: themeSchema,
   }),
   outputSchema: z.object({
     plan: taskPlanSchema,
     scope: permissionScopeSchema,
     prompt: z.string(),
+    theme: themeSchema,
     primary: datasetSchema,
     executedPipeline: z.array(z.record(z.unknown())),
   }),
@@ -58,7 +65,7 @@ const queryStep = createStep({
     const queryResult = await runMongoDatasetQuery({
       plan: inputData.plan,
       scope: inputData.scope,
-      mastra,
+      mastra: mastra!,
     });
     return {
       ...inputData,
@@ -68,33 +75,59 @@ const queryStep = createStep({
   },
 });
 
-const enrichStep = createStep({
-  id: 'enrich',
+const enrichmentStep = createStep({
+  id: 'enrichment',
+  inputSchema: planStep.outputSchema,
+  outputSchema: z.object({
+    enrichment: datasetSchema.optional(),
+  }),
+  execute: async ({ inputData, mastra }) => {
+    const { plan } = inputData;
+    if (!plan.needsEnrichment || !plan.enrichment) {
+      return {};
+    }
+
+    return {
+      enrichment: await runSearchEnrichment({
+        mastra: mastra!,
+        enrichment: plan.enrichment,
+        joinKey: plan.query.dimensions?.[0],
+      }),
+    };
+  },
+});
+
+const mergeStep = createStep({
+  id: 'merge',
   inputSchema: z.object({
-    plan: taskPlanSchema,
-    scope: permissionScopeSchema,
-    prompt: z.string(),
-    primary: datasetSchema,
-    executedPipeline: z.array(z.record(z.unknown())),
+    query: z.object({
+      plan: taskPlanSchema,
+      scope: permissionScopeSchema,
+      prompt: z.string(),
+      theme: themeSchema,
+      primary: datasetSchema,
+      executedPipeline: z.array(z.record(z.unknown())),
+    }),
+    enrichment: z.object({
+      enrichment: datasetSchema.optional(),
+    }),
   }),
   outputSchema: z.object({
     plan: taskPlanSchema,
     prompt: z.string(),
+    theme: themeSchema,
     dataset: datasetSchema,
     executedPipeline: z.array(z.record(z.unknown())),
   }),
-  execute: async ({ inputData, mastra }) => {
-    const { plan, primary } = inputData;
-    if (!plan.needsEnrichment || !plan.enrichment) {
-      return { plan, prompt: inputData.prompt, dataset: primary, executedPipeline: inputData.executedPipeline };
+  execute: async ({ inputData }) => {
+    const { plan, primary, prompt, theme, executedPipeline } = inputData.query;
+    const enrichment = inputData.enrichment.enrichment;
+
+    if (!enrichment) {
+      return { plan, prompt, theme, dataset: primary, executedPipeline };
     }
 
     const joinKey = plan.query.dimensions?.[0] ?? Object.keys(primary.schema)[0];
-    const enrichment = await runSearchEnrichment({
-      mastra: mastra!,
-      enrichment: plan.enrichment,
-      joinKey,
-    });
     const merged = mergeDatasets({
       primary,
       secondary: enrichment,
@@ -109,7 +142,7 @@ const enrichStep = createStep({
       secondaryRowCount: enrichment.rows.length,
       mergedRowCount: merged.rows.length,
     });
-    return { plan, prompt: inputData.prompt, dataset: merged, executedPipeline: inputData.executedPipeline };
+    return { plan, prompt, theme, dataset: merged, executedPipeline };
   },
 });
 
@@ -118,6 +151,7 @@ const chartStep = createStep({
   inputSchema: z.object({
     plan: taskPlanSchema,
     prompt: z.string(),
+    theme: themeSchema,
     dataset: datasetSchema,
     executedPipeline: z.array(z.record(z.unknown())),
   }),
@@ -129,11 +163,11 @@ const chartStep = createStep({
   }),
   execute: async ({ inputData, mastra }) => {
     const chart = await runChartRuntime({
-      mastra: mastra!,
       dataset: inputData.dataset,
       intentHint: inputData.plan.chartHint,
       title: inputData.prompt,
-      theme: 'light',
+      theme: inputData.theme,
+      mastra: mastra!,
     });
     return {
       chart,
@@ -150,7 +184,7 @@ export const dashboardWorkflow = createWorkflow({
   outputSchema: chartStep.outputSchema,
 })
   .then(planStep)
-  .then(queryStep)
-  .then(enrichStep)
+  .parallel([queryStep, enrichmentStep])
+  .then(mergeStep)
   .then(chartStep)
   .commit();

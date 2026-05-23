@@ -1,6 +1,6 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
-import { permissionScopeSchema } from '../schemas/blueprint.js';
+import { permissionScopeSchema } from '../schemas/datastore.js';
 import { taskPlanSchema, datasetSchema } from '../schemas/intent.js';
 import { chartResultSchema } from '../schemas/chart.js';
 import { runChartRuntime } from '../runtime/chart-runtime.js';
@@ -15,7 +15,7 @@ const planStep = createStep({
     prompt: z.string(),
     scope: permissionScopeSchema,
     topic: z.string().optional(),
-    blueprintId: z.string().optional(),
+    dataStoreName: z.string().optional(),
   }),
   outputSchema: z.object({
     plan: taskPlanSchema,
@@ -30,7 +30,7 @@ const planStep = createStep({
         intent: 'report',
         scope: inputData.scope,
         topic: inputData.topic,
-        blueprintId: inputData.blueprintId,
+        dataStoreName: inputData.dataStoreName,
       }),
       scope: inputData.scope,
       prompt: inputData.prompt,
@@ -38,9 +38,65 @@ const planStep = createStep({
   },
 });
 
+const queryStep = createStep({
+  id: 'query',
+  inputSchema: planStep.outputSchema,
+  outputSchema: z.object({
+    plan: taskPlanSchema,
+    scope: permissionScopeSchema,
+    prompt: z.string(),
+    dataset: datasetSchema,
+  }),
+  execute: async ({ inputData, mastra }) => {
+    const queryResult = await runMongoDatasetQuery({
+      plan: inputData.plan,
+      scope: inputData.scope,
+      mastra: mastra!,
+    });
+
+    return {
+      plan: inputData.plan,
+      scope: inputData.scope,
+      prompt: inputData.prompt,
+      dataset: queryResult.dataset,
+    };
+  },
+});
+
+const enrichmentStep = createStep({
+  id: 'enrichment',
+  inputSchema: planStep.outputSchema,
+  outputSchema: z.object({
+    enrichment: datasetSchema.optional(),
+  }),
+  execute: async ({ inputData, mastra }) => {
+    if (!inputData.plan.needsEnrichment || !inputData.plan.enrichment) {
+      return {};
+    }
+
+    return {
+      enrichment: await runSearchEnrichment({
+        mastra: mastra!,
+        enrichment: inputData.plan.enrichment,
+        joinKey: inputData.plan.query.dimensions?.[0],
+      }),
+    };
+  },
+});
+
 const gatherStep = createStep({
   id: 'gather',
-  inputSchema: planStep.outputSchema,
+  inputSchema: z.object({
+    query: z.object({
+      plan: taskPlanSchema,
+      scope: permissionScopeSchema,
+      prompt: z.string(),
+      dataset: datasetSchema,
+    }),
+    enrichment: z.object({
+      enrichment: datasetSchema.optional(),
+    }),
+  }),
   outputSchema: z.object({
     plan: taskPlanSchema,
     scope: permissionScopeSchema,
@@ -48,37 +104,19 @@ const gatherStep = createStep({
     dataset: datasetSchema,
     enrichment: datasetSchema.optional(),
   }),
-  execute: async ({ inputData, mastra }) => {
-    const queryResult = await runMongoDatasetQuery({
-      plan: inputData.plan,
-      scope: inputData.scope,
-      mastra,
-    });
-    let enrichment: z.infer<typeof datasetSchema> | undefined;
-    if (inputData.plan.needsEnrichment && inputData.plan.enrichment) {
-      enrichment = await runSearchEnrichment({
-        mastra: mastra!,
-        enrichment: inputData.plan.enrichment,
-        joinKey: inputData.plan.query.dimensions?.[0],
-      });
-    }
-
+  execute: async ({ inputData }) => {
     return {
-      plan: inputData.plan,
-      scope: inputData.scope,
-      prompt: inputData.prompt,
-      dataset: queryResult.dataset,
-      enrichment,
+      ...inputData.query,
+      enrichment: inputData.enrichment.enrichment,
     };
   },
 });
 
-const writeStep = createStep({
+const writeReportStep = createStep({
   id: 'write-report',
   inputSchema: gatherStep.outputSchema,
   outputSchema: z.object({
     reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
-    charts: z.array(chartResultSchema).optional(),
     plan: taskPlanSchema,
   }),
   execute: async ({ inputData, mastra }) => {
@@ -89,29 +127,68 @@ const writeStep = createStep({
       enrichment: inputData.enrichment,
     });
 
-    let charts: z.infer<typeof chartResultSchema>[] | undefined;
+    return { reportSections: writePayload.reportSections, plan: inputData.plan };
+  },
+});
+
+const chartStep = createStep({
+  id: 'chart',
+  inputSchema: gatherStep.outputSchema,
+  outputSchema: z.object({
+    charts: z.array(chartResultSchema).optional(),
+  }),
+  execute: async ({ inputData, mastra }) => {
     if (inputData.plan.needsChart && inputData.dataset.rows.length > 0) {
-      charts = [
-        await runChartRuntime({
-          mastra: mastra!,
-          dataset: inputData.dataset,
-          intentHint: inputData.plan.chartHint,
-          title: inputData.prompt,
-          theme: 'light',
-        }),
-      ];
+      return {
+        charts: [
+          await runChartRuntime({
+            dataset: inputData.dataset,
+            intentHint: inputData.plan.chartHint,
+            title: inputData.prompt,
+            theme: 'light',
+            mastra: mastra!,
+          }),
+        ],
+      };
     }
 
-    return { reportSections: writePayload.reportSections, charts, plan: inputData.plan };
+    return {};
+  },
+});
+
+const finalizeStep = createStep({
+  id: 'finalize-report',
+  inputSchema: z.object({
+    'write-report': z.object({
+      reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
+      plan: taskPlanSchema,
+    }),
+    chart: z.object({
+      charts: z.array(chartResultSchema).optional(),
+    }),
+  }),
+  outputSchema: z.object({
+    reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
+    charts: z.array(chartResultSchema).optional(),
+    plan: taskPlanSchema,
+  }),
+  execute: async ({ inputData }) => {
+    return {
+      reportSections: inputData['write-report'].reportSections,
+      charts: inputData.chart.charts,
+      plan: inputData['write-report'].plan,
+    };
   },
 });
 
 export const reportWorkflow = createWorkflow({
   id: 'report',
   inputSchema: planStep.inputSchema,
-  outputSchema: writeStep.outputSchema,
+  outputSchema: finalizeStep.outputSchema,
 })
   .then(planStep)
+  .parallel([queryStep, enrichmentStep])
   .then(gatherStep)
-  .then(writeStep)
+  .parallel([writeReportStep, chartStep])
+  .then(finalizeStep)
   .commit();

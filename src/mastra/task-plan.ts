@@ -1,49 +1,49 @@
 import { z } from 'zod';
 import { taskPlanSchema } from './schemas/intent.js';
-import type { Blueprint, DataStore } from '../types/index.js';
+import type { DataStore } from '../types/index.js';
 
 type TaskPlan = z.infer<typeof taskPlanSchema>;
 
 interface FinalizeTaskPlanInput {
   plan: TaskPlan;
   prompt: string;
-  availableBlueprints: Blueprint[];
+  availableDataStores: DataStore[];
   forcedIntent?: TaskPlan['intent'];
 }
 
 export function finalizeTaskPlan({
   plan,
   prompt,
-  availableBlueprints,
+  availableDataStores,
   forcedIntent,
 }: FinalizeTaskPlanInput): TaskPlan {
   const query: TaskPlan['query'] = { ...plan.query };
 
-  const blueprint = resolveBlueprint(availableBlueprints, query.blueprintId, query.dataStoreName);
-  const dataStore = blueprint
-    ? resolveDataStore(blueprint, query.dataStoreName)
-    : resolveDataStoreAcrossBlueprints(availableBlueprints, query.dataStoreName);
-
-  if (blueprint) {
-    query.blueprintId = blueprint.id;
-  } else if (dataStore) {
-    query.blueprintId = availableBlueprints.find((bp) =>
-      bp.dataStores.some((candidate) => candidate.name === dataStore.name),
-    )?.id;
-  }
+  const dataStore = resolveDataStore(availableDataStores, query.dataStoreName);
 
   if (dataStore) {
     query.dataStoreName = dataStore.name;
     query.metric = normalizeFieldName(query.metric, dataStore, ['measure']);
+    query.metrics = normalizeFieldList(query.metrics, dataStore, ['measure']);
     query.dimensions = resolvePromptDimensions({
       prompt,
       current: normalizeFieldList(query.dimensions, dataStore, ['dimension', 'temporal']),
       dataStore,
     });
-    query.filters = mergeFilters(normalizeFilters(query.filters, dataStore),
-     inferPromptFilters(prompt, dataStore));
+    query.filters = mergeFilters(
+      normalizeFilters(query.filters, dataStore),
+      inferPromptFilters(prompt, dataStore),
+    );
     query.sort = normalizeSort(query.sort, dataStore);
     query.timeRange = normalizeTimeRange(query.timeRange, prompt, dataStore);
+    query.dimensions = ensureTrendDimension({
+      dimensions: query.dimensions,
+      chartHint: inferChartHint(prompt, plan.chartHint, query, dataStore),
+      timeRange: query.timeRange,
+      dataStore,
+    });
+    query.topN = query.topN ?? inferTopN(prompt);
+    query.percentOf = query.percentOf ?? inferPercentOf(prompt, query.metric);
   }
 
   if (query.aggregation === 'count') {
@@ -53,56 +53,37 @@ export function finalizeTaskPlan({
   const finalizedQuery: TaskPlan['query'] = {
     ...query,
     dimensions: query.dimensions && query.dimensions.length > 0 ? query.dimensions : undefined,
+    metrics: query.metrics && query.metrics.length > 0 ? query.metrics : undefined,
     filters: query.filters && query.filters.length > 0 ? query.filters : undefined,
     sort: query.sort && query.sort.length > 0 ? query.sort : undefined,
   };
+
+  const chartHint = normalizeChartHint(
+    inferChartHint(prompt, plan.chartHint, query, dataStore),
+    query,
+    dataStore,
+  );
 
   return {
     ...plan,
     intent: forcedIntent ?? plan.intent,
     needsChart: forcedIntent === 'dashboard' ? true : plan.needsChart,
-    chartHint: normalizeChartHint(plan.chartHint, query, dataStore),
+    chartHint,
     query: finalizedQuery,
   } as TaskPlan;
 }
 
-function resolveBlueprint(
-  blueprints: Blueprint[],
-  blueprintId: string | undefined,
+function resolveDataStore(
+  dataStores: DataStore[],
   dataStoreName: string | undefined,
 ) {
-  const normalizedId = normalizeToken(blueprintId);
-  if (normalizedId) {
-    const direct = blueprints.find(
-      (bp) => normalizeToken(bp.id) === normalizedId || normalizeToken(bp.name) === normalizedId,
-    );
-    if (direct) return direct;
-  }
-
-  const normalizedStore = normalizeToken(dataStoreName);
-  if (normalizedStore) {
-    return blueprints.find((bp) =>
-      bp.dataStores.some((ds) => normalizeToken(ds.name) === normalizedStore),
-    );
-  }
-
-  return undefined;
-}
-
-function resolveDataStore(blueprint: Blueprint, dataStoreName: string | undefined) {
   const normalizedName = normalizeToken(dataStoreName);
-  if (!normalizedName) return undefined;
-  return blueprint.dataStores.find((ds) => normalizeToken(ds.name) === normalizedName);
-}
 
-function resolveDataStoreAcrossBlueprints(blueprints: Blueprint[], dataStoreName: string | undefined) {
-  const normalizedName = normalizeToken(dataStoreName);
   if (!normalizedName) return undefined;
-  for (const blueprint of blueprints) {
-    const match = blueprint.dataStores.find((ds) => normalizeToken(ds.name) === normalizedName);
-    if (match) return match;
-  }
-  return undefined;
+
+  return dataStores.find((ds) => {
+    return normalizeToken(ds.name) === normalizedName || normalizeToken(ds.collection) === normalizedName;
+  });
 }
 
 function normalizeFieldList(
@@ -445,22 +426,93 @@ function localizeEnumValue(rawValue: string) {
   return synonyms[normalized] ?? rawValue;
 }
 
+function inferTopN(prompt: string): number | undefined {
+  const lower = prompt.toLowerCase();
+  const match =
+    lower.match(/\btop\s+(\d+)\b/i) ??
+    lower.match(/\b(\d+)\s+(?:أعلى|أكثر|الأوائل|الأعلى)\b/) ??
+    lower.match(/(?:أعلى|أكثر|الأعلى)\s+(\d+)/);
+  if (match) {
+    const n = Number(match[1]);
+    if (n > 0 && n <= 100) return n;
+  }
+  return undefined;
+}
+
+function inferPercentOf(prompt: string, metric: string | undefined): string | undefined {
+  if (!metric) return undefined;
+  const lower = prompt.toLowerCase();
+  const asksPercent =
+    /\b(percent|percentage|share|proportion|نسبة|كنسبة|حصة)\b/i.test(lower);
+  return asksPercent ? metric : undefined;
+}
+
 function normalizeChartHint(
   chartHint: TaskPlan['chartHint'],
   query: TaskPlan['query'],
   dataStore: DataStore | undefined,
 ): TaskPlan['chartHint'] {
+  if (query.topN) return 'ranking';
+  if (query.percentOf) return 'part_of_whole';
   if (chartHint !== 'trend' || !dataStore) return chartHint;
 
   const temporalFields = new Set(
     dataStore.fields.filter((field) => isTemporalField(field)).map((field) => field.name),
   );
   const dimensions = query.dimensions ?? [];
-  if (dimensions.some((dimension) => temporalFields.has(dimension))) {
-    return 'trend';
+  if (dimensions.some((dimension) => temporalFields.has(dimension))) return 'trend';
+  return query.timeRange?.field && temporalFields.has(query.timeRange.field) ? 'trend' : 'compare';
+}
+
+function inferChartHint(
+  prompt: string,
+  chartHint: TaskPlan['chartHint'],
+  query: TaskPlan['query'],
+  dataStore: DataStore | undefined,
+): TaskPlan['chartHint'] {
+  if (chartHint) return chartHint;
+
+  const lower = prompt.toLowerCase();
+
+  if (query.topN ?? inferTopN(prompt)) return 'ranking';
+
+  if (/\b(percent|percentage|share|proportion|نسبة|كنسبة|حصة)\b/i.test(lower)) {
+    return 'part_of_whole';
   }
 
-  return 'compare';
+  if (!dataStore?.fields.some((field) => isTemporalField(field))) return chartHint;
+
+  const asksForTrend =
+    /\b(trend|over time|timeline|daily|weekly|monthly|yearly|last\s+\d+\s+days?|this month|this year|ytd)\b/i.test(lower) ||
+    /(اتجاه|زمني|يومي|يومياً|اسبوعي|أسبوعي|شهري|سنوياً|سنوي|آخر\s+\d+\s+يو|هذا الشهر|هذا العام)/i.test(lower);
+
+  if (asksForTrend || query.timeRange) return 'trend';
+  return chartHint;
+}
+
+function ensureTrendDimension({
+  dimensions,
+  chartHint,
+  timeRange,
+  dataStore,
+}: {
+  dimensions: string[] | undefined;
+  chartHint: TaskPlan['chartHint'];
+  timeRange: TaskPlan['query']['timeRange'];
+  dataStore: DataStore;
+}) {
+  if (chartHint !== 'trend') return dimensions;
+
+  const temporalField =
+    (timeRange?.field && dataStore.fields.some((field) => field.name === timeRange.field && isTemporalField(field))
+      ? timeRange.field
+      : undefined) ??
+    dataStore.fields.find((field) => isTemporalField(field))?.name;
+
+  if (!temporalField) return dimensions;
+  const current = dimensions ?? [];
+  if (current.includes(temporalField)) return current;
+  return [temporalField, ...current];
 }
 
 function asSupportedFieldRole(

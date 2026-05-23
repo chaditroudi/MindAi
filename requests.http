@@ -15,7 +15,7 @@ Content-Type: application/json
   "scope": {
     "userId": "u_demo",
     "tenantId": "t_mind_qatar",
-    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+    "allowedDataStores": ["ServiceRequests", "Inspections", "Permits", "Projects"]
   }
 }
 
@@ -25,11 +25,11 @@ Content-Type: application/json
 
 {
   "prompt": "analyze service request volume by municipality over the last 90 days and surface key trends",
-  "blueprintId": "bp_municipal_operations",
+  "dataStoreName": "ServiceRequests",
   "scope": {
     "userId": "u_demo",
     "tenantId": "t_mind_qatar",
-    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+    "allowedDataStores": ["ServiceRequests", "Inspections", "Permits", "Projects"]
   }
 }
 
@@ -39,11 +39,11 @@ Content-Type: application/json
 
 {
   "prompt": "service request count by municipality this month",
-  "blueprintId": "bp_municipal_operations",
+  "dataStoreName": "ServiceRequests",
   "scope": {
     "userId": "u_demo",
     "tenantId": "t_mind_qatar",
-    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+    "allowedDataStores": ["ServiceRequests", "Inspections", "Permits", "Projects"]
   }
 }
 
@@ -53,11 +53,11 @@ Content-Type: application/json
 
 {
   "prompt": "daily service request count over the last 30 days",
-  "blueprintId": "bp_municipal_operations",
+  "dataStoreName": "ServiceRequests",
   "scope": {
     "userId": "u_demo",
     "tenantId": "t_mind_qatar",
-    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+    "allowedDataStores": ["ServiceRequests", "Inspections", "Permits", "Projects"]
   }
 }
 
@@ -67,11 +67,11 @@ Content-Type: application/json
 
 {
   "prompt": "inspection score by municipality",
-  "blueprintId": "bp_municipal_operations",
+  "dataStoreName": "Inspections",
   "scope": {
     "userId": "u_demo",
     "tenantId": "t_mind_qatar",
-    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+    "allowedDataStores": ["ServiceRequests", "Inspections", "Permits", "Projects"]
   }
 }
 
@@ -81,10 +81,10 @@ Content-Type: application/json
 
 {
   "prompt": "open permits by municipality",
-  "blueprintId": "bp_urban_planning",
+  "dataStoreName": "Permits",
   "scope": {
     "userId": "u_demo",
     "tenantId": "t_mind_qatar",
-    "allowedBlueprintIds": ["bp_municipal_operations", "bp_urban_planning"]
+    "allowedDataStores": ["ServiceRequests", "Inspections", "Permits", "Projects"]
   }
 }

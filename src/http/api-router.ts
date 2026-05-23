@@ -42,9 +42,14 @@ function normalizeError(error: unknown) {
 
 export const apiRouter = Router();
 
-apiRouter.get('/meta', (_req, res) => {
-  const payload = reviewMetaSchema.parse(analyticsService.getReviewMeta());
-  res.json(payload);
+apiRouter.get('/meta', async (_req, res) => {
+  try {
+    const payload = reviewMetaSchema.parse(await analyticsService.getReviewMeta());
+    res.json(payload);
+  } catch (error) {
+    const normalized = normalizeError(error);
+    res.status(normalized.status).json(normalized.body);
+  }
 });
 
 apiRouter.post('/inquiry', async (req, res) => {

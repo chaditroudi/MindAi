@@ -14,7 +14,7 @@ if errorlevel 1 (
 if not exist .env (
   copy .env.example .env >nul
   echo [+] Created .env from .env.example
-  echo     Edit .env and set ANTHROPIC_API_KEY before running the server.
+  echo     Edit .env and set GROQ_API_KEY before running the server.
 ) else (
   echo [+] .env already exists
 )
@@ -24,14 +24,15 @@ echo Installing npm dependencies...
 call npm install
 if errorlevel 1 exit /b %errorlevel%
 
-where docker >nul 2>&1
-if not errorlevel 1 (
+echo.
+echo Checking local MongoDB connection...
+call npm run db:check
+if errorlevel 1 (
+  echo [!] Start local MongoDB and confirm MONGODB_URI/MONGODB_DB in .env, then run npm run seed.
+) else (
   echo.
-  set /p START="Start MongoDB via Docker? (y/N) "
-  if /i "%START%"=="y" (
-    docker compose up -d
-    timeout /t 5 /nobreak >nul
-    echo Seeding sample data...
+  set /p SEED="Seed sample data into local MongoDB? (y/N) "
+  if /i "%SEED%"=="y" (
     call npm run seed
   )
 )

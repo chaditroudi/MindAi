@@ -25,19 +25,17 @@ if ($nodeMajor -lt 20) {
 }
 Write-Host "✓ Node.js $nodeVersion" -ForegroundColor Green
 
-if (Test-Command "docker") {
-  Write-Host "✓ Docker found" -ForegroundColor Green
-  $hasDocker = $true
+if (-not (Test-Command "mongosh")) {
+  Write-Host "! mongosh was not found. Install MongoDB Shell or make sure MongoDB tools are on PATH." -ForegroundColor Yellow
 } else {
-  Write-Host "! Docker not found. You'll need to point MONGODB_URI at an existing MongoDB instance." -ForegroundColor Yellow
-  $hasDocker = $false
+  Write-Host "✓ mongosh found" -ForegroundColor Green
 }
 
 # 2) .env
 if (-not (Test-Path ".env")) {
   Copy-Item ".env.example" ".env"
   Write-Host "✓ Created .env from .env.example" -ForegroundColor Green
-  Write-Host "  → Edit .env and set ANTHROPIC_API_KEY (or DEFAULT_MODEL_PROVIDER=openai + OPENAI_API_KEY)" -ForegroundColor Yellow
+  Write-Host "  → Edit .env and set GROQ_API_KEY if needed" -ForegroundColor Yellow
 } else {
   Write-Host "✓ .env already exists" -ForegroundColor Green
 }
@@ -48,16 +46,15 @@ Write-Host "Installing npm dependencies…" -ForegroundColor Cyan
 npm install
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-# 4) Start Mongo (optional)
-if ($hasDocker) {
-  Write-Host ""
-  $start = Read-Host "Start MongoDB via Docker? (y/N)"
-  if ($start -eq "y" -or $start -eq "Y") {
-    docker compose up -d
-    Write-Host "Waiting for Mongo to be ready…"
-    Start-Sleep -Seconds 5
-    Write-Host ""
-    Write-Host "Seeding sample data…" -ForegroundColor Cyan
+# 4) Verify local MongoDB
+Write-Host ""
+Write-Host "Checking local MongoDB connection..." -ForegroundColor Cyan
+npm run db:check
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "! Start local MongoDB and confirm MONGODB_URI/MONGODB_DB in .env, then run npm run seed." -ForegroundColor Yellow
+} else {
+  $seed = Read-Host "Seed sample data into local MongoDB? (y/N)"
+  if ($seed -eq "y" -or $seed -eq "Y") {
     npm run seed
   }
 }

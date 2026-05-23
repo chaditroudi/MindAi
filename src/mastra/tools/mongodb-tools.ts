@@ -1,39 +1,41 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { getMongo } from '../../db/mongo.client.js';
-import { blueprintRepo } from '../../db/blueprint.repository.js';
-import { blueprintSchema, dataStoreSchema, permissionScopeSchema } from '../schemas/blueprint.js';
+import { dataStoreRepo } from '../../db/datastore.repository.js';
+import { dataStoreSchema, permissionScopeSchema } from '../schemas/datastore.js';
 import { taskPlanSchema } from '../schemas/intent.js';
 
-export const resolveBlueprintTool = createTool({
-  id: 'resolve-blueprint',
+export const resolveDataStoreTool = createTool({
+  id: 'resolve-data-store',
   description:
-    'Look up a Blueprint by id (or list accessible ones). Returns Data Stores and their typed fields so you know what is queryable.',
+    'Look up accessible Data Stores and their typed fields so you know what is queryable.',
   inputSchema: z.object({
-    blueprintId: z.string().optional(),
-    allowedBlueprintIds: z.array(z.string()),
+    dataStoreName: z.string().optional(),
+    scope: permissionScopeSchema,
   }),
   outputSchema: z.object({
-    blueprints: z.array(blueprintSchema),
+    dataStores: z.array(dataStoreSchema),
   }),
   execute: async ({ context }) => {
-    const { blueprintId, allowedBlueprintIds } = context;
-    if (blueprintId) {
-      if (!allowedBlueprintIds.includes(blueprintId)) {
-        throw new Error(`Blueprint ${blueprintId} is not in the user's allowed scope.`);
-      }
-      const bp = await blueprintRepo.getById(blueprintId);
-      return { blueprints: bp ? [bp] : [] };
+    const dataStores = await dataStoreRepo.listAccessibleDataStores(context.scope);
+    if (context.dataStoreName) {
+      const normalized = normalizeToken(context.dataStoreName);
+      return {
+        dataStores: dataStores.filter(
+          (ds) =>
+            normalizeToken(ds.name) === normalized ||
+            normalizeToken(ds.collection) === normalized,
+        ),
+      };
     }
-    const bps = await blueprintRepo.listAccessible(allowedBlueprintIds);
-    return { blueprints: bps };
+    return { dataStores };
   },
 });
 
 export const buildAggregationTool = createTool({
   id: 'build-aggregation',
   description:
-    'Translate a structured query plan into a MongoDB aggregation pipeline. Returns the pipeline as a JSON array without executing it.',
+    'Translate a structured query plan into a MongoDB aggregation pipeline. Returns the pipeline as a JSON array without executing it. Supports topN, having, lookups, multi-metric, percentOf, nin, and regex.',
   inputSchema: z.object({
     plan: taskPlanSchema,
     dataStore: dataStoreSchema,
@@ -87,22 +89,22 @@ export function buildAggregationFromPlan({
   scope: z.infer<typeof permissionScopeSchema>;
 }) {
   const pipeline: Record<string, unknown>[] = [];
+  const filterOpMap: Record<string, string> = {
+    eq: '$eq', ne: '$ne', gt: '$gt', gte: '$gte', lt: '$lt', lte: '$lte',
+    in: '$in', nin: '$nin',
+  };
 
+  // 1. Tenant guard + rowFilter + user filters + time range
   const matchStage: Record<string, unknown> = { tenantId: scope.tenantId };
   if (scope.rowFilter) Object.assign(matchStage, scope.rowFilter);
 
   if (plan.query.filters) {
     for (const f of plan.query.filters) {
-      const opMap: Record<string, string> = {
-        eq: '$eq',
-        ne: '$ne',
-        gt: '$gt',
-        gte: '$gte',
-        lt: '$lt',
-        lte: '$lte',
-        in: '$in',
-      };
-      matchStage[f.field] = { [opMap[f.op]]: f.value };
+      if (f.op === 'regex') {
+        matchStage[f.field] = { $regex: f.value, $options: 'i' };
+      } else {
+        matchStage[f.field] = { [filterOpMap[f.op]]: f.value };
+      }
     }
   }
 
@@ -115,46 +117,109 @@ export function buildAggregationFromPlan({
 
   pipeline.push({ $match: matchStage });
 
+  // 2. Lookup joins ($lookup + $unwind for each, added before $group)
+  if (plan.query.lookups) {
+    for (const lookup of plan.query.lookups) {
+      pipeline.push({
+        $lookup: {
+          from: lookup.from,
+          localField: lookup.localField,
+          foreignField: lookup.foreignField,
+          as: lookup.as,
+        },
+      });
+      pipeline.push({
+        $unwind: { path: `$${lookup.as}`, preserveNullAndEmptyArrays: true },
+      });
+    }
+  }
+
+  // 3. Group stage
   const dimensions = plan.query.dimensions ?? [];
-  if (dimensions.length > 0 || plan.query.aggregation) {
-    const groupId: Record<string, string> = {};
-    for (const d of dimensions) groupId[d] = `$${d}`;
+  const allMetrics = plan.query.metrics?.length
+    ? plan.query.metrics
+    : plan.query.metric
+      ? [plan.query.metric]
+      : [];
+  const agg = plan.query.aggregation;
+  const aggOpMap: Record<string, string> = {
+    sum: '$sum', avg: '$avg', min: '$min', max: '$max',
+  };
+
+  if (dimensions.length > 0 || agg) {
+    const groupId: Record<string, unknown> = {};
+    for (const d of dimensions) {
+      groupId[d] = isTemporalDimension(d, dataStore)
+        ? { $dateToString: { format: '%Y-%m-%d', date: `$${d}`, timezone: 'UTC' } }
+        : `$${d}`;
+    }
 
     const groupStage: Record<string, unknown> = {
       _id: dimensions.length > 0 ? groupId : null,
     };
 
-    if (plan.query.aggregation && plan.query.metric) {
-      const aggOpMap: Record<string, string> = {
-        sum: '$sum',
-        avg: '$avg',
-        min: '$min',
-        max: '$max',
-      };
-      if (plan.query.aggregation === 'count') {
-        groupStage.value = { $sum: 1 };
-      } else {
-        const aggOp = aggOpMap[plan.query.aggregation];
-        groupStage.value = { [aggOp]: `$${plan.query.metric}` };
-      }
-    } else {
+    if (!agg || agg === 'count') {
       groupStage.value = { $sum: 1 };
+    } else {
+      const aggOp = aggOpMap[agg];
+      groupStage.value = allMetrics[0] ? { [aggOp]: `$${allMetrics[0]}` } : { $sum: 1 };
+      for (let i = 1; i < allMetrics.length; i++) {
+        groupStage[allMetrics[i]] = { [aggOp]: `$${allMetrics[i]}` };
+      }
     }
 
     pipeline.push({ $group: groupStage });
 
+    // 4. Having (post-group filter)
+    if (plan.query.having) {
+      const h = plan.query.having;
+      const havingOpMap: Record<string, string> = {
+        gt: '$gt', gte: '$gte', lt: '$lt', lte: '$lte', eq: '$eq',
+      };
+      pipeline.push({ $match: { [h.field]: { [havingOpMap[h.op]]: h.value } } });
+    }
+
+    // 5. Project dimensions + value + extra metrics
     const projection: Record<string, unknown> = { _id: 0, value: 1 };
     for (const d of dimensions) projection[d] = `$_id.${d}`;
+    for (let i = 1; i < allMetrics.length; i++) {
+      projection[allMetrics[i]] = 1;
+    }
     pipeline.push({ $project: projection });
   }
 
-  if (plan.query.sort && plan.query.sort.length > 0) {
-    const sortStage: Record<string, 1 | -1> = {};
-    for (const s of plan.query.sort) sortStage[s.field] = s.dir === 'asc' ? 1 : -1;
-    pipeline.push({ $sort: sortStage });
+  // 6. Percent of total via $setWindowFields (MongoDB 5.0+)
+  if (plan.query.percentOf) {
+    pipeline.push({
+      $setWindowFields: {
+        sortBy: { value: -1 },
+        output: {
+          _total: { $sum: '$value', window: { documents: ['unbounded', 'unbounded'] } },
+        },
+      },
+    });
+    pipeline.push({
+      $addFields: {
+        percent: {
+          $round: [{ $multiply: [{ $divide: ['$value', '$_total'] }, 100] }, 1],
+        },
+      },
+    });
+    pipeline.push({ $project: { _total: 0 } });
   }
 
-  pipeline.push({ $limit: normalizeLimit(plan.query.limit) });
+  // 7. Sort + limit (topN takes priority over manual sort)
+  if (plan.query.topN) {
+    pipeline.push({ $sort: { value: -1 } });
+    pipeline.push({ $limit: plan.query.topN });
+  } else {
+    if (plan.query.sort && plan.query.sort.length > 0) {
+      const sortStage: Record<string, 1 | -1> = {};
+      for (const s of plan.query.sort) sortStage[s.field] = s.dir === 'asc' ? 1 : -1;
+      pipeline.push({ $sort: sortStage });
+    }
+    pipeline.push({ $limit: normalizeLimit(plan.query.limit) });
+  }
 
   return { pipeline, collection: dataStore.collection };
 }
@@ -162,7 +227,6 @@ export function buildAggregationFromPlan({
 function normalizeLimit(limit: z.infer<typeof taskPlanSchema>['query']['limit']) {
   const defaultLimit = 1000;
   const maxLimit = 5000;
-
   if (typeof limit !== 'number' || !Number.isInteger(limit) || limit <= 0) return defaultLimit;
   return Math.min(limit, maxLimit);
 }
@@ -187,9 +251,12 @@ export async function executePipeline({
   }
 
   const { db } = await getMongo();
-  const rows = await db.collection(collection).aggregate(safePipeline, { allowDiskUse: true }).toArray();
+  const rows = await db
+    .collection(collection)
+    .aggregate(safePipeline, { allowDiskUse: true })
+    .toArray() as Record<string, unknown>[];
 
-  return { rows: rows as Record<string, unknown>[], rowCount: rows.length };
+  return { rows, rowCount: rows.length };
 }
 
 export function validateRows({
@@ -201,11 +268,9 @@ export function validateRows({
 }) {
   const issues: string[] = [];
   const schema: Record<string, string> = {};
-
   const fieldMap = new Map(dataStore.fields.map((f) => [f.name, f.type]));
-  if (rows.length === 0) {
-    return { valid: true, schema: {}, rows: [], issues: [] };
-  }
+
+  if (rows.length === 0) return { valid: true, schema: {}, rows: [], issues: [] };
 
   for (const key of Object.keys(rows[0])) {
     schema[key] = fieldMap.get(key) ?? inferType(rows[0][key]);
@@ -231,4 +296,15 @@ function inferType(v: unknown): string {
   if (typeof v === 'boolean') return 'boolean';
   if (v instanceof Date) return 'datetime';
   return 'string';
+}
+
+function isTemporalDimension(dimension: string, dataStore: z.infer<typeof dataStoreSchema>) {
+  const field = dataStore.fields.find((f) => f.name === dimension);
+  if (!field) return false;
+  const role = field.role as string | undefined;
+  return role === 'temporal' || field.type === 'date' || field.type === 'datetime';
+}
+
+function normalizeToken(value: string | undefined) {
+  return value?.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }

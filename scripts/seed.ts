@@ -2,9 +2,10 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { BSON } from 'mongodb';
 import { getMongo, closeMongo } from '../src/db/mongo.client.js';
 import { generateSampleCollections } from '../src/mock/sample-data.js';
-import type { Blueprint } from '../src/types/index.js';
+import type { DataStore } from '../src/types/index.js';
 
 const TENANT_ID = 't_mind_qatar';
 
@@ -14,14 +15,15 @@ async function main() {
     const { db } = await getMongo();
     const collections = generateSampleCollections(TENANT_ID);
 
-    const samplePath = resolve(
+    const dataStorePath = resolve(
       dirname(fileURLToPath(import.meta.url)),
-      '../samples/blueprints.json',
+      '../samples/datastore.json',
     );
-    const blueprints = JSON.parse(readFileSync(samplePath, 'utf-8')) as Blueprint[];
-    await db.collection('_blueprints').deleteMany({});
-    await db.collection('_blueprints').insertMany(blueprints);
-    console.log(`  ✓ ${blueprints.length} blueprints`);
+    const dataStores = BSON.EJSON.parse(readFileSync(dataStorePath, 'utf-8')) as DataStore[];
+
+    await db.collection('data_stores').deleteMany({});
+    await db.collection('data_stores').insertMany(dataStores);
+    console.log(`  ✓ ${dataStores.length} data stores`);
 
     const serviceRequests = collections.service_requests;
     await db.collection('service_requests').deleteMany({});

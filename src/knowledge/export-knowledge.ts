@@ -19,7 +19,7 @@ const CATEGORY_KEYWORDS: Array<{ category: string; collections: string[] }> = [
   },
   {
     category: 'configuration',
-    collections: ['_blueprints', 'blueprints', 'data_stores', 'platforms', 'platforms_stats', 'system_settings'],
+    collections: ['data_stores', 'platforms', 'platforms_stats', 'system_settings'],
   },
   {
     category: 'workspace',

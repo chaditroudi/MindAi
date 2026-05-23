@@ -1,13 +1,14 @@
 import { z } from 'zod';
-import { permissionScopeSchema } from '../mastra/schemas/blueprint.js';
+import { permissionScopeSchema } from '../mastra/schemas/datastore.js';
 import { chartResultSchema } from '../mastra/schemas/chart.js';
 import { taskPlanSchema } from '../mastra/schemas/intent.js';
 
 export const promptRequestSchema = z.object({
-  prompt: z.string().trim().min(1),
+  prompt: z.string().trim().min(1).max(4000),
   scope: permissionScopeSchema,
   topic: z.string().trim().min(1).optional(),
-  blueprintId: z.string().trim().min(1).optional(),
+  dataStoreName: z.string().trim().min(1).optional(),
+  theme: z.enum(['light', 'dark', 'brand']).optional(),
 });
 
 export const recordLinkSchema = z.object({
@@ -67,7 +68,7 @@ export const reviewMetaSchema = z.object({
         z.object({
           label: z.string(),
           prompt: z.string(),
-          blueprintId: z.string().optional(),
+          dataStoreName: z.string().optional(),
           topic: z.string().optional(),
         }),
       ),
