@@ -92,6 +92,11 @@ const enrichmentStep = createStep({
         mastra: mastra!,
         enrichment: plan.enrichment,
         joinKey: plan.query.dimensions?.[0],
+        // Give the agent a schema hint derived from the plan so it names fields correctly
+        primarySchema: plan.query.dimensions?.reduce<Record<string, string>>(
+          (acc, d) => ({ ...acc, [d]: 'string' }),
+          {},
+        ),
       }),
     };
   },

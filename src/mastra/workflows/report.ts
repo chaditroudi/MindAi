@@ -79,6 +79,10 @@ const enrichmentStep = createStep({
         mastra: mastra!,
         enrichment: inputData.plan.enrichment,
         joinKey: inputData.plan.query.dimensions?.[0],
+        primarySchema: inputData.plan.query.dimensions?.reduce<Record<string, string>>(
+          (acc, d) => ({ ...acc, [d]: 'string' }),
+          {},
+        ),
       }),
     };
   },

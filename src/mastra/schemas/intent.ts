@@ -2,27 +2,45 @@ import { z } from 'zod';
 
 export const intentKindSchema = z.enum(['general_question', 'report', 'dashboard']);
 
+const sortDirectionSchema = z.enum(['asc', 'desc']);
+const nullToUndefined = (value: unknown) => value === null ? undefined : value;
+const optionalString = z.preprocess(nullToUndefined, z.string().optional());
+const optionalStringArray = z.preprocess(nullToUndefined, z.array(z.string()).optional());
+const optionalPositiveInt = z.preprocess(nullToUndefined, z.number().int().positive().optional());
+
+type SortClause = { field: string; dir: 'asc' | 'desc' };
+
+const sortClauseSchema: z.ZodType<SortClause, z.ZodTypeDef, unknown> = z.preprocess((value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+
+  const sort = value as { field?: unknown; dir?: unknown; direction?: unknown };
+  return {
+    field: sort.field,
+    dir: sort.dir ?? sort.direction,
+  };
+}, z.object({ field: z.string(), dir: sortDirectionSchema }));
+
 export const taskPlanSchema = z.object({
   intent: intentKindSchema,
   needsData: z.boolean(),
   needsEnrichment: z.boolean(),
   needsChart: z.boolean(),
   query: z.object({
-    dataStoreName: z.string().optional(),
-    metric: z.string().optional(),
-    metrics: z.array(z.string()).optional(),
-    aggregation: z.enum(['sum', 'avg', 'count', 'min', 'max']).optional(),
-    dimensions: z.array(z.string()).optional(),
-    topN: z.number().int().positive().optional(),
-    percentOf: z.string().optional(),
-    having: z
+    dataStoreName: optionalString,
+    metric: optionalString,
+    metrics: optionalStringArray,
+    aggregation: z.preprocess(nullToUndefined, z.enum(['sum', 'avg', 'count', 'min', 'max']).optional()),
+    dimensions: optionalStringArray,
+    topN: optionalPositiveInt,
+    percentOf: optionalString,
+    having: z.preprocess(nullToUndefined, z
       .object({
         field: z.string(),
         op: z.enum(['gt', 'gte', 'lt', 'lte', 'eq']),
         value: z.number(),
       })
-      .optional(),
-    lookups: z
+      .optional()),
+    lookups: z.preprocess(nullToUndefined, z
       .array(
         z.object({
           from: z.string(),
@@ -31,15 +49,15 @@ export const taskPlanSchema = z.object({
           as: z.string(),
         }),
       )
-      .optional(),
-    timeRange: z
+      .optional()),
+    timeRange: z.preprocess(nullToUndefined, z
       .object({
         field: z.string(),
-        from: z.string().optional(),
-        to: z.string().optional(),
+        from: optionalString,
+        to: optionalString,
       })
-      .optional(),
-    filters: z
+      .optional()),
+    filters: z.preprocess(nullToUndefined, z
       .array(
         z.object({
           field: z.string(),
@@ -47,20 +65,20 @@ export const taskPlanSchema = z.object({
           value: z.unknown(),
         }),
       )
-      .optional(),
-    sort: z.array(z.object({ field: z.string(), dir: z.enum(['asc', 'desc']) })).optional(),
-    limit: z.number().int().positive().optional(),
+      .optional()),
+    sort: z.preprocess(nullToUndefined, z.array(sortClauseSchema).optional()),
+    limit: optionalPositiveInt,
   }),
-  enrichment: z
+  enrichment: z.preprocess(nullToUndefined, z
     .object({
       topic: z.string(),
       dimensions: z.array(z.string()),
-      sources: z.array(z.string()).optional(),
+      sources: optionalStringArray,
     })
-    .optional(),
-  chartHint: z
+    .optional()),
+  chartHint: z.preprocess(nullToUndefined, z
     .enum(['compare', 'trend', 'distribution', 'part_of_whole', 'geo', 'ranking'])
-    .optional(),
+    .optional()),
 });
 
 export type TaskPlanInput = z.infer<typeof taskPlanSchema>;

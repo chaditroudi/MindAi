@@ -1,7 +1,7 @@
 import type { Mastra } from '@mastra/core/mastra';
 import { z } from 'zod';
-import { log } from '../../observability/log.js';
 import { datasetSchema } from '../schemas/intent.js';
+import { parseJsonOutput } from './json-output.js';
 import { envTimeout, withTimeout } from './timeout.js';
 
 const summarySchema = z.object({
@@ -42,45 +42,12 @@ Records (first 10): ${JSON.stringify(dataset.rows.slice(0, 10))}`,
   ];
   const timeoutMs = envTimeout('WRITER_TIMEOUT_MS', 10000);
 
-  try {
-    const result = await withTimeout(
-      writer.generate(messages, { output: summarySchema, maxTokens: 800, temperature: 0 }),
-      'writer.inquiry',
-      timeoutMs,
-    );
-    return result.object;
-  } catch (error) {
-    log.warn('writer.inquiry.retry', {
-      agent: 'writerAgent',
-      rowCount: dataset.rows.length,
-      err: error instanceof Error ? error.message : String(error),
-    });
-    try {
-      const retry = await withTimeout(
-        writer.generate(
-          [
-            {
-              role: 'system',
-              content:
-                'Your previous response was invalid JSON. Return exactly one valid JSON object matching { "summary": string }. No markdown or prose outside JSON.',
-            },
-            ...messages,
-          ],
-          { output: summarySchema, maxTokens: 800, temperature: 0 },
-        ),
-        'writer.inquiry.retry',
-        Math.min(timeoutMs, 5000),
-      );
-      return retry.object;
-    } catch (retryError) {
-      log.error('writer.inquiry.failed', {
-        agent: 'writerAgent',
-        rowCount: dataset.rows.length,
-        err: retryError instanceof Error ? retryError.message : String(retryError),
-      });
-      throw retryError;
-    }
-  }
+  const result = await withTimeout(
+    writer.generate(messages, { maxTokens: 256, temperature: 0 }),
+    'writer.inquiry',
+    timeoutMs,
+  );
+  return parseJsonOutput(result.text, summarySchema);
 }
 
 export async function runReportWriter({
@@ -112,47 +79,10 @@ External context: ${JSON.stringify(enrichment ?? null).slice(0, 4000)}`,
   ];
   const timeoutMs = envTimeout('WRITER_TIMEOUT_MS', 10000);
 
-  try {
-    const result = await withTimeout(
-      writer.generate(messages, {
-        output: reportSectionsSchema,
-        maxTokens: 2200,
-        temperature: 0,
-      }),
-      'writer.report',
-      timeoutMs,
-    );
-    return result.object;
-  } catch (error) {
-    log.warn('writer.report.retry', {
-      agent: 'writerAgent',
-      rowCount: dataset.rows.length,
-      err: error instanceof Error ? error.message : String(error),
-    });
-    try {
-      const retry = await withTimeout(
-        writer.generate(
-          [
-            {
-              role: 'system',
-              content:
-                'Your previous response was invalid JSON. Return exactly one valid JSON object matching { "reportSections": [{ "heading": string, "body": string }] }. No markdown or prose outside JSON.',
-            },
-            ...messages,
-          ],
-          { output: reportSectionsSchema, maxTokens: 2200, temperature: 0 },
-        ),
-        'writer.report.retry',
-        Math.min(timeoutMs, 5000),
-      );
-      return retry.object;
-    } catch (retryError) {
-      log.error('writer.report.failed', {
-        agent: 'writerAgent',
-        rowCount: dataset.rows.length,
-        err: retryError instanceof Error ? retryError.message : String(retryError),
-      });
-      throw retryError;
-    }
-  }
+  const result = await withTimeout(
+    writer.generate(messages, { maxTokens: 512, temperature: 0 }),
+    'writer.report',
+    timeoutMs,
+  );
+  return parseJsonOutput(result.text, reportSectionsSchema);
 }

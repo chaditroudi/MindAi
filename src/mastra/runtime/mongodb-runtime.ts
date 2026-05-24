@@ -5,12 +5,6 @@ import { log, logged } from '../../observability/log.js';
 import type { PermissionScope } from '../../types/index.js';
 import { datasetSchema, taskPlanSchema } from '../schemas/intent.js';
 import { buildAggregationFromPlan, executePipeline, validateRows } from '../tools/mongodb-tools.js';
-import { envTimeout, withTimeout } from './timeout.js';
-
-const mongoAgentPlanSchema = z.object({
-  plan: taskPlanSchema,
-  notes: z.array(z.string()),
-});
 
 export async function runMongoDatasetQuery({
   plan,
@@ -36,42 +30,12 @@ export async function runMongoDatasetQuery({
     throw new Error(`Data store '${plan.query.dataStoreName}' not found.`);
   }
 
-  const agent = mastra.getAgent('mongodbAgent');
-
-  const agentPlanResult = await logged(
-    'mongo.agent.plan',
-    { agent: 'mongodbAgent', tenantId: scope.tenantId, collection: dataStore.collection },
-    () =>
-      withTimeout(
-        agent.generate(
-          [
-            {
-              role: 'user',
-              content: JSON.stringify({
-                plan,
-                scope: {
-                  userId: scope.userId,
-                  tenantId: scope.tenantId,
-                  allowedDataStores: scope.allowedDataStores,
-                  rowFilter: scope.rowFilter,
-                },
-                dataStore,
-              }),
-            },
-          ],
-          { output: mongoAgentPlanSchema, maxTokens: 900, temperature: 0 },
-        ),
-        'mongo.agent.plan',
-        envTimeout('MONGO_TIMEOUT_MS', 120000),
-      ),
-  );
-
-  const agentPlan = agentPlanResult.object.plan;
   const { pipeline } = await logged(
     'mongo.build-aggregation',
-    { agent: 'mongodbAgent', tenantId: scope.tenantId, collection: dataStore.collection },
-    async () => buildAggregationFromPlan({ plan: agentPlan, dataStore, scope }),
+    { agent: 'mongodbAgent', tenantId: scope.tenantId, collection: dataStore.collection, source: 'deterministic' },
+    async () => buildAggregationFromPlan({ plan, dataStore, scope }),
   );
+
   const executed = await logged(
     'mongo.execute-pipeline',
     { agent: 'mongodbAgent', tenantId: scope.tenantId, collection: dataStore.collection },
@@ -93,7 +57,7 @@ export async function runMongoDatasetQuery({
       source: 'mongodb' as const,
     },
     executedPipeline: pipeline,
-    agentNotes: agentPlanResult.object.notes,
+    agentNotes: [] as string[],
   };
 }
 

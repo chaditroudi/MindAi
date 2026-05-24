@@ -65,34 +65,70 @@ export interface Citation {
   snippet?: string;
 }
 
+export type Aggregation = 'sum' | 'avg' | 'count' | 'min' | 'max';
+
+export type FilterOperator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'nin' | 'regex';
+
+export interface Filter {
+  field: string;
+  op: FilterOperator;
+  value?: unknown;
+}
+
+export interface Lookup {
+  from: string;
+  localField: string;
+  foreignField: string;
+  as: string;
+}
+
+export interface HavingClause {
+  field: string;
+  op: 'gt' | 'gte' | 'lt' | 'lte' | 'eq';
+  value: number;
+}
+
+export interface SortClause {
+  field: string;
+  dir: 'asc' | 'desc';
+}
+
+export interface TimeRange {
+  field: string;
+  from?: string;
+  to?: string;
+}
+
+export interface TaskQuery {
+  dataStoreName?: string;
+  metric?: string;
+  metrics?: string[];
+  aggregation?: Aggregation;
+  dimensions?: string[];
+  topN?: number;
+  percentOf?: string;
+  having?: HavingClause;
+  lookups?: Lookup[];
+  timeRange?: TimeRange;
+  filters?: Filter[];
+  sort?: SortClause[];
+  limit?: number;
+}
+
+export interface EnrichmentPlan {
+  topic: string;
+  dimensions: string[];
+  sources?: string[];
+}
+
+export type ChartHint = 'compare' | 'trend' | 'distribution' | 'part_of_whole' | 'geo' | 'ranking';
+
 export interface TaskPlan {
   intent: IntentKind;
   needsData: boolean;
   needsEnrichment: boolean;
   needsChart: boolean;
-  query: {
-    dataStoreName?: string;
-    metric?: string;
-    metrics?: string[];
-    aggregation?: 'sum' | 'avg' | 'count' | 'min' | 'max';
-    dimensions?: string[];
-    topN?: number;
-    percentOf?: string;
-    having?: { field: string; op: 'gt' | 'gte' | 'lt' | 'lte' | 'eq'; value: number };
-    lookups?: Array<{ from: string; localField: string; foreignField: string; as: string }>;
-    timeRange?: { field: string; from?: string; to?: string };
-    filters?: Array<{
-      field: string;
-      op: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'nin' | 'regex';
-      value: unknown;
-    }>;
-    sort?: Array<{ field: string; dir: 'asc' | 'desc' }>;
-    limit?: number;
-  };
-  enrichment?: {
-    topic: string;
-    dimensions: string[];
-    sources?: string[];
-  };
-  chartHint?: 'compare' | 'trend' | 'distribution' | 'part_of_whole' | 'geo' | 'ranking';
+  query: TaskQuery;
+  enrichment?: EnrichmentPlan;
+  chartHint?: ChartHint;
 }
