@@ -13,6 +13,7 @@ const planStep = createStep({
   id: 'plan-report',
   inputSchema: z.object({
     prompt: z.string(),
+    planningPrompt: z.string().optional(),
     scope: permissionScopeSchema,
     topic: z.string().optional(),
     dataStoreName: z.string().optional(),
@@ -26,7 +27,7 @@ const planStep = createStep({
     return {
       plan: await runSupervisorPlan({
         mastra: mastra!,
-        prompt: inputData.prompt,
+        prompt: inputData.planningPrompt ?? inputData.prompt,
         intent: 'report',
         scope: inputData.scope,
         topic: inputData.topic,

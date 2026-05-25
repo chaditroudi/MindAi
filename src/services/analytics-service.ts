@@ -17,6 +17,11 @@ import type {
   ReviewMetaResponse,
 } from '../http/contracts.js';
 import { envTimeout, withTimeout } from '../mastra/runtime/timeout.js';
+import {
+  buildConversationMemoryPrompt,
+  resolveConversationRef,
+  saveConversationExchange,
+} from './conversation-memory.js';
 
 type WorkflowId = 'generalQuestionWorkflow' | 'reportWorkflow' | 'dashboardWorkflow';
 
@@ -40,16 +45,27 @@ const generatedReviewModesSchema = z.object({
 class AnalyticsService {
   async runInquiry(input: PromptRequest): Promise<InquiryResponse> {
     const t0 = Date.now();
+    const conversation = resolveConversationRef(input);
+    const planningPrompt = await this.withConversationMemory(input, 'general_question', conversation);
     const result = await this.runWorkflow('generalQuestionWorkflow', {
       prompt: input.prompt,
+      planningPrompt,
       scope: input.scope,
       topic: input.topic,
       dataStoreName: input.dataStoreName,
+    });
+    await saveConversationExchange({
+      ref: conversation,
+      scope: input.scope,
+      intent: 'general_question',
+      userPrompt: input.prompt,
+      assistantContent: result.summary,
     });
     return {
       intent: 'general_question',
       summary: result.summary,
       recordLinks: result.recordLinks,
+      conversation,
       audit: {
         plan: result.plan,
         enrichment: result.enrichment,
@@ -60,16 +76,27 @@ class AnalyticsService {
 
   async runReport(input: PromptRequest): Promise<ReportResponse> {
     const t0 = Date.now();
+    const conversation = resolveConversationRef(input);
+    const planningPrompt = await this.withConversationMemory(input, 'report', conversation);
     const result = await this.runWorkflow('reportWorkflow', {
       prompt: input.prompt,
+      planningPrompt,
       scope: input.scope,
       topic: input.topic,
       dataStoreName: input.dataStoreName,
+    });
+    await saveConversationExchange({
+      ref: conversation,
+      scope: input.scope,
+      intent: 'report',
+      userPrompt: input.prompt,
+      assistantContent: renderReportMemory(result.reportSections),
     });
     return {
       intent: 'report',
       reportSections: result.reportSections,
       charts: result.charts,
+      conversation,
       audit: {
         plan: result.plan,
         dataset: result.dataset,
@@ -80,17 +107,28 @@ class AnalyticsService {
 
   async runDashboard(input: PromptRequest): Promise<DashboardResponse> {
     const t0 = Date.now();
+    const conversation = resolveConversationRef(input);
+    const planningPrompt = await this.withConversationMemory(input, 'dashboard', conversation);
     const result = await this.runWorkflow('dashboardWorkflow', {
       prompt: input.prompt,
+      planningPrompt,
       scope: input.scope,
       topic: input.topic,
       dataStoreName: input.dataStoreName,
       intent: 'dashboard',
       theme: input.theme ?? 'light',
     });
+    await saveConversationExchange({
+      ref: conversation,
+      scope: input.scope,
+      intent: 'dashboard',
+      userPrompt: input.prompt,
+      assistantContent: renderDashboardMemory(result),
+    });
     return {
       intent: 'dashboard',
       chart: result.chart,
+      conversation,
       audit: {
         plan: result.plan,
         pipeline: result.executedPipeline,
@@ -127,6 +165,22 @@ class AnalyticsService {
     }
 
     return result.result;
+  }
+
+  private async withConversationMemory(
+    input: PromptRequest,
+    intent: 'general_question' | 'report' | 'dashboard',
+    conversation: { threadId: string; resourceId: string },
+  ) {
+    const memory = await buildConversationMemoryPrompt(conversation);
+    if (!memory) return input.prompt;
+
+    return [
+      memory,
+      '',
+      `Current ${intent} request:`,
+      input.prompt,
+    ].join('\n');
   }
 
   private async generateReviewModes(): Promise<ReviewModeDefinition[]> {
@@ -172,6 +226,22 @@ class AnalyticsService {
 }
 
 export const analyticsService = new AnalyticsService();
+
+function renderReportMemory(reportSections: Array<{ heading: string; body: string }>) {
+  return reportSections.map((section) => `${section.heading}: ${section.body}`).join(' ');
+}
+
+function renderDashboardMemory(result: {
+  chart?: { accessibility?: { description?: string } };
+  plan?: { query?: { dataStoreName?: string; dimensions?: string[] } };
+}) {
+  const query = result.plan?.query;
+  const title = query?.dataStoreName
+    ? `Dashboard generated for ${query.dataStoreName}${query.dimensions?.length ? ` by ${query.dimensions.join(', ')}` : ''}`
+    : 'Dashboard chart generated';
+  const description = result.chart?.accessibility?.description;
+  return description ? `${title}. ${description}` : title;
+}
 
 function mergeModeSuggestions(
   generated: z.infer<typeof generatedReviewModesSchema>['modes'],

@@ -16,6 +16,7 @@ const planStep = createStep({
   id: 'plan',
   inputSchema: z.object({
     prompt: z.string(),
+    planningPrompt: z.string().optional(),
     intent: z.enum(['general_question', 'report', 'dashboard']).optional(),
     scope: permissionScopeSchema,
     topic: z.string().optional(),
@@ -32,7 +33,7 @@ const planStep = createStep({
     return {
       plan: await runSupervisorPlan({
         mastra: mastra!,
-        prompt: inputData.prompt,
+        prompt: inputData.planningPrompt ?? inputData.prompt,
         intent: inputData.intent ?? 'dashboard',
         scope: inputData.scope,
         topic: inputData.topic,

@@ -3,26 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>منصة مايند - التحليلات البلدية</title>
+  <title>Mind Analytics Console</title>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
   <style>
     :root {
       color-scheme: light;
-      --bg-top: #f8f3e7;
-      --bg-bottom: #ece2d2;
-      --panel: rgba(255, 251, 245, 0.9);
-      --panel-strong: rgba(255, 255, 255, 0.94);
-      --text: #17263a;
-      --muted: #5f6d80;
-      --line: rgba(23, 38, 58, 0.12);
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #eef4f3;
+      --text: #101828;
+      --muted: #667085;
+      --subtle: #98a2b3;
+      --line: #d6dde6;
+      --line-soft: #edf1f5;
       --accent: #0f766e;
-      --accent-dark: #0b5954;
-      --accent-soft: rgba(15, 118, 110, 0.12);
-      --error: #b63d2c;
-      --shadow: 0 20px 50px rgba(23, 38, 58, 0.12);
-      --radius-xl: 28px;
-      --radius-lg: 22px;
-      --radius-md: 16px;
+      --accent-strong: #0b5f59;
+      --accent-soft: #e6f4f2;
+      --blue: #2563eb;
+      --blue-soft: #eaf1ff;
+      --warning: #b54708;
+      --warning-soft: #fff4e5;
+      --error: #b42318;
+      --error-soft: #fff1f0;
+      --shadow: 0 14px 36px rgba(16, 24, 40, 0.08);
+      --radius: 8px;
+      --radius-sm: 6px;
     }
 
     * { box-sizing: border-box; }
@@ -30,517 +36,789 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
+      background: var(--bg);
       color: var(--text);
+      font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
       direction: rtl;
       text-align: right;
-      background:
-        radial-gradient(circle at top left, rgba(218, 166, 57, 0.18), transparent 28%),
-        radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 24%),
-        linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
     }
 
-    .page { max-width: 1320px; margin: 0 auto; padding: 28px 18px 40px; }
-    .shell { display: grid; gap: 20px; }
-    h1, h2, h3, p { margin: 0; }
+    button, textarea { font: inherit; }
 
-    .hero,
-    .panel,
-    .results-panel {
-      background: var(--panel);
-      border: 1px solid rgba(255, 255, 255, 0.65);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
     }
 
-    .hero { padding: 28px; border-radius: var(--radius-xl); }
-
-    h1 {
-      font-size: clamp(1.8rem, 4vw, 3rem);
-      line-height: 1;
-      letter-spacing: -0.04em;
-      margin-bottom: 10px;
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
     }
 
-    .subtitle {
-      max-width: 78ch;
-      color: var(--muted);
-      line-height: 1.7;
-      font-size: 1rem;
+    .topbar-inner {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 12px 22px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
     }
 
-    /* ── capability chips in hero ── */
-    .capability-chips {
+    .brand {
+      min-width: 0;
       display: flex;
-      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius);
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0;
+      flex-shrink: 0;
+    }
+
+    .brand-copy {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.81rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tenant-strip {
+      display: flex;
       gap: 8px;
-      margin-top: 16px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
     }
 
-    .chip {
-      padding: 5px 12px;
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
       border-radius: 999px;
-      background: var(--accent-soft);
-      border: 1px solid rgba(15, 118, 110, 0.18);
-      color: var(--accent-dark);
-      font-size: 0.82rem;
-      font-weight: 600;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 650;
+      white-space: nowrap;
     }
 
-    .workspace { display: grid; gap: 20px; }
-    .panel { padding: 22px; border-radius: var(--radius-lg); }
+    .pill.primary {
+      color: var(--accent-strong);
+      border-color: #b9ddd8;
+      background: var(--accent-soft);
+    }
 
-    /* ── top toolbar: tabs + theme ── */
-    .toolbar {
+    .main {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 18px 22px 30px;
+      display: grid;
+      grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .side-panel {
+      position: sticky;
+      top: 82px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      min-height: 56px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line-soft);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
       gap: 12px;
-      margin-bottom: 18px;
     }
 
-    .endpoint-tabs { display: flex; gap: 10px; flex-wrap: wrap; }
-
-    .endpoint-tabs button,
-    .theme-pills button,
-    .examples button,
-    #go, #prompt { font: inherit; }
-
-    .endpoint-tabs button {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: var(--panel-strong);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 11px 18px;
-      cursor: pointer;
-      transition: 160ms ease;
+    .panel-title {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      font-weight: 800;
+      letter-spacing: 0;
     }
 
-    .endpoint-tabs button:hover,
-    .endpoint-tabs button.active {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: var(--accent-dark);
-      transform: translateY(-1px);
-    }
-
-    /* ── theme picker ── */
-    .theme-label {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-left: 6px;
-    }
-
-    .theme-pills { display: flex; gap: 6px; align-items: center; }
-
-    .theme-pills button {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: var(--panel-strong);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 7px 14px;
-      cursor: pointer;
-      font-size: 0.84rem;
-      transition: 160ms ease;
-    }
-
-    .theme-pills button.active {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: var(--accent-dark);
-      font-weight: 700;
-    }
-
-    /* ── composer ── */
-    .composer {
+    .mode-tabs {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 12px;
-      align-items: stretch;
-      margin-bottom: 18px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 4px;
+      margin: 16px 16px 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
     }
 
-    #prompt {
+    .mode-tabs button {
+      min-height: 38px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .mode-tabs button.active {
+      background: var(--surface);
+      color: var(--accent-strong);
+      box-shadow: 0 1px 4px rgba(16, 24, 40, 0.12);
+    }
+
+    .side-body {
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .mode-note {
+      margin: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.65;
+    }
+
+    .field-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 0.84rem;
+      font-weight: 750;
+    }
+
+    .field-label span {
+      color: var(--subtle);
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
+    textarea {
       width: 100%;
-      min-height: 62px;
+      min-height: 142px;
+      resize: vertical;
       border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 18px;
-      background: var(--panel-strong);
+      border-radius: var(--radius);
+      background: var(--surface);
       color: var(--text);
       outline: none;
-      resize: vertical;
-      transition: border-color 160ms ease, box-shadow 160ms ease;
+      padding: 12px 13px;
+      line-height: 1.65;
     }
 
-    #prompt:focus {
+    textarea:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 5px var(--accent-soft);
+      box-shadow: 0 0 0 3px var(--accent-soft);
     }
 
-    #go {
-      border: none;
-      border-radius: 20px;
-      min-width: 130px;
-      padding: 0 24px;
-      cursor: pointer;
-      color: #f8f7f2;
-      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-      font-weight: 600;
-      font-size: 1rem;
-      box-shadow: 0 14px 28px rgba(15, 118, 110, 0.24);
-      transition: 160ms ease;
-    }
-
-    #go:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 18px 30px rgba(15, 118, 110, 0.28); }
-    #go:disabled { opacity: 0.65; cursor: not-allowed; box-shadow: none; }
-
-    /* ── run status ── */
-    .run-status {
-      display: none;
-      gap: 14px;
+    .action-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
       align-items: center;
-      padding: 14px 16px;
-      margin-bottom: 18px;
-      border: 1px solid rgba(15, 118, 110, 0.16);
-      border-radius: 18px;
-      background: rgba(15, 118, 110, 0.08);
     }
 
-    .run-status.active { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+    .source-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .primary-btn {
+      min-width: 112px;
+      min-height: 42px;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .primary-btn:hover:not(:disabled) {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    .primary-btn:disabled {
+      opacity: 0.62;
+      cursor: not-allowed;
+    }
+
+    .status-wrap {
+      border-top: 1px solid var(--line-soft);
+      background: var(--surface-2);
+    }
+
+    .progress {
+      display: none;
+      height: 4px;
+      background: var(--line-soft);
+    }
+
+    .progress.active { display: block; }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 300ms ease;
+    }
+
+    .status {
+      display: none;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 16px;
+    }
+
+    .status.active { display: grid; }
 
     .spinner {
-      width: 24px; height: 24px;
-      border: 3px solid rgba(15, 118, 110, 0.18);
+      width: 18px;
+      height: 18px;
+      border: 2px solid #c8d8d5;
       border-top-color: var(--accent);
       border-radius: 50%;
-      animation: spin 900ms linear infinite;
+      animation: spin 800ms linear infinite;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .status-copy { display: grid; gap: 4px; min-width: 0; }
-    .status-title { font-weight: 700; color: var(--accent-dark); }
-    .status-detail { color: var(--muted); font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .elapsed { color: var(--muted); font-variant-numeric: tabular-nums; direction: ltr; text-align: left; min-width: 54px; }
-
-    .progress-bar { position: relative; height: 8px; margin-bottom: 18px; overflow: hidden; border-radius: 999px; background: rgba(23, 38, 58, 0.08); display: none; }
-    .progress-bar.active { display: block; }
-    .progress-fill { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #d59b2d); transition: width 420ms ease; }
-
-    .progress-steps { display: none; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 18px; }
-    .progress-steps.active { display: grid; }
-
-    .progress-step {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      gap: 8px;
-      align-items: center;
-      min-height: 42px;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.62);
-      color: var(--muted);
-      font-size: 0.88rem;
+    .status-title {
+      color: var(--accent-strong);
+      font-size: 0.84rem;
+      font-weight: 800;
     }
 
-    .progress-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(95, 109, 128, 0.32); }
-    .progress-step.active { border-color: rgba(15, 118, 110, 0.34); background: rgba(15, 118, 110, 0.1); color: var(--accent-dark); font-weight: 700; }
-    .progress-step.active .progress-dot { background: var(--accent); box-shadow: 0 0 0 5px rgba(15, 118, 110, 0.12); }
-    .progress-step.done { color: var(--text); }
-    .progress-step.done .progress-dot { background: #d59b2d; }
+    .status-detail {
+      color: var(--muted);
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-    /* ── example prompts ── */
-    .examples-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 10px; }
+    .elapsed {
+      direction: ltr;
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-variant-numeric: tabular-nums;
+    }
 
-    .examples {
+    .examples-section {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 9px;
+    }
+
+    .examples-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
       gap: 10px;
     }
 
+    .examples-heading h3 {
+      margin: 0;
+      font-size: 0.86rem;
+    }
+
+    .examples-heading span {
+      color: var(--subtle);
+      font-size: 0.74rem;
+    }
+
+    .examples {
+      display: grid;
+      gap: 8px;
+    }
+
     .examples button {
+      width: 100%;
+      min-height: 54px;
       border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.82);
+      border-radius: var(--radius);
+      background: var(--surface);
       color: var(--text);
-      border-radius: 16px;
-      padding: 12px 14px;
       text-align: right;
       cursor: pointer;
-      transition: 160ms ease;
+      padding: 10px 11px;
+      display: grid;
+      gap: 5px;
       line-height: 1.45;
-      font-size: 0.92rem;
     }
 
-    .examples button .ex-tag {
-      display: inline-block;
-      font-size: 0.72rem;
-      padding: 2px 7px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent-dark);
+    .examples button:hover {
+      border-color: var(--accent);
+      background: #fbfffe;
+    }
+
+    .example-title {
+      font-size: 0.88rem;
       font-weight: 700;
-      margin-bottom: 5px;
     }
 
-    .examples button:hover { border-color: var(--accent); background: #fff; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(23, 38, 58, 0.08); }
-
-    /* ── results ── */
-    .content { display: grid; gap: 20px; align-items: start; }
-    .results-panel { border-radius: var(--radius-lg); padding: 22px; min-height: 520px; }
-    .section-title { font-size: 1.1rem; margin-bottom: 14px; }
-    .surface { display: grid; gap: 16px; }
-
-    #chart-wrap,
-    #output-text {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 242, 233, 0.98));
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      overflow: hidden;
+    .example-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.74rem;
     }
 
-    #chart-wrap { padding: 12px; }
-
-    .chart-meta { display: none; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 4px 4px 12px; }
-    .chart-meta.active { display: grid; }
-    .chart-meta-title { min-width: 0; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
-    .chart-meta-subtitle { margin-top: 4px; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
-
-    .chart-type-pill {
+    .tag {
       display: inline-flex;
       align-items: center;
-      min-height: 34px;
-      padding: 0 12px;
+      min-height: 20px;
+      padding: 0 7px;
       border-radius: 999px;
-      border: 1px solid rgba(15, 118, 110, 0.18);
+      color: var(--accent-strong);
       background: var(--accent-soft);
-      color: var(--accent-dark);
-      font-size: 0.86rem;
-      font-weight: 700;
+      font-weight: 800;
+    }
+
+    .empty-examples {
+      padding: 12px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: var(--surface-2);
+      font-size: 0.84rem;
+      line-height: 1.6;
+    }
+
+    .workspace {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .result-panel {
+      overflow: hidden;
+      min-height: 660px;
+    }
+
+    .result-header {
+      min-height: 56px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .result-title-block {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .result-title-block p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .run-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      font-size: 0.76rem;
+      font-weight: 750;
       white-space: nowrap;
     }
 
-    #chart { width: 100%; height: 460px; border-radius: 14px; }
+    .run-chip.ok {
+      color: var(--accent-strong);
+      background: var(--accent-soft);
+      border-color: #b9ddd8;
+    }
 
-    #output-text { padding: 22px; min-height: 200px; line-height: 1.7; }
-    #output-text h3 { margin-top: 0; margin-bottom: 8px; font-size: 1.05rem; }
-    #output-text p { color: var(--muted); margin-bottom: 16px; }
+    .run-chip.warn {
+      color: var(--warning);
+      background: var(--warning-soft);
+      border-color: #fedf89;
+    }
+
+    .result-body {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .chart-meta {
+      display: none;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 0 2px;
+    }
+
+    .chart-meta.active { display: grid; }
+
+    .chart-title {
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .chart-subtitle {
+      color: var(--muted);
+      font-size: 0.83rem;
+      line-height: 1.5;
+      margin-top: 3px;
+    }
+
+    .chart-type {
+      display: none;
+      color: var(--accent-strong);
+      background: var(--accent-soft);
+      border: 1px solid #b9ddd8;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.77rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .chart-type.active { display: inline-flex; }
+
+    #chart-wrap {
+      display: block;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #fff;
+    }
+
+    #chart {
+      width: 100%;
+      height: 520px;
+    }
+
+    #output-text {
+      display: none;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 16px;
+      line-height: 1.75;
+    }
+
+    #output-text h3 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+
+    #output-text p {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+
     #output-text p:last-child { margin-bottom: 0; }
 
     .record-link {
       display: inline-flex;
-      align-items: center;
-      padding: 7px 12px;
-      margin: 4px 6px 0 0;
+      margin: 4px 0 0 6px;
+      border: 1px solid #b9ddd8;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
       border-radius: 999px;
-      background: rgba(15, 118, 110, 0.1);
-      color: var(--accent-dark);
-      font-size: 13px;
-      border: 1px solid rgba(15, 118, 110, 0.14);
+      padding: 5px 9px;
+      font-size: 0.78rem;
+      font-weight: 700;
     }
 
-    .busy-overlay {
-      min-height: 220px;
+    .placeholder {
+      min-height: 410px;
       display: grid;
       place-items: center;
-      padding: 28px;
-      color: var(--muted);
       text-align: center;
-      border: 1px dashed rgba(15, 118, 110, 0.22);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.72);
+      color: var(--muted);
+      background: var(--surface-2);
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      padding: 26px;
+      line-height: 1.7;
     }
 
-    /* ── audit panel ── */
+    .error {
+      color: var(--error);
+      background: var(--error-soft);
+      border: 1px solid #f2b8ad;
+      padding: 12px;
+      border-radius: var(--radius);
+      line-height: 1.65;
+    }
+
     .audit-panel {
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--line);
-      background: var(--panel);
-      box-shadow: var(--shadow);
       overflow: hidden;
     }
 
     .audit-toggle {
       width: 100%;
+      min-height: 52px;
+      border: 0;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      padding: 13px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 16px 20px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font: inherit;
-      color: var(--text);
-      font-weight: 600;
-      font-size: 0.95rem;
+      font-weight: 800;
     }
 
-    .audit-toggle:hover { background: rgba(15, 118, 110, 0.05); }
-    .audit-toggle .arrow { transition: transform 220ms ease; font-style: normal; }
+    .audit-toggle:hover { background: var(--surface-2); }
+    .audit-toggle .arrow { transition: transform 180ms ease; }
     .audit-toggle.open .arrow { transform: rotate(180deg); }
 
     .audit-body {
       display: none;
-      padding: 0 20px 20px;
-      gap: 14px;
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--line-soft);
     }
 
-    .audit-body.open { display: grid; }
+    .audit-body.open {
+      display: grid;
+      gap: 12px;
+    }
 
     .audit-row {
       display: grid;
-      grid-template-columns: 120px minmax(0, 1fr);
+      grid-template-columns: 132px minmax(0, 1fr);
       gap: 10px;
       align-items: start;
-      font-size: 0.88rem;
+      padding-top: 12px;
     }
 
     .audit-key {
       color: var(--muted);
-      font-weight: 600;
-      padding-top: 2px;
-    }
-
-    .audit-val {
-      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 800;
     }
 
     .audit-code {
-      background: #0f1724;
-      color: #c9d8e8;
-      border-radius: 12px;
-      padding: 12px 14px;
       direction: ltr;
       text-align: left;
+      max-height: 300px;
       overflow: auto;
-      max-height: 260px;
-      font-size: 11.5px;
-      line-height: 1.55;
       white-space: pre;
+      background: #101828;
+      color: #d0d5dd;
+      border-radius: var(--radius);
+      padding: 12px;
+      font: 11.5px/1.55 Consolas, "Cascadia Mono", monospace;
     }
 
-    .intent-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 0.83rem;
-      font-weight: 700;
-      background: var(--accent-soft);
-      color: var(--accent-dark);
-      border: 1px solid rgba(15, 118, 110, 0.16);
+    @media (max-width: 1060px) {
+      .topbar-inner { grid-template-columns: 1fr; }
+      .tenant-strip { justify-content: flex-start; }
+      .main { grid-template-columns: 1fr; padding: 14px; }
+      .side-panel { position: static; }
+      .result-panel { min-height: 0; }
+      #chart { height: 420px; }
     }
 
-    .error {
-      color: var(--error);
-      background: rgba(182, 61, 44, 0.08);
-      border: 1px solid rgba(182, 61, 44, 0.16);
-      padding: 14px 16px;
-      border-radius: 16px;
-    }
-
-    @media (max-width: 720px) {
-      .page { padding: 16px 12px 28px; }
-      .hero, .panel, .results-panel { padding: 18px; border-radius: 20px; }
-      .composer { grid-template-columns: 1fr; }
-      #go { min-height: 52px; }
-      #chart { height: 320px; }
+    @media (max-width: 620px) {
+      .topbar-inner { padding: 12px 14px; }
+      .brand p { white-space: normal; }
+      .mode-tabs { grid-template-columns: 1fr; }
+      .action-row { grid-template-columns: 1fr; }
+      .primary-btn { width: 100%; }
+      .result-header { grid-template-columns: 1fr; }
+      .result-actions { justify-content: flex-start; }
+      .chart-meta { grid-template-columns: 1fr; }
       .audit-row { grid-template-columns: 1fr; }
+      #chart { height: 340px; }
     }
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="shell">
-
-      <header class="hero">
-        <h1>منصة مايند · التحليلات البلدية</h1>
-        <p class="subtitle">استعلم عن البيانات التشغيلية للبلديات: التصاريح والتفتيشات وطلبات الخدمة والمشاريع — باستخدام لغة طبيعية، والنتيجة رسم بياني أو تقرير أو ملخص.</p>
-        <div class="capability-chips">
-          <span class="chip">أعلى N ترتيباً</span>
-          <span class="chip">فلتر ما بعد التجميع</span>
-          <span class="chip">نسبة مئوية من الإجمالي</span>
-          <span class="chip">اتجاهات زمنية</span>
-          <span class="chip">مقارنة بالأهداف</span>
-          <span class="chip">بحث نصي</span>
+  <div class="app">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-mark">M</div>
+          <div class="brand-copy">
+            <h1>Mind Analytics Console</h1>
+            <p>واجهة اختبار مركزة لمسار الوكلاء من السؤال إلى الاستعلام والنتيجة.</p>
+          </div>
         </div>
-      </header>
+        <div class="tenant-strip">
+          <span class="pill primary">tenant: t_mind_qatar</span>
+          <span class="pill">MongoDB</span>
+          <span class="pill">Mastra agents</span>
+        </div>
+      </div>
+    </header>
 
-      <section class="workspace">
-        <div class="panel">
-          <div class="toolbar">
-            <div class="endpoint-tabs">
-              <button class="active" data-endpoint="/api/dashboard">لوحة المعلومات</button>
-              <button data-endpoint="/api/report">التقرير</button>
-              <button data-endpoint="/api/inquiry">الاستعلام</button>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="theme-label">السمة:</span>
-              <div class="theme-pills">
-                <button class="active" data-theme="light">فاتح</button>
-                <button data-theme="dark">غامق</button>
-                <button data-theme="brand">علامة</button>
-              </div>
-            </div>
+    <main class="main">
+      <aside class="panel side-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">تكوين الطلب</h2>
+          <span class="pill primary" id="mode-badge">لوحة المعلومات</span>
+        </div>
+
+        <nav class="mode-tabs" aria-label="mode">
+          <button class="active" data-endpoint="/api/dashboard" type="button">لوحة المعلومات</button>
+          <button data-endpoint="/api/report" type="button">التقرير</button>
+          <button data-endpoint="/api/inquiry" type="button">الاستعلام</button>
+        </nav>
+
+        <div class="side-body">
+          <p class="mode-note" id="mode-note">أدخل سؤالا ينتج مخططا واحدا من بيانات MongoDB.</p>
+
+          <section>
+            <label class="field-label" for="prompt">
+              <strong>السؤال</strong>
+              <span>Enter للتشغيل، Shift+Enter لسطر جديد</span>
+            </label>
+            <textarea id="prompt" placeholder="سيتم تحميل أمثلة من بيانات المنصة" rows="5"></textarea>
+          </section>
+
+          <div class="action-row">
+            <div class="source-label" id="selected-store">مصدر البيانات: تلقائي</div>
+            <button id="go" class="primary-btn" type="button">تشغيل</button>
           </div>
 
-          <div class="composer">
-            <textarea id="prompt" placeholder="مثال: أعلى 5 بلديات حسب عدد طلبات الخدمة" rows="2"></textarea>
-            <button id="go" type="button">تشغيل</button>
-          </div>
+          <section class="examples-section">
+            <div class="examples-heading">
+              <h3>اقتراحات مبنية على البيانات</h3>
+              <span>من /api/meta</span>
+            </div>
+            <div class="examples" id="examples"></div>
+          </section>
+        </div>
 
-          <div class="run-status" id="run-status" aria-live="polite">
+        <div class="status-wrap">
+          <div class="progress" id="progress-bar" aria-hidden="true">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <div class="status" id="run-status" aria-live="polite">
             <div class="spinner" aria-hidden="true"></div>
-            <div class="status-copy">
-              <div class="status-title" id="status-title">جارٍ التشغيل</div>
+            <div>
+              <div class="status-title" id="status-title">جار التشغيل</div>
               <div class="status-detail" id="status-detail">تهيئة الطلب</div>
             </div>
             <div class="elapsed" id="elapsed">0s</div>
           </div>
-          <div class="progress-bar" id="progress-bar" aria-hidden="true">
-            <div class="progress-fill" id="progress-fill"></div>
-          </div>
-          <div class="progress-steps" id="progress-steps"></div>
-
-          <p class="examples-label">أمثلة جاهزة:</p>
-          <div class="examples" id="examples"></div>
         </div>
+      </aside>
 
-        <div class="content">
-          <section class="results-panel">
-            <h2 class="section-title">النتيجة</h2>
-            <div class="surface">
-              <div id="chart-wrap">
-                <div class="chart-meta" id="chart-meta">
-                  <div>
-                    <div class="chart-meta-title" id="chart-meta-title"></div>
-                    <div class="chart-meta-subtitle" id="chart-meta-subtitle"></div>
-                  </div>
-                  <span class="chart-type-pill" id="chart-type-pill"></span>
-                </div>
-                <div id="chart"></div>
-              </div>
-              <div id="output-text" style="display:none"></div>
+      <section class="workspace">
+        <section class="panel result-panel">
+          <div class="result-header">
+            <div class="result-title-block">
+              <h2 class="panel-title">النتيجة</h2>
+              <p id="result-subtitle">اختر مثالا أو اكتب طلبا لتبدأ.</p>
             </div>
-          </section>
-
-          <div class="audit-panel" id="audit-panel" style="display:none">
-            <button class="audit-toggle" id="audit-toggle" type="button">
-              <span>تفاصيل التنفيذ</span>
-              <span class="arrow">▼</span>
-            </button>
-            <div class="audit-body" id="audit-body"></div>
+            <div class="result-actions">
+              <span class="run-chip" id="run-chip">جاهز</span>
+              <span class="run-chip" id="duration-chip">0 ms</span>
+            </div>
           </div>
-        </div>
-      </section>
 
-    </div>
+          <div class="result-body">
+            <div class="chart-meta" id="chart-meta">
+              <div>
+                <div class="chart-title" id="chart-meta-title"></div>
+                <div class="chart-subtitle" id="chart-meta-subtitle"></div>
+              </div>
+              <span class="chart-type" id="chart-type-pill"></span>
+            </div>
+
+            <div id="chart-wrap">
+              <div id="chart"></div>
+            </div>
+            <div id="output-text"></div>
+          </div>
+        </section>
+
+        <section class="panel audit-panel" id="audit-panel" style="display:none">
+          <button class="audit-toggle" id="audit-toggle" type="button">
+            <span>تفاصيل التنفيذ</span>
+            <span class="arrow">▼</span>
+          </button>
+          <div class="audit-body" id="audit-body"></div>
+        </section>
+      </section>
+    </main>
   </div>
 
   <script>
@@ -550,126 +828,157 @@
       allowedDataStores: ['ServiceRequests', 'Inspections', 'Permits', 'Projects'],
     };
 
-    const FALLBACK_EXAMPLES = {
+    const MODE_COPY = {
       '/api/dashboard': {
-        placeholder: 'سيتم تحميل أمثلة من بيانات المنصة',
-        prompts: [],
+        badge: 'لوحة المعلومات',
+        note: 'ينشئ مخططا واحدا من بيانات MongoDB مع عرض خطة التنفيذ والمسار.',
+        placeholder: 'مثال: top 5 municipalities by service request count',
       },
       '/api/report': {
-        placeholder: 'سيتم تحميل أمثلة من بيانات المنصة',
-        prompts: [],
+        badge: 'التقرير',
+        note: 'ينشئ تقريرا تحليليا موجزا، ويمكن أن يضيف مخططا عند الحاجة.',
+        placeholder: 'مثال: analyze service request count by municipality over the last 90 days',
       },
       '/api/inquiry': {
-        placeholder: 'سيتم تحميل أمثلة من بيانات المنصة',
-        prompts: [],
+        badge: 'الاستعلام',
+        note: 'يجلب سجلات مطابقة من MongoDB ثم يلخصها ويربطها بالعناصر.',
+        placeholder: 'مثال: find recent service requests where status is new',
       },
     };
 
-    // ── DOM refs ──────────────────────────────────────────────────────────
-    const chartWrap       = document.getElementById('chart-wrap');
-    const chartDiv        = document.getElementById('chart');
-    const chartMeta       = document.getElementById('chart-meta');
-    const chartMetaTitle  = document.getElementById('chart-meta-title');
-    const chartMetaSubtitle = document.getElementById('chart-meta-subtitle');
-    const chartTypePill   = document.getElementById('chart-type-pill');
-    const outputText      = document.getElementById('output-text');
-    const promptInput     = document.getElementById('prompt');
-    const goBtn           = document.getElementById('go');
-    const examplesDiv     = document.getElementById('examples');
-    const runStatus       = document.getElementById('run-status');
-    const statusTitle     = document.getElementById('status-title');
-    const statusDetail    = document.getElementById('status-detail');
-    const elapsedEl       = document.getElementById('elapsed');
-    const progressBar     = document.getElementById('progress-bar');
-    const progressFill    = document.getElementById('progress-fill');
-    const progressSteps   = document.getElementById('progress-steps');
-    const auditPanel      = document.getElementById('audit-panel');
-    const auditToggle     = document.getElementById('audit-toggle');
-    const auditBody       = document.getElementById('audit-body');
+    const FALLBACK_EXAMPLES = {
+      '/api/dashboard': { placeholder: MODE_COPY['/api/dashboard'].placeholder, prompts: [] },
+      '/api/report': { placeholder: MODE_COPY['/api/report'].placeholder, prompts: [] },
+      '/api/inquiry': { placeholder: MODE_COPY['/api/inquiry'].placeholder, prompts: [] },
+    };
 
-    // ── State ─────────────────────────────────────────────────────────────
-    let currentEndpoint      = '/api/dashboard';
-    let currentTheme         = 'light';
+    const chartWrap = document.getElementById('chart-wrap');
+    const chartDiv = document.getElementById('chart');
+    const chartMeta = document.getElementById('chart-meta');
+    const chartMetaTitle = document.getElementById('chart-meta-title');
+    const chartMetaSubtitle = document.getElementById('chart-meta-subtitle');
+    const chartTypePill = document.getElementById('chart-type-pill');
+    const outputText = document.getElementById('output-text');
+    const promptInput = document.getElementById('prompt');
+    const goBtn = document.getElementById('go');
+    const examplesDiv = document.getElementById('examples');
+    const selectedStore = document.getElementById('selected-store');
+    const modeBadge = document.getElementById('mode-badge');
+    const modeNote = document.getElementById('mode-note');
+    const runStatus = document.getElementById('run-status');
+    const statusTitle = document.getElementById('status-title');
+    const statusDetail = document.getElementById('status-detail');
+    const elapsedEl = document.getElementById('elapsed');
+    const progressBar = document.getElementById('progress-bar');
+    const progressFill = document.getElementById('progress-fill');
+    const auditPanel = document.getElementById('audit-panel');
+    const auditToggle = document.getElementById('audit-toggle');
+    const auditBody = document.getElementById('audit-body');
+    const resultSubtitle = document.getElementById('result-subtitle');
+    const runChip = document.getElementById('run-chip');
+    const durationChip = document.getElementById('duration-chip');
+
+    let currentEndpoint = '/api/dashboard';
     let selectedDataStoreName = undefined;
-    let progressTimer        = null;
-    let progressStartedAt    = 0;
-    let progressStageIndex   = 0;
-    let EXAMPLES             = JSON.parse(JSON.stringify(FALLBACK_EXAMPLES));
+    let progressTimer = null;
+    let progressStartedAt = 0;
+    let progressStageIndex = 0;
+    let EXAMPLES = JSON.parse(JSON.stringify(FALLBACK_EXAMPLES));
+    let conversation = null;
     const REQUEST_TIMEOUT_MS = 480000;
 
-    // ── ECharts ───────────────────────────────────────────────────────────
-    let chart = echarts.init(chartDiv, 'dark');
+    let chart = echarts.init(chartDiv, null);
     window.addEventListener('resize', () => chart.resize());
 
-    // ── Progress stages ───────────────────────────────────────────────────
     const PROGRESS_STAGES = {
       '/api/dashboard': [
-        { label: 'المشرف يخطط', detail: 'تحويل السؤال إلى خطة بيانات', at: 0 },
-        { label: 'جلب البيانات', detail: 'وكيل MongoDB ينفذ الاستعلام', at: 3000 },
-        { label: 'بناء الرسم', detail: 'وكيل الرسم يختار نوع المخطط', at: 8000 },
-        { label: 'الاكتمال', detail: 'تجهيز العرض النهائي', at: 13000 },
+        { label: 'تخطيط الطلب', detail: 'المشرف يحول السؤال إلى خطة بيانات', at: 0 },
+        { label: 'قراءة MongoDB', detail: 'بناء وتنفيذ aggregation آمن', at: 2500 },
+        { label: 'اختيار المخطط', detail: 'وكيل الرسم يحدد النوع والمحاور', at: 6500 },
+        { label: 'تجهيز النتيجة', detail: 'إرجاع الرسم وتفاصيل التدقيق', at: 9500 },
       ],
       '/api/report': [
-        { label: 'المشرف يخطط', detail: 'تحويل السؤال إلى خطة تقرير', at: 0 },
-        { label: 'جلب البيانات', detail: 'وكيل MongoDB يجمع البيانات', at: 3000 },
-        { label: 'كتابة التقرير', detail: 'وكيل الكاتب يصيغ الأقسام', at: 8000 },
-        { label: 'الاكتمال', detail: 'تجهيز التقرير النهائي', at: 18000 },
+        { label: 'تخطيط التقرير', detail: 'المشرف يحدد البيانات المطلوبة', at: 0 },
+        { label: 'قراءة MongoDB', detail: 'تنفيذ الاستعلام والتحقق من الصفوف', at: 2500 },
+        { label: 'كتابة التقرير', detail: 'وكيل الكاتب يصيغ الأقسام', at: 7000 },
+        { label: 'تجهيز النتيجة', detail: 'إرجاع التقرير والتدقيق', at: 11000 },
       ],
       '/api/inquiry': [
-        { label: 'المشرف يخطط', detail: 'تحديد نوع السجلات المطلوبة', at: 0 },
-        { label: 'جلب السجلات', detail: 'تطبيق المرشحات والصلاحيات', at: 2500 },
-        { label: 'التلخيص', detail: 'وكيل الكاتب يصوغ الإجابة', at: 6000 },
+        { label: 'تخطيط البحث', detail: 'المشرف يحدد السجلات المطلوبة', at: 0 },
+        { label: 'جلب السجلات', detail: 'MongoDB يطبق المرشحات والصلاحيات', at: 2200 },
+        { label: 'تلخيص النتيجة', detail: 'وكيل الكاتب يصوغ الإجابة', at: 5600 },
       ],
     };
 
-    // ── Endpoint tabs ─────────────────────────────────────────────────────
-    document.querySelectorAll('.endpoint-tabs button').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.endpoint-tabs button').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentEndpoint = btn.dataset.endpoint;
+    document.querySelectorAll('.mode-tabs button').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.mode-tabs button').forEach((candidate) => candidate.classList.remove('active'));
+        button.classList.add('active');
+        currentEndpoint = button.dataset.endpoint;
         selectedDataStoreName = undefined;
+        updateModeCopy();
         renderExamples();
+        resetResult();
       });
     });
 
-    // ── Theme pills ───────────────────────────────────────────────────────
-    document.querySelectorAll('.theme-pills button').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.theme-pills button').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentTheme = btn.dataset.theme;
-      });
-    });
-
-    // ── Audit toggle ──────────────────────────────────────────────────────
     auditToggle.addEventListener('click', () => {
       const open = auditBody.classList.toggle('open');
       auditToggle.classList.toggle('open', open);
     });
 
-    // ── Input events ──────────────────────────────────────────────────────
-    promptInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); run(); }
+    promptInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        run();
+      }
     });
-    promptInput.addEventListener('input', () => { selectedDataStoreName = undefined; });
+
+    promptInput.addEventListener('input', () => {
+      selectedDataStoreName = undefined;
+      updateSelectedStore();
+    });
+
     goBtn.addEventListener('click', run);
 
-    // ── Examples ──────────────────────────────────────────────────────────
+    function updateModeCopy() {
+      const copy = MODE_COPY[currentEndpoint];
+      modeBadge.textContent = copy.badge;
+      modeNote.textContent = copy.note;
+      promptInput.placeholder = EXAMPLES[currentEndpoint]?.placeholder || copy.placeholder;
+    }
+
+    function updateSelectedStore() {
+      selectedStore.textContent = selectedDataStoreName
+        ? `مصدر البيانات: ${selectedDataStoreName}`
+        : 'مصدر البيانات: تلقائي';
+    }
+
     function renderExamples() {
-      const config = EXAMPLES[currentEndpoint];
-      promptInput.placeholder = config.placeholder;
-      examplesDiv.innerHTML = (config.prompts || [])
-        .map(({ label, prompt, dataStoreName, tag }) =>
-          `<button data-prompt="${escAttr(prompt)}" data-store="${escAttr(dataStoreName || '')}">
-            ${tag ? `<span class="ex-tag">${esc(tag)}</span><br>` : ''}${esc(label)}
+      const config = EXAMPLES[currentEndpoint] || FALLBACK_EXAMPLES[currentEndpoint];
+      promptInput.placeholder = config.placeholder || MODE_COPY[currentEndpoint].placeholder;
+
+      if (!config.prompts?.length) {
+        examplesDiv.innerHTML = '<div class="empty-examples">لم يتم تحميل اقتراحات بعد. يمكنك كتابة طلبك مباشرة.</div>';
+        return;
+      }
+
+      examplesDiv.innerHTML = config.prompts
+        .map(({ label, prompt, dataStoreName, tag }) => `
+          <button data-prompt="${escAttr(prompt)}" data-store="${escAttr(dataStoreName || '')}" type="button">
+            <span class="example-title">${esc(label)}</span>
+            <span class="example-meta">
+              ${tag ? `<span class="tag">${esc(tag)}</span>` : ''}
+              ${dataStoreName ? `<span>${esc(dataStoreName)}</span>` : '<span>Auto</span>'}
+            </span>
           </button>`)
         .join('');
 
-      examplesDiv.querySelectorAll('button').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          promptInput.value = btn.dataset.prompt;
-          selectedDataStoreName = btn.dataset.store || undefined;
+      examplesDiv.querySelectorAll('button').forEach((button) => {
+        button.addEventListener('click', () => {
+          promptInput.value = button.dataset.prompt;
+          selectedDataStoreName = button.dataset.store || undefined;
+          updateSelectedStore();
           run();
         });
       });
@@ -685,22 +994,26 @@
             mode.endpoint,
             {
               placeholder: mode.placeholder || FALLBACK_EXAMPLES[mode.endpoint]?.placeholder,
-              prompts: (mode.prompts || []).map((p) => ({
-                ...p,
+              prompts: (mode.prompts || []).map((prompt) => ({
+                ...prompt,
                 tag: tagForEndpoint(mode.endpoint),
               })),
             },
           ]),
         );
+        updateModeCopy();
         renderExamples();
-      } catch { /* keep fallback */ }
+      } catch {
+        renderExamples();
+      }
     }
 
-    function tagForEndpoint(ep) {
-      return ep === '/api/dashboard' ? 'رسم' : ep === '/api/report' ? 'تقرير' : 'بحث';
+    function tagForEndpoint(endpoint) {
+      if (endpoint === '/api/dashboard') return 'رسم';
+      if (endpoint === '/api/report') return 'تقرير';
+      return 'بحث';
     }
 
-    // ── Main run ──────────────────────────────────────────────────────────
     async function run() {
       const prompt = promptInput.value.trim();
       if (!prompt) return;
@@ -716,20 +1029,28 @@
             prompt,
             scope: SCOPE,
             dataStoreName: selectedDataStoreName,
-            theme: currentTheme,
+            theme: 'light',
+            threadId: conversation?.threadId,
+            resourceId: conversation?.resourceId,
           }),
         }, REQUEST_TIMEOUT_MS);
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? 'فشل الطلب');
+        if (data.conversation) conversation = data.conversation;
         completeProgress();
         render(data);
         renderAudit(data, res.headers.get('x-run-id'));
       } catch (err) {
         stopProgress();
         chartWrap.style.display = 'none';
+        chartMeta.classList.remove('active');
+        chartTypePill.classList.remove('active');
         outputText.style.display = 'block';
         outputText.innerHTML = `<div class="error">خطأ: ${esc(err.message)}</div>`;
+        resultSubtitle.textContent = 'فشل الطلب. راجع سجل الخادم أو تفاصيل الخطأ.';
+        runChip.textContent = 'فشل';
+        runChip.className = 'run-chip warn';
       } finally {
         resetControls();
       }
@@ -748,43 +1069,48 @@
       }
     }
 
-    // ── Render response ───────────────────────────────────────────────────
     function render(data) {
       if (data.intent === 'dashboard' && data.chart) {
         chartWrap.style.display = 'block';
         outputText.style.display = 'none';
         renderChartResult(data.chart);
-      } else if (data.intent === 'report') {
+        return;
+      }
+
+      if (data.intent === 'report') {
         chartWrap.style.display = data.charts?.[0] ? 'block' : 'none';
         outputText.style.display = 'block';
         outputText.innerHTML = (data.reportSections || [])
-          .map((s) => `<h3>${esc(s.heading)}</h3><p>${esc(s.body)}</p>`)
+          .map((section) => `<h3>${esc(section.heading)}</h3><p>${esc(section.body)}</p>`)
           .join('');
         if (data.charts?.[0]) renderChartResult(data.charts[0]);
-      } else if (data.intent === 'general_question') {
+        else {
+          chartMeta.classList.remove('active');
+          chartTypePill.classList.remove('active');
+        }
+        return;
+      }
+
+      if (data.intent === 'general_question') {
         chartWrap.style.display = 'none';
         chartMeta.classList.remove('active');
+        chartTypePill.classList.remove('active');
         outputText.style.display = 'block';
         outputText.innerHTML =
           `<p>${esc(data.summary || '')}</p>` +
           (data.recordLinks || [])
-            .map((l) => `<span class="record-link">${esc(l.label)}</span>`)
+            .map((link) => `<span class="record-link">${esc(link.label)}</span>`)
             .join('');
       }
     }
 
     function renderChartResult(chartData) {
       chart.clear();
-      const theme = currentTheme === 'dark' ? 'dark' : null;
-      if (theme !== 'dark') {
-        chart.dispose();
-        chart = echarts.init(chartDiv, null);
-        window.setTimeout(() => chart.resize(), 0);
-      }
       chart.setOption(chartData.option, true);
       chartMetaTitle.textContent = chartData.title || 'الرسم البياني';
       chartMetaSubtitle.textContent = chartData.accessibility?.description || '';
       chartTypePill.textContent = chartTypeLabel(chartData.chartType);
+      chartTypePill.classList.add('active');
       chartMeta.classList.add('active');
       window.setTimeout(() => chart.resize(), 0);
     }
@@ -799,12 +1125,10 @@
         map: 'خريطة',
         histogram: 'توزيع',
         table: 'جدول',
-        ranking: 'ترتيب',
       };
       return map[type] || type || 'رسم';
     }
 
-    // ── Audit panel ───────────────────────────────────────────────────────
     function renderAudit(data, runId) {
       const audit = data.audit;
       if (!audit) return;
@@ -815,119 +1139,108 @@
         general_question: 'استعلام',
       };
 
+      runChip.textContent = runId ? `run ${runId.split('_').at(-1)}` : 'اكتمل';
+      runChip.className = 'run-chip ok';
+      durationChip.textContent = audit.elapsedMs !== undefined ? `${audit.elapsedMs.toLocaleString()} ms` : '0 ms';
+      resultSubtitle.textContent = summarizeAudit(data, audit);
+
       let html = '';
-
-      if (runId) {
-        html += auditRow('معرف التشغيل', `<span style="font-family:monospace;font-size:0.85rem">${esc(runId)}</span>`);
+      if (runId) html += auditRow('معرف التشغيل', `<span class="pill primary">${esc(runId)}</span>`);
+      if (data.conversation?.threadId) {
+        html += auditRow('معرف المحادثة', `<span class="pill">${esc(data.conversation.threadId)}</span>`);
       }
-
-      html += auditRow('النية', `<span class="intent-badge">${esc(intentLabels[data.intent] || data.intent)}</span>`);
-
-      if (audit.elapsedMs !== undefined) {
-        html += auditRow('الوقت المستغرق', `<span class="audit-val">${audit.elapsedMs.toLocaleString()} ms</span>`);
-      }
-
-      if (audit.plan) {
-        html += auditRow('خطة التنفيذ', `<div class="audit-code">${esc(JSON.stringify(audit.plan, null, 2))}</div>`);
-      }
-
+      html += auditRow('النية', `<span class="pill primary">${esc(intentLabels[data.intent] || data.intent)}</span>`);
+      if (audit.elapsedMs !== undefined) html += auditRow('المدة', `<span>${audit.elapsedMs.toLocaleString()} ms</span>`);
+      if (audit.plan) html += auditRow('خطة التنفيذ', codeBlock(audit.plan));
       if (audit.dataset?.rows?.length) {
-        html += auditRow('البيانات المستخدمة', `<div class="audit-code">${esc(JSON.stringify({
+        html += auditRow('البيانات المستخدمة', codeBlock({
           rows: audit.dataset.rows,
           schema: audit.dataset.schema,
           source: audit.dataset.source,
-        }, null, 2))}</div>`);
+        }));
       }
-
-      if (audit.pipeline?.length) {
-        html += auditRow('مسار MongoDB', `<div class="audit-code">${esc(JSON.stringify(audit.pipeline, null, 2))}</div>`);
-      }
-
-      if (audit.schema && Object.keys(audit.schema).length) {
-        html += auditRow('مخطط الحقول', `<div class="audit-code">${esc(JSON.stringify(audit.schema, null, 2))}</div>`);
-      }
-
-      if (audit.jsonSchema && Object.keys(audit.jsonSchema).length) {
-        html += auditRow('JSON Schema', `<div class="audit-code">${esc(JSON.stringify(audit.jsonSchema, null, 2))}</div>`);
-      }
-
+      if (audit.pipeline?.length) html += auditRow('مسار MongoDB', codeBlock(audit.pipeline));
+      if (audit.schema && Object.keys(audit.schema).length) html += auditRow('مخطط الحقول', codeBlock(audit.schema));
+      if (audit.jsonSchema && Object.keys(audit.jsonSchema).length) html += auditRow('JSON Schema', codeBlock(audit.jsonSchema));
       if (audit.enrichment?.rows?.length) {
-        html += auditRow('نتائج وكيل البحث', `<div class="audit-code">${esc(JSON.stringify({
+        html += auditRow('نتائج وكيل البحث', codeBlock({
           rows: audit.enrichment.rows,
           schema: audit.enrichment.schema,
           source: audit.enrichment.source,
-        }, null, 2))}</div>`);
+        }));
       }
-
-      if (audit.enrichment?.citations?.length) {
-        html += auditRow('مصادر وكيل البحث', `<div class="audit-code">${esc(JSON.stringify(audit.enrichment.citations, null, 2))}</div>`);
-      }
+      if (audit.enrichment?.citations?.length) html += auditRow('مصادر وكيل البحث', codeBlock(audit.enrichment.citations));
 
       auditBody.innerHTML = html;
       auditPanel.style.display = 'block';
     }
 
-    function auditRow(key, valHtml) {
-      return `<div class="audit-row"><span class="audit-key">${esc(key)}</span><div>${valHtml}</div></div>`;
+    function summarizeAudit(data, audit) {
+      const query = audit.plan?.query || {};
+      const store = query.dataStoreName || selectedDataStoreName || 'مصدر تلقائي';
+      const dims = query.dimensions?.length ? `حسب ${query.dimensions.join(', ')}` : 'بدون تقسيم';
+      if (data.intent === 'dashboard') return `${store} · ${dims}`;
+      if (data.intent === 'report') return `${store} · تقرير تحليلي`;
+      return `${store} · ملخص سجلات`;
     }
 
-    // ── Progress ──────────────────────────────────────────────────────────
+    function codeBlock(value) {
+      return `<div class="audit-code">${esc(JSON.stringify(value, null, 2))}</div>`;
+    }
+
+    function auditRow(key, valueHtml) {
+      return `<div class="audit-row"><div class="audit-key">${esc(key)}</div><div>${valueHtml}</div></div>`;
+    }
+
     function startProgress() {
       const stages = PROGRESS_STAGES[currentEndpoint];
       progressStartedAt = Date.now();
       progressStageIndex = 0;
       goBtn.disabled = true;
-      goBtn.textContent = 'جارٍ التشغيل...';
+      goBtn.textContent = 'جار التشغيل';
       promptInput.disabled = true;
       setDisabled(examplesDiv.querySelectorAll('button'), true);
-      setDisabled(document.querySelectorAll('.endpoint-tabs button'), true);
+      setDisabled(document.querySelectorAll('.mode-tabs button'), true);
       runStatus.classList.add('active');
       progressBar.classList.add('active');
-      progressSteps.classList.add('active');
-      chartWrap.style.display = currentEndpoint === '/api/inquiry' ? 'none' : 'block';
       chartMeta.classList.remove('active');
+      chartTypePill.classList.remove('active');
+      resultSubtitle.textContent = 'جار تنفيذ الطلب عبر الوكلاء.';
+      runChip.textContent = 'قيد التشغيل';
+      runChip.className = 'run-chip';
+      durationChip.textContent = '0 ms';
       outputText.style.display = 'block';
-      outputText.innerHTML = '<div class="busy-overlay">جارٍ تجهيز النتيجة عبر وكلاء الذكاء الاصطناعي...</div>';
-      chart.clear();
-      renderProgressDots(stages);
-      updateProgress();
-      progressTimer = setInterval(updateProgress, 500);
+      outputText.innerHTML = '<div class="placeholder">جار تجهيز النتيجة...</div>';
+      if (currentEndpoint !== '/api/inquiry') {
+        chartWrap.style.display = 'block';
+        chart.clear();
+      } else {
+        chartWrap.style.display = 'none';
+      }
+      updateProgress(stages);
+      progressTimer = setInterval(() => updateProgress(stages), 500);
     }
 
-    function updateProgress() {
-      const stages = PROGRESS_STAGES[currentEndpoint];
+    function updateProgress(stages) {
       const ms = Date.now() - progressStartedAt;
-      const next = stages.findLastIndex((s) => ms >= s.at);
+      const next = stages.findLastIndex((stage) => ms >= stage.at);
       progressStageIndex = Math.max(0, Math.min(next, stages.length - 1));
-      const cur = stages[progressStageIndex];
-      statusTitle.textContent = cur.label;
-      statusDetail.textContent = cur.detail;
-      elapsedEl.textContent = `${Math.floor(ms / 1000)}s`;
-      const stageEnd = stages[progressStageIndex + 1]?.at ?? cur.at + 9000;
-      const ratio = Math.min(0.9, Math.max(0, (ms - cur.at) / Math.max(1, stageEnd - cur.at)));
+      const current = stages[progressStageIndex];
+      const stageEnd = stages[progressStageIndex + 1]?.at ?? current.at + 9000;
+      const ratio = Math.min(0.9, Math.max(0, (ms - current.at) / Math.max(1, stageEnd - current.at)));
       const pct = ((progressStageIndex + ratio) / stages.length) * 100;
-      progressFill.style.width = `${Math.min(92, Math.max(6, pct))}%`;
-      renderProgressDots(stages);
-    }
-
-    function renderProgressDots(stages) {
-      progressSteps.innerHTML = stages
-        .map((s, i) => {
-          const cls = i < progressStageIndex ? 'done' : i === progressStageIndex ? 'active' : '';
-          return `<div class="progress-step ${cls}"><span class="progress-dot"></span><span>${esc(s.label)}</span></div>`;
-        })
-        .join('');
+      statusTitle.textContent = current.label;
+      statusDetail.textContent = current.detail;
+      elapsedEl.textContent = `${Math.floor(ms / 1000)}s`;
+      progressFill.style.width = `${Math.min(92, Math.max(8, pct))}%`;
     }
 
     function completeProgress() {
       clearInterval(progressTimer);
       progressTimer = null;
-      const stages = PROGRESS_STAGES[currentEndpoint];
-      progressStageIndex = stages.length - 1;
       progressFill.style.width = '100%';
       statusTitle.textContent = 'اكتملت النتيجة';
       statusDetail.textContent = 'تم تجهيز العرض';
-      renderProgressDots(stages);
     }
 
     function stopProgress() {
@@ -935,7 +1248,6 @@
       progressTimer = null;
       runStatus.classList.remove('active');
       progressBar.classList.remove('active');
-      progressSteps.classList.remove('active');
       progressFill.style.width = '0%';
     }
 
@@ -945,23 +1257,43 @@
       goBtn.textContent = 'تشغيل';
       promptInput.disabled = false;
       setDisabled(examplesDiv.querySelectorAll('button'), false);
-      setDisabled(document.querySelectorAll('.endpoint-tabs button'), false);
+      setDisabled(document.querySelectorAll('.mode-tabs button'), false);
     }
 
-    function setDisabled(els, val) {
-      els.forEach((el) => { el.disabled = val; });
+    function resetResult() {
+      auditPanel.style.display = 'none';
+      chartMeta.classList.remove('active');
+      chartTypePill.classList.remove('active');
+      chartWrap.style.display = currentEndpoint === '/api/inquiry' ? 'none' : 'block';
+      outputText.style.display = 'block';
+      outputText.innerHTML = '<div class="placeholder">اختر اقتراحا أو اكتب طلبا لتبدأ.</div>';
+      resultSubtitle.textContent = 'اختر مثالا أو اكتب طلبا لتبدأ.';
+      runChip.textContent = 'جاهز';
+      runChip.className = 'run-chip';
+      durationChip.textContent = '0 ms';
+      chart.clear();
     }
 
-    // ── Escape helpers ────────────────────────────────────────────────────
-    function esc(v) {
-      return String(v ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-    }
-    function escAttr(v) {
-      return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    function setDisabled(elements, value) {
+      elements.forEach((element) => { element.disabled = value; });
     }
 
-    // ── Boot ──────────────────────────────────────────────────────────────
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char]));
+    }
+
+    function escAttr(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    updateModeCopy();
+    updateSelectedStore();
     renderExamples();
+    resetResult();
     loadMeta();
   </script>
 </body>

@@ -9,6 +9,13 @@ export const promptRequestSchema = z.object({
   topic: z.string().trim().min(1).optional(),
   dataStoreName: z.string().trim().min(1).optional(),
   theme: z.enum(['light', 'dark', 'brand']).optional(),
+  threadId: z.string().trim().min(1).max(200).optional(),
+  resourceId: z.string().trim().min(1).max(200).optional(),
+});
+
+export const conversationRefSchema = z.object({
+  threadId: z.string(),
+  resourceId: z.string(),
 });
 
 export const recordLinkSchema = z.object({
@@ -26,6 +33,7 @@ export const inquiryResponseSchema = z.object({
   intent: z.literal('general_question'),
   summary: z.string(),
   recordLinks: z.array(recordLinkSchema),
+  conversation: conversationRefSchema,
   audit: z.object({
     plan: taskPlanSchema,
     enrichment: datasetSchema.optional(),
@@ -37,6 +45,7 @@ export const reportResponseSchema = z.object({
   intent: z.literal('report'),
   reportSections: z.array(reportSectionSchema),
   charts: z.array(chartResultSchema).optional(),
+  conversation: conversationRefSchema,
   audit: z.object({
     plan: taskPlanSchema,
     dataset: datasetSchema.optional(),
@@ -47,6 +56,7 @@ export const reportResponseSchema = z.object({
 export const dashboardResponseSchema = z.object({
   intent: z.literal('dashboard'),
   chart: chartResultSchema,
+  conversation: conversationRefSchema,
   audit: z.object({
     plan: taskPlanSchema,
     pipeline: z.array(z.record(z.unknown())),

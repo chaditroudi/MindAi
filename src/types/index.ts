@@ -50,6 +50,11 @@ export interface PermissionScope {
 
 export type IntentKind = 'general_question' | 'report' | 'dashboard';
 
+export interface ConversationRef {
+  threadId: string;
+  resourceId: string;
+}
+
 export type DatasetRow = Record<string, string | number | boolean | null>;
 
 export interface Dataset {
