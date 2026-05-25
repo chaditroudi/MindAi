@@ -550,36 +550,18 @@
       allowedDataStores: ['ServiceRequests', 'Inspections', 'Permits', 'Projects'],
     };
 
-    // ── Fallback examples (overwritten by /api/meta) ──────────────────────
     const FALLBACK_EXAMPLES = {
       '/api/dashboard': {
-        placeholder: 'مثال: أعلى 5 بلديات حسب عدد الطلبات',
-        prompts: [
-          { label: 'أعلى 5 بلديات حسب الطلبات', prompt: 'top 5 municipalities by service request count', dataStoreName: 'ServiceRequests', tag: 'ترتيب' },
-          { label: 'توزيع الميزانية كنسبة مئوية', prompt: 'budget distribution by project type as a percentage', dataStoreName: 'Projects', tag: '%' },
-          { label: 'مناطق بأكثر من 5 مخالفات', prompt: 'zones with more than 5 inspection violations', dataStoreName: 'Inspections', tag: 'فلتر' },
-          { label: 'طلبات يومية آخر 30 يوماً', prompt: 'daily service request count over the last 30 days', dataStoreName: 'ServiceRequests', tag: 'اتجاه' },
-          { label: 'التصاريح المفتوحة حسب البلدية', prompt: 'open permits by municipality', dataStoreName: 'Permits', tag: 'فلتر' },
-          { label: 'متوسط معالجة التصاريح حسب النوع', prompt: 'average processing days by permit type', dataStoreName: 'Permits', tag: 'متوسط' },
-        ],
+        placeholder: 'سيتم تحميل أمثلة من بيانات المنصة',
+        prompts: [],
       },
       '/api/report': {
-        placeholder: 'مثال: تحليل المخالفات حسب البلدية هذا العام',
-        prompts: [
-          { label: 'مخالفات التفتيش حسب البلدية', prompt: 'analyze inspection violations by municipality this year', dataStoreName: 'Inspections', tag: 'تقرير' },
-          { label: 'أعلى 10 مقاولين حسب الميزانية', prompt: 'top 10 contractors by total project budget', dataStoreName: 'Projects', tag: 'ترتيب' },
-          { label: 'اتجاهات الطلبات آخر 90 يوماً', prompt: 'analyze service request volume by municipality over the last 90 days', dataStoreName: 'ServiceRequests', tag: 'اتجاه' },
-          { label: 'التصاريح المرفوضة والموافق عليها', prompt: 'compare approved vs rejected permits by type', dataStoreName: 'Permits', tag: 'مقارنة' },
-        ],
+        placeholder: 'سيتم تحميل أمثلة من بيانات المنصة',
+        prompts: [],
       },
       '/api/inquiry': {
-        placeholder: 'مثال: طلبات خدمة عاجلة بحالة جديدة',
-        prompts: [
-          { label: 'طلبات عاجلة بحالة جديدة', prompt: 'find urgent service requests with status new', dataStoreName: 'ServiceRequests', tag: 'بحث' },
-          { label: 'تصاريح مرفوضة آخر 7 أيام', prompt: 'show rejected permits in the last 7 days', dataStoreName: 'Permits', tag: 'بحث' },
-          { label: 'تفتيشات بمخالفات', prompt: 'find inspections with violation outcome', dataStoreName: 'Inspections', tag: 'بحث' },
-          { label: 'مشاريع قيد التنفيذ', prompt: 'find projects in execution stage', dataStoreName: 'Projects', tag: 'بحث' },
-        ],
+        placeholder: 'سيتم تحميل أمثلة من بيانات المنصة',
+        prompts: [],
       },
     };
 
@@ -849,8 +831,36 @@
         html += auditRow('خطة التنفيذ', `<div class="audit-code">${esc(JSON.stringify(audit.plan, null, 2))}</div>`);
       }
 
+      if (audit.dataset?.rows?.length) {
+        html += auditRow('البيانات المستخدمة', `<div class="audit-code">${esc(JSON.stringify({
+          rows: audit.dataset.rows,
+          schema: audit.dataset.schema,
+          source: audit.dataset.source,
+        }, null, 2))}</div>`);
+      }
+
       if (audit.pipeline?.length) {
         html += auditRow('مسار MongoDB', `<div class="audit-code">${esc(JSON.stringify(audit.pipeline, null, 2))}</div>`);
+      }
+
+      if (audit.schema && Object.keys(audit.schema).length) {
+        html += auditRow('مخطط الحقول', `<div class="audit-code">${esc(JSON.stringify(audit.schema, null, 2))}</div>`);
+      }
+
+      if (audit.jsonSchema && Object.keys(audit.jsonSchema).length) {
+        html += auditRow('JSON Schema', `<div class="audit-code">${esc(JSON.stringify(audit.jsonSchema, null, 2))}</div>`);
+      }
+
+      if (audit.enrichment?.rows?.length) {
+        html += auditRow('نتائج وكيل البحث', `<div class="audit-code">${esc(JSON.stringify({
+          rows: audit.enrichment.rows,
+          schema: audit.enrichment.schema,
+          source: audit.enrichment.source,
+        }, null, 2))}</div>`);
+      }
+
+      if (audit.enrichment?.citations?.length) {
+        html += auditRow('مصادر وكيل البحث', `<div class="audit-code">${esc(JSON.stringify(audit.enrichment.citations, null, 2))}</div>`);
       }
 
       auditBody.innerHTML = html;

@@ -11,6 +11,7 @@
     "mastra:dev": "mastra dev",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
+    "import:db-export": "tsx scripts/import-db-export.ts",
     "smoke": "tsx scripts/smoke.ts",
     "knowledge:index": "tsx scripts/build-knowledge-index.ts",
     "db:check": "tsx scripts/check-mongo.ts",

@@ -4,13 +4,13 @@ import { chartPlanSchema, chartResultSchema } from '../schemas/chart.js';
 import type { ChartPlan } from '../schemas/chart.js';
 import { datasetSchema } from '../schemas/intent.js';
 import { buildChartFromDataset, getChartTypeCandidates } from '../tools/chart-tools.js';
-import { parseJsonOutput } from './json-output.js';
 import { envTimeout, withTimeout } from './timeout.js';
 
 type Dataset = z.infer<typeof datasetSchema>;
 type IntentHint = 'compare' | 'trend' | 'distribution' | 'part_of_whole' | 'geo' | 'ranking';
+type ChartType = NonNullable<ChartPlan['chartType']>;
 type CompleteChartPlan = ChartPlan & {
-  chartType: NonNullable<ChartPlan['chartType']>;
+  chartType: ChartType;
   xAxisField: string;
   yAxisField: string;
   title: string;
@@ -145,28 +145,163 @@ async function runChartPlanner({
         },
         { role: 'user', content: JSON.stringify(payload) },
       ],
-      { maxTokens: 256, temperature: 0 },
+      { output: chartPlanSchema, maxTokens: 256, temperature: 0 },
     ),
     'chart.planner',
     envTimeout('CHART_TIMEOUT_MS', 3000),
   );
 
-  return sanitizePlan(parseJsonOutput(result.text, chartPlanSchema), visibleFields);
+  return sanitizePlan({
+    plan: result.object,
+    dataset,
+    visibleFields,
+    candidates,
+    intentHint,
+    fallbackTitle: title,
+  });
 }
 
 /**
- * Strip any field names the LLM invented that don't exist in the actual schema.
- * chartType is kept as-is; the builder validates it implicitly.
+ * Strip invented fields and repair invalid field roles before the renderer sees
+ * the plan. The LLM may understand the intent but still swap category/metric
+ * fields; this guard keeps ECharts inputs type-correct.
  */
-function sanitizePlan(plan: ChartPlan, validFields: string[]): ChartPlan {
-  const valid = new Set(validFields);
+function sanitizePlan({
+  plan,
+  dataset,
+  visibleFields,
+  candidates,
+  intentHint,
+  fallbackTitle,
+}: {
+  plan: ChartPlan;
+  dataset: Dataset;
+  visibleFields: string[];
+  candidates: ChartType[];
+  intentHint?: IntentHint;
+  fallbackTitle?: string;
+}): ChartPlan {
+  const valid = new Set(visibleFields);
+  const schema = dataset.schema;
+  const numericFields = visibleFields.filter((field) => isNumericField(field, schema));
+  const temporalFields = visibleFields.filter((field) => isTemporalField(field, schema, dataset));
+  const categoricalFields = visibleFields.filter(
+    (field) => !isNumericField(field, schema) && schema[field] !== 'geo',
+  );
+  const chartType = resolveChartType(plan.chartType, candidates, intentHint);
+  const metricField = resolveMetricField(plan.yAxisField, numericFields);
+  const dimensionField = resolveDimensionField({
+    requested: plan.xAxisField,
+    chartType,
+    categoricalFields,
+    temporalFields,
+    numericFields,
+    metricField,
+  });
+  const clusterField = plan.clusters?.find(
+    (field) =>
+      valid.has(field) &&
+      field !== dimensionField &&
+      field !== metricField &&
+      !isNumericField(field, schema),
+  );
+  const groupByField =
+    clusterField ??
+    (plan.groupByField &&
+    valid.has(plan.groupByField) &&
+    plan.groupByField !== dimensionField &&
+    plan.groupByField !== metricField &&
+    !isNumericField(plan.groupByField, schema)
+      ? plan.groupByField
+      : undefined);
+
   return {
-    chartType: plan.chartType,
-    xAxisField: plan.xAxisField && valid.has(plan.xAxisField) ? plan.xAxisField : undefined,
-    yAxisField: plan.yAxisField && valid.has(plan.yAxisField) ? plan.yAxisField : undefined,
-    groupByField: plan.groupByField && valid.has(plan.groupByField) ? plan.groupByField : undefined,
-    title: plan.title,
+    chartType,
+    xAxisField: dimensionField,
+    yAxisField: metricField,
+    groupByField,
+    clusters: groupByField ? [groupByField] : undefined,
+    title: plan.title ?? fallbackTitle,
   };
+}
+
+function resolveChartType(
+  requested: ChartPlan['chartType'],
+  candidates: ChartType[],
+  intentHint?: IntentHint,
+) {
+  if (requested && candidates.includes(requested)) return requested;
+
+  const byIntent: Partial<Record<IntentHint, ChartType[]>> = {
+    trend: ['line'],
+    ranking: ['horizontalBar', 'bar'],
+    compare: ['bar', 'horizontalBar'],
+    distribution: ['histogram'],
+    part_of_whole: ['donut', 'bar'],
+    geo: ['map', 'horizontalBar'],
+  };
+  const preferred = intentHint ? byIntent[intentHint] ?? [] : [];
+  return (
+    preferred.find((candidate) => candidates.includes(candidate)) ??
+    (['line', 'bar', 'horizontalBar', 'histogram', 'scatter', 'donut', 'map', 'table'] as ChartType[]).find(
+      (candidate) => candidates.includes(candidate),
+    ) ??
+    candidates[0]
+  );
+}
+
+function resolveMetricField(requested: string | undefined, numericFields: string[]) {
+  if (requested && numericFields.includes(requested)) return requested;
+
+  const aliases = ['value', 'count', 'total', 'sum', 'average', 'avg', 'rate', 'amount', 'score'];
+  return numericFields.find((field) => aliases.includes(field.toLowerCase())) ?? numericFields[0];
+}
+
+function resolveDimensionField({
+  requested,
+  chartType,
+  categoricalFields,
+  temporalFields,
+  numericFields,
+  metricField,
+}: {
+  requested: string | undefined;
+  chartType: ChartPlan['chartType'];
+  categoricalFields: string[];
+  temporalFields: string[];
+  numericFields: string[];
+  metricField: string | undefined;
+}) {
+  if (chartType === 'line') {
+    if (requested && temporalFields.includes(requested)) return requested;
+    return temporalFields[0] ?? categoricalFields[0] ?? numericFields.find((field) => field !== metricField);
+  }
+
+  if (chartType === 'histogram') {
+    if (requested && numericFields.includes(requested)) return requested;
+    return metricField ?? numericFields[0];
+  }
+
+  if (chartType === 'scatter') {
+    if (requested && numericFields.includes(requested) && requested !== metricField) return requested;
+    return numericFields.find((field) => field !== metricField) ?? numericFields[0];
+  }
+
+  if (requested && categoricalFields.includes(requested)) return requested;
+  return categoricalFields[0] ?? temporalFields[0] ?? numericFields.find((field) => field !== metricField);
+}
+
+function isNumericField(field: string, schema: Record<string, string>) {
+  return schema[field] === 'number' || schema[field] === 'integer';
+}
+
+function isTemporalField(field: string, schema: Record<string, string>, dataset: Dataset) {
+  if (schema[field] === 'date' || schema[field] === 'datetime') return true;
+  if (!/(date|time|created|updated|day|month|year|يوم|تاريخ|شهر|سنة)/i.test(field)) return false;
+  return dataset.rows.some((row) => {
+    const value = row[field];
+    return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+  });
 }
 
 /**
@@ -181,7 +316,7 @@ function mergeChartPlan(
     chartType: planner.chartType,
     xAxisField: caller.xAxisField ?? planner.xAxisField,
     yAxisField: caller.yAxisField ?? planner.yAxisField,
-    groupByField: caller.groupByField ?? planner.groupByField,
+    groupByField: caller.groupByField ?? planner.clusters?.[0] ?? planner.groupByField,
     title: caller.title ?? planner.title,
   };
 }

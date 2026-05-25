@@ -10,8 +10,13 @@ export class DataStoreRepository {
 
     return dataStores.find(
       (ds) =>
-        normalizeToken(ds.name) === normalizedName ||
-        normalizeToken(ds.collection) === normalizedName,
+        [
+          ds.name,
+          ds.collection,
+          getStringProperty(ds, 'id'),
+          getStringProperty(ds, '_id'),
+          getStringProperty(ds, 'blueprintId'),
+        ].some((candidate) => normalizeToken(candidate) === normalizedName),
     ) ?? null;
   }
 
@@ -46,4 +51,11 @@ export const dataStoreRepo = new DataStoreRepository();
 
 function normalizeToken(value: string | undefined) {
   return value?.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+function getStringProperty(value: unknown, key: string) {
+  if (!value || typeof value !== 'object') return undefined;
+  const raw = (value as Record<string, unknown>)[key];
+  if (raw === undefined || raw === null) return undefined;
+  return String(raw);
 }

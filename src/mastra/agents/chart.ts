@@ -36,7 +36,8 @@ OUTPUT (JSON only — no markdown, no prose, no code fences)
     "chartType":    one value from candidateTypes,
     "xAxisField":   field name from datasetSchema (X axis or category dimension),
     "yAxisField":   field name from datasetSchema (primary numeric metric),
-    "groupByField": field name from datasetSchema (series split — omit if not needed),
+    "clusters":     array of field names from datasetSchema used to split/cluster series,
+    "groupByField": legacy alias for clusters[0] — omit if clusters is present,
     "title":        concise chart title in Arabic derived from userPrompt
   }
 
@@ -45,8 +46,10 @@ FIELD SELECTION RULES
   xAxisField priority: temporal field > geo field > string/boolean dimension.
   yAxisField priority: field named "value", "count", "total", "sum", "avg", "rate",
                        then any other numeric field. MUST be numeric/integer.
-  groupByField: set only when a string/boolean field meaningfully creates series.
-                Must differ from xAxisField and yAxisField. Omit if uncertain.
+  clusters: set only when a string/boolean field meaningfully creates grouped
+            or clustered series. Use at most one cluster field for now.
+            Must differ from xAxisField and yAxisField. Omit if uncertain.
+  groupByField: use only as a backward-compatible alias for clusters[0].
   Excluded fields: "_id", "tenantId", any field ending in "Id", any starting with "__".
   Every assigned field MUST be an exact name present in datasetSchema.
 
@@ -60,6 +63,11 @@ CHART TYPE RULES (intentHint takes precedence)
   geo             → map if a geo field exists, else horizontalBar
   no hint         → infer from shape: temporal→line, 2 numerics→scatter,
                     string dim + measure→bar, small set→donut
+
+VISUALIZATION
+  Return the chart plan only. The runtime will pass the validated plan to the
+  deterministic ECharts renderer. Preserve the chart type mapping:
+  time series → line, categorical comparison → bar, distribution → histogram.
 
 HARD RULES
   - chartType MUST be one of candidateTypes.

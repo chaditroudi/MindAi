@@ -77,6 +77,7 @@ const enrichStep = createStep({
     const knowledgeDataset = await runSearchEnrichment({
       mastra: mastra!,
       enrichment: inputData.plan.enrichment!,
+      timeRange: inputData.plan.query.timeRange,
       joinKey: inputData.plan.query.dimensions?.[0],
     });
 
@@ -128,6 +129,7 @@ const summarizeStep = createStep({
     summary: z.string(),
     recordLinks: z.array(z.object({ collection: z.string(), id: z.string(), label: z.string() })),
     plan: taskPlanSchema,
+    dataset: datasetSchema,
   }),
   execute: async ({ inputData, mastra }) => {
     const summaryPayload = await runInquiryWriter({
@@ -142,7 +144,7 @@ const summarizeStep = createStep({
       label: String(r.name ?? r.title ?? r._id ?? `Record ${i + 1}`),
     }));
 
-    return { summary: summaryPayload.summary, recordLinks, plan: inputData.plan };
+    return { summary: summaryPayload.summary, recordLinks, plan: inputData.plan, dataset: inputData.dataset };
   },
 });
 

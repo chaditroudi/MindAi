@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const nullToUndefined = (value: unknown) => value === null ? undefined : value;
+const optionalString = z.preprocess(nullToUndefined, z.string().optional());
 
 export const chartTypeSchema = z.enum([
   'line',
@@ -28,11 +30,12 @@ export const chartResultSchema = z.object({
  * The deterministic chart builder consumes this and owns all rendering.
  */
 export const chartPlanSchema = z.object({
-  chartType: chartTypeSchema.optional(),
-  xAxisField: z.string().optional(),
-  yAxisField: z.string().optional(),
-  groupByField: z.string().optional(),
-  title: z.string().optional(),
+  chartType: z.preprocess(nullToUndefined, chartTypeSchema.optional()),
+  xAxisField: optionalString,
+  yAxisField: optionalString,
+  groupByField: optionalString,
+  clusters: z.preprocess(nullToUndefined, z.array(z.string()).optional()),
+  title: optionalString,
 });
 
 export type ChartType = z.infer<typeof chartTypeSchema>;

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { permissionScopeSchema } from '../mastra/schemas/datastore.js';
 import { chartResultSchema } from '../mastra/schemas/chart.js';
-import { taskPlanSchema } from '../mastra/schemas/intent.js';
+import { datasetSchema, taskPlanSchema } from '../mastra/schemas/intent.js';
 
 export const promptRequestSchema = z.object({
   prompt: z.string().trim().min(1).max(4000),
@@ -28,6 +28,7 @@ export const inquiryResponseSchema = z.object({
   recordLinks: z.array(recordLinkSchema),
   audit: z.object({
     plan: taskPlanSchema,
+    enrichment: datasetSchema.optional(),
     elapsedMs: z.number(),
   }),
 });
@@ -38,6 +39,7 @@ export const reportResponseSchema = z.object({
   charts: z.array(chartResultSchema).optional(),
   audit: z.object({
     plan: taskPlanSchema,
+    dataset: datasetSchema.optional(),
     elapsedMs: z.number(),
   }),
 });
@@ -48,6 +50,9 @@ export const dashboardResponseSchema = z.object({
   audit: z.object({
     plan: taskPlanSchema,
     pipeline: z.array(z.record(z.unknown())),
+    schema: z.record(z.string()).optional(),
+    jsonSchema: z.record(z.unknown()).optional(),
+    enrichment: datasetSchema.optional(),
     elapsedMs: z.number(),
   }),
 });

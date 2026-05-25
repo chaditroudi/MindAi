@@ -41,6 +41,12 @@ type BuildChartInput = {
   labelFormat?: 'number' | 'currency' | 'percent' | 'compact';
 };
 
+const nullToUndefined = (value: unknown) => value === null ? undefined : value;
+const optionalString = z.preprocess(nullToUndefined, z.string().optional());
+const optionalNumber = z.preprocess(nullToUndefined, z.number().optional());
+const optionalBoolean = z.preprocess(nullToUndefined, z.boolean().optional());
+const optionalStringArray = z.preprocess(nullToUndefined, z.array(z.string()).optional());
+
 // Common aggregation output field names, ordered by priority
 const VALUE_ALIASES = ['value', 'count', 'total', 'sum', 'average', 'avg', 'amount', 'score', 'rate', 'quantity', 'cnt', 'n'];
 
@@ -51,21 +57,21 @@ export const buildEChartsTool = createTool({
   inputSchema: z.object({
     dataset: datasetSchema,
     intentHint: z.enum(['compare', 'trend', 'distribution', 'part_of_whole', 'geo', 'ranking']).optional(),
-    chartType: chartTypeSchema.optional(),
-    title: z.string().optional(),
+    chartType: z.preprocess(nullToUndefined, chartTypeSchema.optional()),
+    title: optionalString,
     theme: z.enum(['light', 'dark', 'brand']).default('light'),
-    xAxisField: z.string().optional().describe('Field name to use as the X axis / category dimension. Overrides auto-detection.'),
-    yAxisField: z.string().optional().describe('Field name to use as the Y axis / primary metric. Overrides auto-detection.'),
-    groupByField: z.string().optional().describe('Field name to split into separate series / clusters / colors. Overrides auto-detection.'),
-    sizeField: z.string().optional().describe('Numeric field to map to bubble/scatter point size.'),
-    stackBars: z.boolean().optional().describe('Stack grouped bar series instead of placing them side-by-side.'),
-    bins: z.number().int().min(2).max(100).optional().describe('Number of bins for histogram charts. Defaults to 10.'),
-    smooth: z.boolean().optional().describe('Enable smooth curves on line charts. Defaults to true.'),
-    colorPalette: z.array(z.string()).optional().describe('Custom hex color array to override the default palette.'),
-    showDataZoom: z.boolean().optional().describe('Add a data-zoom slider below the chart for large datasets.'),
-    yAxisMin: z.number().optional().describe('Explicit minimum value for the Y axis.'),
-    yAxisMax: z.number().optional().describe('Explicit maximum value for the Y axis.'),
-    labelFormat: z.enum(['number', 'currency', 'percent', 'compact']).optional().describe('Numeric label formatting for tooltip and axis values.'),
+    xAxisField: optionalString.describe('Field name to use as the X axis / category dimension. Overrides auto-detection.'),
+    yAxisField: optionalString.describe('Field name to use as the Y axis / primary metric. Overrides auto-detection.'),
+    groupByField: optionalString.describe('Field name to split into separate series / clusters / colors. Overrides auto-detection.'),
+    sizeField: optionalString.describe('Numeric field to map to bubble/scatter point size.'),
+    stackBars: optionalBoolean.describe('Stack grouped bar series instead of placing them side-by-side.'),
+    bins: z.preprocess(nullToUndefined, z.number().int().min(2).max(100).optional()).describe('Number of bins for histogram charts. Defaults to 10.'),
+    smooth: optionalBoolean.describe('Enable smooth curves on line charts. Defaults to true.'),
+    colorPalette: optionalStringArray.describe('Custom hex color array to override the default palette.'),
+    showDataZoom: optionalBoolean.describe('Add a data-zoom slider below the chart for large datasets.'),
+    yAxisMin: optionalNumber.describe('Explicit minimum value for the Y axis.'),
+    yAxisMax: optionalNumber.describe('Explicit maximum value for the Y axis.'),
+    labelFormat: z.preprocess(nullToUndefined, z.enum(['number', 'currency', 'percent', 'compact']).optional()).describe('Numeric label formatting for tooltip and axis values.'),
   }),
   outputSchema: chartResultSchema,
   execute: async ({ context }) => buildChartFromDataset(context),
@@ -630,8 +636,6 @@ function buildHistogram(rows: Row[], val: string, title: string, theme: string, 
   };
 }
 
-// Requires the consuming client to have registered a named map via echarts.registerMap().
-// Falls back gracefully if called with string-label geo data (handled in buildChartFromDataset).
 function buildMap(rows: Row[], geoField: string, val: string, title: string, theme: string, opts: ChartOpts = {}) {
   return {
     chartType: 'map' as const,

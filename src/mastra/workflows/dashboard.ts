@@ -91,6 +91,7 @@ const enrichmentStep = createStep({
       enrichment: await runSearchEnrichment({
         mastra: mastra!,
         enrichment: plan.enrichment,
+        timeRange: plan.query.timeRange,
         joinKey: plan.query.dimensions?.[0],
         // Give the agent a schema hint derived from the plan so it names fields correctly
         primarySchema: plan.query.dimensions?.reduce<Record<string, string>>(
@@ -122,6 +123,7 @@ const mergeStep = createStep({
     prompt: z.string(),
     theme: themeSchema,
     dataset: datasetSchema,
+    enrichment: datasetSchema.optional(),
     executedPipeline: z.array(z.record(z.unknown())),
   }),
   execute: async ({ inputData }) => {
@@ -147,7 +149,7 @@ const mergeStep = createStep({
       secondaryRowCount: enrichment.rows.length,
       mergedRowCount: merged.rows.length,
     });
-    return { plan, prompt, theme, dataset: merged, executedPipeline };
+    return { plan, prompt, theme, dataset: merged, enrichment, executedPipeline };
   },
 });
 
@@ -158,11 +160,13 @@ const chartStep = createStep({
     prompt: z.string(),
     theme: themeSchema,
     dataset: datasetSchema,
+    enrichment: datasetSchema.optional(),
     executedPipeline: z.array(z.record(z.unknown())),
   }),
   outputSchema: z.object({
     chart: chartResultSchema,
     dataset: datasetSchema,
+    enrichment: datasetSchema.optional(),
     plan: taskPlanSchema,
     executedPipeline: z.array(z.record(z.unknown())),
   }),
@@ -177,6 +181,7 @@ const chartStep = createStep({
     return {
       chart,
       dataset: inputData.dataset,
+      enrichment: inputData.enrichment,
       plan: inputData.plan,
       executedPipeline: inputData.executedPipeline,
     };

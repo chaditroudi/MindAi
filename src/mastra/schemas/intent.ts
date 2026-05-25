@@ -4,9 +4,17 @@ export const intentKindSchema = z.enum(['general_question', 'report', 'dashboard
 
 const sortDirectionSchema = z.enum(['asc', 'desc']);
 const nullToUndefined = (value: unknown) => value === null ? undefined : value;
+const objectOrUndefined = (value: unknown) =>
+  value === null || typeof value !== 'object' || Array.isArray(value) ? undefined : value;
+const positiveIntOrUndefined = (value: unknown) => {
+  if (value === null || value === undefined) return undefined;
+  const numeric = typeof value === 'string' ? Number(value) : value;
+  if (typeof numeric !== 'number' || !Number.isInteger(numeric) || numeric <= 0) return undefined;
+  return numeric;
+};
 const optionalString = z.preprocess(nullToUndefined, z.string().optional());
 const optionalStringArray = z.preprocess(nullToUndefined, z.array(z.string()).optional());
-const optionalPositiveInt = z.preprocess(nullToUndefined, z.number().int().positive().optional());
+const optionalPositiveInt = z.preprocess(positiveIntOrUndefined, z.number().int().positive().optional());
 
 type SortClause = { field: string; dir: 'asc' | 'desc' };
 
@@ -26,6 +34,8 @@ export const taskPlanSchema = z.object({
   needsEnrichment: z.boolean(),
   needsChart: z.boolean(),
   query: z.object({
+    blueprintId: optionalString,
+    dataStoreId: optionalString,
     dataStoreName: optionalString,
     metric: optionalString,
     metrics: optionalStringArray,
@@ -50,7 +60,7 @@ export const taskPlanSchema = z.object({
         }),
       )
       .optional()),
-    timeRange: z.preprocess(nullToUndefined, z
+    timeRange: z.preprocess(objectOrUndefined, z
       .object({
         field: z.string(),
         from: optionalString,
@@ -73,6 +83,15 @@ export const taskPlanSchema = z.object({
     .object({
       topic: z.string(),
       dimensions: z.array(z.string()),
+      timeRange: z.preprocess(objectOrUndefined, z
+        .object({
+          field: z.string(),
+          from: optionalString,
+          to: optionalString,
+        })
+        .optional()),
+      language: optionalString,
+      locale: optionalString,
       sources: optionalStringArray,
     })
     .optional()),
@@ -86,6 +105,7 @@ export type TaskPlanInput = z.infer<typeof taskPlanSchema>;
 export const datasetSchema = z.object({
   rows: z.array(z.record(z.union([z.string(), z.number(), z.boolean(), z.null()]))),
   schema: z.record(z.string()),
+  jsonSchema: z.record(z.unknown()).optional(),
   source: z.enum(['mongodb', 'search', 'merged']),
   citations: z
     .array(

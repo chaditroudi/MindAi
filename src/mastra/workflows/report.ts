@@ -78,6 +78,7 @@ const enrichmentStep = createStep({
       enrichment: await runSearchEnrichment({
         mastra: mastra!,
         enrichment: inputData.plan.enrichment,
+        timeRange: inputData.plan.query.timeRange,
         joinKey: inputData.plan.query.dimensions?.[0],
         primarySchema: inputData.plan.query.dimensions?.reduce<Record<string, string>>(
           (acc, d) => ({ ...acc, [d]: 'string' }),
@@ -122,6 +123,7 @@ const writeReportStep = createStep({
   outputSchema: z.object({
     reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
     plan: taskPlanSchema,
+    enrichment: datasetSchema.optional(),
   }),
   execute: async ({ inputData, mastra }) => {
     const writePayload = await runReportWriter({
@@ -131,7 +133,7 @@ const writeReportStep = createStep({
       enrichment: inputData.enrichment,
     });
 
-    return { reportSections: writePayload.reportSections, plan: inputData.plan };
+    return { reportSections: writePayload.reportSections, plan: inputData.plan, enrichment: inputData.enrichment };
   },
 });
 
@@ -166,6 +168,7 @@ const finalizeStep = createStep({
     'write-report': z.object({
       reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
       plan: taskPlanSchema,
+      enrichment: datasetSchema.optional(),
     }),
     chart: z.object({
       charts: z.array(chartResultSchema).optional(),
@@ -175,12 +178,14 @@ const finalizeStep = createStep({
     reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
     charts: z.array(chartResultSchema).optional(),
     plan: taskPlanSchema,
+    enrichment: datasetSchema.optional(),
   }),
   execute: async ({ inputData }) => {
     return {
       reportSections: inputData['write-report'].reportSections,
       charts: inputData.chart.charts,
       plan: inputData['write-report'].plan,
+      enrichment: inputData['write-report'].enrichment,
     };
   },
 });

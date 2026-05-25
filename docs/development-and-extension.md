@@ -6,6 +6,24 @@
 2. Add or seed records in the MongoDB collection named by the data store's `collection`.
 3. Include the data store name in `scope.allowedDataStores` if you use an allow-list.
 
+## Import DB Export Samples
+
+The app does not query `samples/db-export/*.json` directly at runtime. To use
+exported snapshots, import selected collections into MongoDB:
+
+```powershell
+npm run import:db-export
+```
+
+By default this imports `service_requests`, `inspections`, `permits`, and
+`projects` with `tenantId=t_mind_qatar` in replace mode.
+
+Optional environment variables:
+
+- `IMPORT_COLLECTIONS=service_requests,permits`
+- `IMPORT_TENANT_ID=t_mind_qatar`
+- `IMPORT_MODE=replace|append`
+
 ## Important Files
 
 - `src/db/datastore.repository.ts`: data store metadata loading

@@ -14,6 +14,7 @@ Rules:
 - report: needsData=true, needsChart only if user asks for chart.
 - inquiry: needsData=true, needsChart=false.
 - "top N" means topN=N and chartHint="ranking".
+- Only set topN when N is a positive integer. Never set topN to 0.
 - "by X" means dimensions=["X"] if X is a real dimension field.
 - Counts use aggregation="count" and no metric.
 - Amount totals use aggregation="sum" with a measure metric.
@@ -22,9 +23,14 @@ Rules:
 - Every filter must include field, op, and value. Use op="eq" for exact status,
   priority, outcome, stage, type, or enum matches.
 - needsEnrichment=true ONLY when the user explicitly asks to compare against external benchmarks,
-  national averages, public standards, or regional data not in the platform.
+  national averages, public standards, geo metadata, currency rates, news, or regional data
+  not in the platform.
   When true, set enrichment.topic (what to search for), enrichment.dimensions (must match the
-  primary query dimensions exactly), and optionally enrichment.sources (domain allow-list).
+  primary query dimensions exactly), and optionally enrichment.timeRange, enrichment.language,
+  enrichment.locale, and enrichment.sources (domain allow-list).
+- timeRange MUST be an object when present:
+  { "field": "createdAt", "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }.
+  Never set timeRange to a string like "last 30 days".
 
 Required shape:
 {

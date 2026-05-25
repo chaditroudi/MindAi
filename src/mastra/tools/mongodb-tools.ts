@@ -6,6 +6,26 @@ import { dataStoreRepo } from '../../db/datastore.repository.js';
 import { dataStoreSchema, permissionScopeSchema } from '../schemas/datastore.js';
 import { taskPlanSchema } from '../schemas/intent.js';
 
+const resolveBlueprintInputSchema = z.object({
+  blueprintId: z.string().optional(),
+  dataStoreId: z.string().optional(),
+  dataStoreName: z.string().optional(),
+  scope: permissionScopeSchema,
+});
+
+export const resolveBlueprintTool = createTool({
+  id: 'resolveBlueprint',
+  description:
+    'Resolve a blueprint/data-store identifier into the accessible Data Store metadata: collection, typed fields, and joins.',
+  inputSchema: resolveBlueprintInputSchema,
+  outputSchema: z.object({
+    blueprint: dataStoreSchema.optional(),
+    dataStore: dataStoreSchema.optional(),
+    dataStores: z.array(dataStoreSchema),
+  }),
+  execute: async ({ context }) => resolveBlueprint(context),
+});
+
 export const resolveDataStoreTool = createTool({
   id: 'resolve-data-store',
   description:
@@ -18,40 +38,38 @@ export const resolveDataStoreTool = createTool({
     dataStores: z.array(dataStoreSchema),
   }),
   execute: async ({ context }) => {
-    const dataStores = await dataStoreRepo.listAccessibleDataStores(context.scope);
-    if (context.dataStoreName) {
-      const normalized = normalizeToken(context.dataStoreName);
-      return {
-        dataStores: dataStores.filter(
-          (ds) =>
-            normalizeToken(ds.name) === normalized ||
-            normalizeToken(ds.collection) === normalized,
-        ),
-      };
-    }
-    return { dataStores };
+    const resolved = await resolveBlueprint(context);
+    return { dataStores: resolved.dataStores };
   },
 });
 
 export const buildAggregationTool = createTool({
-  id: 'build-aggregation',
+  id: 'buildAggregation',
   description:
     'Translate a structured query plan into a MongoDB aggregation pipeline. Returns the pipeline as a JSON array without executing it. Supports topN, having, lookups, multi-metric, percentOf, nin, and regex.',
   inputSchema: z.object({
     plan: taskPlanSchema,
-    dataStore: dataStoreSchema,
+    blueprint: dataStoreSchema.optional(),
+    dataStore: dataStoreSchema.optional(),
     scope: permissionScopeSchema,
   }),
   outputSchema: z.object({
     pipeline: z.array(z.record(z.unknown())),
     collection: z.string(),
   }),
-  execute: async ({ context }) => buildAggregationFromPlan(context),
+  execute: async ({ context }) => {
+    const dataStore = context.dataStore ?? context.blueprint;
+    if (!dataStore) {
+      throw new Error('buildAggregation requires a resolved blueprint or dataStore.');
+    }
+
+    return buildAggregationFromPlan({ plan: context.plan, dataStore, scope: context.scope });
+  },
 });
 
 export const executePipelineTool = createTool({
-  id: 'execute-pipeline',
-  description: 'Execute a MongoDB aggregation pipeline produced by build-aggregation.',
+  id: 'executePipeline',
+  description: 'Execute a safe MongoDB aggregation pipeline produced by buildAggregation.',
   inputSchema: z.object({
     pipeline: z.array(z.record(z.unknown())),
     collection: z.string(),
@@ -65,20 +83,54 @@ export const executePipelineTool = createTool({
 });
 
 export const validateRowsTool = createTool({
-  id: 'validate-rows',
+  id: 'validateRows',
   description: 'Validate rows shape and produce a field→type schema for downstream agents.',
   inputSchema: z.object({
     rows: z.array(z.record(z.unknown())),
-    dataStore: dataStoreSchema,
+    blueprint: dataStoreSchema.optional(),
+    dataStore: dataStoreSchema.optional(),
   }),
   outputSchema: z.object({
     valid: z.boolean(),
     schema: z.record(z.string()),
+    jsonSchema: z.record(z.unknown()),
     rows: z.array(z.record(z.union([z.string(), z.number(), z.boolean(), z.null()]))),
     issues: z.array(z.string()),
   }),
-  execute: async ({ context }) => validateRows(context),
+  execute: async ({ context }) => {
+    const dataStore = context.dataStore ?? context.blueprint;
+    if (!dataStore) {
+      throw new Error('validateRows requires a resolved blueprint or dataStore.');
+    }
+
+    return validateRows({ rows: context.rows, dataStore });
+  },
 });
+
+export async function resolveBlueprint({
+  blueprintId,
+  dataStoreId,
+  dataStoreName,
+  scope,
+}: z.infer<typeof resolveBlueprintInputSchema>) {
+  const dataStores = await dataStoreRepo.listAccessibleDataStores(scope);
+  const identifiers = [blueprintId, dataStoreId, dataStoreName]
+    .map(normalizeToken)
+    .filter((identifier): identifier is string => Boolean(identifier));
+
+  if (identifiers.length === 0) {
+    return { dataStores };
+  }
+
+  const matches = dataStores.filter((ds) => identifiers.some((identifier) => matchesDataStore(ds, identifier)));
+  const resolved = matches[0];
+
+  return {
+    blueprint: resolved,
+    dataStore: resolved,
+    dataStores: matches,
+  };
+}
 
 export function buildAggregationFromPlan({
   plan,
@@ -116,7 +168,15 @@ export function validateRows({
   const schema: Record<string, string> = {};
   const fieldMap = new Map(dataStore.fields.map((f) => [f.name, f.type]));
 
-  if (rows.length === 0) return { valid: true, schema: {}, rows: [], issues: [] };
+  if (rows.length === 0) {
+    return {
+      valid: true,
+      schema: {},
+      jsonSchema: buildOutputJsonSchema({}),
+      rows: [],
+      issues: [],
+    };
+  }
 
   for (const key of Object.keys(rows[0])) {
     schema[key] = fieldMap.get(key) ?? inferType(rows[0][key]);
@@ -133,7 +193,13 @@ export function validateRows({
     return out;
   });
 
-  return { valid: issues.length === 0, schema, rows: cleanRows, issues };
+  return {
+    valid: issues.length === 0,
+    schema,
+    jsonSchema: buildOutputJsonSchema(schema),
+    rows: cleanRows,
+    issues,
+  };
 }
 
 function inferType(v: unknown): string {
@@ -141,6 +207,50 @@ function inferType(v: unknown): string {
   if (typeof v === 'boolean') return 'boolean';
   if (v instanceof Date) return 'datetime';
   return 'string';
+}
+
+function buildOutputJsonSchema(schema: Record<string, string>) {
+  const properties = Object.fromEntries(
+    Object.entries(schema).map(([field, type]) => [
+      field,
+      { type: jsonSchemaTypesForField(type) },
+    ]),
+  );
+
+  return {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'array',
+    items: {
+      type: 'object',
+      additionalProperties: false,
+      properties,
+      required: Object.keys(properties),
+    },
+  };
+}
+
+function jsonSchemaTypesForField(type: string) {
+  if (type === 'number' || type === 'integer') return ['number', 'null'];
+  if (type === 'boolean') return ['boolean', 'null'];
+  return ['string', 'null'];
+}
+
+function matchesDataStore(dataStore: z.infer<typeof dataStoreSchema>, normalizedIdentifier: string) {
+  const raw = dataStore as Record<string, unknown>;
+  const candidates = [
+    dataStore.name,
+    dataStore.collection,
+    stringifyProperty(raw.id),
+    stringifyProperty(raw._id),
+    stringifyProperty(raw.blueprintId),
+  ];
+
+  return candidates.some((candidate) => normalizeToken(candidate) === normalizedIdentifier);
+}
+
+function stringifyProperty(value: unknown) {
+  if (value === undefined || value === null) return undefined;
+  return String(value);
 }
 
 function normalizeToken(value: string | undefined) {

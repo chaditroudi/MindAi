@@ -55,6 +55,7 @@ export type DatasetRow = Record<string, string | number | boolean | null>;
 export interface Dataset {
   rows: DatasetRow[];
   schema: Record<string, FieldType>;
+  jsonSchema?: Record<string, unknown>;
   source: 'mongodb' | 'search' | 'merged';
   citations?: Citation[];
 }
@@ -100,6 +101,8 @@ export interface TimeRange {
 }
 
 export interface TaskQuery {
+  blueprintId?: string;
+  dataStoreId?: string;
   dataStoreName?: string;
   metric?: string;
   metrics?: string[];
@@ -118,6 +121,9 @@ export interface TaskQuery {
 export interface EnrichmentPlan {
   topic: string;
   dimensions: string[];
+  timeRange?: TimeRange;
+  language?: string;
+  locale?: string;
   sources?: string[];
 }
 

@@ -17,7 +17,9 @@ export async function runMongoDatasetQuery({
 }) {
   const empty: z.infer<typeof datasetSchema> = { rows: [], schema: {}, source: 'mongodb' };
 
-  if (!plan.needsData || !plan.query.dataStoreName) {
+  const dataStoreIdentifier = getDataStoreIdentifier(plan);
+
+  if (!plan.needsData || !dataStoreIdentifier) {
     return {
       dataset: empty,
       executedPipeline: [] as Record<string, unknown>[],
@@ -25,9 +27,9 @@ export async function runMongoDatasetQuery({
     };
   }
 
-  const dataStore = await dataStoreRepo.findDataStore(plan.query.dataStoreName);
+  const dataStore = await dataStoreRepo.findDataStore(dataStoreIdentifier);
   if (!dataStore) {
-    throw new Error(`Data store '${plan.query.dataStoreName}' not found.`);
+    throw new Error(`Data store '${dataStoreIdentifier}' not found.`);
   }
 
   const { pipeline } = await logged(
@@ -54,6 +56,7 @@ export async function runMongoDatasetQuery({
     dataset: {
       rows: validated.rows,
       schema: validated.schema,
+      jsonSchema: validated.jsonSchema,
       source: 'mongodb' as const,
     },
     executedPipeline: pipeline,
@@ -70,16 +73,18 @@ export async function runMongoRecordFetch({
 }) {
   const empty: z.infer<typeof datasetSchema> = { rows: [], schema: {}, source: 'mongodb' };
 
-  if (!plan.needsData || !plan.query.dataStoreName) {
+  const dataStoreIdentifier = getDataStoreIdentifier(plan);
+
+  if (!plan.needsData || !dataStoreIdentifier) {
     return {
       dataset: empty,
       collection: undefined as string | undefined,
     };
   }
 
-  const dataStore = await dataStoreRepo.findDataStore(plan.query.dataStoreName);
+  const dataStore = await dataStoreRepo.findDataStore(dataStoreIdentifier);
   if (!dataStore) {
-    throw new Error(`Data store '${plan.query.dataStoreName}' not found.`);
+    throw new Error(`Data store '${dataStoreIdentifier}' not found.`);
   }
 
   const rawPlan = {
@@ -99,8 +104,13 @@ export async function runMongoRecordFetch({
     dataset: {
       rows: validated.rows,
       schema: validated.schema,
+      jsonSchema: validated.jsonSchema,
       source: 'mongodb' as const,
     },
     collection: dataStore.collection,
   };
+}
+
+function getDataStoreIdentifier(plan: z.infer<typeof taskPlanSchema>) {
+  return plan.query.dataStoreName ?? plan.query.dataStoreId ?? plan.query.blueprintId;
 }
