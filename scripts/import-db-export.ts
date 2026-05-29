@@ -4,6 +4,7 @@ import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BSON, type Document } from 'mongodb';
 import { closeMongo, getMongo } from '../src/db/mongo.client.js';
+import type { DataStore } from '../src/types/index.js';
 
 const DEFAULT_TENANT_ID = 't_mind_qatar';
 const DEFAULT_COLLECTIONS = ['service_requests', 'inspections', 'permits', 'projects'];
@@ -25,6 +26,7 @@ const SAFE_COLLECTIONS = new Set([
 async function main() {
   const tenantId = process.env.IMPORT_TENANT_ID ?? DEFAULT_TENANT_ID;
   const mode = process.env.IMPORT_MODE ?? 'replace';
+  const importDataStores = process.env.IMPORT_DATA_STORES !== 'false';
   const selected = parseCollectionList(process.env.IMPORT_COLLECTIONS);
   const collections = selected.length > 0 ? selected : DEFAULT_COLLECTIONS;
 
@@ -33,9 +35,21 @@ async function main() {
   }
 
   const exportDir = resolve(dirname(fileURLToPath(import.meta.url)), '../samples/db-export');
+  const dataStorePath = resolve(dirname(fileURLToPath(import.meta.url)), '../samples/datastore.json');
   const { db } = await getMongo();
 
   console.log(`Importing db-export collections into MongoDB (${mode}, tenantId=${tenantId})`);
+
+  if (importDataStores) {
+    const dataStores = readDataStoreFile(dataStorePath);
+    await db.collection('data_stores').deleteMany({});
+    if (dataStores.length > 0) {
+      await db.collection('data_stores').insertMany(dataStores, { ordered: false });
+    }
+    await db.collection('data_stores').createIndex({ name: 1 }, { unique: true }).catch(() => undefined);
+    await db.collection('data_stores').createIndex({ collection: 1 }).catch(() => undefined);
+    console.log(`  ✓ data_stores: ${dataStores.length} data store(s)`);
+  }
 
   for (const collection of collections) {
     if (!SAFE_COLLECTIONS.has(collection)) {
@@ -81,6 +95,19 @@ function readExportFile(filePath: string): Document[] {
       throw new Error(`Expected every item in ${filePath} to be an object.`);
     }
     return value as Document;
+  });
+}
+
+function readDataStoreFile(filePath: string): DataStore[] {
+  const parsed = BSON.EJSON.parse(readFileSync(filePath, 'utf-8'), { relaxed: true }) as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Expected ${filePath} to contain a JSON array.`);
+  }
+  return parsed.map((value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error(`Expected every item in ${filePath} to be an object.`);
+    }
+    return value as DataStore;
   });
 }
 

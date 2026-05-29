@@ -8,12 +8,14 @@ export async function runSearchEnrichment({
   joinKey,
   primarySchema,
   timeRange,
+  tenantId,
 }: {
   mastra: Mastra;
   enrichment: NonNullable<z.infer<typeof taskPlanSchema>['enrichment']>;
   joinKey?: string;
   primarySchema?: Record<string, string>;
   timeRange?: z.infer<typeof taskPlanSchema>['query']['timeRange'];
+  tenantId: string;
 }) {
   const search = mastra.getAgent('searchAgent');
   const messages = [
@@ -26,10 +28,10 @@ export async function runSearchEnrichment({
       role: 'user' as const,
       content: JSON.stringify({
         ...enrichment,
+        tenantId,
         timeRange: enrichment.timeRange ?? timeRange,
-        allowList: enrichment.sources,
         joinKey,
-        primarySchema,  // agent now knows the exact field names/types to match
+        primarySchema,
         outputRules: {
           source: 'search',
           alignRowsToDimensionKeys: enrichment.dimensions,

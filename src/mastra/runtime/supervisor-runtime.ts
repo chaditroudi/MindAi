@@ -11,6 +11,7 @@ import { envTimeout, withTimeout } from './timeout.js';
 export async function runSupervisorPlan({
   mastra,
   prompt,
+  planningPrompt,
   intent,
   scope,
   topic,
@@ -18,6 +19,7 @@ export async function runSupervisorPlan({
 }: {
   mastra: Mastra;
   prompt: string;
+  planningPrompt?: string;
   intent: 'general_question' | 'report' | 'dashboard';
   scope: PermissionScope;
   topic?: string;
@@ -25,8 +27,10 @@ export async function runSupervisorPlan({
 }) {
   const supervisor = mastra.getAgent('supervisorAgent');
   const dataStores = await dataStoreRepo.listAccessibleDataStores(scope);
+  const plannerPrompt = planningPrompt ?? prompt;
   const payload = {
-    prompt,
+    prompt: plannerPrompt,
+    currentRequest: prompt,
     intent,
     dataStoreName,
     platform: { dataStores: compactDataStores(dataStores, dataStoreName ?? topic) },

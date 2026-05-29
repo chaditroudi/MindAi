@@ -41,13 +41,13 @@ Prerequisites:
 
 - Node.js 20.9+
 - Docker Desktop for local MongoDB, or MongoDB on `127.0.0.1:27017`
-- Ollama or an Ollama-compatible OpenAI-style endpoint
+- OpenRouter or Groq API key
 
 ```powershell
 copy .env.example .env
 npm install
 npm run db:up
-npm run seed
+npm run import:db-export
 npm run dev
 ```
 
@@ -55,9 +55,9 @@ Open `http://localhost:3000`.
 
 Default model settings:
 
-- `LLM_PROVIDER=ollama`
-- `OLLAMA_BASE_URL=http://127.0.0.1:11434/v1`
-- `OLLAMA_MODEL=gpt-oss:20b`
+- `LLM_PROVIDER=openrouter`
+- `OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct:free`
+- `GROQ_MODEL=llama-3.3-70b-versatile` when `LLM_PROVIDER=groq`
 
 ## Data
 
@@ -65,7 +65,7 @@ Datastore metadata lives in:
 
 - MongoDB collection: `data_stores`
 
-Seeded record collections:
+Imported record collections:
 
 - `service_requests`
 - `inspections`

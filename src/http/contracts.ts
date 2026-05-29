@@ -29,6 +29,18 @@ export const reportSectionSchema = z.object({
   body: z.string(),
 });
 
+export const searchImpactSchema = z.object({
+  status: z.enum(['not_requested', 'requested_no_results', 'used']),
+  requested: z.boolean(),
+  used: z.boolean(),
+  rowCount: z.number().int().nonnegative(),
+  citationCount: z.number().int().nonnegative(),
+  effect: z.string(),
+  source: z.string().optional(),
+  topic: z.string().optional(),
+  dimensions: z.array(z.string()).optional(),
+});
+
 export const inquiryResponseSchema = z.object({
   intent: z.literal('general_question'),
   summary: z.string(),
@@ -37,6 +49,7 @@ export const inquiryResponseSchema = z.object({
   audit: z.object({
     plan: taskPlanSchema,
     enrichment: datasetSchema.optional(),
+    searchImpact: searchImpactSchema,
     elapsedMs: z.number(),
   }),
 });
@@ -49,6 +62,8 @@ export const reportResponseSchema = z.object({
   audit: z.object({
     plan: taskPlanSchema,
     dataset: datasetSchema.optional(),
+    enrichment: datasetSchema.optional(),
+    searchImpact: searchImpactSchema,
     elapsedMs: z.number(),
   }),
 });
@@ -63,6 +78,7 @@ export const dashboardResponseSchema = z.object({
     schema: z.record(z.string()).optional(),
     jsonSchema: z.record(z.unknown()).optional(),
     enrichment: datasetSchema.optional(),
+    searchImpact: searchImpactSchema,
     elapsedMs: z.number(),
   }),
 });
@@ -94,6 +110,16 @@ export const reviewMetaSchema = z.object({
     partial: z.array(z.string()),
     missing: z.array(z.string()),
   }),
+  agents: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      description: z.string(),
+      capabilities: z.array(z.string()),
+      tools: z.array(z.string()),
+      boundaries: z.array(z.string()),
+    }),
+  ),
 });
 
 export type PromptRequest = z.infer<typeof promptRequestSchema>;

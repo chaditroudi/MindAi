@@ -25,7 +25,8 @@ const planStep = createStep({
     return {
       plan: await runSupervisorPlan({
         mastra: mastra!,
-        prompt: inputData.planningPrompt ?? inputData.prompt,
+        prompt: inputData.prompt,
+        planningPrompt: inputData.planningPrompt,
         intent: 'general_question',
         scope: inputData.scope,
         topic: inputData.topic,
@@ -78,17 +79,14 @@ const enrichStep = createStep({
     const knowledgeDataset = await runSearchEnrichment({
       mastra: mastra!,
       enrichment: inputData.plan.enrichment!,
+      tenantId: inputData.scope.tenantId,
       timeRange: inputData.plan.query.timeRange,
       joinKey: inputData.plan.query.dimensions?.[0],
     });
 
-    if (knowledgeDataset.rows.length === 0) {
-      return {};
-    }
-
     return {
       dataset: knowledgeDataset,
-      collection: 'knowledge',
+      collection: knowledgeDataset.rows.length > 0 ? 'knowledge' : undefined,
     };
   },
 });
@@ -107,19 +105,21 @@ const chooseContextStep = createStep({
       collection: z.string().optional(),
     }),
   }),
-  outputSchema: fetchStep.outputSchema,
+  outputSchema: z.object({
+    plan: taskPlanSchema,
+    prompt: z.string(),
+    dataset: datasetSchema,
+    collection: z.string().optional(),
+    enrichment: datasetSchema.optional(),
+  }),
   execute: async ({ inputData }) => {
     const retrieved = inputData['retrieve-context'];
+    const primary = inputData['fetch-records'];
 
-    if (retrieved.dataset) {
-      return {
-        ...inputData['fetch-records'],
-        dataset: retrieved.dataset,
-        collection: retrieved.collection,
-      };
-    }
-
-    return inputData['fetch-records'];
+    return {
+      ...primary,
+      enrichment: retrieved.dataset,
+    };
   },
 });
 
@@ -131,6 +131,7 @@ const summarizeStep = createStep({
     recordLinks: z.array(z.object({ collection: z.string(), id: z.string(), label: z.string() })),
     plan: taskPlanSchema,
     dataset: datasetSchema,
+    enrichment: datasetSchema.optional(),
   }),
   execute: async ({ inputData, mastra }) => {
     const summaryPayload = await runInquiryWriter({
@@ -145,7 +146,13 @@ const summarizeStep = createStep({
       label: String(r.name ?? r.title ?? r._id ?? `Record ${i + 1}`),
     }));
 
-    return { summary: summaryPayload.summary, recordLinks, plan: inputData.plan, dataset: inputData.dataset };
+    return {
+      summary: summaryPayload.summary,
+      recordLinks,
+      plan: inputData.plan,
+      dataset: inputData.dataset,
+      enrichment: inputData.enrichment,
+    };
   },
 });
 

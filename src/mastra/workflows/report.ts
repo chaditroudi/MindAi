@@ -27,7 +27,8 @@ const planStep = createStep({
     return {
       plan: await runSupervisorPlan({
         mastra: mastra!,
-        prompt: inputData.planningPrompt ?? inputData.prompt,
+        prompt: inputData.prompt,
+        planningPrompt: inputData.planningPrompt,
         intent: 'report',
         scope: inputData.scope,
         topic: inputData.topic,
@@ -52,7 +53,6 @@ const queryStep = createStep({
     const queryResult = await runMongoDatasetQuery({
       plan: inputData.plan,
       scope: inputData.scope,
-      mastra: mastra!,
     });
 
     return {
@@ -79,6 +79,7 @@ const enrichmentStep = createStep({
       enrichment: await runSearchEnrichment({
         mastra: mastra!,
         enrichment: inputData.plan.enrichment,
+        tenantId: inputData.scope.tenantId,
         timeRange: inputData.plan.query.timeRange,
         joinKey: inputData.plan.query.dimensions?.[0],
         primarySchema: inputData.plan.query.dimensions?.reduce<Record<string, string>>(
@@ -146,6 +147,7 @@ const chartStep = createStep({
   }),
   execute: async ({ inputData, mastra }) => {
     if (inputData.plan.needsChart && inputData.dataset.rows.length > 0) {
+      const dimensions = inputData.plan.query.dimensions ?? [];
       return {
         charts: [
           await runChartRuntime({
@@ -154,6 +156,8 @@ const chartStep = createStep({
             title: inputData.prompt,
             theme: 'light',
             mastra: mastra!,
+            preferredXAxisField: dimensions[0],
+            preferredGroupByField: dimensions[1],
           }),
         ],
       };

@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mind Analytics Console — Full Team Documentation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;font-size:13.5px;line-height:1.75;color:#1e293b;background:#fff;padding:48px 64px;max-width:1060px;margin:0 auto}
+/* Cover */
+.cover{text-align:center;padding:90px 0 70px;border-bottom:3px solid #0f766e;margin-bottom:60px;page-break-after:always}
+.logo{width:76px;height:76px;background:#0f766e;color:#fff;font-size:2.4rem;font-weight:900;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:28px}
+.cover h1{font-size:2.6rem;color:#0f766e;margin-bottom:12px;letter-spacing:-0.5px}
+.cover h2{font-size:1.25rem;color:#64748b;font-weight:400;margin-bottom:36px}
+.badge{display:inline-block;background:#e6f4f2;color:#0b5f59;border:1px solid #b9ddd8;border-radius:999px;padding:4px 14px;font-size:.8rem;font-weight:700;margin:3px}
+.cover-meta{color:#94a3b8;font-size:.88rem;margin-top:24px}
+/* TOC */
+.toc{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:32px 36px;margin-bottom:56px;page-break-after:always}
+.toc h2{color:#0f766e;margin-bottom:20px;font-size:1.25rem;border-bottom:2px solid #e6f4f2;padding-bottom:10px}
+.toc ol{padding-left:22px}
+.toc li{margin-bottom:7px;color:#334155}
+.toc a{color:#0f766e;text-decoration:none;font-weight:600}
+.toc a:hover{text-decoration:underline}
+/* Headings */
+h1{font-size:2rem;color:#0f766e;margin:48px 0 18px;border-bottom:2px solid #e6f4f2;padding-bottom:12px;page-break-before:always}
+h1.no-break{page-break-before:auto}
+h2{font-size:1.45rem;color:#0b5f59;margin:36px 0 14px}
+h3{font-size:1.15rem;color:#0f766e;margin:28px 0 10px}
+h4{font-size:1rem;color:#1e293b;margin:20px 0 8px;font-weight:800}
+p{margin-bottom:14px;color:#334155}
+ul,ol{margin:10px 0 16px 24px;color:#334155}
+li{margin-bottom:6px}
+/* Code */
+pre{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:20px 22px;font:12px/1.65 "Cascadia Mono","Consolas",monospace;overflow-x:auto;margin:16px 0 22px;white-space:pre}
+code{background:#e6f4f2;color:#0b5f59;padding:2px 7px;border-radius:4px;font:12px "Cascadia Mono","Consolas",monospace}
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:16px 0 26px;font-size:.88rem}
+th{background:#0f766e;color:#fff;padding:11px 15px;text-align:left;font-weight:700}
+td{padding:10px 15px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+tr:nth-child(even) td{background:#f8fafc}
+/* Boxes */
+.box{border-radius:8px;padding:18px 22px;margin:18px 0}
+.green{background:#e6f4f2;border-left:4px solid #0f766e}
+.blue{background:#eff6ff;border-left:4px solid #2563eb}
+.yellow{background:#fffbeb;border-left:4px solid #d97706}
+.red{background:#fff1f2;border-left:4px solid #e11d48}
+.box strong{display:block;margin-bottom:8px;font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:#475569}
+/* File path */
+.fp{display:inline-block;background:#1e293b;color:#7dd3fc;font:11.5px "Cascadia Mono",monospace;padding:3px 11px;border-radius:5px;margin:8px 0 12px}
+/* Section */
+.section{margin-bottom:44px}
+hr{border:none;border-top:1px solid #e2e8f0;margin:40px 0}
+/* Print */
+@media print{
+  body{padding:20px 28px;font-size:12px}
+  pre{font-size:10.5px}
+  h1{font-size:1.6rem}
+  h2{font-size:1.2rem}
+  .cover{padding:50px 0 40px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ COVER ══════════ -->
+<div class="cover">
+  <div class="logo">M</div>
+  <h1>Mind Analytics Console</h1>
+  <h2>Full Team Documentation — Product, Architecture, Code &amp; Operations</h2>
+  <div>
+    <span class="badge">Node.js 20 + TypeScript</span>
+    <span class="badge">Express</span>
+    <span class="badge">Mastra AI Framework</span>
+    <span class="badge">MongoDB</span>
+    <span class="badge">ECharts 5</span>
+    <span class="badge">OpenRouter / Groq</span>
+    <span class="badge">Llama 3.3 70B</span>
+  </div>
+  <p class="cover-meta">Version 2.0 &nbsp;·&nbsp; Tenant: t_mind_qatar &nbsp;·&nbsp; For internal team use</p>
+</div>
+
+<!-- ══════════ TOC ══════════ -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#s1">Executive Summary</a></li>
+    <li><a href="#s2">Product Purpose &amp; What It Does</a></li>
+    <li><a href="#s3">Glossary — Key Terms Defined</a></li>
+    <li><a href="#s4">High-Level Architecture</a></li>
+    <li><a href="#s5">User Interface Walkthrough</a></li>
+    <li><a href="#s6">API Reference</a></li>
+    <li><a href="#s7">Request Lifecycle — Step by Step</a></li>
+    <li><a href="#s8">AI Agents &amp; Workflows</a></li>
+    <li><a href="#s9">Data Model — All Collections &amp; Fields</a></li>
+    <li><a href="#s10">MongoDB Query Engine</a></li>
+    <li><a href="#s11">Chart Engine</a></li>
+    <li><a href="#s12">Every File Explained</a></li>
+    <li><a href="#s13">Full File Connection Map</a></li>
+    <li><a href="#s14">Setup &amp; Operations</a></li>
+    <li><a href="#s15">Security, Safety &amp; Limits</a></li>
+    <li><a href="#s16">How to Extend the App</a></li>
+    <li><a href="#s17">Demo Guide &amp; Best Prompts</a></li>
+    <li><a href="#s18">Troubleshooting</a></li>
+    <li><a href="#s19">Team Presentation Script</a></li>
+  </ol>
+</div>
+
+<!-- ══════════ 1 ══════════ -->
+<h1 id="s1" class="no-break">1. Executive Summary</h1>
+<div class="section">
+  <div class="box green">
+    <strong>One Sentence</strong>
+    Mind Analytics Console is an AI-powered analytics service that turns natural-language questions into charts, reports, and search results — backed by real municipal MongoDB data, with no SQL knowledge required.
+  </div>
+  <p>The app is built for the <strong>Mind Platform</strong> — a municipal operations platform used in Qatar. It gives managers and analysts a way to ask questions about service requests, inspections, permits, and projects, and instantly see the answer as a dashboard chart, a written Arabic report, or a list of matching records.</p>
+  <p>The most important design choice: <strong>the AI plans, but TypeScript code executes the database query safely</strong>. The LLM never writes raw MongoDB code. It creates a structured JSON plan, and deterministic builders convert that plan into a validated, tenant-scoped aggregation pipeline.</p>
+  <p><strong>Tech stack:</strong> Express (server) · MongoDB (data) · Mastra (AI workflow framework) · OpenRouter or Groq (LLM provider) · ECharts (charts in browser).</p>
+</div>
+
+<!-- ══════════ 2 ══════════ -->
+<h1 id="s2">2. Product Purpose &amp; What It Does</h1>
+<div class="section">
+  <h2>The Three Output Modes</h2>
+  <table>
+    <tr><th>Mode</th><th>Endpoint</th><th>What You Get</th><th>Best For</th></tr>
+    <tr><td><strong>Dashboard</strong><br><small>لوحة المعلومات</small></td><td><code>POST /api/dashboard</code></td><td>One interactive ECharts chart</td><td>Comparisons, rankings, trends, KPIs</td></tr>
+    <tr><td><strong>Report</strong><br><small>التقرير</small></td><td><code>POST /api/report</code></td><td>Arabic analytical text + optional chart</td><td>Narrative insights, executive briefs</td></tr>
+    <tr><td><strong>Inquiry</strong><br><small>الاستعلام</small></td><td><code>POST /api/inquiry</code></td><td>Arabic summary + up to 10 record links</td><td>Record search, finding specific entries</td></tr>
+  </table>
+
+  <h2>What Data It Works With</h2>
+  <p>The app answers questions about four municipal collections:</p>
+  <ul>
+    <li><strong>Service Requests</strong> — citizen requests (status, municipality, type, priority, channel, response time)</li>
+    <li><strong>Inspections</strong> — field compliance assessments (outcome, inspector team, score)</li>
+    <li><strong>Permits</strong> — building/construction permit applications (type, status, processing days, fees)</li>
+    <li><strong>Projects</strong> — municipal projects (stage, contractor, budget, completion %)</li>
+  </ul>
+
+  <h2>Example Questions the App Can Answer</h2>
+  <pre>service request count by municipality this month
+daily service request count over the last 30 days
+top 5 municipalities by service request count
+average responseHours by serviceType
+open permits by municipality
+average processingDays by permitType
+inspection score by municipality
+find recent service requests where status is new
+analyze service request volume by municipality over last 90 days</pre>
+
+  <h2>Why It Is Useful</h2>
+  <ul>
+    <li>No SQL or database knowledge needed — ask in plain English or Arabic</li>
+    <li>Prompt suggestions auto-generated from real data (not hardcoded examples)</li>
+    <li>Full audit trail — see exactly what the AI planned and what MongoDB pipeline ran</li>
+    <li>Conversation memory — follow-up questions work naturally</li>
+    <li>Tenant-safe — every query is scoped to the correct organization</li>
+    <li>Read-only — can never modify platform data</li>
+  </ul>
+</div>
+
+<!-- ══════════ 3 ══════════ -->
+<h1 id="s3">3. Glossary — Key Terms Defined</h1>
+<div class="section">
+  <h3>Data Store</h3>
+  <p>A logical dataset in the platform. It maps one-to-one with a MongoDB collection. The app learns about available data through data store metadata stored in the <code>data_stores</code> collection.</p>
+  <pre>{
+  "name": "ServiceRequests",
+  "collection": "service_requests",
+  "description": "Citizen service requests",
+  "fields": [ ... ]
+}</pre>
+
+  <h3>Field</h3>
+  <p>A property inside a data store (e.g. <code>municipality</code>, <code>status</code>, <code>createdAt</code>, <code>responseHours</code>). Each field has a <strong>type</strong> and a <strong>role</strong>.</p>
+
+  <h3>Field Type</h3>
+  <table>
+    <tr><th>Type</th><th>Meaning</th></tr>
+    <tr><td><code>string</code></td><td>Text value</td></tr>
+    <tr><td><code>number</code></td><td>Decimal number</td></tr>
+    <tr><td><code>integer</code></td><td>Whole number</td></tr>
+    <tr><td><code>boolean</code></td><td>True / false</td></tr>
+    <tr><td><code>date</code> / <code>datetime</code></td><td>Date or timestamp</td></tr>
+    <tr><td><code>enum</code></td><td>String with a fixed set of allowed values</td></tr>
+    <tr><td><code>reference</code></td><td>Foreign key to another collection</td></tr>
+    <tr><td><code>geo</code></td><td>Geographic coordinates</td></tr>
+    <tr><td><code>text</code></td><td>Long searchable text</td></tr>
+  </table>
+
+  <h3>Field Role</h3>
+  <table>
+    <tr><th>Role</th><th>Meaning</th><th>Example</th></tr>
+    <tr><td><code>id</code></td><td>Identifier — never used as dimension or metric</td><td><code>_id</code>, <code>tenantId</code></td></tr>
+    <tr><td><code>dimension</code></td><td>Group-by or filter field</td><td><code>municipality</code>, <code>status</code></td></tr>
+    <tr><td><code>measure</code></td><td>Numeric field for aggregation</td><td><code>responseHours</code>, <code>feeAmount</code></td></tr>
+    <tr><td><code>temporal</code></td><td>Date/time field for time ranges and trends</td><td><code>createdAt</code></td></tr>
+  </table>
+
+  <h3>TaskPlan</h3>
+  <p>The structured JSON object created by the Supervisor Agent from the user's natural-language question. It tells the query engine exactly what to do.</p>
+  <pre>{
+  "intent": "dashboard",
+  "needsData": true,
+  "needsEnrichment": false,
+  "needsChart": true,
+  "query": {
+    "dataStoreName": "ServiceRequests",
+    "aggregation": "count",
+    "dimensions": ["municipality"],
+    "topN": 5
+  },
+  "chartHint": "ranking"
+}</pre>
+
+  <h3>Dataset</h3>
+  <p>The normalized rows returned from MongoDB or the search agent. Always has <code>rows</code>, <code>schema</code>, and <code>source</code>.</p>
+  <pre>{
+  "rows": [{ "municipality": "Doha", "value": 1200 }, ...],
+  "schema": { "municipality": "string", "value": "number" },
+  "source": "mongodb"
+}</pre>
+
+  <h3>Permission Scope</h3>
+  <p>The security context sent with every API request. Enforced server-side on every database query.</p>
+  <pre>{
+  "userId": "u_review",
+  "tenantId": "t_mind_qatar",
+  "allowedDataStores": ["ServiceRequests", "Inspections", "Permits", "Projects"]
+}</pre>
+
+  <h3>Audit</h3>
+  <p>Extra execution details returned by every API response. Contains the TaskPlan, MongoDB pipeline, field schema, enrichment data, and elapsed time. Shown in the UI audit panel.</p>
+
+  <h3>Enrichment</h3>
+  <p>Optional internal context retrieved by the Search Agent. Only triggered when the Supervisor sets <code>needsEnrichment=true</code> — for example when the user asks about schemas, data model documentation, or internal platform knowledge. Never used for external web data.</p>
+
+  <h3>Conversation Memory</h3>
+  <p>The last 8 turns of conversation stored in MongoDB and included in the planning prompt for follow-up questions. Example: if the user says "show the same but for last year", the app uses conversation memory to understand what "the same" refers to.</p>
+</div>
+
+<!-- ══════════ 4 ══════════ -->
+<h1 id="s4">4. High-Level Architecture</h1>
+<div class="section">
+  <h2>System Diagram</h2>
+  <pre>Browser  (public/index.html)
+    │  fetch() HTTP requests
+    ▼
+Express Server  (src/server.ts)  — port 3000
+    │
+    ▼
+API Router  (src/http/api-router.ts)
+    │  validates with src/http/contracts.ts
+    ▼
+Analytics Service  (src/services/analytics-service.ts)
+    │
+    ├── Conversation Memory  (src/services/conversation-memory.ts)
+    │        └── MongoDB: conversation_memory collection
+    │
+    └── Mastra Workflow
+            │
+            ├── PLAN  →  Supervisor Runtime  →  Supervisor Agent (AI)
+            │                                       └── model.ts  →  OpenRouter / Groq
+            │
+            ├── QUERY  →  MongoDB Runtime  →  MongoDB Tools  →  Analytics Builders  →  MongoDB
+            │
+            ├── ENRICH (optional, parallel)  →  Search Runtime  →  Search Agent (AI)
+            │
+            ├── MERGE  →  Merge Tools
+            │
+            └── OUTPUT:
+                  Dashboard  →  Chart Runtime  →  Chart Planner Agent (AI)  →  chart-tools (ECharts)
+                  Report     →  Writer Runtime  →  Writer Agent (AI)
+                  Inquiry    →  Writer Runtime  →  Writer Agent (AI)</pre>
+
+  <h2>Key Architectural Decisions</h2>
+  <div class="box blue">
+    <strong>AI Plans, TypeScript Executes</strong>
+    The LLM never writes raw MongoDB queries. It produces a structured TaskPlan JSON. TypeScript builders in <code>src/analytics/builders/</code> convert that plan to a safe pipeline. This is the central safety guarantee of the app.
+  </div>
+  <div class="box green">
+    <strong>Metadata-Driven</strong>
+    The app has no hardcoded business logic per collection. Add a new data store with correct field metadata and the planner and query engine can use it automatically.
+  </div>
+  <div class="box yellow">
+    <strong>Tenant Guard Is Always Enforced</strong>
+    Every MongoDB aggregation is guaranteed to start with <code>{ $match: { tenantId: "..." } }</code>. Even if a bug in the builder omits it, the executor prepends it automatically.
+  </div>
+</div>
+
+<!-- ══════════ 5 ══════════ -->
+<h1 id="s5">5. User Interface Walkthrough</h1>
+<div class="section">
+  <p>The entire UI is one file: <span class="fp">public/index.html</span></p>
+  <p>Served at: <code>http://localhost:3000/</code></p>
+
+  <h2>Layout Overview</h2>
+  <pre>┌──────────────────────────────────────────────────────────────────┐
+│  TOPBAR: Mind Analytics Console         tenant: t_mind_qatar      │
+├──────────────────────────┬───────────────────────────────────────┤
+│  LEFT PANEL (sticky)     │  RIGHT WORKSPACE                      │
+│                          │                                        │
+│  [Dashboard][Report]     │  ┌─────────────────────────────────┐  │
+│  [Inquiry]               │  │  RESULT PANEL                   │  │
+│                          │  │                                  │  │
+│  Mode description        │  │  Chart / Report text /           │  │
+│                          │  │  Inquiry summary + links         │  │
+│  [Prompt textarea]       │  │                                  │  │
+│                          │  └─────────────────────────────────┘  │
+│  [Run Button]            │                                        │
+│                          │  ┌─────────────────────────────────┐  │
+│  Progress bar            │  │  AUDIT PANEL (collapsible)       │  │
+│  Status indicator        │  │  - Run ID                        │  │
+│                          │  │  - AI TaskPlan                   │  │
+│  Auto-generated          │  │  - MongoDB pipeline              │  │
+│  prompt suggestions      │  │  - Field schema                  │  │
+│                          │  │  - Elapsed time                  │  │
+│  Search agent            │  └─────────────────────────────────┘  │
+│  capability cards        │                                        │
+└──────────────────────────┴───────────────────────────────────────┘</pre>
+
+  <h2>Mode Tabs</h2>
+  <table>
+    <tr><th>Tab</th><th>Endpoint Called</th><th>Note in UI</th></tr>
+    <tr><td>Dashboard (لوحة المعلومات)</td><td><code>/api/dashboard</code></td><td>Generates one chart from MongoDB data</td></tr>
+    <tr><td>Report (التقرير)</td><td><code>/api/report</code></td><td>Generates an analytical brief, chart optional</td></tr>
+    <tr><td>Inquiry (الاستعلام)</td><td><code>/api/inquiry</code></td><td>Fetches matching records, summarizes with links</td></tr>
+  </table>
+
+  <h2>Demo Scope (Hardcoded)</h2>
+  <p>The UI sends this scope with every request. In production, this should come from authentication.</p>
+  <pre>const SCOPE = {
+  userId: 'u_review',
+  tenantId: 't_mind_qatar',
+  allowedDataStores: ['ServiceRequests', 'Inspections', 'Permits', 'Projects'],
+};</pre>
+
+  <h2>Dynamic Prompt Suggestions</h2>
+  <p>On page load, the UI calls <code>GET /api/meta</code>. The backend:</p>
+  <ol>
+    <li>Reads actual data stores from MongoDB</li>
+    <li>Generates deterministic suggestions based on field metadata</li>
+    <li>Tries to polish them with the Writer Agent (Arabic labels, better phrasing)</li>
+    <li>Falls back to deterministic suggestions if the LLM times out</li>
+  </ol>
+  <p>This means the suggestion buttons always reflect the actual data — not hardcoded examples.</p>
+
+  <h2>Progress Stages (Simulated)</h2>
+  <table>
+    <tr><th>Dashboard Stages</th><th>Report Stages</th><th>Inquiry Stages</th></tr>
+    <tr><td>تخطيط الطلب (0ms)</td><td>تخطيط التقرير (0ms)</td><td>تخطيط البحث (0ms)</td></tr>
+    <tr><td>قراءة MongoDB (2.5s)</td><td>قراءة MongoDB (2.5s)</td><td>جلب السجلات (2.2s)</td></tr>
+    <tr><td>اختيار المخطط (6.5s)</td><td>كتابة التقرير (7s)</td><td>تلخيص النتيجة (5.6s)</td></tr>
+    <tr><td>تجهيز النتيجة (9.5s)</td><td>تجهيز النتيجة (11s)</td><td>—</td></tr>
+  </table>
+
+  <h2>Audit Panel</h2>
+  <p>After every request, the collapsible audit panel shows:</p>
+  <ul>
+    <li><strong>Run ID</strong> — unique ID for this request (also in <code>x-run-id</code> header)</li>
+    <li><strong>Conversation Thread ID</strong> — for follow-up tracking</li>
+    <li><strong>Intent</strong> — dashboard / report / inquiry</li>
+    <li><strong>Duration</strong> — elapsed milliseconds</li>
+    <li><strong>Search Agent Impact</strong> — whether enrichment was used and what effect it had</li>
+    <li><strong>TaskPlan</strong> — the exact JSON plan the Supervisor created</li>
+    <li><strong>Dataset rows</strong> — what MongoDB returned</li>
+    <li><strong>MongoDB Pipeline</strong> — the exact aggregation stages that ran</li>
+    <li><strong>Field Schema</strong> — field name → type mapping</li>
+    <li><strong>JSON Schema</strong> — full JSON Schema of the result</li>
+    <li><strong>Enrichment data &amp; citations</strong> — if internal search was used</li>
+  </ul>
+  <div class="box green">
+    <strong>Tip for demos</strong>
+    The audit panel is your best tool for explaining the app to technical stakeholders. Show the TaskPlan and MongoDB pipeline to demonstrate that the LLM does not run arbitrary database code.
+  </div>
+</div>
+
+<!-- ══════════ 6 ══════════ -->
+<h1 id="s6">6. API Reference</h1>
+<div class="section">
+  <p>Base URL: <code>http://localhost:3000</code></p>
+
+  <h2>GET /health</h2>
+  <p>Returns <code>{"ok":true}</code>. Use to confirm Express server is running.</p>
+
+  <h2>GET /api/meta</h2>
+  <p>Returns dynamic UI metadata: app title, mode definitions, prompt suggestions, capability matrix, and agent cards. Powers the suggestion buttons in the UI.</p>
+
+  <h2>Shared Request Body (all POST endpoints)</h2>
+  <pre>{
+  "prompt": "service request count by municipality this month",
+  "scope": {
+    "userId": "u_demo",
+    "tenantId": "t_mind_qatar",
+    "allowedDataStores": ["ServiceRequests", "Inspections", "Permits", "Projects"],
+    "rowFilter": {}
+  },
+  "dataStoreName": "ServiceRequests",
+  "theme": "light",
+  "threadId": "optional-thread-id",
+  "resourceId": "optional-resource-id"
+}</pre>
+  <table>
+    <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+    <tr><td><code>prompt</code></td><td>Yes</td><td>Natural-language question, max 4000 chars</td></tr>
+    <tr><td><code>scope.userId</code></td><td>Yes</td><td>User identifier for audit and memory</td></tr>
+    <tr><td><code>scope.tenantId</code></td><td>Yes</td><td>Tenant guard applied to every MongoDB query</td></tr>
+    <tr><td><code>scope.allowedDataStores</code></td><td>No</td><td>Limits which data stores can be queried</td></tr>
+    <tr><td><code>scope.rowFilter</code></td><td>No</td><td>Extra MongoDB filter merged into $match</td></tr>
+    <tr><td><code>dataStoreName</code></td><td>No</td><td>Hint when the UI knows which data store to use</td></tr>
+    <tr><td><code>theme</code></td><td>No</td><td><code>light</code> / <code>dark</code> / <code>brand</code> — affects chart colors</td></tr>
+    <tr><td><code>threadId</code></td><td>No</td><td>Conversation memory thread identifier</td></tr>
+    <tr><td><code>resourceId</code></td><td>No</td><td>Conversation memory resource identifier</td></tr>
+  </table>
+
+  <h2>POST /api/dashboard — Response</h2>
+  <pre>{
+  "intent": "dashboard",
+  "chart": {
+    "chartType": "horizontalBar",
+    "option": { /* ECharts option object — passed directly to chart.setOption() */ },
+    "title": "top 5 municipalities by service request count",
+    "accessibility": { "description": "Horizontal bar chart showing..." }
+  },
+  "conversation": { "threadId": "...", "resourceId": "..." },
+  "audit": {
+    "plan": { /* TaskPlan */ },
+    "pipeline": [ /* MongoDB stages */ ],
+    "schema": { "municipality": "string", "value": "number" },
+    "jsonSchema": { /* JSON Schema */ },
+    "enrichment": { /* if search was used */ },
+    "searchImpact": { "status": "not_requested", "rowCount": 0 },
+    "elapsedMs": 4320
+  }
+}</pre>
+
+  <h2>POST /api/report — Response</h2>
+  <pre>{
+  "intent": "report",
+  "reportSections": [
+    { "heading": "ملخص", "body": "..." },
+    { "heading": "التوزيع الجغرافي", "body": "..." }
+  ],
+  "charts": [ /* optional chart objects */ ],
+  "conversation": { "threadId": "...", "resourceId": "..." },
+  "audit": { "plan": {}, "dataset": {}, "elapsedMs": 6800 }
+}</pre>
+
+  <h2>POST /api/inquiry — Response</h2>
+  <pre>{
+  "intent": "general_question",
+  "summary": "تم العثور على 47 طلب خدمة جديد خلال الفترة المحددة ...",
+  "recordLinks": [
+    { "collection": "service_requests", "id": "sr_001", "label": "SR-001" }
+  ],
+  "conversation": { "threadId": "...", "resourceId": "..." },
+  "audit": { "plan": {}, "elapsedMs": 3100 }
+}</pre>
+
+  <h2>Error Responses</h2>
+  <table>
+    <tr><th>HTTP Status</th><th>When</th><th>Body</th></tr>
+    <tr><td>400</td><td>Request validation failed (Zod)</td><td><code>{ "error": "بيانات الطلب غير صالحة", "detail": {...} }</code></td></tr>
+    <tr><td>500</td><td>Server or workflow error</td><td><code>{ "error": "...", "detail": "..." }</code></td></tr>
+  </table>
+</div>
+
+<!-- ══════════ 7 ══════════ -->
+<h1 id="s7">7. Request Lifecycle — Step by Step</h1>
+<div class="section">
+  <h2>Outer Pattern (All POST Endpoints)</h2>
+  <pre>1.  Express receives HTTP POST request
+2.  Zod validates request body (contracts.ts)
+3.  API creates unique run ID (logged in x-run-id header)
+4.  AnalyticsService resolves conversation reference (threadId / resourceId)
+5.  AnalyticsService checks if prompt is a follow-up question
+6.  If follow-up → loads last 8 conversation turns from MongoDB
+7.  Builds enriched planning prompt with conversation context
+8.  Starts matching Mastra workflow with timeout (WORKFLOW_TIMEOUT_MS)
+9.  Workflow returns result
+10. AnalyticsService saves user + assistant turns to conversation_memory
+11. Zod validates response shape
+12. API sends JSON response with x-run-id header</pre>
+
+  <h2>Follow-Up Detection</h2>
+  <p>A prompt is detected as a follow-up if it matches any of these patterns:</p>
+  <pre>English: same, again, also, too, previous, above, that, those, it, them, compare it, what about
+         use/keep/with the same
+Arabic:  نفس، أيضا، السابق، أعلاه، هذا، هذه، ذلك، تلك، قارنها، ماذا عن</pre>
+
+  <h2>Dashboard Workflow Lifecycle</h2>
+  <pre>POST /api/dashboard
+  └── analyticsService.runDashboard()
+        └── dashboardWorkflow (Mastra)
+              │
+              ├── Step 1: PLAN
+              │     supervisorAgent.generate(prompt + dataStores + conversationMemory)
+              │     → parse TaskPlan JSON
+              │     → finalizeTaskPlan() repairs/normalizes fields
+              │
+              ├── Step 2a: QUERY (parallel with 2b)
+              │     buildAggregationFromPlan(plan, dataStore, scope)
+              │     → runAggregation(pipeline, collection, scope)
+              │     → validateRows(rows, dataStore)
+              │     → returns Dataset { rows, schema, jsonSchema }
+              │
+              ├── Step 2b: ENRICH (parallel with 2a, only if needsEnrichment=true)
+              │     searchAgent.generate(enrichment task)
+              │     → vectorSearch tool
+              │     → returns Dataset { rows, schema, citations }
+              │
+              ├── Step 3: MERGE
+              │     if enrichment exists → mergeDatasets(primary, secondary, joinKey)
+              │
+              └── Step 4: CHART
+                    chartPlannerAgent.generate(schema + tiny sample + Supervisor hints)
+                    → sanitize chart plan
+                    → buildChartFromDataset(dataset, plan)
+                    → returns ECharts option object</pre>
+
+  <h2>Report Workflow Lifecycle</h2>
+  <pre>POST /api/report
+  └── reportWorkflow
+        ├── Plan → Query + Enrich (parallel) → Merge
+        └── Parallel:
+              ├── writerAgent.generate(dataset + prompt)  → reportSections[]
+              └── chartPlannerAgent.generate() (if needsChart=true) → chart</pre>
+
+  <h2>Inquiry Workflow Lifecycle</h2>
+  <pre>POST /api/inquiry
+  └── generalQuestionWorkflow
+        ├── Plan → fetch MongoDB records (no aggregation, raw documents)
+        ├── Optional context retrieval (parallel)
+        └── writerAgent.generate(records + prompt)  → { summary, recordLinks }</pre>
+
+  <h2>Conversation Memory Lifecycle</h2>
+  <pre>MongoDB collection: conversation_memory
+
+On every request:
+  1. Resolve threadId + resourceId (from request or generate fallback)
+  2. Load last 8 turns (4 exchanges) from MongoDB
+  3. Format as:
+     "Recent conversation memory, oldest to newest:
+      [dashboard:user] top 5 municipalities ...
+      [dashboard:assistant] Dashboard generated for ServiceRequests by municipality...
+      Current dashboard request:
+      show the same for last year"
+  4. Pass this enriched prompt to the Supervisor Agent
+
+After workflow completes:
+  5. Save user turn: { threadId, resourceId, tenantId, userId, role:"user", content, createdAt }
+  6. Save assistant turn: { ..., role:"assistant", content: summary/description }</pre>
+</div>
+
+<!-- ══════════ 8 ══════════ -->
+<h1 id="s8">8. AI Agents &amp; Workflows</h1>
+<div class="section">
+  <h2>Supervisor Agent</h2>
+  <p><span class="fp">src/mastra/agents/supervisor.ts</span></p>
+  <p><strong>Job:</strong> Convert a natural-language question into a structured TaskPlan JSON. It is the brain that decides what to query, how to query it, and what kind of output to produce.</p>
+  <p><strong>Rules enforced in its prompt:</strong></p>
+  <ul>
+    <li>Dashboard: <code>needsData=true</code>, <code>needsChart=true</code></li>
+    <li>Report: <code>needsData=true</code>, chart only if user explicitly asks</li>
+    <li>Inquiry: <code>needsData=true</code>, <code>needsChart=false</code></li>
+    <li>"top N" → sets <code>topN=N</code> and <code>chartHint="ranking"</code></li>
+    <li>Counts: <code>aggregation="count"</code>, no metric field</li>
+    <li>Sums: <code>aggregation="sum"</code> with a measure field</li>
+    <li>Averages: <code>aggregation="avg"</code> with a measure field</li>
+    <li>Never uses <code>_id</code> or <code>tenantId</code> as dimensions</li>
+    <li>Enrichment only for explicit internal knowledge / schema / documentation requests</li>
+    <li>Time range must be an object <code>{ field, from, to }</code> — never a string like "last 30 days"</li>
+  </ul>
+  <p><strong>Output example:</strong></p>
+  <pre>{
+  "intent": "dashboard",
+  "needsData": true,
+  "needsEnrichment": false,
+  "needsChart": true,
+  "query": {
+    "dataStoreName": "ServiceRequests",
+    "aggregation": "count",
+    "dimensions": ["municipality"],
+    "filters": [{ "field": "status", "op": "eq", "value": "new" }],
+    "topN": 5
+  },
+  "chartHint": "ranking"
+}</pre>
+
+  <h2>Task Plan Finalizer</h2>
+  <p><span class="fp">src/mastra/task-plan.ts</span></p>
+  <p>After the Supervisor returns a plan, <code>finalizeTaskPlan()</code> repairs and normalizes it. This is critical — the LLM may use slightly wrong field names or miss dimensions implied by the prompt.</p>
+  <p><strong>What it does:</strong></p>
+  <ul>
+    <li>Normalizes data store name to match exact MongoDB name</li>
+    <li>Removes field names that don't exist in the data store metadata</li>
+    <li>Infers dimensions from prompt phrases like "by municipality" → <code>["municipality"]</code></li>
+    <li>Infers filters from phrases like "open permits" → <code>[{field:"status", op:"in", value:["submitted","under_review"]}]</code></li>
+    <li>Infers "urgent" → <code>[{field:"priority", op:"eq", value:"urgent"}]</code></li>
+    <li>Infers "violations" → <code>[{field:"outcome", op:"eq", value:"violation"}]</code></li>
+    <li>Infers "completed projects" → <code>[{field:"stage", op:"eq", value:"completed"}]</code></li>
+    <li>Infers relative time ranges: today, yesterday, last N days, this month, this year, recent (=30 days)</li>
+    <li>Infers topN from phrases like "top 5", "أعلى 10"</li>
+    <li>Infers percentOf when user asks for "percentage/share/نسبة"</li>
+    <li>Auto-adds temporal dimension for trend charts (line charts need a date field)</li>
+    <li>Clears metric field when aggregation is "count"</li>
+    <li>Forces intent to match the endpoint called</li>
+  </ul>
+  <p><strong>Dimension inference patterns (English + Arabic):</strong></p>
+  <pre>"by municipality" / "حسب البلدية"  →  municipality
+"by zone"         / "حسب المنطقة"   →  zone
+"by status"       / "حسب الحالة"    →  status
+"by permit type"  / "حسب نوع التصريح" →  permitType
+"by contractor"   / "حسب المقاول"   →  contractor
+... (20+ patterns total)</pre>
+
+  <h2>MongoDB Agent</h2>
+  <p><span class="fp">src/mastra/agents/mongodb.ts</span></p>
+  <p>Defines the data-layer contract with tools: <code>resolveDataStore</code>, <code>buildAggregation</code>, <code>executePipeline</code>, <code>validateRows</code>. In normal workflow execution, the runtime uses deterministic TypeScript builders directly — not the LLM — for database safety.</p>
+
+  <h2>Writer Agent</h2>
+  <p><span class="fp">src/mastra/agents/writer.ts</span></p>
+  <p><strong>Job:</strong> Write Arabic text for inquiry summaries and report sections. Grounds every sentence in the provided dataset — never invents figures.</p>
+  <p><strong>Rules:</strong></p>
+  <ul>
+    <li>Always writes in Arabic</li>
+    <li>Inquiry summaries: 2–4 sentences, lead with most notable finding</li>
+    <li>Reports: concise analyst brief — what happened → where concentrated → notable comparisons</li>
+    <li>Uses human-readable field labels: "رسوم التصاريح" not "permitFee"</li>
+    <li>Uses percent field when present: "تمثل بلدية X نسبة 34% من الإجمالي"</li>
+    <li>Returns JSON only — no markdown, no prose outside the JSON</li>
+    <li>If dataset is empty: says clearly that no data was found</li>
+  </ul>
+
+  <h2>Chart Planner Agent</h2>
+  <p><span class="fp">src/mastra/agents/chart.ts</span></p>
+  <p><strong>Job:</strong> Decide how to visualize the data. Receives the schema, up to 3 sample rows, row count, the user prompt, and Supervisor hints (never the full dataset). Returns a chart plan that the deterministic ECharts builder then renders.</p>
+  <p><strong>Field selection rules:</strong></p>
+  <ul>
+    <li><strong>xAxisField priority:</strong> temporal field → geo field → string/boolean dimension</li>
+    <li><strong>yAxisField priority:</strong> fields named value/count/total/sum/avg/rate → any other numeric</li>
+    <li><strong>clusters:</strong> optional string field for grouped/clustered series</li>
+    <li>Excluded: <code>_id</code>, <code>tenantId</code>, fields ending in "Id", fields starting with "__"</li>
+  </ul>
+  <p><strong>Chart type selection by intentHint:</strong></p>
+  <table>
+    <tr><th>Intent Hint</th><th>Chart Type</th></tr>
+    <tr><td>trend</td><td>line (xAxis must be temporal)</td></tr>
+    <tr><td>ranking</td><td>horizontalBar</td></tr>
+    <tr><td>compare</td><td>bar or horizontalBar (horizontal if &gt;12 categories)</td></tr>
+    <tr><td>part_of_whole</td><td>donut</td></tr>
+    <tr><td>distribution</td><td>histogram</td></tr>
+    <tr><td>geo</td><td>map (or horizontalBar if no geo field)</td></tr>
+    <tr><td>no hint</td><td>infer from shape: temporal→line, string+number→bar, small set→donut</td></tr>
+  </table>
+
+  <h2>Internal Search Agent</h2>
+  <p><span class="fp">src/mastra/agents/search.ts</span></p>
+  <p><strong>Job:</strong> Search the platform's internal knowledge corpus when the Supervisor requests enrichment. Uses <code>vectorSearch</code> tool. If embeddings are indexed, uses semantic search. Otherwise falls back to lexical search over <code>samples/db-export/</code> JSON files.</p>
+  <p><strong>Hard rules:</strong></p>
+  <ul>
+    <li>Never uses web search, web fetch, scraping, or public benchmarks</li>
+    <li>Never invents facts outside the internal search results</li>
+    <li>Returns empty rows and citations if vectorSearch finds nothing</li>
+    <li>Only activated when <code>needsEnrichment=true</code> in the TaskPlan</li>
+  </ul>
+
+  <h2>Model Provider</h2>
+  <p><span class="fp">src/mastra/model.ts</span></p>
+  <p>Reads <code>LLM_PROVIDER</code> from <code>.env</code>. Supports <code>openrouter</code> and <code>groq</code>. Each agent can use a different model by setting role-specific env vars.</p>
+  <table>
+    <tr><th>Env Variable</th><th>Controls</th></tr>
+    <tr><td><code>OPENROUTER_SUPERVISOR_MODEL</code></td><td>Model for Supervisor Agent (OpenRouter)</td></tr>
+    <tr><td><code>OPENROUTER_CHART_MODEL</code></td><td>Model for Chart Planner Agent (OpenRouter)</td></tr>
+    <tr><td><code>GROQ_SUPERVISOR_MODEL</code></td><td>Model for Supervisor Agent (Groq)</td></tr>
+    <tr><td><code>OPENROUTER_MODEL</code></td><td>Default model for all agents (OpenRouter)</td></tr>
+    <tr><td><code>GROQ_MODEL</code></td><td>Default model for all agents (Groq)</td></tr>
+  </table>
+  <p>Default models: <code>meta-llama/llama-3.3-70b-instruct:free</code> (OpenRouter) and <code>llama-3.3-70b-versatile</code> (Groq).</p>
+</div>
+
+<!-- ══════════ 9 ══════════ -->
+<h1 id="s9">9. Data Model — All Collections &amp; Fields</h1>
+<div class="section">
+  <div class="box yellow">
+    <strong>Important</strong>
+    The app requires the <code>data_stores</code> MongoDB collection to exist and have data. If it is empty, the app throws: "No data stores found." Run <code>npm run import:db-export</code> to seed it.
+  </div>
+
+  <h2>ServiceRequests</h2>
+  <p>Collection: <code>service_requests</code> &nbsp;·&nbsp; ~700 records<br>Description: Citizen and operational service requests managed through Mind Platform workflows.</p>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Role</th><th>Notes / Enum Values</th></tr>
+    <tr><td><code>_id</code></td><td>string</td><td>id</td><td>MongoDB document ID</td></tr>
+    <tr><td><code>tenantId</code></td><td>string</td><td>id</td><td>Tenant guard field — always in $match</td></tr>
+    <tr><td><code>requestNumber</code></td><td>string</td><td>dimension</td><td>Human-readable reference number</td></tr>
+    <tr><td><code>municipality</code></td><td>string</td><td>dimension</td><td>City/municipality name</td></tr>
+    <tr><td><code>zone</code></td><td>string</td><td>dimension</td><td>Geographic zone</td></tr>
+    <tr><td><code>district</code></td><td>string</td><td>dimension</td><td>District within zone</td></tr>
+    <tr><td><code>topic</code></td><td>string</td><td>dimension</td><td>Subject area</td></tr>
+    <tr><td><code>serviceType</code></td><td>string</td><td>dimension</td><td>Type of service</td></tr>
+    <tr><td><code>status</code></td><td>enum</td><td>dimension</td><td>new · in_review · in_progress · resolved · closed</td></tr>
+    <tr><td><code>priority</code></td><td>enum</td><td>dimension</td><td>low · medium · high · urgent</td></tr>
+    <tr><td><code>channel</code></td><td>enum</td><td>dimension</td><td>mobile_app · call_center · portal · field_team</td></tr>
+    <tr><td><code>responseHours</code></td><td>number</td><td>measure</td><td>Hours until first response</td></tr>
+    <tr><td><code>resolutionDays</code></td><td>number</td><td>measure</td><td>Days until resolved</td></tr>
+    <tr><td><code>createdAt</code></td><td>datetime</td><td>temporal</td><td>Request creation timestamp</td></tr>
+  </table>
+
+  <h2>Inspections</h2>
+  <p>Collection: <code>inspections</code> &nbsp;·&nbsp; ~260 records<br>Description: Field inspections and compliance assessments for municipal operations.</p>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Role</th><th>Notes / Enum Values</th></tr>
+    <tr><td><code>_id</code></td><td>string</td><td>id</td><td></td></tr>
+    <tr><td><code>tenantId</code></td><td>string</td><td>id</td><td></td></tr>
+    <tr><td><code>municipality</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>zone</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>inspectionType</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>outcome</code></td><td>enum</td><td>dimension</td><td>compliant · warning · violation · follow_up</td></tr>
+    <tr><td><code>inspectorTeam</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>score</code></td><td>number</td><td>measure</td><td>Compliance score (0–100)</td></tr>
+    <tr><td><code>createdAt</code></td><td>datetime</td><td>temporal</td><td></td></tr>
+  </table>
+
+  <h2>Permits</h2>
+  <p>Collection: <code>permits</code> &nbsp;·&nbsp; ~240 records<br>Description: Permit applications and approval workflow records.</p>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Role</th><th>Notes / Enum Values</th></tr>
+    <tr><td><code>_id</code></td><td>string</td><td>id</td><td></td></tr>
+    <tr><td><code>tenantId</code></td><td>string</td><td>id</td><td></td></tr>
+    <tr><td><code>permitNumber</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>municipality</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>zone</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>permitType</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>status</code></td><td>enum</td><td>dimension</td><td>submitted · under_review · approved · rejected · expired</td></tr>
+    <tr><td><code>applicantType</code></td><td>enum</td><td>dimension</td><td>individual · business · government</td></tr>
+    <tr><td><code>processingDays</code></td><td>number</td><td>measure</td><td>Days from submission to decision</td></tr>
+    <tr><td><code>feeAmount</code></td><td>number</td><td>measure</td><td>Permit fee in currency</td></tr>
+    <tr><td><code>createdAt</code></td><td>datetime</td><td>temporal</td><td></td></tr>
+  </table>
+
+  <h2>Projects</h2>
+  <p>Collection: <code>projects</code> &nbsp;·&nbsp; ~140 records<br>Description: Municipal projects and initiatives tracked for delivery performance.</p>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Role</th><th>Notes / Enum Values</th></tr>
+    <tr><td><code>_id</code></td><td>string</td><td>id</td><td></td></tr>
+    <tr><td><code>tenantId</code></td><td>string</td><td>id</td><td></td></tr>
+    <tr><td><code>name</code></td><td>string</td><td>dimension</td><td>Project name</td></tr>
+    <tr><td><code>municipality</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>projectType</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>stage</code></td><td>enum</td><td>dimension</td><td>planning · procurement · execution · handover · completed</td></tr>
+    <tr><td><code>contractor</code></td><td>string</td><td>dimension</td><td></td></tr>
+    <tr><td><code>budgetAmount</code></td><td>number</td><td>measure</td><td>Project budget</td></tr>
+    <tr><td><code>completionPercent</code></td><td>number</td><td>measure</td><td>0–100</td></tr>
+    <tr><td><code>createdAt</code></td><td>datetime</td><td>temporal</td><td></td></tr>
+  </table>
+
+  <h2>Internal MongoDB Collections (System)</h2>
+  <table>
+    <tr><th>Collection</th><th>Purpose</th></tr>
+    <tr><td><code>data_stores</code></td><td>Data store field metadata — required for the app to work</td></tr>
+    <tr><td><code>conversation_memory</code></td><td>Stored conversation turns for follow-up question support</td></tr>
+  </table>
+</div>
+
+<!-- ══════════ 10 ══════════ -->
+<h1 id="s10">10. MongoDB Query Engine</h1>
+<div class="section">
+  <div class="box green">
+    <strong>Core Principle</strong>
+    The LLM creates a TaskPlan. TypeScript code in <code>src/analytics/builders/</code> converts that plan to a MongoDB aggregation pipeline. The executor enforces safety rules. The LLM never writes database code directly.
+  </div>
+
+  <h2>Pipeline Build Order</h2>
+  <p>File: <span class="fp">src/analytics/builders/build-pipeline.ts</span></p>
+  <pre>1.  $match           ← tenant guard + filters + time range
+2.  $lookup / $unwind ← joins to other collections (if defined in metadata)
+3.  $group            ← count / sum / avg / min / max by dimensions
+4.  having $match     ← filter after grouping (like SQL HAVING)
+5.  $project          ← rename _id fields to readable names, keep only needed fields
+6.  percent stages    ← calculate percentage share if percentOf requested
+7.  $sort             ← value descending (for topN) or explicit sort
+8.  $limit            ← topN or default 1000 (max 5000)</pre>
+
+  <h2>$match Stage</h2>
+  <p>File: <span class="fp">src/analytics/builders/build-match-stage.ts</span></p>
+  <p>Always starts with <code>{ tenantId: scope.tenantId }</code>. Also adds:</p>
+  <ul>
+    <li><code>scope.rowFilter</code> — extra filters from the API caller</li>
+    <li>TaskPlan filters (status, priority, outcome, etc.)</li>
+    <li>Time range filters using <code>$gte</code> / <code>$lte</code> on the temporal field</li>
+  </ul>
+  <p><strong>Supported filter operators:</strong></p>
+  <table>
+    <tr><th>Operator</th><th>MongoDB Equivalent</th></tr>
+    <tr><td><code>eq</code></td><td><code>{ field: value }</code></td></tr>
+    <tr><td><code>ne</code></td><td><code>{ field: { $ne: value } }</code></td></tr>
+    <tr><td><code>gt</code> / <code>gte</code></td><td><code>{ field: { $gt/$gte: value } }</code></td></tr>
+    <tr><td><code>lt</code> / <code>lte</code></td><td><code>{ field: { $lt/$lte: value } }</code></td></tr>
+    <tr><td><code>in</code></td><td><code>{ field: { $in: [values] } }</code></td></tr>
+    <tr><td><code>nin</code></td><td><code>{ field: { $nin: [values] } }</code></td></tr>
+    <tr><td><code>regex</code></td><td><code>{ field: { $regex: value, $options: "i" } }</code></td></tr>
+  </table>
+
+  <h2>$group Stage</h2>
+  <p>File: <span class="fp">src/analytics/builders/build-group-stage.ts</span></p>
+  <ul>
+    <li>Temporal dimensions are formatted as <code>%Y-%m-%d</code> using <code>$dateToString</code></li>
+    <li><code>count</code> → <code>{ "$sum": 1 }</code></li>
+    <li><code>sum</code>, <code>avg</code>, <code>min</code>, <code>max</code> → use the selected metric field</li>
+    <li>Primary metric output is always named <code>value</code></li>
+  </ul>
+
+  <h2>Safety Enforcement</h2>
+  <p>File: <span class="fp">src/analytics/executor/run-aggregation.ts</span></p>
+  <table>
+    <tr><th>Rule</th><th>Value</th></tr>
+    <tr><td>Max pipeline stages</td><td>25</td></tr>
+    <tr><td>Aggregation timeout</td><td>30 seconds</td></tr>
+    <tr><td>Blocked stages</td><td><code>$function</code>, <code>$merge</code>, <code>$out</code>, <code>$where</code></td></tr>
+    <tr><td>Tenant guard enforcement</td><td>If first $match lacks tenantId, executor prepends it automatically</td></tr>
+  </table>
+
+  <h2>Row Validation</h2>
+  <p>After query execution, rows are normalized:</p>
+  <ul>
+    <li>Keeps: string, number, boolean, null</li>
+    <li>Dates → ISO string format</li>
+    <li>Everything else → string</li>
+    <li>Creates field schema: <code>{ municipality: "string", value: "number" }</code></li>
+    <li>Creates JSON Schema for downstream agents</li>
+  </ul>
+
+  <h2>Validators</h2>
+  <table>
+    <tr><th>File</th><th>What It Validates</th></tr>
+    <tr><td><code>validate-scope.ts</code></td><td>User has permission to access the requested data store</td></tr>
+    <tr><td><code>validate-task-plan.ts</code></td><td>Overall TaskPlan structure is complete and coherent</td></tr>
+    <tr><td><code>validate-metrics.ts</code></td><td>Metric fields are real numeric fields in the data store</td></tr>
+    <tr><td><code>validate-dimensions.ts</code></td><td>Dimension fields exist and have correct role</td></tr>
+    <tr><td><code>validate-time-fields.ts</code></td><td>Date/time fields and ranges are valid</td></tr>
+    <tr><td><code>validate-lookups.ts</code></td><td>Join references exist in data store metadata</td></tr>
+  </table>
+</div>
+
+<!-- ══════════ 11 ══════════ -->
+<h1 id="s11">11. Chart Engine</h1>
+<div class="section">
+  <h2>Chart Flow</h2>
+  <pre>Dataset (rows + schema)
+    │
+    ├── get candidate chart types (getChartTypeCandidates)
+    │     based on: temporal fields? numeric fields? string dimensions? count?
+    │
+    ├── run Chart Planner Agent
+    │     send: schema + up to 3 sample rows + row count + prompt + Supervisor hints + candidateTypes
+    │     receive: { chartType, xAxisField, yAxisField, groupByField, title }
+    │
+    └── sanitize plan (strip invented fields, fix role mismatches)
+          merge with explicit caller overrides
+          → buildChartFromDataset (deterministic ECharts renderer)
+          → if planner fails, fall back to deterministic rendering with Supervisor hints</pre>
+
+  <h2>Supported Chart Types</h2>
+  <table>
+    <tr><th>Type</th><th>When Used</th><th>ECharts Series</th></tr>
+    <tr><td><code>line</code></td><td>Trends over time</td><td>series type: line</td></tr>
+    <tr><td><code>bar</code></td><td>Categorical comparison</td><td>series type: bar (vertical)</td></tr>
+    <tr><td><code>horizontalBar</code></td><td>Rankings, many categories</td><td>series type: bar + yAxis categorical</td></tr>
+    <tr><td><code>donut</code></td><td>Part of whole, percentages</td><td>series type: pie with inner radius</td></tr>
+    <tr><td><code>histogram</code></td><td>Distribution of numeric values</td><td>series type: bar (binned)</td></tr>
+    <tr><td><code>scatter</code></td><td>Correlation between two numbers</td><td>series type: scatter</td></tr>
+    <tr><td><code>map</code></td><td>Geographic data</td><td>series type: map</td></tr>
+    <tr><td><code>table</code></td><td>Tabular display</td><td>Custom table rendering</td></tr>
+  </table>
+
+  <h2>Field Detection Priority</h2>
+  <table>
+    <tr><th>Axis</th><th>Priority Order</th></tr>
+    <tr><td>Y-Axis (metric)</td><td>Fields named: value → count → total → sum → average → avg → rate → amount → score</td></tr>
+    <tr><td>X-Axis (dimension)</td><td>Temporal field → geo field → string/boolean dimension</td></tr>
+    <tr><td>GroupBy</td><td>String/boolean field ≠ xAxis ≠ yAxis, only when it meaningfully splits data</td></tr>
+  </table>
+
+  <h2>Chart Output Shape</h2>
+  <pre>{
+  "chartType": "horizontalBar",
+  "option": {
+    "tooltip": { ... },
+    "xAxis": { ... },
+    "yAxis": { ... },
+    "series": [ { "type": "bar", "data": [...] } ],
+    "color": ["#0f766e", ...]
+  },
+  "title": "top 5 municipalities by service request count",
+  "accessibility": {
+    "description": "Horizontal bar chart showing 5 municipalities..."
+  }
+}</pre>
+  <p>The frontend passes <code>option</code> directly to ECharts: <code>chart.setOption(chartData.option, true)</code></p>
+</div>
+
+<!-- ══════════ 12 ══════════ -->
+<h1 id="s12">12. Every File Explained</h1>
+<div class="section">
+
+  <h2>Entry &amp; Server</h2>
+  <h4><span class="fp">src/index.ts</span></h4>
+  <p>Entry point. Imports and starts the server. Nothing else.</p>
+
+  <h4><span class="fp">src/server.ts</span></h4>
+  <p>Creates the Express app. Applies CORS, JSON parsing (1MB limit), serves <code>public/</code> as static files, mounts <code>/api</code> routes, adds <code>/health</code> endpoint. Starts listening on <code>PORT</code> (default 3000).</p>
+
+  <hr>
+  <h2>HTTP Layer — <code>src/http/</code></h2>
+
+  <h4><span class="fp">src/http/api-router.ts</span></h4>
+  <p>Express Router with 4 handlers: <code>/meta</code>, <code>/inquiry</code>, <code>/report</code>, <code>/dashboard</code>. Each handler: generates a runId, validates input with Zod, calls the analytics service, validates output with Zod, sets <code>x-run-id</code> header, sends JSON response. Catches and normalizes errors into Arabic error messages.</p>
+
+  <h4><span class="fp">src/http/contracts.ts</span></h4>
+  <p>All Zod schemas for requests and responses. Defines: <code>promptRequestSchema</code>, <code>dashboardResponseSchema</code>, <code>reportResponseSchema</code>, <code>inquiryResponseSchema</code>, <code>reviewMetaSchema</code>. If the API returns data that doesn't match these schemas, the response is rejected before sending.</p>
+
+  <hr>
+  <h2>Services — <code>src/services/</code></h2>
+
+  <h4><span class="fp">src/services/analytics-service.ts</span></h4>
+  <p>The central coordinator. Contains <code>AnalyticsService</code> class with methods: <code>runInquiry()</code>, <code>runReport()</code>, <code>runDashboard()</code>, <code>getReviewMeta()</code>. Handles: conversation memory, workflow execution with timeout, response shaping, auto-suggestion generation for <code>/api/meta</code>. Also generates Arabic UI suggestions from data store metadata using the Writer Agent (falls back to deterministic if LLM times out).</p>
+
+  <h4><span class="fp">src/services/conversation-memory.ts</span></h4>
+  <p>Three exported functions: <code>resolveConversationRef()</code> — creates or parses threadId/resourceId; <code>buildConversationMemoryPrompt()</code> — loads last 8 turns and formats them for the planning prompt; <code>saveConversationExchange()</code> — saves one user turn + one assistant turn to MongoDB. Content is truncated to 4000 chars.</p>
+
+  <hr>
+  <h2>Database — <code>src/db/</code></h2>
+
+  <h4><span class="fp">src/db/mongo.client.ts</span></h4>
+  <p>Creates and caches the MongoDB client. Exports <code>getMongo()</code> which returns <code>{ client, db }</code>. Connects once and reuses the connection. Supports retry logic via <code>MONGODB_CONNECT_RETRIES</code>.</p>
+
+  <h4><span class="fp">src/db/datastore.repository.ts</span></h4>
+  <p>Exports <code>dataStoreRepo</code> — a singleton <code>DataStoreRepository</code>. Two methods: <code>findDataStore(name)</code> — finds one data store by name/collection/id; <code>listAccessibleDataStores(scope)</code> — returns only data stores the user's scope allows. Results are <strong>cached in memory</strong> — the MongoDB <code>data_stores</code> collection is only read once per process lifetime.</p>
+
+  <hr>
+  <h2>Mastra Registry — <code>src/mastra/</code></h2>
+
+  <h4><span class="fp">src/mastra/index.ts</span></h4>
+  <p>Registers all agents and workflows with the Mastra framework. Exports the <code>mastra</code> instance used throughout the app. Agents: supervisorAgent, mongodbAgent, searchAgent, writerAgent, chartPlannerAgent. Workflows: dashboardWorkflow, reportWorkflow, generalQuestionWorkflow.</p>
+
+  <h4><span class="fp">src/mastra/model.ts</span></h4>
+  <p>Exports <code>resolveModel(role)</code> — reads <code>LLM_PROVIDER</code> and returns the correct model instance. Supports per-role model overrides via environment variables. Default provider: openrouter. Default model: Llama 3.3 70B (free tier).</p>
+
+  <h4><span class="fp">src/mastra/task-plan.ts</span></h4>
+  <p>Exports <code>finalizeTaskPlan()</code> — the most important post-processing step. Takes the AI's raw TaskPlan and repairs it: normalizes field names, infers dimensions and filters from prompt text, resolves relative time ranges to absolute dates, infers topN, infers percentOf, ensures trend charts have a temporal dimension, clears metric for count aggregations.</p>
+
+  <hr>
+  <h2>Agents — <code>src/mastra/agents/</code></h2>
+  <table>
+    <tr><th>File</th><th>Agent Name</th><th>Job</th></tr>
+    <tr><td><code>supervisor.ts</code></td><td>Supervisor Agent</td><td>Converts prompt → TaskPlan JSON</td></tr>
+    <tr><td><code>mongodb.ts</code></td><td>MongoDB Agent</td><td>Data-layer contract and tools definition</td></tr>
+    <tr><td><code>writer.ts</code></td><td>Writer Agent</td><td>Writes Arabic inquiry summaries and report sections</td></tr>
+    <tr><td><code>chart.ts</code></td><td>Chart Planner Agent</td><td>Decides chart type, axes, grouping from schema</td></tr>
+    <tr><td><code>search.ts</code></td><td>Internal Search Agent</td><td>Searches internal knowledge corpus for enrichment</td></tr>
+  </table>
+
+  <hr>
+  <h2>Workflows — <code>src/mastra/workflows/</code></h2>
+  <table>
+    <tr><th>File</th><th>Steps</th><th>Output</th></tr>
+    <tr><td><code>dashboard.ts</code></td><td>plan → query+enrich (parallel) → merge → chart</td><td>ECharts option + audit</td></tr>
+    <tr><td><code>report.ts</code></td><td>plan → query+enrich (parallel) → merge → write+chart (parallel)</td><td>reportSections + optional chart</td></tr>
+    <tr><td><code>general-question.ts</code></td><td>plan → fetch+context (parallel) → write</td><td>summary + recordLinks</td></tr>
+  </table>
+
+  <hr>
+  <h2>Runtime Adapters — <code>src/mastra/runtime/</code></h2>
+
+  <h4><span class="fp">src/mastra/runtime/supervisor-runtime.ts</span></h4>
+  <p>Calls the Supervisor Agent. Loads data stores, sends compact metadata to the AI (only name, collection, field names/types/roles — no full documents), parses JSON response using <code>parseJsonOutput()</code>, calls <code>finalizeTaskPlan()</code>. Has 4-second timeout by default.</p>
+
+  <h4><span class="fp">src/mastra/runtime/mongodb-runtime.ts</span></h4>
+  <p>Two functions: <code>runMongoDatasetQuery()</code> for aggregations (dashboard/report) and <code>runMongoRecordFetch()</code> for raw records (inquiry). Both find the data store, build the pipeline deterministically, run it, validate rows, and return a clean Dataset.</p>
+
+  <h4><span class="fp">src/mastra/runtime/chart-runtime.ts</span></h4>
+  <p>Manages the agent-first chart system: for non-empty datasets it calls the Chart Planner Agent (3-second timeout), passes schema, up to 3 sample rows, row count, prompt, Supervisor hints, and candidate chart types, sanitizes the plan (strip invented fields, fix roles), merges explicit caller overrides, and builds the ECharts option. If planning fails, it falls back to deterministic rendering with Supervisor hints.</p>
+
+  <h4><span class="fp">src/mastra/runtime/writer-runtime.ts</span></h4>
+  <p>Calls the Writer Agent with the dataset and prompt. Returns parsed JSON with <code>summary</code> (inquiry) or <code>reportSections</code> (report).</p>
+
+  <h4><span class="fp">src/mastra/runtime/search-runtime.ts</span></h4>
+  <p>Calls the Search Agent when <code>needsEnrichment=true</code>. Passes: topic, joinKey, primarySchema, tenantId, timeRange. Returns enrichment Dataset with citations.</p>
+
+  <h4><span class="fp">src/mastra/runtime/llm-queue.ts</span></h4>
+  <p>Optional serialization queue for LLM calls. Set <code>LLM_SERIAL_QUEUE=1</code> to prevent concurrent supervisor calls from overwhelming the LLM provider rate limits.</p>
+
+  <h4><span class="fp">src/mastra/runtime/timeout.ts</span></h4>
+  <p>Exports <code>withTimeout(promise, name, ms)</code> — wraps any async call with a time limit. Exports <code>envTimeout(varName, default)</code> — reads timeout from environment. All AI calls go through this.</p>
+
+  <h4><span class="fp">src/mastra/runtime/json-output.ts</span></h4>
+  <p>Exports <code>parseJsonOutput(text, schema)</code> — AI responses sometimes include markdown fences or extra prose. This function extracts the JSON substring and validates it against the Zod schema.</p>
+
+  <hr>
+  <h2>Tools — <code>src/mastra/tools/</code></h2>
+
+  <h4><span class="fp">src/mastra/tools/mongodb-tools.ts</span></h4>
+  <p>Three tool functions: <code>buildAggregationFromPlan(plan, dataStore, scope)</code> — validates then calls the pipeline builder; <code>executePipeline(pipeline, collection, scope)</code> — calls <code>runAggregation</code> with safety enforcement; <code>validateRows(rows, dataStore)</code> — normalizes types, builds schema and JSON Schema.</p>
+
+  <h4><span class="fp">src/mastra/tools/chart-tools.ts</span></h4>
+  <p>Exports <code>buildChartFromDataset()</code> — the deterministic ECharts option builder. Supports all 8 chart types. Handles: color themes, data zoom, label formatting (number/currency/percent/compact), accessibility descriptions, Arabic titles, grouped/clustered series. Also exports <code>getChartTypeCandidates(dataset)</code> — determines valid chart types from the data shape.</p>
+
+  <h4><span class="fp">src/mastra/tools/search-tools.ts</span></h4>
+  <p>Exports <code>vectorSearchTool</code> — the Mastra tool that the Search Agent calls. Uses semantic embeddings if the knowledge index exists, otherwise falls back to lexical text search over <code>samples/db-export/*.json</code> files. Returns chunks with title, snippet, score.</p>
+
+  <h4><span class="fp">src/mastra/tools/merge-tools.ts</span></h4>
+  <p>Exports <code>mergeDatasets(primary, secondary, joinKey, secondaryLabel)</code> — joins two datasets on a shared dimension key. Used when MongoDB data + Search enrichment data need to be combined. The secondary dataset columns are prefixed with the <code>secondaryLabel</code> (default: "benchmark").</p>
+
+  <hr>
+  <h2>Analytics Builders — <code>src/analytics/builders/</code></h2>
+  <table>
+    <tr><th>File</th><th>MongoDB Stage</th><th>What It Builds</th></tr>
+    <tr><td><code>build-pipeline.ts</code></td><td>Assembler</td><td>Calls all builders in order, returns complete pipeline array</td></tr>
+    <tr><td><code>build-match-stage.ts</code></td><td><code>$match</code></td><td>Tenant guard + rowFilter + TaskPlan filters + time range</td></tr>
+    <tr><td><code>build-lookup-stage.ts</code></td><td><code>$lookup</code> + <code>$unwind</code></td><td>Joins to other collections if declared in data store metadata joins</td></tr>
+    <tr><td><code>build-group-stage.ts</code></td><td><code>$group</code></td><td>Groups by dimensions, applies count/sum/avg/min/max</td></tr>
+    <tr><td><code>build-having-stage.ts</code></td><td><code>$match</code> (post-group)</td><td>Filters after grouping — like SQL HAVING</td></tr>
+    <tr><td><code>build-project-stage.ts</code></td><td><code>$project</code></td><td>Flattens _id fields to top-level, renames to readable names</td></tr>
+    <tr><td><code>build-percent-stage.ts</code></td><td>Multi-stage</td><td>Adds percent-of-total field using $group total + $addFields ratio</td></tr>
+    <tr><td><code>build-sort-stage.ts</code></td><td><code>$sort</code></td><td>Sorts by value desc (topN) or explicit query.sort</td></tr>
+    <tr><td><code>build-limit-stage.ts</code></td><td><code>$limit</code></td><td>topN if set, else min(query.limit, 1000), max 5000</td></tr>
+  </table>
+
+  <hr>
+  <h2>Analytics Validators — <code>src/analytics/validators/</code></h2>
+  <table>
+    <tr><th>File</th><th>What It Checks</th></tr>
+    <tr><td><code>validate-scope.ts</code></td><td>User's allowedDataStores includes the target collection</td></tr>
+    <tr><td><code>validate-task-plan.ts</code></td><td>Plan has required fields, aggregation is valid</td></tr>
+    <tr><td><code>validate-metrics.ts</code></td><td>Metric fields exist and have measure role</td></tr>
+    <tr><td><code>validate-dimensions.ts</code></td><td>Dimension fields exist in the data store metadata</td></tr>
+    <tr><td><code>validate-time-fields.ts</code></td><td>Time range field is temporal type and range is valid</td></tr>
+    <tr><td><code>validate-lookups.ts</code></td><td>Lookup references exist in data store metadata joins</td></tr>
+  </table>
+
+  <hr>
+  <h2>Analytics Executor — <code>src/analytics/executor/</code></h2>
+
+  <h4><span class="fp">src/analytics/executor/run-aggregation.ts</span></h4>
+  <p>Exports <code>runAggregation()</code> and <code>enforceAggregationSafety()</code>. Safety checks: blocks $function/$merge/$out/$where, limits to 25 stages, prepends tenant guard if missing, sets 30-second maxTimeMS. Uses <code>allowDiskUse: true</code> for large datasets.</p>
+
+  <h4><span class="fp">src/analytics/executor/explain-aggregation.ts</span></h4>
+  <p>Runs <code>explain()</code> on the aggregation for debugging purposes.</p>
+
+  <hr>
+  <h2>Schemas — <code>src/mastra/schemas/</code></h2>
+  <table>
+    <tr><th>File</th><th>Defines</th></tr>
+    <tr><td><code>intent.ts</code></td><td><code>taskPlanSchema</code>, <code>datasetSchema</code> — used by supervisor-runtime, mongodb-runtime, all workflows</td></tr>
+    <tr><td><code>chart.ts</code></td><td><code>chartResultSchema</code>, <code>chartPlanSchema</code>, <code>chartTypeSchema</code> — used by chart-runtime and chart-tools</td></tr>
+    <tr><td><code>datastore.ts</code></td><td><code>permissionScopeSchema</code> — used by api-router and all workflows</td></tr>
+  </table>
+
+  <hr>
+  <h2>Other Key Files</h2>
+  <table>
+    <tr><th>File</th><th>Purpose</th></tr>
+    <tr><td><code>src/types/index.ts</code></td><td>Shared TypeScript interfaces: DataStore, Field, PermissionScope, TaskPlan, ConversationRef, IntentKind</td></tr>
+    <tr><td><code>src/observability/log.ts</code></td><td>Structured JSON logger. Exports <code>log.info()</code>, <code>log.error()</code>, <code>logged()</code> (wraps async with timing). Set LOG_LEVEL=debug and LOG_PRETTY=1 for verbose readable output.</td></tr>
+    <tr><td><code>src/config/review-catalog.ts</code></td><td>Defines the 3 mode shells, capability matrix (done/partial/missing), and Search Agent capability cards shown in the UI</td></tr>
+    <tr><td><code>src/knowledge/export-knowledge.ts</code></td><td>Exports data store metadata and records to JSON files, which the Search Agent uses when no vector index is configured</td></tr>
+    <tr><td><code>public/index.html</code></td><td>The entire frontend — mode tabs, prompt area, run button, ECharts rendering, audit panel, progress stages, follow-up conversation tracking. All CSS and JavaScript embedded in one file.</td></tr>
+    <tr><td><code>samples/db-export/</code></td><td>JSON files used for Search Agent lexical fallback and data import. Contains: activities.json, assets.json, comments.json, dashboards.json, inspections.json, permits.json, projects.json, service_requests.json, users.json, and more.</td></tr>
+    <tr><td><code>scripts/import-db-export.ts</code></td><td>Imports data store metadata and collection JSON files into MongoDB. Supports IMPORT_MODE=replace or append, IMPORT_TENANT_ID, IMPORT_COLLECTIONS.</td></tr>
+    <tr><td><code>.env.example</code></td><td>Template for all environment variables with default values and comments</td></tr>
+    <tr><td><code>package.json</code></td><td>All npm scripts, dependencies (Express, Mastra, MongoDB driver, Zod, ECharts, tsx, etc.)</td></tr>
+    <tr><td><code>tsconfig.json</code></td><td>TypeScript config: ESNext target, Node16 module resolution, strict mode</td></tr>
+    <tr><td><code>docker-compose.yml</code></td><td>MongoDB 7 on port 27017 + Mongo Express UI on port 8081</td></tr>
+  </table>
+</div>
+
+<!-- ══════════ 13 ══════════ -->
+<h1 id="s13">13. Full File Connection Map</h1>
+<div class="section">
+  <h2>Top-Level Request Flow</h2>
+  <pre>public/index.html  (browser)
+    │ fetch() POST request
+    ▼
+src/server.ts  →  src/http/api-router.ts  →  src/http/contracts.ts (validation)
+    │
+    ▼
+src/services/analytics-service.ts
+    ├── src/services/conversation-memory.ts  →  src/db/mongo.client.ts
+    └── Mastra Workflow</pre>
+
+  <h2>Dashboard Workflow — Full Call Chain</h2>
+  <pre>src/mastra/workflows/dashboard.ts
+    │
+    ├─ STEP 1: PLAN
+    │   src/mastra/runtime/supervisor-runtime.ts
+    │       ├── src/db/datastore.repository.ts  →  src/db/mongo.client.ts
+    │       ├── src/mastra/agents/supervisor.ts  →  src/mastra/model.ts  →  OpenRouter/Groq API
+    │       ├── src/mastra/runtime/llm-queue.ts
+    │       ├── src/mastra/runtime/timeout.ts
+    │       ├── src/mastra/runtime/json-output.ts
+    │       └── src/mastra/task-plan.ts
+    │
+    ├─ STEP 2a: QUERY (parallel)
+    │   src/mastra/runtime/mongodb-runtime.ts
+    │       ├── src/db/datastore.repository.ts
+    │       └── src/mastra/tools/mongodb-tools.ts
+    │               ├── src/analytics/builders/build-pipeline.ts
+    │               │       ├── src/analytics/validators/*.ts
+    │               │       ├── build-match-stage.ts
+    │               │       ├── build-lookup-stage.ts
+    │               │       ├── build-group-stage.ts
+    │               │       ├── build-having-stage.ts
+    │               │       ├── build-project-stage.ts
+    │               │       ├── build-percent-stage.ts
+    │               │       ├── build-sort-stage.ts
+    │               │       └── build-limit-stage.ts
+    │               └── src/analytics/executor/run-aggregation.ts
+    │                       └── src/db/mongo.client.ts  →  MongoDB
+    │
+    ├─ STEP 2b: ENRICH (parallel, only if needsEnrichment=true)
+    │   src/mastra/runtime/search-runtime.ts
+    │       ├── src/mastra/agents/search.ts  →  src/mastra/model.ts  →  OpenRouter/Groq API
+    │       └── src/mastra/tools/search-tools.ts  (vector or lexical search)
+    │
+    ├─ STEP 3: MERGE
+    │   src/mastra/tools/merge-tools.ts
+    │
+    └─ STEP 4: CHART
+        src/mastra/runtime/chart-runtime.ts
+            ├── src/mastra/agents/chart.ts  →  src/mastra/model.ts  →  OpenRouter/Groq API
+            ├── src/mastra/runtime/timeout.ts
+            ├── src/mastra/schemas/chart.ts
+            └── src/mastra/tools/chart-tools.ts  →  ECharts option object</pre>
+
+  <h2>Model Resolution</h2>
+  <pre>Any Agent
+    └── src/mastra/model.ts
+            ├── LLM_PROVIDER=openrouter  →  OpenRouter API  (https://openrouter.ai/api/v1)
+            │         model: OPENROUTER_[ROLE]_MODEL or OPENROUTER_MODEL or default free Llama
+            └── LLM_PROVIDER=groq        →  Groq API        (https://api.groq.com/openai/v1)
+                      model: GROQ_[ROLE]_MODEL or GROQ_MODEL or llama-3.3-70b-versatile</pre>
+
+  <h2>Database Connections</h2>
+  <pre>src/db/mongo.client.ts  →  MongoDB instance
+    Used by:
+        src/db/datastore.repository.ts        (reads data_stores collection — cached)
+        src/services/conversation-memory.ts   (reads/writes conversation_memory)
+        src/analytics/executor/run-aggregation.ts  (runs aggregation pipelines)
+
+MongoDB Collections:
+    data_stores          — data store field metadata (cached in memory)
+    service_requests     — 700 records
+    inspections          — 260 records
+    permits              — 240 records
+    projects             — 140 records
+    conversation_memory  — chat history turns</pre>
+
+  <h2>Schemas Dependency Map</h2>
+  <pre>src/types/index.ts  ←  used by almost every file
+src/mastra/schemas/intent.ts    (taskPlanSchema, datasetSchema)
+    ←  supervisor-runtime.ts, mongodb-runtime.ts, all 3 workflows
+src/mastra/schemas/chart.ts     (chartResultSchema, chartPlanSchema, chartTypeSchema)
+    ←  chart-runtime.ts, chart-tools.ts
+src/mastra/schemas/datastore.ts (permissionScopeSchema)
+    ←  api-router.ts, all 3 workflows</pre>
+
+  <h2>Simplest One-Line Summary</h2>
+  <pre>index.html → server → api-router → analytics-service → workflow
+    → supervisor (AI) → mongodb-tools → mongo DB
+    → chart agent (AI) → chart-tools → ECharts option
+    → browser draws chart</pre>
+</div>
+
+<!-- ══════════ 14 ══════════ -->
+<h1 id="s14">14. Setup &amp; Operations</h1>
+<div class="section">
+  <h2>Prerequisites</h2>
+  <ul>
+    <li>Node.js 20.9 or newer</li>
+    <li>Docker Desktop (for local MongoDB) — or MongoDB running on <code>127.0.0.1:27017</code></li>
+    <li>OpenRouter API key (free tier works) — OR Groq API key</li>
+  </ul>
+
+  <h2>First-Time Setup</h2>
+  <pre>copy .env.example .env      # copy environment template
+# Edit .env: add OPENROUTER_API_KEY or GROQ_API_KEY
+npm install                  # install dependencies
+npm run db:up                # start MongoDB in Docker
+npm run import:db-export     # import data stores + sample data
+npm run dev                  # start the development server
+# Open http://localhost:3000</pre>
+
+  <h2>All Environment Variables</h2>
+  <table>
+    <tr><th>Variable</th><th>Default</th><th>Purpose</th></tr>
+    <tr><td><code>PORT</code></td><td>3000</td><td>Express server port</td></tr>
+    <tr><td><code>MONGODB_URI</code></td><td>mongodb://127.0.0.1:27017</td><td>MongoDB connection string</td></tr>
+    <tr><td><code>MONGODB_DB</code></td><td>mind_viz</td><td>Database name</td></tr>
+    <tr><td><code>LLM_PROVIDER</code></td><td>openrouter</td><td><code>openrouter</code> or <code>groq</code></td></tr>
+    <tr><td><code>OPENROUTER_API_KEY</code></td><td>—</td><td>Required if LLM_PROVIDER=openrouter</td></tr>
+    <tr><td><code>OPENROUTER_MODEL</code></td><td>meta-llama/llama-3.3-70b-instruct:free</td><td>Default model (all agents)</td></tr>
+    <tr><td><code>OPENROUTER_SUPERVISOR_MODEL</code></td><td>falls back to OPENROUTER_MODEL</td><td>Model for Supervisor Agent only</td></tr>
+    <tr><td><code>OPENROUTER_CHART_MODEL</code></td><td>falls back to OPENROUTER_MODEL</td><td>Model for Chart Planner only</td></tr>
+    <tr><td><code>GROQ_API_KEY</code></td><td>—</td><td>Required if LLM_PROVIDER=groq</td></tr>
+    <tr><td><code>GROQ_MODEL</code></td><td>llama-3.3-70b-versatile</td><td>Default Groq model</td></tr>
+    <tr><td><code>LLM_SERIAL_QUEUE</code></td><td>0</td><td>Set to 1 to serialize LLM calls (avoid rate limits)</td></tr>
+    <tr><td><code>SUPERVISOR_TIMEOUT_MS</code></td><td>4000</td><td>Max time for Supervisor AI call</td></tr>
+    <tr><td><code>WRITER_TIMEOUT_MS</code></td><td>8000</td><td>Max time for Writer AI call</td></tr>
+    <tr><td><code>CHART_TIMEOUT_MS</code></td><td>3000</td><td>Max time for Chart Planner AI call</td></tr>
+    <tr><td><code>META_GENERATION_TIMEOUT_MS</code></td><td>5000</td><td>Max time for /api/meta LLM polishing</td></tr>
+    <tr><td><code>WORKFLOW_TIMEOUT_MS</code></td><td>30000</td><td>Max time for entire workflow</td></tr>
+    <tr><td><code>MONGODB_SERVER_SELECTION_TIMEOUT_MS</code></td><td>5000</td><td>MongoDB connect timeout</td></tr>
+    <tr><td><code>MONGODB_CONNECT_RETRIES</code></td><td>3</td><td>MongoDB connection retry count</td></tr>
+    <tr><td><code>LOG_LEVEL</code></td><td>info</td><td>Logging level: debug / info / warn / error</td></tr>
+    <tr><td><code>LOG_PRETTY</code></td><td>0</td><td>Set to 1 for readable console output</td></tr>
+    <tr><td><code>IMPORT_TENANT_ID</code></td><td>t_mind_qatar</td><td>Tenant ID injected during data import</td></tr>
+    <tr><td><code>IMPORT_MODE</code></td><td>replace</td><td><code>replace</code> or <code>append</code> for import script</td></tr>
+  </table>
+
+  <h2>All NPM Scripts</h2>
+  <table>
+    <tr><th>Command</th><th>Purpose</th></tr>
+    <tr><td><code>npm run dev</code></td><td>Start TypeScript server with hot reload (tsx watch)</td></tr>
+    <tr><td><code>npm start</code></td><td>Start server without watch (tsx src/server.ts)</td></tr>
+    <tr><td><code>npm run build</code></td><td>Compile TypeScript (type-check only, no emit)</td></tr>
+    <tr><td><code>npm run typecheck</code></td><td>Run TypeScript type checker without emitting files</td></tr>
+    <tr><td><code>npm run db:up</code></td><td>Start MongoDB + Mongo Express via Docker Compose</td></tr>
+    <tr><td><code>npm run db:down</code></td><td>Stop Docker services</td></tr>
+    <tr><td><code>npm run db:reset</code></td><td>db:up + wait + import</td></tr>
+    <tr><td><code>npm run db:check</code></td><td>Check MongoDB connection and data store count</td></tr>
+    <tr><td><code>npm run import:db-export</code></td><td>Import data store metadata + exported JSON collections</td></tr>
+    <tr><td><code>npm run knowledge:index</code></td><td>Build internal knowledge vector index for Search Agent</td></tr>
+    <tr><td><code>npm run smoke</code></td><td>Run HTTP smoke tests against running server</td></tr>
+  </table>
+
+  <h2>Docker Services</h2>
+  <table>
+    <tr><th>Service</th><th>Port</th><th>Purpose</th></tr>
+    <tr><td>mongo</td><td>27017</td><td>MongoDB 7</td></tr>
+    <tr><td>mongo-express</td><td>8081</td><td>Browser UI for browsing MongoDB data</td></tr>
+  </table>
+  <p>Mongo Express: <code>http://localhost:8081</code> — useful for verifying data import.</p>
+
+  <h2>Logging</h2>
+  <p>The logger (<span class="fp">src/observability/log.ts</span>) outputs structured JSON with these fields: timestamp, level, message, runId, workflow, step, agent, tenantId, durationMs. Set <code>LOG_LEVEL=debug</code> and <code>LOG_PRETTY=1</code> for readable development logs.</p>
+</div>
+
+<!-- ══════════ 15 ══════════ -->
+<h1 id="s15">15. Security, Safety &amp; Limits</h1>
+<div class="section">
+  <h2>Active Safety Features</h2>
+  <table>
+    <tr><th>Feature</th><th>Where Enforced</th></tr>
+    <tr><td>Request validation with Zod</td><td>api-router.ts → contracts.ts</td></tr>
+    <tr><td>Response validation with Zod</td><td>api-router.ts → contracts.ts</td></tr>
+    <tr><td>Tenant guard in every MongoDB aggregation</td><td>build-match-stage.ts + run-aggregation.ts</td></tr>
+    <tr><td>Data store allow-list (allowedDataStores)</td><td>datastore.repository.ts → validate-scope.ts</td></tr>
+    <tr><td>Field validation against data store metadata</td><td>validate-*.ts files</td></tr>
+    <tr><td>Blocked MongoDB stages ($function, $merge, $out, $where)</td><td>run-aggregation.ts</td></tr>
+    <tr><td>Max 25 pipeline stages</td><td>run-aggregation.ts</td></tr>
+    <tr><td>30-second aggregation timeout</td><td>run-aggregation.ts</td></tr>
+    <tr><td>AI output validated against strict Zod schemas</td><td>supervisor-runtime, chart-runtime</td></tr>
+    <tr><td>Chart planner sees only schema + 1 row — never full dataset</td><td>chart-runtime.ts</td></tr>
+    <tr><td>LLM call timeouts (per agent)</td><td>timeout.ts</td></tr>
+    <tr><td>Read-only — no create/update/delete API operations</td><td>Architecture design</td></tr>
+    <tr><td>Internal Search Agent cannot use web search</td><td>search.ts agent instructions</td></tr>
+  </table>
+
+  <h2>Current Limitations</h2>
+  <div class="box yellow">
+    <strong>Known Limits (Not Production-Ready)</strong>
+    <ul style="margin-top:8px;padding-left:20px">
+      <li>No production authentication — UI scope is hardcoded for demo</li>
+      <li>Data store metadata is cached in memory — requires restart to pick up new data stores</li>
+      <li>ECharts loaded from CDN — offline environments need local vendoring</li>
+      <li>No live progress streaming — UI shows simulated progress bar</li>
+      <li>Report output is Arabic by design — requires code changes for other languages</li>
+      <li>Record links in inquiry are labels, not full platform URLs</li>
+      <li>Chart planner failure throws an error — no silent fallback</li>
+      <li>No rate limiting on API endpoints</li>
+      <li>Conversation memory is not encrypted at rest</li>
+    </ul>
+  </div>
+
+  <h2>What the App Can and Cannot Write to MongoDB</h2>
+  <table>
+    <tr><th>Operation</th><th>Allowed?</th><th>Where</th></tr>
+    <tr><td>Read business data (aggregations)</td><td>Yes</td><td>Normal API operation</td></tr>
+    <tr><td>Write conversation turns</td><td>Yes</td><td>conversation_memory collection</td></tr>
+    <tr><td>Write imported data</td><td>Yes (script only)</td><td>import:db-export script</td></tr>
+    <tr><td>Write/update business records</td><td>No</td><td>Not exposed in any endpoint</td></tr>
+    <tr><td>Delete records</td><td>No</td><td>Not exposed in any endpoint</td></tr>
+  </table>
+
+  <h2>Capability Status</h2>
+  <table>
+    <tr><th>Feature</th><th>Status</th></tr>
+    <tr><td>Mastra workflow orchestration</td><td>✅ Done</td></tr>
+    <tr><td>MongoDB analytics query path</td><td>✅ Done</td></tr>
+    <tr><td>All 5 agent roles</td><td>✅ Done</td></tr>
+    <tr><td>Dashboard, Report, Inquiry modes</td><td>✅ Done</td></tr>
+    <tr><td>Deterministic chart rendering</td><td>✅ Done</td></tr>
+    <tr><td>Conversation memory</td><td>✅ Done</td></tr>
+    <tr><td>External enrichment providers</td><td>⚠️ Partial</td></tr>
+    <tr><td>Parallel task coordination</td><td>⚠️ Partial</td></tr>
+    <tr><td>NestJS gateway + Angular shell</td><td>❌ Missing</td></tr>
+    <tr><td>Live progress streaming</td><td>❌ Missing</td></tr>
+    <tr><td>Auth-injected permission scope</td><td>❌ Missing</td></tr>
+    <tr><td>Semantic vector search (fully configured)</td><td>❌ Missing</td></tr>
+    <tr><td>Geographic map charts (configured)</td><td>❌ Missing</td></tr>
+    <tr><td>MongoDB create/update/link operations</td><td>❌ Missing</td></tr>
+  </table>
+</div>
+
+<!-- ══════════ 16 ══════════ -->
+<h1 id="s16">16. How to Extend the App</h1>
+<div class="section">
+  <h2>Add a New Data Store</h2>
+  <ol>
+    <li>Add metadata to MongoDB <code>data_stores</code> collection with correct field names, types, and roles</li>
+    <li>Import records into the collection named by <code>collection</code> field in the metadata</li>
+    <li>Include the data store name in <code>scope.allowedDataStores</code></li>
+    <li>Restart the server (metadata is cached — it won't auto-refresh)</li>
+    <li>Test with <code>GET /api/meta</code> and dashboard prompts</li>
+  </ol>
+
+  <h2>Add a New Field to an Existing Data Store</h2>
+  <ol>
+    <li>Add field to real MongoDB documents</li>
+    <li>Add field metadata in <code>data_stores</code> (name, type, role)</li>
+    <li>Choose correct role: <code>dimension</code> for group/filter, <code>measure</code> for numeric aggregation, <code>temporal</code> for date fields</li>
+    <li>Restart server</li>
+    <li>Test a prompt that uses the field</li>
+  </ol>
+
+  <h2>Add a New Prompt Filter Synonym (Arabic or English)</h2>
+  <p>File: <span class="fp">src/mastra/task-plan.ts</span></p>
+  <p>Add to <code>inferPromptFilters()</code> for new filter patterns, and to <code>localizeEnumValue()</code> for Arabic-to-English enum translations.</p>
+
+  <h2>Add a New Dimension Alias</h2>
+  <p>File: <span class="fp">src/mastra/task-plan.ts</span></p>
+  <p>Add an entry to the <code>aliases</code> array in <code>inferPromptDimensions()</code>:</p>
+  <pre>{ pattern: /\bby\s+newfield\b/, field: 'newField' },
+{ pattern: /حسب\s+الحقلالجديد/, field: 'newField' },</pre>
+
+  <h2>Add a New Chart Type</h2>
+  <ol>
+    <li>Add to <code>chartTypeSchema</code> in <span class="fp">src/mastra/schemas/chart.ts</span></li>
+    <li>Add candidate selection logic in <code>getChartTypeCandidates()</code> in <span class="fp">src/mastra/tools/chart-tools.ts</span></li>
+    <li>Add rendering logic in <code>buildChartFromDataset()</code></li>
+    <li>Update chart planner agent instructions in <span class="fp">src/mastra/agents/chart.ts</span></li>
+    <li>Add Arabic label mapping in <code>chartTypeLabel()</code> in <span class="fp">public/index.html</span></li>
+  </ol>
+
+  <h2>Add Production Authentication</h2>
+  <ol>
+    <li>Add authentication middleware before API handlers</li>
+    <li>Derive <code>userId</code>, <code>tenantId</code>, <code>allowedDataStores</code>, and <code>rowFilter</code> from the authenticated session</li>
+    <li>Remove hardcoded <code>SCOPE</code> from <code>public/index.html</code></li>
+    <li>Keep the tenant guard in <code>run-aggregation.ts</code> as defense-in-depth</li>
+  </ol>
+
+  <h2>Vendor ECharts Locally (for Offline)</h2>
+  <p>Replace the CDN script tag in <code>public/index.html</code>:</p>
+  <pre>&lt;!-- Replace this: --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"&gt;&lt;/script&gt;
+
+&lt;!-- With this (after copying file to public/): --&gt;
+&lt;script src="/echarts.min.js"&gt;&lt;/script&gt;</pre>
+</div>
+
+<!-- ══════════ 17 ══════════ -->
+<h1 id="s17">17. Demo Guide &amp; Best Prompts</h1>
+<div class="section">
+  <h2>Start the App</h2>
+  <pre>npm run db:up
+npm run import:db-export
+npm run dev
+# Open http://localhost:3000</pre>
+
+  <h2>Dashboard Prompts (لوحة المعلومات)</h2>
+  <table>
+    <tr><th>Prompt</th><th>Expected Chart</th></tr>
+    <tr><td>service request count by municipality this month</td><td>Bar chart by municipality</td></tr>
+    <tr><td>daily service request count over the last 30 days</td><td>Line trend chart</td></tr>
+    <tr><td>top 5 municipalities by service request count</td><td>Horizontal bar (ranking)</td></tr>
+    <tr><td>average responseHours by serviceType</td><td>Horizontal bar</td></tr>
+    <tr><td>open permits by municipality</td><td>Bar chart</td></tr>
+    <tr><td>average processingDays by permitType</td><td>Horizontal bar</td></tr>
+    <tr><td>inspection score by municipality</td><td>Bar chart</td></tr>
+    <tr><td>project budgetAmount by contractor</td><td>Horizontal bar</td></tr>
+    <tr><td>completed projects by municipality</td><td>Bar chart</td></tr>
+    <tr><td>service request count by status</td><td>Donut chart</td></tr>
+  </table>
+
+  <h2>Report Prompts (التقرير)</h2>
+  <table>
+    <tr><th>Prompt</th><th>Expected Output</th></tr>
+    <tr><td>analyze service request volume by municipality over the last 90 days and surface key trends</td><td>Arabic analytical sections</td></tr>
+    <tr><td>analyze average responseHours by serviceType</td><td>Comparative analysis sections</td></tr>
+    <tr><td>compare permits by status</td><td>Status breakdown report</td></tr>
+    <tr><td>analyze project budgetAmount by municipality</td><td>Budget analysis report</td></tr>
+    <tr><td>analyze inspections by outcome</td><td>Compliance report sections</td></tr>
+  </table>
+
+  <h2>Inquiry Prompts (الاستعلام)</h2>
+  <table>
+    <tr><th>Prompt</th><th>Expected Output</th></tr>
+    <tr><td>find recent service requests where status is new</td><td>Arabic summary + record links</td></tr>
+    <tr><td>show service requests from the last 7 days</td><td>Time-filtered records</td></tr>
+    <tr><td>find urgent service requests</td><td>Priority-filtered records</td></tr>
+    <tr><td>find open permits</td><td>Status in_review + submitted</td></tr>
+    <tr><td>find violations</td><td>outcome=violation inspection records</td></tr>
+    <tr><td>find completed projects</td><td>stage=completed project records</td></tr>
+  </table>
+
+  <h2>Live Demo Talking Points</h2>
+  <ol>
+    <li>Open <code>http://localhost:3000</code> — point out the three mode tabs</li>
+    <li>Note the auto-generated suggestions — "These come from the real data, not hardcoded examples"</li>
+    <li>Run: <code>top 5 municipalities by service request count</code></li>
+    <li>Point out the chart type badge (horizontal bar — ranking)</li>
+    <li>Open the audit panel — show the TaskPlan JSON</li>
+    <li>"This is the plan the AI created — it never wrote MongoDB code directly"</li>
+    <li>Show the MongoDB pipeline — "This is what actually ran against the database"</li>
+    <li>Show elapsed time — "This is how long the full AI + database cycle took"</li>
+    <li>Switch to Report mode, run an analysis prompt — show Arabic text sections</li>
+    <li>Switch to Inquiry, run a record search — show record links in the result</li>
+    <li>"All three modes share the same planning and query foundation"</li>
+  </ol>
+</div>
+
+<!-- ══════════ 18 ══════════ -->
+<h1 id="s18">18. Troubleshooting</h1>
+<div class="section">
+  <table>
+    <tr><th>Problem</th><th>Likely Cause</th><th>Fix</th></tr>
+    <tr><td>Server does not start</td><td>Node.js version or missing deps</td><td><code>npm install</code>, verify Node.js ≥ 20.9</td></tr>
+    <tr><td>MongoDB connection refused</td><td>Docker not running</td><td><code>npm run db:up</code> then wait for it to start</td></tr>
+    <tr><td>"No data stores found"</td><td>data_stores collection is empty</td><td><code>npm run import:db-export</code></td></tr>
+    <tr><td>LLM provider error</td><td>Missing API key</td><td>Add <code>OPENROUTER_API_KEY</code> or <code>GROQ_API_KEY</code> to .env</td></tr>
+    <tr><td>Chart does not render</td><td>CDN blocked, empty dataset, planner timeout</td><td>Check browser console, server logs, audit panel</td></tr>
+    <tr><td>Dataset is empty</td><td>Time filter too strict, wrong tenant, wrong data store</td><td>Try without time range: "service request count by municipality"</td></tr>
+    <tr><td>Supervisor timeout</td><td>LLM provider too slow</td><td>Increase <code>SUPERVISOR_TIMEOUT_MS</code>, try Groq (faster)</td></tr>
+    <tr><td>Smoke tests fail</td><td>Server not running or wrong port</td><td>Start server first, check <code>SMOKE_BASE_URL</code></td></tr>
+    <tr><td>Follow-up question ignored</td><td>Prompt not detected as follow-up</td><td>Use explicit words: "same", "again", "also", "نفس", "أيضا"</td></tr>
+    <tr><td>Prompt suggestions not loading</td><td>/api/meta failed or timed out</td><td>Check server logs, wait for LLM to respond or restart</td></tr>
+    <tr><td>Chart planner picks wrong chart type</td><td>intentHint missing from plan</td><td>Prompt more explicitly: "show trend" or "top N ranking"</td></tr>
+  </table>
+</div>
+
+<!-- ══════════ 19 ══════════ -->
+<h1 id="s19">19. Team Presentation Script</h1>
+<div class="section">
+  <h2>30-Second Version</h2>
+  <div class="box green">
+    <strong>What to say</strong>
+    This app is a natural-language analytics service for the Mind Platform. A user asks a question — in Arabic or English. The Supervisor AI converts it into a structured plan. The backend builds a safe MongoDB query from that plan. The result becomes a dashboard chart, a written report, or a search summary. The key point: the AI plans, but TypeScript code validates and executes the database query. The LLM never writes raw database code.
+  </div>
+
+  <h2>2-Minute Version</h2>
+  <p>The app has three modes. Dashboard returns one chart. Report returns Arabic analytical text and optionally a chart. Inquiry returns a summary and record links.</p>
+  <p>The UI is a single review console. Suggestion buttons are generated from the actual MongoDB data — not static examples. When a user submits a prompt, the backend adds conversation memory if it's a follow-up, then starts a Mastra workflow.</p>
+  <p>The Supervisor Agent creates a TaskPlan. A finalizer normalizes it — removing bad fields, inferring "by municipality" as a dimension, resolving "last 30 days" to actual dates. Then the MongoDB runtime builds a deterministic aggregation pipeline, stage by stage: match (with tenant guard), group, sort, limit. The executor enforces safety: blocks dangerous stages, limits pipeline length, sets a timeout.</p>
+  <p>For dashboard output, the Chart Planner Agent chooses how to map fields, and deterministic code builds the ECharts configuration. For report and inquiry output, the Writer Agent writes Arabic text grounded only in the returned data.</p>
+  <p>The audit panel is the best feature for technical review — it shows the TaskPlan, MongoDB pipeline, schema, and timing for every request.</p>
+
+  <h2>Expected Questions &amp; Answers</h2>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Is this production-ready?</td><td>Not fully. It is a solid analytics prototype. Production needs real authentication, server-derived permission scope, a proper frontend shell (Angular), and operational hardening.</td></tr>
+    <tr><td>Does the LLM write MongoDB queries?</td><td>No. The LLM creates a structured TaskPlan JSON. TypeScript builders in <code>src/analytics/builders/</code> convert that to MongoDB stages safely.</td></tr>
+    <tr><td>Can it support more data collections?</td><td>Yes. Add a data store definition with correct field metadata and the AI can use it automatically — no hardcoded logic needed.</td></tr>
+    <tr><td>Can it answer questions using external/web data?</td><td>No. The Search Agent is internal-only. It searches exported platform knowledge, not the public web.</td></tr>
+    <tr><td>Why is the report text in Arabic?</td><td>The Writer Agent and UI are Arabic-oriented for Qatar municipal review. This can be changed by updating writer instructions and UI copy.</td></tr>
+    <tr><td>Where do the prompt suggestions come from?</td><td>From <code>/api/meta</code>, generated from real data store field metadata. Not static hardcoded examples.</td></tr>
+    <tr><td>What happens if the AI gives a wrong field name?</td><td><code>finalizeTaskPlan()</code> strips unknown fields and the validators reject invalid ones before the pipeline runs. The app never queries a field that doesn't exist in the metadata.</td></tr>
+    <tr><td>How does follow-up conversation work?</td><td>After each request, the user's question and the app's answer are saved to MongoDB. For the next request, the last 8 turns are loaded and included in the planning prompt so the Supervisor understands context.</td></tr>
+  </table>
+
+  <h2>What to Emphasize to the Manager</h2>
+  <ul>
+    <li><strong>Metadata-driven design</strong> — add any new data store with proper metadata and the AI can use it, no code changes needed</li>
+    <li><strong>Safety-first query execution</strong> — the LLM plans, TypeScript validates and executes, tenant filtering is always enforced</li>
+    <li><strong>Transparent AI</strong> — the audit panel shows exactly what the AI decided and what the database received</li>
+    <li><strong>Full Arabic support</strong> — reports, summaries, UI labels, prompt suggestions all in Arabic</li>
+    <li><strong>This is a prototype / review console</strong> — not the full production Mind Platform</li>
+    <li><strong>Production needs:</strong> real auth, Angular frontend, NestJS gateway, server-derived scope</li>
+  </ul>
+</div>
+
+<!-- ══════════ FOOTER ══════════ -->
+<hr>
+<p style="text-align:center;color:#94a3b8;font-size:.82rem;margin-top:32px;margin-bottom:12px">
+  Mind Analytics Console &nbsp;·&nbsp; Full Team Documentation &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Internal Use Only
+</p>
+
+</body>
+</html>

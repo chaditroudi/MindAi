@@ -6,41 +6,22 @@ import { dataStoreRepo } from '../../db/datastore.repository.js';
 import { dataStoreSchema, permissionScopeSchema } from '../schemas/datastore.js';
 import { taskPlanSchema } from '../schemas/intent.js';
 
-const resolveBlueprintInputSchema = z.object({
-  blueprintId: z.string().optional(),
+const resolveDataStoreInputSchema = z.object({
   dataStoreId: z.string().optional(),
   dataStoreName: z.string().optional(),
   scope: permissionScopeSchema,
 });
 
-export const resolveBlueprintTool = createTool({
-  id: 'resolveBlueprint',
+export const resolveDataStoreTool = createTool({
+  id: 'resolveDataStore',
   description:
-    'Resolve a blueprint/data-store identifier into the accessible Data Store metadata: collection, typed fields, and joins.',
-  inputSchema: resolveBlueprintInputSchema,
+    'Resolve a Data Store identifier into accessible Data Store metadata: collection, typed fields, and joins.',
+  inputSchema: resolveDataStoreInputSchema,
   outputSchema: z.object({
-    blueprint: dataStoreSchema.optional(),
     dataStore: dataStoreSchema.optional(),
     dataStores: z.array(dataStoreSchema),
   }),
-  execute: async ({ context }) => resolveBlueprint(context),
-});
-
-export const resolveDataStoreTool = createTool({
-  id: 'resolve-data-store',
-  description:
-    'Look up accessible Data Stores and their typed fields so you know what is queryable.',
-  inputSchema: z.object({
-    dataStoreName: z.string().optional(),
-    scope: permissionScopeSchema,
-  }),
-  outputSchema: z.object({
-    dataStores: z.array(dataStoreSchema),
-  }),
-  execute: async ({ context }) => {
-    const resolved = await resolveBlueprint(context);
-    return { dataStores: resolved.dataStores };
-  },
+  execute: async ({ context }) => resolveDataStore(context),
 });
 
 export const buildAggregationTool = createTool({
@@ -49,7 +30,6 @@ export const buildAggregationTool = createTool({
     'Translate a structured query plan into a MongoDB aggregation pipeline. Returns the pipeline as a JSON array without executing it. Supports topN, having, lookups, multi-metric, percentOf, nin, and regex.',
   inputSchema: z.object({
     plan: taskPlanSchema,
-    blueprint: dataStoreSchema.optional(),
     dataStore: dataStoreSchema.optional(),
     scope: permissionScopeSchema,
   }),
@@ -58,9 +38,9 @@ export const buildAggregationTool = createTool({
     collection: z.string(),
   }),
   execute: async ({ context }) => {
-    const dataStore = context.dataStore ?? context.blueprint;
+    const dataStore = context.dataStore;
     if (!dataStore) {
-      throw new Error('buildAggregation requires a resolved blueprint or dataStore.');
+      throw new Error('buildAggregation requires a resolved dataStore.');
     }
 
     return buildAggregationFromPlan({ plan: context.plan, dataStore, scope: context.scope });
@@ -87,7 +67,6 @@ export const validateRowsTool = createTool({
   description: 'Validate rows shape and produce a field→type schema for downstream agents.',
   inputSchema: z.object({
     rows: z.array(z.record(z.unknown())),
-    blueprint: dataStoreSchema.optional(),
     dataStore: dataStoreSchema.optional(),
   }),
   outputSchema: z.object({
@@ -98,23 +77,22 @@ export const validateRowsTool = createTool({
     issues: z.array(z.string()),
   }),
   execute: async ({ context }) => {
-    const dataStore = context.dataStore ?? context.blueprint;
+    const dataStore = context.dataStore;
     if (!dataStore) {
-      throw new Error('validateRows requires a resolved blueprint or dataStore.');
+      throw new Error('validateRows requires a resolved dataStore.');
     }
 
     return validateRows({ rows: context.rows, dataStore });
   },
 });
 
-export async function resolveBlueprint({
-  blueprintId,
+export async function resolveDataStore({
   dataStoreId,
   dataStoreName,
   scope,
-}: z.infer<typeof resolveBlueprintInputSchema>) {
+}: z.infer<typeof resolveDataStoreInputSchema>) {
   const dataStores = await dataStoreRepo.listAccessibleDataStores(scope);
-  const identifiers = [blueprintId, dataStoreId, dataStoreName]
+  const identifiers = [dataStoreId, dataStoreName]
     .map(normalizeToken)
     .filter((identifier): identifier is string => Boolean(identifier));
 
@@ -126,7 +104,6 @@ export async function resolveBlueprint({
   const resolved = matches[0];
 
   return {
-    blueprint: resolved,
     dataStore: resolved,
     dataStores: matches,
   };
@@ -242,7 +219,6 @@ function matchesDataStore(dataStore: z.infer<typeof dataStoreSchema>, normalized
     dataStore.collection,
     stringifyProperty(raw.id),
     stringifyProperty(raw._id),
-    stringifyProperty(raw.blueprintId),
   ];
 
   return candidates.some((candidate) => normalizeToken(candidate) === normalizedIdentifier);

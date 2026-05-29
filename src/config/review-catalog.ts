@@ -62,3 +62,32 @@ export const capabilityMatrix = {
     'عمليات MongoDB للإنشاء والتحديث والربط خارج نطاق خدمة التحليلات الحالية',
   ],
 };
+
+export interface AgentCapabilityDefinition {
+  id: string;
+  label: string;
+  description: string;
+  capabilities: string[];
+  tools: string[];
+  boundaries: string[];
+}
+
+export const agentCapabilityCards: AgentCapabilityDefinition[] = [
+  {
+    id: 'searchAgent',
+    label: 'وكيل البحث الداخلي',
+    description: 'يثري نتائج التحليلات بسياق من فهرس المعرفة الداخلي عندما تطلب خطة المشرف enrichment.',
+    capabilities: [
+      'البحث في مجموعات البيانات المصدرة وبيانات DataStore الوصفية',
+      'استخدام البحث الدلالي عند توفر الفهرس ثم الرجوع إلى البحث النصي المحلي',
+      'إرجاع rows وschema وcitations بصيغة منظمة لاستخدامها في التدقيق والدمج',
+      'مواءمة نتائج الإثراء مع مفاتيح الأبعاد القادمة من مجموعة MongoDB الأساسية',
+    ],
+    tools: ['vectorSearch', 'vector-search'],
+    boundaries: [
+      'لا يستخدم بحث الويب أو المصادر العامة',
+      'لا يخترع حقائق خارج نتائج فهرس المعرفة الداخلي',
+      'يعمل فقط عند تفعيل needsEnrichment في خطة المشرف',
+    ],
+  },
+];

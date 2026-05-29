@@ -1,6 +1,7 @@
 import { mastra } from '../mastra/index.js';
 import { z } from 'zod';
 import {
+  agentCapabilityCards,
   capabilityMatrix,
   reviewModeShells,
   type ReviewEndpoint,
@@ -17,6 +18,7 @@ import type {
   ReviewMetaResponse,
 } from '../http/contracts.js';
 import { envTimeout, withTimeout } from '../mastra/runtime/timeout.js';
+import { log } from '../observability/log.js';
 import {
   buildConversationMemoryPrompt,
   resolveConversationRef,
@@ -69,6 +71,7 @@ class AnalyticsService {
       audit: {
         plan: result.plan,
         enrichment: result.enrichment,
+        searchImpact: buildSearchImpact('general_question', result.plan, result.enrichment),
         elapsedMs: Date.now() - t0,
       },
     };
@@ -100,6 +103,8 @@ class AnalyticsService {
       audit: {
         plan: result.plan,
         dataset: result.dataset,
+        enrichment: result.enrichment,
+        searchImpact: buildSearchImpact('report', result.plan, result.enrichment),
         elapsedMs: Date.now() - t0,
       },
     };
@@ -135,6 +140,7 @@ class AnalyticsService {
         schema: result.dataset.schema,
         jsonSchema: result.dataset.jsonSchema,
         enrichment: result.enrichment,
+        searchImpact: buildSearchImpact('dashboard', result.plan, result.enrichment),
         elapsedMs: Date.now() - t0,
       },
     };
@@ -145,10 +151,11 @@ class AnalyticsService {
       app: {
         title: 'منصة مايند للتحليلات البلدية',
         subtitle: 'خلفية Express وتشغيل Mastra وتنفيذ بيانات MongoDB وواجهة مراجعة ECharts.',
-        stack: ['Express', 'Mastra', 'MongoDB', 'ECharts', 'Ollama'],
+        stack: ['Express', 'Mastra', 'MongoDB', 'ECharts', 'OpenRouter/Groq'],
       },
       modes: await this.generateReviewModes(),
       capabilities: capabilityMatrix,
+      agents: agentCapabilityCards,
     };
   }
 
@@ -172,6 +179,8 @@ class AnalyticsService {
     intent: 'general_question' | 'report' | 'dashboard',
     conversation: { threadId: string; resourceId: string },
   ) {
+    if (!isFollowUpPrompt(input.prompt)) return input.prompt;
+
     const memory = await buildConversationMemoryPrompt(conversation);
     if (!memory) return input.prompt;
 
@@ -219,7 +228,10 @@ class AnalyticsService {
       );
 
       return mergeModeSuggestions(result.object.modes, deterministicModes, dataStores);
-    } catch {
+    } catch (err) {
+      log.warn('meta.prompt-suggestions.failed', {
+        err: err instanceof Error ? err.message : String(err),
+      });
       return deterministicModes;
     }
   }
@@ -474,4 +486,65 @@ function dedupePrompts(prompts: ReviewPromptDefinition[]) {
     seen.add(key);
     return true;
   });
+}
+
+function buildSearchImpact(
+  intent: 'general_question' | 'report' | 'dashboard',
+  plan?: { needsEnrichment?: boolean; enrichment?: { topic?: string; dimensions?: string[] } },
+  enrichment?: { rows?: unknown[]; citations?: unknown[]; source?: string },
+) {
+  const requested = Boolean(plan?.needsEnrichment && plan.enrichment);
+  const rowCount = enrichment?.rows?.length ?? 0;
+  const citationCount = enrichment?.citations?.length ?? 0;
+  const used = requested && rowCount > 0;
+  const status: 'not_requested' | 'requested_no_results' | 'used' = !requested
+    ? 'not_requested'
+    : used
+      ? 'used'
+      : 'requested_no_results';
+
+  return {
+    status,
+    requested,
+    used,
+    rowCount,
+    citationCount,
+    effect: searchEffectFor(intent, requested, used),
+    source: enrichment?.source,
+    topic: plan?.enrichment?.topic,
+    dimensions: plan?.enrichment?.dimensions,
+  };
+}
+
+function searchEffectFor(
+  intent: 'general_question' | 'report' | 'dashboard',
+  requested: boolean,
+  used: boolean,
+) {
+  if (!requested) {
+    return 'لم يطلب المشرف إثراء من وكيل البحث لهذا الطلب، لذلك اعتمدت النتيجة على MongoDB فقط.';
+  }
+
+  if (!used) {
+    return 'تم طلب وكيل البحث، لكنه لم يرجع صفوف معرفة داخلية قابلة للاستخدام، لذلك بقيت النتيجة على بيانات MongoDB.';
+  }
+
+  if (intent === 'dashboard') {
+    return 'أضيفت نتائج وكيل البحث إلى مجموعة MongoDB قبل بناء الرسم، لذلك يظهر أثره في البيانات المدمجة والمصادر.';
+  }
+
+  if (intent === 'report') {
+    return 'مررت نتائج وكيل البحث إلى وكيل الكاتب كسياق إضافي، لذلك يمكن أن تؤثر في نص التقرير والمصادر.';
+  }
+
+  return 'استخدمت نتائج وكيل البحث كسياق الإجابة بدلا من سجلات MongoDB العامة لهذا الاستعلام.';
+}
+
+function isFollowUpPrompt(prompt: string) {
+  const lower = prompt.toLowerCase();
+  return [
+    /\b(same|again|also|too|previous|above|that|those|it|them|compare it|what about)\b/i,
+    /\b(use|keep|with)\s+(the\s+)?same\b/i,
+    /(نفس|أيضا|ايضا|كذلك|السابق|السابقة|أعلاه|اعلاه|هذا|هذه|ذلك|تلك|قارنها|ماذا عن)/i,
+  ].some((pattern) => pattern.test(lower));
 }

@@ -3,14 +3,13 @@
   "version": "0.1.0",
   "description": "Datastore-driven analytics service for Mind Platform with Mastra Supervisor, MongoDB, Search, Writer, and deterministic chart runtime.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
+    "start": "tsx src/server.ts",
     "mastra:dev": "mastra dev",
-    "typecheck": "tsc --noEmit",
-    "seed": "tsx scripts/seed.ts",
+    "typecheck": "tsc -p tsconfig.json",
     "import:db-export": "tsx scripts/import-db-export.ts",
     "smoke": "tsx scripts/smoke.ts",
     "knowledge:index": "tsx scripts/build-knowledge-index.ts",
@@ -18,7 +17,7 @@
     "db:up": "docker compose up -d mongo mongo-express",
     "db:down": "docker compose down",
     "db:wait": "npm run db:check",
-    "db:reset": "npm run db:up && npm run db:wait && npm run seed"
+    "db:reset": "npm run db:up && npm run db:wait && npm run import:db-export"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.0",
@@ -27,6 +26,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "mongodb": "^6.10.0",
+    "tsx": "^4.19.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -34,7 +34,6 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "mastra": "^0.10.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   },
   "engines": {

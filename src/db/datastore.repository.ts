@@ -15,7 +15,6 @@ export class DataStoreRepository {
           ds.collection,
           getStringProperty(ds, 'id'),
           getStringProperty(ds, '_id'),
-          getStringProperty(ds, 'blueprintId'),
         ].some((candidate) => normalizeToken(candidate) === normalizedName),
     ) ?? null;
   }

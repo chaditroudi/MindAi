@@ -105,7 +105,7 @@ export function buildChartFromDataset({
 }: BuildChartInput) {
   const { rows, schema } = dataset;
 
-  if (rows.length === 0) return emptyChart(title ?? 'لا توجد بيانات');
+  if (rows.length === 0) return emptyChart(title ?? 'لا توجد بيانات', theme);
 
   const fields = Object.keys(schema).filter((field) => !isTechnicalField(field));
   const temporalField = xAxisField && isTemporalField(xAxisField, schema, rows)
@@ -153,20 +153,20 @@ export function buildChartFromDataset({
     }
     // String-label geo (zone names, district names) → horizontal bar is more accurate
     if (val) return buildBar(rows, effectiveGeoField, val, title ?? 'حسب المنطقة', theme, true, opts);
-    return emptyChart(title ?? 'لا توجد بيانات رقمية');
+    return emptyChart(title ?? 'لا توجد بيانات رقمية', theme);
   }
 
   // ── Ranking (topN) → horizontal bar, data already sorted DESC ───────────
   if (intentHint === 'ranking') {
     const val = valueField ?? numericFields[0];
-    if (!primaryDim || !val) return emptyChart(title ?? 'لا توجد بيانات كافية');
+    if (!primaryDim || !val) return emptyChart(title ?? 'لا توجد بيانات كافية', theme);
     return buildBar(rows, primaryDim, val, title ?? 'الترتيب', theme, true, opts);
   }
 
   // ── Explicit compare → bar ────────────────────────────────────────────────
   if (intentHint === 'compare') {
     const val = valueField ?? numericFields[0];
-    if (!primaryDim || !val) return emptyChart(title ?? 'لا توجد بيانات كافية للمقارنة');
+    if (!primaryDim || !val) return emptyChart(title ?? 'لا توجد بيانات كافية للمقارنة', theme);
     return buildBar(rows, primaryDim, val, title ?? 'المقارنة', theme, rows.length > 12, opts);
   }
 
@@ -174,7 +174,7 @@ export function buildChartFromDataset({
   if (intentHint === 'trend' || (temporalField && !intentHint)) {
     const tField = temporalField ?? fields[0];
     const val = valueField ?? numericFields[0];
-    if (!val) return emptyChart(title ?? 'لا توجد بيانات رقمية');
+    if (!val) return emptyChart(title ?? 'لا توجد بيانات رقمية', theme);
     const lineDims = seriesGroupField
       ? [seriesGroupField]
       : dimensionFields.filter((f) => f !== tField && schema[f] === 'string');
@@ -191,13 +191,13 @@ export function buildChartFromDataset({
     if (primaryDim && val) {
       return buildBar(rows, primaryDim, val, title ?? 'الحصة', theme, true, opts);
     }
-    return emptyChart(title ?? 'لا توجد بيانات كافية');
+    return emptyChart(title ?? 'لا توجد بيانات كافية', theme);
   }
 
   // ── Distribution (histogram) ──────────────────────────────────────────────
   if (intentHint === 'distribution') {
     const val = valueField ?? numericFields[0];
-    if (!val) return emptyChart(title ?? 'لا توجد بيانات رقمية للتوزيع');
+    if (!val) return emptyChart(title ?? 'لا توجد بيانات رقمية للتوزيع', theme);
     return buildHistogram(rows, val, title ?? 'التوزيع', theme, opts);
   }
 
@@ -218,7 +218,7 @@ export function buildChartFromDataset({
 
   // ── Default: bar ──────────────────────────────────────────────────────────
   const val = valueField ?? numericFields[0];
-  if (!primaryDim || !val) return emptyChart(title ?? 'لا توجد بيانات كافية');
+  if (!primaryDim || !val) return emptyChart(title ?? 'لا توجد بيانات كافية', theme);
   return buildBar(rows, primaryDim, val, title ?? 'المقارنة', theme, rows.length > 12, opts);
 }
 
@@ -332,7 +332,7 @@ function buildRequestedChart({
     return buildMap(rows, geoField, val, title ?? 'حسب الموقع', theme, opts);
   }
 
-  if (chartType === 'table') return emptyChart(title ?? 'جدول البيانات');
+  if (chartType === 'table') return emptyChart(title ?? 'جدول البيانات', theme);
 
   return undefined;
 }
@@ -607,7 +607,7 @@ function buildDonut(rows: Row[], dim: string, val: string, title: string, theme:
 
 function buildHistogram(rows: Row[], val: string, title: string, theme: string, opts: ChartOpts = {}) {
   const values = rows.map((r) => Number(r[val])).filter((v) => !Number.isNaN(v));
-  if (values.length === 0) return emptyChart(title);
+  if (values.length === 0) return emptyChart(title, theme);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const binCount = opts.bins ?? 10;
@@ -659,11 +659,30 @@ function buildMap(rows: Row[], geoField: string, val: string, title: string, the
   };
 }
 
-function emptyChart(title: string) {
+function emptyChart(title: string, theme = 'light') {
   return {
     chartType: 'table' as const,
-    option: { title: { text: title }, series: [] },
+    option: {
+      ...baseOption(theme),
+      title: { text: title, left: 0 },
+      graphic: {
+        type: 'text',
+        left: 'center',
+        top: 'middle',
+        style: {
+          text: 'لا توجد بيانات مطابقة للفلاتر الحالية',
+          fill: '#64748b',
+          fontSize: 16,
+          fontWeight: 600,
+          textAlign: 'center',
+        },
+      },
+      xAxis: { show: false },
+      yAxis: { show: false },
+      series: [],
+    },
     title,
+    annotations: ['No matching records found for the current filters.'],
     accessibility: { description: 'لا توجد بيانات متاحة.' },
   };
 }

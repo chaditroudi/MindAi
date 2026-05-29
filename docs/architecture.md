@@ -23,13 +23,14 @@ public/index.html
 - `src/mastra/runtime`: workflow runtime adapters
 - `src/mastra/tools`: deterministic MongoDB, chart, merge, and search helpers
 
-## MongoDB Agent Scope
+## MongoDB Runtime Scope
 
-The MongoDB Agent implements the analytics/data-query responsibility with the
-tools `resolveBlueprint`, `buildAggregation`, `executePipeline`, and
-`validateRows`:
+The MongoDB Agent contract is registered in Mastra, but the active
+dashboard/report/inquiry query path uses deterministic runtime tools for
+database safety. The runtime uses `buildAggregation`, `executePipeline`, and
+`validateRows` to:
 
-- resolves the target blueprint/data store from platform metadata
+- resolves the target Data Store from platform metadata
 - builds a tenant-safe MongoDB aggregation pipeline
 - executes the aggregation
 - validates and returns structured rows plus a compact field-type schema and JSON Schema
@@ -44,29 +45,33 @@ through this analytics service.
 - `report`: report page, returns report sections and optional charts
 - `dashboard`: dashboard page, returns a single chart
 
-## Search Agent Trigger
+## Internal Search Agent Trigger
 
-The Search Agent is only invoked when the Supervisor plan sets
+The Internal Search Agent is only invoked when the Supervisor plan sets
 `needsEnrichment=true`.
 
-Its goal is to fetch external or contextual data that the user's Data Store does
-not contain: industry benchmarks, geo metadata, currency rates, news, or
-RAG-retrieved knowledge from the platform's internal corpus.
+Its goal is to search contextual data that already exists inside the platform's
+internal knowledge corpus, such as exported DB collection summaries, field
+metadata, schema context, and internal documentation.
 
 Inputs are an enrichment task with `topic`, dataset dimensions, optional
-`timeRange`, `language`, `locale`, and an explicit source allow-list.
+`timeRange`, `language`, `locale`, and `tenantId`.
 
-Outputs are a secondary dataset shaped to align with the MongoDB result using
-the same dimension keys, plus citation metadata for chart/report attribution.
+Outputs are a search dataset with internal hits and citation snippets. For
+dashboard/report enrichment, rows can be merged with the MongoDB result when
+they share the same dimension key.
 
-Tools: `webSearch`, `webFetch`, `vectorSearch`, and `geocode`. Legacy tool IDs
-`web-search`, `web-fetch`, `vector-search`, and `webScrape` remain available.
+Active tool: `vectorSearch`. If semantic embeddings are indexed, it uses
+semantic search. Otherwise it uses local lexical search over `samples/db-export`.
 
 ## Chart Agent Selection
 
-The Chart Agent selects visualization intent before deterministic rendering:
-time series use `line`, categorical comparisons use `bar` or `horizontalBar`,
-and distributions use `histogram`.
+The Chart Agent is the primary visualization planner for non-empty dashboard
+and report chart datasets. It receives the dataset schema, a tiny sample, row
+count, the user prompt, valid chart candidates, and Supervisor hints such as
+`chartHint` and suggested dimensions. It returns a structured chart plan
+(`chartType`, axes, and optional grouping). The deterministic renderer then
+validates that plan against real fields and builds the final ECharts option.
 
 ## Metadata Source
 

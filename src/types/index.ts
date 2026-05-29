@@ -106,7 +106,6 @@ export interface TimeRange {
 }
 
 export interface TaskQuery {
-  blueprintId?: string;
   dataStoreId?: string;
   dataStoreName?: string;
   metric?: string;

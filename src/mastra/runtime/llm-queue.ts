@@ -1,7 +1,7 @@
 let queue = Promise.resolve();
 
 export function runQueuedLlmCall<T>(fn: () => Promise<T>): Promise<T> {
-  if (process.env.LLM_PROVIDER?.trim().toLowerCase() !== 'ollama') {
+  if (process.env.LLM_SERIAL_QUEUE !== '1') {
     return fn();
   }
 

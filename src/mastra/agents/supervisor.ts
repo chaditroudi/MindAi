@@ -22,12 +22,14 @@ Rules:
 - Never use _id or tenantId as dimensions.
 - Every filter must include field, op, and value. Use op="eq" for exact status,
   priority, outcome, stage, type, or enum matches.
-- needsEnrichment=true ONLY when the user explicitly asks to compare against external benchmarks,
-  national averages, public standards, geo metadata, currency rates, news, or regional data
-  not in the platform.
-  When true, set enrichment.topic (what to search for), enrichment.dimensions (must match the
-  primary query dimensions exactly), and optionally enrichment.timeRange, enrichment.language,
-  enrichment.locale, and enrichment.sources (domain allow-list).
+- needsEnrichment=true ONLY when the user explicitly asks for internal knowledge,
+  internal search, indexed platform context, collection/schema explanations, data model details,
+  exported DB context, or documentation already inside the platform knowledge corpus.
+  Do not set needsEnrichment for external benchmarks, national averages, public standards,
+  currency rates, news, or web/regional data.
+  When true, set enrichment.topic (what to search internally), enrichment.dimensions (must match
+  the primary query dimensions when a primary aggregation exists), and optionally
+  enrichment.timeRange, enrichment.language, and enrichment.locale. Do not set enrichment.sources.
 - timeRange MUST be an object when present:
   { "field": "createdAt", "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }.
   Never set timeRange to a string like "last 30 days".

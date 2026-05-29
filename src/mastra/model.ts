@@ -1,19 +1,19 @@
 import { createOpenAI } from '@ai-sdk/openai';
 
 type AgentRole = 'supervisor' | 'mongodb' | 'search' | 'writer' | 'chart';
-type ModelProvider = 'ollama' | 'groq';
+type ModelProvider = 'openrouter' | 'groq';
 
-const DEFAULT_OLLAMA_MODEL = 'gpt-oss:20b';
-const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434/v1';
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 
-const OLLAMA_MODEL_ENV_BY_ROLE: Record<AgentRole, string> = {
-  supervisor: 'OLLAMA_SUPERVISOR_MODEL',
-  mongodb: 'OLLAMA_MONGODB_MODEL',
-  search: 'OLLAMA_SEARCH_MODEL',
-  writer: 'OLLAMA_WRITER_MODEL',
-  chart: 'OLLAMA_CHART_MODEL',
+const OPENROUTER_MODEL_ENV_BY_ROLE: Record<AgentRole, string> = {
+  supervisor: 'OPENROUTER_SUPERVISOR_MODEL',
+  mongodb: 'OPENROUTER_MONGODB_MODEL',
+  search: 'OPENROUTER_SEARCH_MODEL',
+  writer: 'OPENROUTER_WRITER_MODEL',
+  chart: 'OPENROUTER_CHART_MODEL',
 };
 
 const GROQ_MODEL_ENV_BY_ROLE: Record<AgentRole, string> = {
@@ -31,38 +31,53 @@ export function resolveModel(role: AgentRole) {
     return resolveGroqModel(role);
   }
 
-  return resolveOllamaModel(role);
+  return resolveOpenRouterModel(role);
 }
 
 export function hasModelProviderConfigured() {
-  return resolveProvider() === 'ollama' || Boolean(process.env.GROQ_API_KEY?.trim());
+  try {
+    const provider = resolveProvider();
+    return provider === 'openrouter'
+      ? Boolean(process.env.OPENROUTER_API_KEY?.trim())
+      : Boolean(process.env.GROQ_API_KEY?.trim());
+  } catch {
+    return false;
+  }
 }
 
 function resolveProvider(): ModelProvider {
   const raw = process.env.LLM_PROVIDER?.trim().toLowerCase();
-  return raw === 'groq' ? 'groq' : 'ollama';
+  if (!raw || raw === 'openrouter') return 'openrouter';
+  if (raw === 'groq') return 'groq';
+  throw new Error(`Unsupported LLM_PROVIDER "${raw}". Use "openrouter" or "groq".`);
 }
 
-function resolveOllamaModel(role: AgentRole) {
-  const modelName =
-    process.env[OLLAMA_MODEL_ENV_BY_ROLE[role]]?.trim() ||
-    process.env.OLLAMA_MODEL?.trim() ||
-    DEFAULT_OLLAMA_MODEL;
+function resolveOpenRouterModel(role: AgentRole) {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
 
-  const ollama = createOpenAI({
-    name: 'ollama',
-    baseURL: process.env.OLLAMA_BASE_URL?.trim() || DEFAULT_OLLAMA_BASE_URL,
-    apiKey: process.env.OLLAMA_API_KEY?.trim() || 'ollama',
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY is missing in .env. Set LLM_PROVIDER=groq to use Groq instead.');
+  }
+
+  const modelName =
+    process.env[OPENROUTER_MODEL_ENV_BY_ROLE[role]]?.trim() ||
+    process.env.OPENROUTER_MODEL?.trim() ||
+    DEFAULT_OPENROUTER_MODEL;
+
+  const openrouter = createOpenAI({
+    name: 'openrouter',
+    baseURL: OPENROUTER_BASE_URL,
+    apiKey,
     compatibility: 'compatible',
   });
-  return ollama(modelName);
+  return openrouter(modelName);
 }
 
 function resolveGroqModel(role: AgentRole) {
   const apiKey = process.env.GROQ_API_KEY?.trim();
 
   if (!apiKey) {
-    throw new Error('GROQ_API_KEY is missing in .env. Set LLM_PROVIDER=ollama to use Ollama instead.');
+    throw new Error('GROQ_API_KEY is missing in .env. Set LLM_PROVIDER=openrouter to use OpenRouter instead.');
   }
 
   const modelName =

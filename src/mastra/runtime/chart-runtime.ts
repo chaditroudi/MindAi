@@ -9,6 +9,11 @@ import { envTimeout, withTimeout } from './timeout.js';
 type Dataset = z.infer<typeof datasetSchema>;
 type IntentHint = 'compare' | 'trend' | 'distribution' | 'part_of_whole' | 'geo' | 'ranking';
 type ChartType = NonNullable<ChartPlan['chartType']>;
+type ChartFieldHints = {
+  xAxisField?: string;
+  yAxisField?: string;
+  groupByField?: string;
+};
 type CompleteChartPlan = ChartPlan & {
   chartType: ChartType;
   xAxisField: string;
@@ -22,6 +27,11 @@ export type ChartRuntimeInput = {
   title?: string;
   theme?: 'light' | 'dark' | 'brand';
   mastra: Mastra;
+  // Supervisor hints passed into the Chart Agent. They guide planning but are
+  // not hard overrides.
+  preferredXAxisField?: string;
+  preferredYAxisField?: string;
+  preferredGroupByField?: string;
   // Explicit overrides — caller-supplied values always win over the planner.
   xAxisField?: string;
   yAxisField?: string;
@@ -40,12 +50,14 @@ export type ChartRuntimeInput = {
 /**
  * Strict chart resolution:
  *
- *  1. ChartPlannerAgent must return a valid structured chart plan.
- *  2. Explicit caller overrides can replace planner field assignments.
- *  3. Deterministic rendering builds the ECharts option from that validated plan.
+ *  1. ChartPlannerAgent receives the dataset shape and supervisor hints.
+ *  2. Its structured plan is sanitized against real dataset fields.
+ *  3. Explicit caller overrides can replace planner field assignments.
+ *  4. Deterministic rendering builds the ECharts option from that validated plan.
  *
- * Planner failure is surfaced to the API caller. The runtime does not silently
- * replace failed LLM planning with heuristic chart choices.
+ * Planner failure falls back to deterministic rendering with supervisor hints.
+ * This keeps dashboards available while making the chart agent the primary
+ * visualization planner for non-empty datasets.
  */
 export async function runChartRuntime({
   dataset,
@@ -53,6 +65,9 @@ export async function runChartRuntime({
   title,
   theme = 'light',
   mastra,
+  preferredXAxisField,
+  preferredYAxisField,
+  preferredGroupByField,
   xAxisField,
   yAxisField,
   groupByField,
@@ -67,28 +82,76 @@ export async function runChartRuntime({
   labelFormat,
 }: ChartRuntimeInput) {
   if (dataset.rows.length === 0) {
-    throw new Error('Chart generation failed: dataset is empty.');
+    return chartResultSchema.parse(
+      buildChartFromDataset({
+        dataset,
+        intentHint,
+        theme,
+        title: title ?? 'لا توجد بيانات مطابقة',
+      }),
+    );
   }
 
-  const plannerResult = await runChartPlanner({ dataset, intentHint, title, mastra });
-  const resolved = mergeChartPlan(plannerResult, {
-    xAxisField,
-    yAxisField,
-    groupByField,
-    title,
-  });
-  assertCompleteChartPlan(resolved);
+  let plannerResult: ChartPlan | undefined;
+  const preferredFields = {
+    xAxisField: preferredXAxisField,
+    yAxisField: preferredYAxisField,
+    groupByField: preferredGroupByField,
+  };
 
+  try {
+    plannerResult = await runChartPlanner({ dataset, intentHint, title, preferredFields, mastra });
+  } catch {
+    // Planner failed — fall through to deterministic renderer below
+  }
+
+  if (plannerResult) {
+    const resolved = mergeChartPlan(plannerResult, { xAxisField, yAxisField, groupByField, title });
+    if (isCompleteChartPlan(resolved)) {
+      return chartResultSchema.parse(
+        buildChartFromDataset({
+          dataset,
+          intentHint,
+          theme,
+          title: resolved.title,
+          chartType: resolved.chartType,
+          xAxisField: resolved.xAxisField,
+          yAxisField: resolved.yAxisField,
+          groupByField: resolved.groupByField,
+          sizeField,
+          stackBars,
+          bins,
+          smooth,
+          colorPalette,
+          showDataZoom,
+          yAxisMin,
+          yAxisMax,
+          labelFormat,
+        }),
+      );
+    }
+  }
+
+  // Planner incomplete or failed — deterministic renderer as final fallback
+  const fallbackXAxisField = xAxisField ?? preferredXAxisField;
+  const fallbackYAxisField = yAxisField ?? preferredYAxisField;
+  const fallbackGroupByField = groupByField ?? preferredGroupByField;
   return chartResultSchema.parse(
     buildChartFromDataset({
       dataset,
       intentHint,
       theme,
-      title: resolved.title,
-      chartType: resolved.chartType,
-      xAxisField: resolved.xAxisField,
-      yAxisField: resolved.yAxisField,
-      groupByField: resolved.groupByField,
+      title,
+      chartType: resolveDeterministicChartType({
+        dataset,
+        intentHint,
+        title,
+        xAxisField: fallbackXAxisField,
+        groupByField: fallbackGroupByField,
+      }),
+      xAxisField: fallbackXAxisField,
+      yAxisField: fallbackYAxisField,
+      groupByField: fallbackGroupByField,
       sizeField,
       stackBars,
       bins,
@@ -102,17 +165,45 @@ export async function runChartRuntime({
   );
 }
 
+function resolveDeterministicChartType({
+  dataset,
+  intentHint,
+  title,
+  xAxisField,
+  groupByField,
+}: {
+  dataset: Dataset;
+  intentHint?: IntentHint;
+  title?: string;
+  xAxisField?: string;
+  groupByField?: string;
+}): ChartType | undefined {
+  if (isClusteredBarRequest(title) && groupByField) return 'bar';
+  if (/\bscatter\b/i.test(title ?? '')) return 'scatter';
+  if (/\bhistogram\b|\bdistribution\b/i.test(title ?? '')) return 'histogram';
+  if (/\bdonut\b|\bpie\b|\bshare\b|\bpercentage\b|\bpercent\b/i.test(title ?? '')) return 'donut';
+  if (intentHint === 'ranking') return 'horizontalBar';
+  if (intentHint === 'trend') return 'line';
+  if (intentHint === 'distribution') return 'histogram';
+  if (intentHint === 'part_of_whole') return 'donut';
+  if (intentHint === 'geo') return 'map';
+  if (groupByField && (!xAxisField || !isTemporalField(xAxisField, dataset.schema, dataset))) return 'bar';
+  return undefined;
+}
+
 // ─── Chart Planner ────────────────────────────────────────────────────────────
 
 async function runChartPlanner({
   dataset,
   intentHint,
   title,
+  preferredFields,
   mastra,
 }: {
   dataset: Dataset;
   intentHint?: IntentHint;
   title?: string;
+  preferredFields: ChartFieldHints;
   mastra: Mastra;
 }): Promise<ChartPlan> {
   const planner = mastra.getAgent('chartPlannerAgent');
@@ -122,29 +213,29 @@ async function runChartPlanner({
     (f) => !technicalPrefixes.has(f) && !f.endsWith('Id') && !f.startsWith('__'),
   );
 
-  // Pass schema + one sample row — never the full rows array.
-  const sampleRow = dataset.rows[0]
-    ? Object.fromEntries(visibleFields.map((f) => [f, dataset.rows[0][f]]))
-    : {};
+  // Pass a tiny sample only — never the full rows array.
+  const sampleRows = dataset.rows.slice(0, 3).map((row) =>
+    Object.fromEntries(visibleFields.map((f) => [f, row[f]])),
+  );
+  const fieldHints = sanitizeFieldHints(preferredFields, visibleFields);
 
   const payload = {
     datasetSchema: Object.fromEntries(visibleFields.map((f) => [f, dataset.schema[f]])),
-    sampleRow,
-    intentHint: intentHint ?? null,
+    sampleRows,
+    rowCount: dataset.rows.length,
+    supervisorHints: {
+      intentHint: intentHint ?? null,
+      suggestedXAxis: fieldHints.xAxisField ?? null,
+      suggestedYAxis: fieldHints.yAxisField ?? null,
+      suggestedGroupBy: fieldHints.groupByField ?? null,
+    },
     userPrompt: title ?? '',
     candidateTypes: candidates,
   };
 
   const result = await withTimeout(
     planner.generate(
-      [
-        {
-          role: 'system',
-          content:
-            'Return exactly one JSON object matching ChartPlan. Required keys: chartType, xAxisField, yAxisField, title. Optional key: groupByField. No markdown, no prose, no code fence.',
-        },
-        { role: 'user', content: JSON.stringify(payload) },
-      ],
+      [{ role: 'user', content: JSON.stringify(payload) }],
       { output: chartPlanSchema, maxTokens: 256, temperature: 0 },
     ),
     'chart.planner',
@@ -157,8 +248,24 @@ async function runChartPlanner({
     visibleFields,
     candidates,
     intentHint,
+    preferredFields: fieldHints,
     fallbackTitle: title,
   });
+}
+
+function sanitizeFieldHints(preferredFields: ChartFieldHints, visibleFields: string[]): ChartFieldHints {
+  const valid = new Set(visibleFields);
+  return {
+    xAxisField: preferredFields.xAxisField && valid.has(preferredFields.xAxisField)
+      ? preferredFields.xAxisField
+      : undefined,
+    yAxisField: preferredFields.yAxisField && valid.has(preferredFields.yAxisField)
+      ? preferredFields.yAxisField
+      : undefined,
+    groupByField: preferredFields.groupByField && valid.has(preferredFields.groupByField)
+      ? preferredFields.groupByField
+      : undefined,
+  };
 }
 
 /**
@@ -172,6 +279,7 @@ function sanitizePlan({
   visibleFields,
   candidates,
   intentHint,
+  preferredFields,
   fallbackTitle,
 }: {
   plan: ChartPlan;
@@ -179,6 +287,7 @@ function sanitizePlan({
   visibleFields: string[];
   candidates: ChartType[];
   intentHint?: IntentHint;
+  preferredFields: ChartFieldHints;
   fallbackTitle?: string;
 }): ChartPlan {
   const valid = new Set(visibleFields);
@@ -188,10 +297,13 @@ function sanitizePlan({
   const categoricalFields = visibleFields.filter(
     (field) => !isNumericField(field, schema) && schema[field] !== 'geo',
   );
-  const chartType = resolveChartType(plan.chartType, candidates, intentHint);
-  const metricField = resolveMetricField(plan.yAxisField, numericFields);
+  const prefersClusteredBar = isClusteredBarRequest(fallbackTitle);
+  const chartType = prefersClusteredBar && candidates.includes('bar')
+    ? 'bar'
+    : resolveChartType(plan.chartType, candidates, intentHint);
+  const metricField = resolveMetricField(plan.yAxisField ?? preferredFields.yAxisField, numericFields);
   const dimensionField = resolveDimensionField({
-    requested: plan.xAxisField,
+    requested: plan.xAxisField ?? preferredFields.xAxisField,
     chartType,
     categoricalFields,
     temporalFields,
@@ -205,6 +317,14 @@ function sanitizePlan({
       field !== metricField &&
       !isNumericField(field, schema),
   );
+  const preferredGroupByField =
+    preferredFields.groupByField &&
+    valid.has(preferredFields.groupByField) &&
+    preferredFields.groupByField !== dimensionField &&
+    preferredFields.groupByField !== metricField &&
+    !isNumericField(preferredFields.groupByField, schema)
+      ? preferredFields.groupByField
+      : undefined;
   const groupByField =
     clusterField ??
     (plan.groupByField &&
@@ -213,16 +333,57 @@ function sanitizePlan({
     plan.groupByField !== metricField &&
     !isNumericField(plan.groupByField, schema)
       ? plan.groupByField
-      : undefined);
+      : undefined) ??
+    preferredGroupByField;
+  const inferredGroupByField = inferGroupByField({
+    chartType,
+    dimensionField,
+    metricField,
+    categoricalFields,
+    temporalFields,
+    prefersClusteredBar,
+  });
+  const resolvedGroupByField = groupByField ?? inferredGroupByField;
 
   return {
     chartType,
     xAxisField: dimensionField,
     yAxisField: metricField,
-    groupByField,
-    clusters: groupByField ? [groupByField] : undefined,
+    groupByField: resolvedGroupByField,
+    clusters: resolvedGroupByField ? [resolvedGroupByField] : undefined,
     title: plan.title ?? fallbackTitle,
   };
+}
+
+function inferGroupByField({
+  chartType,
+  dimensionField,
+  metricField,
+  categoricalFields,
+  temporalFields,
+  prefersClusteredBar,
+}: {
+  chartType: ChartType;
+  dimensionField: string | undefined;
+  metricField: string | undefined;
+  categoricalFields: string[];
+  temporalFields: string[];
+  prefersClusteredBar: boolean;
+}) {
+  if (!dimensionField || !metricField) return undefined;
+
+  const candidate = categoricalFields.find((field) => field !== dimensionField && field !== metricField);
+  if (!candidate) return undefined;
+
+  if (chartType === 'bar' || chartType === 'horizontalBar' || chartType === 'scatter') return candidate;
+  if (chartType === 'line' && temporalFields.includes(dimensionField)) return candidate;
+  if (prefersClusteredBar) return candidate;
+  return undefined;
+}
+
+function isClusteredBarRequest(title: string | undefined) {
+  if (!title) return false;
+  return /\b(clustered|cluster|grouped|group|group\s+bar|clustered\s+bar)\b/i.test(title);
 }
 
 function resolveChartType(
@@ -321,15 +482,6 @@ function mergeChartPlan(
   };
 }
 
-function assertCompleteChartPlan(plan: ChartPlan): asserts plan is CompleteChartPlan {
-  const missing = [
-    !plan.chartType ? 'chartType' : undefined,
-    !plan.xAxisField ? 'xAxisField' : undefined,
-    !plan.yAxisField ? 'yAxisField' : undefined,
-    !plan.title ? 'title' : undefined,
-  ].filter(Boolean);
-
-  if (missing.length > 0) {
-    throw new Error(`Chart planner returned incomplete plan. Missing: ${missing.join(', ')}.`);
-  }
+function isCompleteChartPlan(plan: ChartPlan): plan is CompleteChartPlan {
+  return Boolean(plan.chartType && plan.xAxisField && plan.yAxisField && plan.title);
 }

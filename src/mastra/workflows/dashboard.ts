@@ -33,7 +33,8 @@ const planStep = createStep({
     return {
       plan: await runSupervisorPlan({
         mastra: mastra!,
-        prompt: inputData.planningPrompt ?? inputData.prompt,
+        prompt: inputData.prompt,
+        planningPrompt: inputData.planningPrompt,
         intent: inputData.intent ?? 'dashboard',
         scope: inputData.scope,
         topic: inputData.topic,
@@ -66,7 +67,6 @@ const queryStep = createStep({
     const queryResult = await runMongoDatasetQuery({
       plan: inputData.plan,
       scope: inputData.scope,
-      mastra: mastra!,
     });
     return {
       ...inputData,
@@ -92,6 +92,7 @@ const enrichmentStep = createStep({
       enrichment: await runSearchEnrichment({
         mastra: mastra!,
         enrichment: plan.enrichment,
+        tenantId: inputData.scope.tenantId,
         timeRange: plan.query.timeRange,
         joinKey: plan.query.dimensions?.[0],
         // Give the agent a schema hint derived from the plan so it names fields correctly
@@ -172,12 +173,15 @@ const chartStep = createStep({
     executedPipeline: z.array(z.record(z.unknown())),
   }),
   execute: async ({ inputData, mastra }) => {
+    const dimensions = inputData.plan.query.dimensions ?? [];
     const chart = await runChartRuntime({
       dataset: inputData.dataset,
       intentHint: inputData.plan.chartHint,
       title: inputData.prompt,
       theme: inputData.theme,
       mastra: mastra!,
+      preferredXAxisField: dimensions[0],
+      preferredGroupByField: dimensions[1],
     });
     return {
       chart,

@@ -110,8 +110,8 @@ function resolvePromptDimensions({
   dataStore: DataStore;
 }) {
   const inferred = inferPromptDimensions(prompt, dataStore);
-  if (inferred.length > 0) return inferred;
-  return current;
+  if (inferred.length === 0) return current;
+  return dedupeStrings([...inferred, ...(current ?? [])]);
 }
 
 function normalizeFieldName(
@@ -279,7 +279,33 @@ function inferPromptDimensions(prompt: string, dataStore: DataStore) {
     if (normalized && !inferred.includes(normalized)) inferred.push(normalized);
   }
 
+  const byClause = extractByClause(lower);
+  if (byClause) {
+    const normalizedClause = normalizeToken(byClause) ?? '';
+    for (const field of dataStore.fields) {
+      if (asSupportedFieldRole(field.role) !== 'dimension') continue;
+      const fieldTokens = [
+        field.name,
+        splitIdentifier(field.name),
+        field.name === 'municipality' ? 'municipalities' : undefined,
+      ].filter((value): value is string => Boolean(value));
+
+      if (!fieldTokens.some((token) => normalizedClause.includes(normalizeToken(token) ?? ''))) continue;
+
+      const normalized = normalizeFieldName(field.name, dataStore, ['dimension']);
+      if (normalized && !inferred.includes(normalized)) inferred.push(normalized);
+    }
+  }
+
   return inferred;
+}
+
+function extractByClause(prompt: string) {
+  const match = prompt.match(/\bby\s+(.+?)(?:\bwhere\b|\bwith\b|\bover\b|\blast\b|\bthis\b|$)/i);
+  if (match?.[1]) return match[1];
+
+  const arabicMatch = prompt.match(/حسب\s+(.+?)(?:\s+حيث|\s+مع|\s+خلال|\s+آخر|\s+هذا|$)/i);
+  return arabicMatch?.[1];
 }
 
 function normalizeTimeRange(
@@ -388,6 +414,17 @@ function endOfDay(date: Date) {
 
 function normalizeToken(value: string | undefined) {
   return value?.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+function splitIdentifier(value: string) {
+  return value
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+}
+
+function dedupeStrings(values: string[]) {
+  return [...new Set(values)];
 }
 
 function matchEnumValue(rawValue: string, enumValues: string[]) {

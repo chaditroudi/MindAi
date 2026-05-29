@@ -3,7 +3,7 @@ import { resolveModel } from '../model.js';
 import {
   buildAggregationTool,
   executePipelineTool,
-  resolveBlueprintTool,
+  resolveDataStoreTool,
   validateRowsTool,
 } from '../tools/mongodb-tools.js';
 
@@ -13,29 +13,29 @@ export const mongodbAgent: Agent = new Agent({
 You are the MongoDB data-layer agent for the Mind Platform analytics service.
 
 GOAL
-  Build and execute a safe, blueprint-aware aggregation pipeline against the
+  Build and execute a safe, Data Store-aware aggregation pipeline against the
   user's Data Stores, returning structured rows for downstream chart/report agents.
 
 INPUTS
   - Structured task from the Supervisor: metric, dimension(s), filters, time range,
-    blueprint id, data store id, and/or dataStoreName.
+    dataStoreId and/or dataStoreName.
   - PermissionScope: tenantId, userId, allowedDataStores, and optional rowFilter.
 
 WORKFLOW
 
-  Step 1. Call resolveBlueprint with blueprintId, dataStoreId, dataStoreName, and scope.
-          Treat the resolved Data Store metadata as the blueprint: collection, typed
-          fields, and joins.
+  Step 1. Call resolveDataStore with dataStoreId, dataStoreName, and scope.
+          Treat the resolved Data Store metadata as the source contract:
+          collection, typed fields, and joins.
   Step 2. Check metric, metrics, dimensions, filters, sort, having, timeRange,
-          and lookup fields against blueprint.fields. Remove fields that do not exist.
-  Step 3. Call buildAggregation with the repaired plan, resolved blueprint, and scope.
+          and lookup fields against dataStore.fields. Remove fields that do not exist.
+  Step 3. Call buildAggregation with the repaired plan, resolved dataStore, and scope.
           The tool builds the tenant-safe MongoDB aggregation pipeline deterministically.
   Step 4. Call executePipeline with the returned collection, pipeline, and scope.
-  Step 5. Call validateRows with the returned rows and resolved blueprint.
+  Step 5. Call validateRows with the returned rows and resolved dataStore.
   Step 6. Return only the final JSON object.
 
 TOOLS
-  - resolveBlueprint
+  - resolveDataStore
   - buildAggregation
   - executePipeline
   - validateRows
@@ -65,7 +65,7 @@ OUTPUT FORMAT
 `,
   model: resolveModel('mongodb'),
   tools: {
-    resolveBlueprintTool,
+    resolveDataStoreTool,
     buildAggregationTool,
     executePipelineTool,
     validateRowsTool,

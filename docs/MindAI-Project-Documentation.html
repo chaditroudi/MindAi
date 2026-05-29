@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MindAI — Full Project Documentation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #ffffff;
+      padding: 40px 60px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* ── Cover Page ── */
+    .cover {
+      text-align: center;
+      padding: 80px 0 60px;
+      border-bottom: 3px solid #0f766e;
+      margin-bottom: 60px;
+      page-break-after: always;
+    }
+    .cover .logo {
+      width: 72px; height: 72px;
+      background: #0f766e;
+      color: #fff;
+      font-size: 2.2rem;
+      font-weight: 900;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .cover h1 { font-size: 2.4rem; color: #0f766e; margin-bottom: 10px; }
+    .cover h2 { font-size: 1.2rem; color: #555; font-weight: 400; margin-bottom: 30px; }
+    .cover .meta { color: #888; font-size: 0.9rem; }
+    .cover .badge {
+      display: inline-block;
+      background: #e6f4f2;
+      color: #0b5f59;
+      border: 1px solid #b9ddd8;
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin: 4px;
+    }
+
+    /* ── Table of Contents ── */
+    .toc {
+      background: #f8fafc;
+      border: 1px solid #d6dde6;
+      border-radius: 10px;
+      padding: 28px 32px;
+      margin-bottom: 50px;
+      page-break-after: always;
+    }
+    .toc h2 { color: #0f766e; margin-bottom: 18px; font-size: 1.2rem; }
+    .toc ol { padding-right: 0; padding-left: 22px; }
+    .toc li { margin-bottom: 7px; color: #334155; }
+    .toc li a { color: #0f766e; text-decoration: none; font-weight: 600; }
+
+    /* ── Headings ── */
+    h1 { font-size: 1.9rem; color: #0f766e; margin: 40px 0 16px; border-bottom: 2px solid #e6f4f2; padding-bottom: 10px; }
+    h2 { font-size: 1.4rem; color: #0b5f59; margin: 32px 0 12px; }
+    h3 { font-size: 1.1rem; color: #0f766e; margin: 24px 0 8px; }
+    h4 { font-size: 0.95rem; color: #334155; margin: 18px 0 6px; font-weight: 800; }
+
+    p { margin-bottom: 12px; color: #334155; }
+
+    /* ── Code / Pre ── */
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 18px 20px;
+      font: 12px/1.6 "Cascadia Mono", "Consolas", monospace;
+      overflow-x: auto;
+      margin: 14px 0 20px;
+      white-space: pre;
+    }
+    code {
+      background: #e6f4f2;
+      color: #0b5f59;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font: 12px "Cascadia Mono", "Consolas", monospace;
+    }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 0.88rem;
+    }
+    th {
+      background: #0f766e;
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #f8fafc; }
+    tr:hover td { background: #e6f4f2; }
+
+    /* ── Callout boxes ── */
+    .box {
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+    .box.green  { background: #e6f4f2; border-left: 4px solid #0f766e; }
+    .box.blue   { background: #eaf1ff; border-left: 4px solid #2563eb; }
+    .box.yellow { background: #fff4e5; border-left: 4px solid #b54708; }
+    .box strong { display: block; margin-bottom: 6px; font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── File path labels ── */
+    .filepath {
+      display: inline-block;
+      background: #1e293b;
+      color: #7dd3fc;
+      font: 11.5px "Cascadia Mono", monospace;
+      padding: 2px 10px;
+      border-radius: 5px;
+      margin: 6px 0 10px;
+    }
+
+    /* ── Section dividers ── */
+    .section { margin-bottom: 40px; }
+    hr { border: none; border-top: 1px solid #e2e8f0; margin: 36px 0; }
+
+    /* ── Page breaks ── */
+    .page-break { page-break-before: always; }
+
+    /* ── Print styles ── */
+    @media print {
+      body { padding: 20px 30px; font-size: 12px; }
+      pre { font-size: 10.5px; }
+      .cover { padding: 40px 0 30px; }
+      h1 { font-size: 1.5rem; }
+      h2 { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════ COVER ══ -->
+<div class="cover">
+  <div class="logo">M</div>
+  <h1>Mind Analytics Console</h1>
+  <h2>Full Project Documentation — Architecture, Files &amp; Code Flow</h2>
+  <div style="margin-bottom:20px">
+    <span class="badge">Node.js + TypeScript</span>
+    <span class="badge">Mastra AI Framework</span>
+    <span class="badge">MongoDB</span>
+    <span class="badge">ECharts</span>
+    <span class="badge">OpenRouter / Groq</span>
+  </div>
+  <p class="meta">Tenant: t_mind_qatar &nbsp;|&nbsp; AI Model: Llama 3.3 70B &nbsp;|&nbsp; Version 2</p>
+</div>
+
+<!-- ═══════════════════════════════════════════ TABLE OF CONTENTS ══ -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#what">What Does the App Do?</a></li>
+    <li><a href="#three-modes">The Three Modes</a></li>
+    <li><a href="#data">Data It Works With</a></li>
+    <li><a href="#how-it-works">How It Works — Step by Step</a></li>
+    <li><a href="#files">Every File Explained</a></li>
+    <li><a href="#map">Full File Connection Map</a></li>
+    <li><a href="#tech">Tech Stack</a></li>
+    <li><a href="#status">What Is Done vs. Planned</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 1 ══ -->
+<h1 id="what">1. What Does the App Do?</h1>
+<div class="section">
+  <div class="box green">
+    <strong>One-Sentence Summary</strong>
+    Mind Analytics Console is an AI-powered analytics platform for municipal government data — you type a question in Arabic or English, and the system automatically queries the database and gives you a chart, a report, or search results.
+  </div>
+
+  <p>The platform is designed for <strong>municipal managers and analysts</strong> who work with government data. They do not need to know SQL or any database language. They simply ask questions in natural language and the AI handles the rest.</p>
+
+  <p>The app is built specifically for <strong>Qatar municipalities</strong> (tenant: <code>t_mind_qatar</code>) and supports both Arabic and English prompts.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 2 ══ -->
+<h1 id="three-modes">2. The Three Modes</h1>
+<div class="section">
+  <table>
+    <tr>
+      <th>Mode</th>
+      <th>Endpoint</th>
+      <th>What You Get</th>
+      <th>Example Prompt</th>
+    </tr>
+    <tr>
+      <td><strong>Dashboard</strong><br><small>لوحة المعلومات</small></td>
+      <td><code>POST /api/dashboard</code></td>
+      <td>One interactive chart (bar, line, donut, etc.)</td>
+      <td>"Top 5 cities with most service requests"</td>
+    </tr>
+    <tr>
+      <td><strong>Report</strong><br><small>التقرير</small></td>
+      <td><code>POST /api/report</code></td>
+      <td>Written Arabic analysis + optional chart</td>
+      <td>"Analyze service requests by municipality over 90 days"</td>
+    </tr>
+    <tr>
+      <td><strong>Inquiry</strong><br><small>الاستعلام</small></td>
+      <td><code>POST /api/inquiry</code></td>
+      <td>Summary text + list of matching record links</td>
+      <td>"Find recent service requests where status is new"</td>
+    </tr>
+  </table>
+
+  <p>There is also a <code>GET /api/meta</code> endpoint that returns auto-generated prompt suggestions based on the actual data in the database.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 3 ══ -->
+<h1 id="data">3. Data It Works With</h1>
+<div class="section">
+  <table>
+    <tr><th>MongoDB Collection</th><th>What It Contains</th></tr>
+    <tr><td><code>service_requests</code></td><td>Citizen service requests — status, municipality, type, date, cost</td></tr>
+    <tr><td><code>inspections</code></td><td>Field inspection records</td></tr>
+    <tr><td><code>permits</code></td><td>Construction and building permits</td></tr>
+    <tr><td><code>projects</code></td><td>Municipal project records</td></tr>
+    <tr><td><code>data_stores</code></td><td>Metadata about the above collections (field names, types, roles)</td></tr>
+    <tr><td><code>conversation_memory</code></td><td>Chat history for follow-up questions</td></tr>
+  </table>
+
+  <p>Each data collection has a <strong>data store definition</strong> stored in <code>data_stores</code>. This definition tells the app what fields exist and their roles:</p>
+  <ul style="margin: 10px 0 10px 22px; color: #334155;">
+    <li><strong>dimension</strong> — a category to group by (e.g. municipality, serviceType)</li>
+    <li><strong>measure</strong> — a number to calculate (e.g. cost, duration)</li>
+    <li><strong>temporal</strong> — a date/time field (e.g. createdAt)</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 4 ══ -->
+<h1 id="how-it-works" class="page-break">4. How It Works — Step by Step</h1>
+<div class="section">
+  <h2>Dashboard Example: "Top 5 cities by service request count"</h2>
+
+  <table>
+    <tr><th>Step</th><th>Who Does It</th><th>What Happens</th><th>Output</th></tr>
+    <tr>
+      <td><strong>1. Receive</strong></td>
+      <td>Express API</td>
+      <td>Request arrives at <code>/api/dashboard</code>, input is validated</td>
+      <td>Clean input object</td>
+    </tr>
+    <tr>
+      <td><strong>2. Plan</strong></td>
+      <td>Supervisor Agent (AI)</td>
+      <td>Reads the prompt and decides: which collection? count or sum? which dimension? top N?</td>
+      <td>TaskPlan JSON: <code>{ dataStoreName: "ServiceRequests", aggregation: "count", dimensions: ["municipality"], topN: 5 }</code></td>
+    </tr>
+    <tr>
+      <td><strong>3a. Query</strong></td>
+      <td>MongoDB Runtime</td>
+      <td>Builds a MongoDB aggregation pipeline from the plan, runs it against the database</td>
+      <td>Rows: <code>[{ municipality: "Doha", count: 1200 }, ...]</code></td>
+    </tr>
+    <tr>
+      <td><strong>3b. Enrich</strong></td>
+      <td>Search Agent (AI)</td>
+      <td>If the supervisor requested enrichment, searches internal documents in parallel</td>
+      <td>Extra context rows (or empty)</td>
+    </tr>
+    <tr>
+      <td><strong>4. Merge</strong></td>
+      <td>Merge Tool</td>
+      <td>Combines MongoDB data + enrichment data on a shared key (e.g. municipality)</td>
+      <td>Merged dataset</td>
+    </tr>
+    <tr>
+      <td><strong>5. Chart</strong></td>
+      <td>Chart Planner (AI) + Chart Tool</td>
+      <td>AI decides chart type and axes. Deterministic builder generates the ECharts config</td>
+      <td>Complete ECharts option object + Arabic title</td>
+    </tr>
+    <tr>
+      <td><strong>6. Respond</strong></td>
+      <td>Express API</td>
+      <td>Returns the chart JSON to the browser</td>
+      <td>Browser draws the chart</td>
+    </tr>
+  </table>
+
+  <div class="box blue">
+    <strong>Note: Steps 3a and 3b run at the same time (parallel)</strong>
+    The MongoDB query and the internal search run simultaneously to save time. They are merged in Step 4.
+  </div>
+
+  <h2>Chart Types Available</h2>
+  <table>
+    <tr><th>Chart Type</th><th>When Used</th></tr>
+    <tr><td>Line</td><td>Trends over time (daily/monthly counts)</td></tr>
+    <tr><td>Bar</td><td>Categorical comparison</td></tr>
+    <tr><td>Horizontal Bar</td><td>Rankings (top N)</td></tr>
+    <tr><td>Donut</td><td>Part of whole / percentages</td></tr>
+    <tr><td>Histogram</td><td>Distribution of values</td></tr>
+    <tr><td>Scatter</td><td>Correlation between two numbers</td></tr>
+    <tr><td>Map</td><td>Geographic data</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 5 ══ -->
+<h1 id="files" class="page-break">5. Every File Explained</h1>
+<div class="section">
+
+  <h2>Entry Point</h2>
+
+  <h3><span class="filepath">src/server.ts</span></h3>
+  <p><strong>What it is:</strong> The on/off switch of the whole app. When you run <code>npm run dev</code>, this file starts the web server on port 3000. It opens the door and routes <code>/api/*</code> requests to the router. Nothing intelligent happens here.</p>
+
+  <hr>
+  <h2>Web Layer — <code>src/http/</code></h2>
+
+  <h3><span class="filepath">src/http/api-router.ts</span></h3>
+  <p><strong>What it is:</strong> The traffic cop. Reads the URL and sends each request to the right handler. Also catches errors and returns Arabic error messages. Handles 4 routes: <code>/inquiry</code>, <code>/report</code>, <code>/dashboard</code>, <code>/meta</code>.</p>
+
+  <h3><span class="filepath">src/http/contracts.ts</span></h3>
+  <p><strong>What it is:</strong> The rulebook for every request and response. Defines the exact shape of data — what fields are required, what types. If a request doesn't match the template it gets rejected immediately before any AI is called.</p>
+
+  <hr>
+  <h2>Brain — <code>src/services/</code></h2>
+
+  <h3><span class="filepath">src/services/analytics-service.ts</span></h3>
+  <p><strong>What it is:</strong> The main coordinator — the most important file. When a request arrives it: checks if it is a follow-up question, starts the right Mastra workflow, waits for the result, saves the conversation to memory, and returns the final answer. It also generates the auto-suggestions you see in the UI by reading actual data stores.</p>
+
+  <h3><span class="filepath">src/services/conversation-memory.ts</span></h3>
+  <p><strong>What it is:</strong> The app's short-term memory. Every question and every answer gets saved to MongoDB. When the user asks a follow-up like "same but for last year", this file loads the last 8 turns of conversation so the AI understands context. Stores: who asked, what they asked, what the answer was, and when.</p>
+
+  <hr>
+  <h2>Workflows — <code>src/mastra/workflows/</code></h2>
+  <p>These are the assembly lines. Each workflow is a series of steps that run in a defined order.</p>
+
+  <h3><span class="filepath">src/mastra/workflows/dashboard.ts</span></h3>
+  <p>5 steps: Plan → Query + Enrich (parallel) → Merge → Chart. Returns a single ECharts chart.</p>
+
+  <h3><span class="filepath">src/mastra/workflows/report.ts</span></h3>
+  <p>5 steps: Plan → Query + Enrich (parallel) → Merge → Write. Returns Arabic narrative sections + optional chart.</p>
+
+  <h3><span class="filepath">src/mastra/workflows/general-question.ts</span></h3>
+  <p>3 steps: Plan → Query + Enrich (parallel) → Write. Returns a short summary + record links.</p>
+
+  <hr>
+  <h2>AI Agents — <code>src/mastra/agents/</code></h2>
+  <p>Each agent is an AI brain with specific instructions. They are specialists that handle one job each.</p>
+
+  <h3><span class="filepath">src/mastra/agents/supervisor.ts</span></h3>
+  <p><strong>Job:</strong> Read the user's question and create a structured plan. Decides: which data store? count or sum or average? which dimension to group by? any filters? top N? Outputs a TaskPlan JSON object.</p>
+  <pre>{
+  "intent": "dashboard",
+  "needsData": true,
+  "needsChart": true,
+  "query": {
+    "dataStoreName": "ServiceRequests",
+    "aggregation": "count",
+    "dimensions": ["municipality"],
+    "topN": 5
+  },
+  "chartHint": "ranking"
+}</pre>
+
+  <h3><span class="filepath">src/mastra/agents/mongodb.ts</span></h3>
+  <p><strong>Job:</strong> Execute the database query safely. Uses tools to find the right data store, build the aggregation pipeline, run it, and return clean rows. It is <strong>read-only</strong> — can never create, update, or delete data.</p>
+
+  <h3><span class="filepath">src/mastra/agents/chart.ts</span></h3>
+  <p><strong>Job:</strong> Decide how to visualize the data. Sees only the data schema, up to 3 sample rows, row count, prompt, and Supervisor hints (never the full dataset). Decides: which chart type? which field on X axis? which on Y? Outputs a chart plan that gets validated before rendering.</p>
+
+  <h3><span class="filepath">src/mastra/agents/writer.ts</span></h3>
+  <p><strong>Job:</strong> Write the Arabic report text. Takes the data rows and writes human-readable analytical sentences organized into sections with headings.</p>
+
+  <h3><span class="filepath">src/mastra/agents/search.ts</span></h3>
+  <p><strong>Job:</strong> Search internal documents. Only activated when the Supervisor sets <code>needsEnrichment=true</code>. Searches exported database files or vector embeddings for related context. Never searches the web.</p>
+
+  <hr>
+  <h2>Runtime Adapters — <code>src/mastra/runtime/</code></h2>
+  <p>These files are the connectors between workflow steps and agents. Each one calls an agent, handles timeouts, and cleans up the output.</p>
+
+  <table>
+    <tr><th>File</th><th>What It Does</th></tr>
+    <tr><td><code>supervisor-runtime.ts</code></td><td>Calls the Supervisor agent. Loads data stores, sends everything to AI, parses and validates the plan.</td></tr>
+    <tr><td><code>mongodb-runtime.ts</code></td><td>Calls MongoDB tools. Finds the data store, builds pipeline, runs it, returns clean rows.</td></tr>
+    <tr><td><code>chart-runtime.ts</code></td><td>Calls the Chart Planner agent for non-empty chart datasets. Sends schema, up to 3 sample rows, row count, prompt, Supervisor hints, and candidate chart types. Gets a chart plan, validates it, then passes it to the ECharts builder.</td></tr>
+    <tr><td><code>writer-runtime.ts</code></td><td>Calls the Writer agent to generate Arabic report sections.</td></tr>
+    <tr><td><code>search-runtime.ts</code></td><td>Calls the Search agent when enrichment is needed.</td></tr>
+    <tr><td><code>llm-queue.ts</code></td><td>A queue that prevents too many AI calls at once. Like a waiting room.</td></tr>
+    <tr><td><code>timeout.ts</code></td><td>Sets time limits on every AI call. Cancels and returns error if AI hangs.</td></tr>
+    <tr><td><code>json-output.ts</code></td><td>Cleans the AI response — extracts the JSON from any surrounding prose.</td></tr>
+  </table>
+
+  <hr>
+  <h2>Tools — <code>src/mastra/tools/</code></h2>
+  <p>Tools are functions that agents can call to do real work.</p>
+
+  <h3><span class="filepath">src/mastra/tools/mongodb-tools.ts</span></h3>
+  <p>Contains 3 functions: <code>buildAggregation</code> (convert plan to pipeline), <code>executePipeline</code> (run against database), <code>validateRows</code> (clean results).</p>
+
+  <h3><span class="filepath">src/mastra/tools/chart-tools.ts</span></h3>
+  <p>Contains <code>buildChartFromDataset</code> — takes a validated chart plan and dataset, produces the complete ECharts option object that the browser uses to draw the chart.</p>
+
+  <h3><span class="filepath">src/mastra/tools/search-tools.ts</span></h3>
+  <p>Contains <code>vectorSearch</code> — searches internal documents by semantic embedding (if set up) or by simple text matching over the exported JSON sample files.</p>
+
+  <h3><span class="filepath">src/mastra/tools/merge-tools.ts</span></h3>
+  <p>Merges two datasets into one by joining on a shared key (e.g. municipality). Used when MongoDB results and Search Agent results need to be combined.</p>
+
+  <hr>
+  <h2>Analytics Query Builders — <code>src/analytics/builders/</code></h2>
+  <p>These files convert the AI's TaskPlan into a real MongoDB aggregation pipeline, stage by stage.</p>
+
+  <table>
+    <tr><th>File</th><th>MongoDB Stage</th><th>What It Does</th></tr>
+    <tr><td><code>build-pipeline.ts</code></td><td>Assembler</td><td>Calls all builders below in the correct order, returns the complete pipeline</td></tr>
+    <tr><td><code>build-match-stage.ts</code></td><td><code>$match</code></td><td>Filters rows — by tenantId (security), status, date range, any filter from the plan</td></tr>
+    <tr><td><code>build-lookup-stage.ts</code></td><td><code>$lookup</code></td><td>Joins with another MongoDB collection when needed</td></tr>
+    <tr><td><code>build-group-stage.ts</code></td><td><code>$group</code></td><td>Groups rows and counts / sums / averages the values</td></tr>
+    <tr><td><code>build-having-stage.ts</code></td><td><code>$match</code> (post-group)</td><td>Filters after grouping — like SQL HAVING clause</td></tr>
+    <tr><td><code>build-project-stage.ts</code></td><td><code>$project</code></td><td>Picks which fields to return and renames them cleanly</td></tr>
+    <tr><td><code>build-percent-stage.ts</code></td><td>Custom stages</td><td>Calculates percentage values from totals</td></tr>
+    <tr><td><code>build-sort-stage.ts</code></td><td><code>$sort</code></td><td>Orders results highest to lowest (or by date)</td></tr>
+    <tr><td><code>build-limit-stage.ts</code></td><td><code>$limit</code></td><td>Returns only the top N results</td></tr>
+  </table>
+
+  <h2>Validators — <code>src/analytics/validators/</code></h2>
+  <p>Check the AI plan before building the pipeline — ensures field names are real, filters are valid, time ranges are properly formatted, and the tenant scope is respected.</p>
+
+  <table>
+    <tr><th>File</th><th>What It Validates</th></tr>
+    <tr><td><code>validate-scope.ts</code></td><td>User has permission to access this data store</td></tr>
+    <tr><td><code>validate-task-plan.ts</code></td><td>Overall plan structure is complete and coherent</td></tr>
+    <tr><td><code>validate-metrics.ts</code></td><td>Metric fields are real numeric fields in the data store</td></tr>
+    <tr><td><code>validate-dimensions.ts</code></td><td>Dimension fields exist and are valid grouping fields</td></tr>
+    <tr><td><code>validate-time-fields.ts</code></td><td>Date/time fields and ranges are valid</td></tr>
+    <tr><td><code>validate-lookups.ts</code></td><td>Join references are valid</td></tr>
+  </table>
+
+  <hr>
+  <h2>Database Layer — <code>src/db/</code></h2>
+
+  <h3><span class="filepath">src/db/mongo.client.ts</span></h3>
+  <p>Opens and manages the single MongoDB connection. Reused across the whole app — only one connection is created.</p>
+
+  <h3><span class="filepath">src/db/datastore.repository.ts</span></h3>
+  <p>Loads data store definitions from the <code>data_stores</code> MongoDB collection. <strong>Caches them in memory</strong> so the database is not hit on every request. Provides two methods: <code>findDataStore(name)</code> and <code>listAccessibleDataStores(scope)</code>.</p>
+
+  <hr>
+  <h2>The UI</h2>
+
+  <h3><span class="filepath">public/index.html</span></h3>
+  <p>One single HTML file — the entire frontend. Contains:</p>
+  <ul style="margin: 8px 0 12px 22px; color: #334155;">
+    <li>Left panel: mode tabs (Dashboard / Report / Inquiry), text area, run button, auto-generated suggestions</li>
+    <li>Right panel: the chart or report result</li>
+    <li>Audit section: shows the AI plan, MongoDB pipeline, field schema, and response time</li>
+    <li>Live progress bar with Arabic stage labels while the request runs</li>
+    <li>All JavaScript embedded in the same file using ECharts for drawing</li>
+    <li>Conversation state tracked so follow-up questions work</li>
+  </ul>
+
+  <hr>
+  <h2>Config, Model &amp; Other Files</h2>
+
+  <h3><span class="filepath">src/mastra/model.ts</span></h3>
+  <p>Decides which AI model to use by reading the <code>.env</code> file. Supports two providers and allows each agent to use a different model. Default is Llama 3.3 70B via OpenRouter (free) or Groq (faster).</p>
+
+  <h3><span class="filepath">src/config/review-catalog.ts</span></h3>
+  <p>Defines the 3 mode descriptions shown in the UI, the capability matrix (what is done vs. planned), and the Search Agent capability cards.</p>
+
+  <h3><span class="filepath">src/mastra/index.ts</span></h3>
+  <p>Registers all agents and workflows with the Mastra framework so they can be retrieved by name at runtime.</p>
+
+  <h3><span class="filepath">src/mastra/task-plan.ts</span></h3>
+  <p>After the Supervisor AI returns a plan, this file finalizes it — fills in any missing fields, corrects the intent, and ensures the plan is valid before the workflow continues.</p>
+
+  <table>
+    <tr><th>File</th><th>What It Does</th></tr>
+    <tr><td><code>src/index.ts</code></td><td>Entry point, just starts the server</td></tr>
+    <tr><td><code>src/types/index.ts</code></td><td>Shared TypeScript type definitions used everywhere</td></tr>
+    <tr><td><code>src/observability/log.ts</code></td><td>Logging — prints timestamped info to the console</td></tr>
+    <tr><td><code>src/mastra/schemas/intent.ts</code></td><td>Defines shapes for TaskPlan and Dataset</td></tr>
+    <tr><td><code>src/mastra/schemas/chart.ts</code></td><td>Defines shapes for ChartResult and ChartPlan</td></tr>
+    <tr><td><code>src/mastra/schemas/datastore.ts</code></td><td>Defines the PermissionScope shape</td></tr>
+    <tr><td><code>src/knowledge/export-knowledge.ts</code></td><td>Exports DB data to JSON files for the Search Agent</td></tr>
+    <tr><td><code>samples/db-export/</code></td><td>Sample JSON data files used for search when no vector DB is set up</td></tr>
+    <tr><td><code>.env.example</code></td><td>Template showing all environment variables needed</td></tr>
+    <tr><td><code>package.json</code></td><td>Dependencies and npm run commands</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 6 ══ -->
+<h1 id="map" class="page-break">6. Full File Connection Map</h1>
+<div class="section">
+
+  <h2>Top-Level Flow</h2>
+  <pre>YOU (Browser — public/index.html)
+    │  sends fetch() HTTP request
+    ▼
+src/server.ts                   ← opens port 3000
+    │
+    ▼
+src/http/api-router.ts          ← routes /inquiry /report /dashboard /meta
+    │  validates with → src/http/contracts.ts
+    ▼
+src/services/analytics-service.ts   ← main coordinator
+    ├──► src/services/conversation-memory.ts  ──► src/db/mongo.client.ts
+    └──► Mastra Workflow (dashboard / report / general-question)</pre>
+
+  <h2>Workflow Steps (Dashboard Example)</h2>
+  <pre>src/mastra/workflows/dashboard.ts
+    │
+    ├── Step 1: PLAN
+    │       └──► src/mastra/runtime/supervisor-runtime.ts
+    │                   ├──► src/mastra/agents/supervisor.ts  (AI)
+    │                   ├──► src/db/datastore.repository.ts
+    │                   ├──► src/mastra/task-plan.ts
+    │                   ├──► src/mastra/runtime/llm-queue.ts
+    │                   ├──► src/mastra/runtime/timeout.ts
+    │                   └──► src/mastra/runtime/json-output.ts
+    │
+    ├── Step 2a: QUERY (runs in parallel with 2b)
+    │       └──► src/mastra/runtime/mongodb-runtime.ts
+    │                   ├──► src/db/datastore.repository.ts
+    │                   └──► src/mastra/tools/mongodb-tools.ts
+    │                               ├──► src/analytics/builders/build-pipeline.ts
+    │                               │           ├── build-match-stage.ts
+    │                               │           ├── build-lookup-stage.ts
+    │                               │           ├── build-group-stage.ts
+    │                               │           ├── build-having-stage.ts
+    │                               │           ├── build-project-stage.ts
+    │                               │           ├── build-percent-stage.ts
+    │                               │           ├── build-sort-stage.ts
+    │                               │           └── build-limit-stage.ts
+    │                               └──► src/db/mongo.client.ts  (MongoDB)
+    │
+    ├── Step 2b: ENRICH (runs in parallel with 2a)
+    │       └──► src/mastra/runtime/search-runtime.ts
+    │                   ├──► src/mastra/agents/search.ts  (AI)
+    │                   └──► src/mastra/tools/search-tools.ts
+    │
+    ├── Step 3: MERGE
+    │       └──► src/mastra/tools/merge-tools.ts
+    │
+    └── Step 4: CHART
+            └──► src/mastra/runtime/chart-runtime.ts
+                        ├──► src/mastra/agents/chart.ts  (AI)
+                        ├──► src/mastra/tools/chart-tools.ts  (builds ECharts config)
+                        ├──► src/mastra/runtime/timeout.ts
+                        └──► src/mastra/schemas/chart.ts</pre>
+
+  <h2>AI Agents → Model</h2>
+  <pre>src/mastra/agents/supervisor.ts  ─┐
+src/mastra/agents/mongodb.ts     ─┤
+src/mastra/agents/chart.ts       ─┼──► src/mastra/model.ts
+src/mastra/agents/writer.ts      ─┤         │
+src/mastra/agents/search.ts      ─┘         ├── LLM_PROVIDER=openrouter → OpenRouter API (Llama 3.3 70B free)
+                                            └── LLM_PROVIDER=groq       → Groq API (Llama 3.3 70B fast)</pre>
+
+  <h2>Database Connections</h2>
+  <pre>src/db/datastore.repository.ts  ──► src/db/mongo.client.ts ──► MongoDB
+src/services/conversation-memory.ts ──► src/db/mongo.client.ts ──► MongoDB
+src/mastra/tools/mongodb-tools.ts ──► src/db/mongo.client.ts ──► MongoDB
+
+MongoDB Collections used:
+  • data_stores          (data store field definitions — cached in memory)
+  • service_requests     (citizen requests data)
+  • inspections          (inspection records)
+  • permits              (permit records)
+  • projects             (project records)
+  • conversation_memory  (chat history for follow-up questions)</pre>
+
+  <h2>Schemas Used Across Files</h2>
+  <pre>src/mastra/schemas/intent.ts    ← taskPlanSchema, datasetSchema
+    used by: supervisor-runtime, mongodb-runtime, all 3 workflows
+
+src/mastra/schemas/chart.ts     ← chartResultSchema, chartPlanSchema, chartTypeSchema
+    used by: chart-runtime, chart-tools
+
+src/mastra/schemas/datastore.ts ← permissionScopeSchema
+    used by: supervisor-runtime, all 3 workflows
+
+src/types/index.ts              ← DataStore, PermissionScope, TaskPlan, ConversationRef
+    used by: all files</pre>
+
+  <h2>Simplest Summary — One Diagram</h2>
+  <pre>index.html
+    └─► server.ts
+            └─► api-router.ts
+                    └─► analytics-service.ts
+                            ├─► conversation-memory.ts ──► mongo.client.ts
+                            └─► workflow
+                                    ├─► supervisor-runtime ──► supervisor agent ──► model.ts ──► Groq/OpenRouter
+                                    ├─► mongodb-runtime ───► mongodb-tools ──► build-pipeline ──► mongo.client.ts
+                                    ├─► search-runtime ────► search agent ──► model.ts
+                                    ├─► merge-tools
+                                    └─► chart-runtime ─────► chart agent ──► model.ts
+                                                           └─► chart-tools (ECharts config)</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 7 ══ -->
+<h1 id="tech" class="page-break">7. Tech Stack</h1>
+<div class="section">
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+    <tr><td>Frontend</td><td>HTML + ECharts 5.5</td><td>Single-page UI, interactive charts</td></tr>
+    <tr><td>Backend</td><td>Node.js 20 + Express</td><td>HTTP server and API routing</td></tr>
+    <tr><td>Language</td><td>TypeScript</td><td>Type-safe code across the whole project</td></tr>
+    <tr><td>AI Framework</td><td>Mastra</td><td>Agent orchestration, workflow management</td></tr>
+    <tr><td>AI Model</td><td>Llama 3.3 70B</td><td>All 5 agents use this model</td></tr>
+    <tr><td>AI Provider</td><td>OpenRouter or Groq</td><td>Configurable via .env file</td></tr>
+    <tr><td>Database</td><td>MongoDB</td><td>Data storage, query execution, conversation memory</td></tr>
+    <tr><td>Validation</td><td>Zod</td><td>Runtime type validation for all inputs and outputs</td></tr>
+    <tr><td>Dev Container</td><td>Docker</td><td>Local MongoDB via docker-compose</td></tr>
+  </table>
+
+  <h2>Environment Variables (.env)</h2>
+  <table>
+    <tr><th>Variable</th><th>Default</th><th>What It Controls</th></tr>
+    <tr><td><code>LLM_PROVIDER</code></td><td>openrouter</td><td>Which AI provider to use</td></tr>
+    <tr><td><code>OPENROUTER_API_KEY</code></td><td>—</td><td>Your OpenRouter API key</td></tr>
+    <tr><td><code>OPENROUTER_MODEL</code></td><td>meta-llama/llama-3.3-70b-instruct:free</td><td>Default model for all agents</td></tr>
+    <tr><td><code>GROQ_API_KEY</code></td><td>—</td><td>Your Groq API key</td></tr>
+    <tr><td><code>GROQ_MODEL</code></td><td>llama-3.3-70b-versatile</td><td>Default Groq model</td></tr>
+    <tr><td><code>MONGODB_URI</code></td><td>mongodb://127.0.0.1:27017</td><td>MongoDB connection string</td></tr>
+    <tr><td><code>PORT</code></td><td>3000</td><td>HTTP server port</td></tr>
+    <tr><td><code>WORKFLOW_TIMEOUT_MS</code></td><td>30000</td><td>Max time per workflow (30s)</td></tr>
+    <tr><td><code>SUPERVISOR_TIMEOUT_MS</code></td><td>4000</td><td>Max time for Supervisor AI</td></tr>
+    <tr><td><code>CHART_TIMEOUT_MS</code></td><td>3000</td><td>Max time for Chart Planner AI</td></tr>
+  </table>
+
+  <h2>Available npm Commands</h2>
+  <table>
+    <tr><th>Command</th><th>What It Does</th></tr>
+    <tr><td><code>npm run dev</code></td><td>Start the server in development mode (hot reload)</td></tr>
+    <tr><td><code>npm run db:up</code></td><td>Start MongoDB in Docker</td></tr>
+    <tr><td><code>npm run import:db-export</code></td><td>Import sample data into MongoDB</td></tr>
+    <tr><td><code>npm run build</code></td><td>Compile TypeScript to JavaScript</td></tr>
+    <tr><td><code>npm start</code></td><td>Run the compiled production build</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 8 ══ -->
+<h1 id="status" class="page-break">8. What Is Done vs. Planned</h1>
+<div class="section">
+
+  <div class="box green">
+    <strong>Done — Fully Working</strong>
+    <ul style="margin-top:8px; padding-left:20px; color:#134e4a">
+      <li>All 3 modes: Dashboard, Report, Inquiry</li>
+      <li>Registered agents: Supervisor, MongoDB contract, Chart Planner, Writer, Search</li>
+      <li>Deterministic MongoDB aggregation pipeline builder</li>
+      <li>ECharts rendering (line, bar, horizontal bar, donut, histogram, scatter, map)</li>
+      <li>Conversation memory for follow-up questions</li>
+      <li>Auto-generated prompt suggestions from real data</li>
+      <li>Multi-tenant permission scope (tenantId filtering)</li>
+      <li>Parallel workflow execution (query + enrich run at same time)</li>
+      <li>Full audit trail in the UI (AI plan, MongoDB pipeline, schema, timing)</li>
+    </ul>
+  </div>
+
+  <div class="box yellow">
+    <strong>Planned — Not Yet Built</strong>
+    <ul style="margin-top:8px; padding-left:20px; color:#7c2d12">
+      <li>NestJS gateway and Angular full frontend shell</li>
+      <li>Real-time streaming progress (show AI thinking live)</li>
+      <li>Semantic vector search (requires embedding index setup)</li>
+      <li>Geographic map charts with configured region data</li>
+      <li>Authentication-injected permission scope (currently hardcoded)</li>
+      <li>Create / Update / Link operations (currently read-only)</li>
+      <li>External data enrichment providers</li>
+      <li>Nx monorepo workspace setup</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══ Footer ══ -->
+<hr>
+<p style="text-align:center; color:#94a3b8; font-size:0.82rem; margin-top:30px">
+  Mind Analytics Console &nbsp;|&nbsp; Full Project Documentation &nbsp;|&nbsp; Generated 2026
+</p>
+
+</body>
+</html>

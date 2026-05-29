@@ -34,7 +34,6 @@ export const taskPlanSchema = z.object({
   needsEnrichment: z.boolean(),
   needsChart: z.boolean(),
   query: z.object({
-    blueprintId: optionalString,
     dataStoreId: optionalString,
     dataStoreName: optionalString,
     metric: optionalString,

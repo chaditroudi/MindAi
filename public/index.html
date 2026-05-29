@@ -445,6 +445,85 @@
       line-height: 1.6;
     }
 
+    .agent-capabilities-section {
+      display: grid;
+      gap: 9px;
+    }
+
+    .agent-capabilities {
+      display: grid;
+      gap: 8px;
+    }
+
+    .agent-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .agent-card-head {
+      display: grid;
+      gap: 4px;
+    }
+
+    .agent-name {
+      margin: 0;
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+
+    .agent-description {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.65;
+    }
+
+    .agent-group {
+      display: grid;
+      gap: 6px;
+    }
+
+    .agent-group-title {
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
+    .agent-list {
+      margin: 0;
+      padding: 0 18px 0 0;
+      color: var(--text);
+      font-size: 0.78rem;
+      line-height: 1.7;
+    }
+
+    .agent-list li { margin: 0 0 3px; }
+
+    .tool-chips {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid #bfdbfe;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 0.73rem;
+      font-weight: 800;
+      direction: ltr;
+    }
+
     .workspace {
       display: grid;
       gap: 18px;
@@ -519,6 +598,70 @@
       padding: 16px;
       display: grid;
       gap: 14px;
+    }
+
+    .search-impact {
+      display: none;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+    }
+
+    .search-impact.active { display: grid; }
+
+    .impact-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .impact-title {
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+
+    .impact-status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: var(--surface);
+      font-size: 0.72rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .impact-status.used {
+      color: var(--accent-strong);
+      border-color: #b9ddd8;
+      background: var(--accent-soft);
+    }
+
+    .impact-status.no-results {
+      color: var(--warning);
+      border-color: #fedf89;
+      background: var(--warning-soft);
+    }
+
+    .impact-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.79rem;
+      line-height: 1.65;
+    }
+
+    .impact-facts {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
     .chart-meta {
@@ -764,6 +907,14 @@
             </div>
             <div class="examples" id="examples"></div>
           </section>
+
+          <section class="agent-capabilities-section">
+            <div class="examples-heading">
+              <h3>قدرات وكيل البحث</h3>
+              <span>من /api/meta</span>
+            </div>
+            <div class="agent-capabilities" id="agent-capabilities"></div>
+          </section>
         </div>
 
         <div class="status-wrap">
@@ -795,6 +946,8 @@
           </div>
 
           <div class="result-body">
+            <div class="search-impact" id="search-impact"></div>
+
             <div class="chart-meta" id="chart-meta">
               <div>
                 <div class="chart-title" id="chart-meta-title"></div>
@@ -862,6 +1015,7 @@
     const promptInput = document.getElementById('prompt');
     const goBtn = document.getElementById('go');
     const examplesDiv = document.getElementById('examples');
+    const agentCapabilitiesDiv = document.getElementById('agent-capabilities');
     const selectedStore = document.getElementById('selected-store');
     const modeBadge = document.getElementById('mode-badge');
     const modeNote = document.getElementById('mode-note');
@@ -875,6 +1029,7 @@
     const auditToggle = document.getElementById('audit-toggle');
     const auditBody = document.getElementById('audit-body');
     const resultSubtitle = document.getElementById('result-subtitle');
+    const searchImpact = document.getElementById('search-impact');
     const runChip = document.getElementById('run-chip');
     const durationChip = document.getElementById('duration-chip');
 
@@ -884,6 +1039,7 @@
     let progressStartedAt = 0;
     let progressStageIndex = 0;
     let EXAMPLES = JSON.parse(JSON.stringify(FALLBACK_EXAMPLES));
+    let AGENT_CAPABILITIES = [];
     let conversation = null;
     const REQUEST_TIMEOUT_MS = 480000;
 
@@ -1001,11 +1157,58 @@
             },
           ]),
         );
+        AGENT_CAPABILITIES = Array.isArray(data.agents) ? data.agents : [];
         updateModeCopy();
         renderExamples();
+        renderAgentCapabilities();
       } catch {
         renderExamples();
+        renderAgentCapabilities();
       }
+    }
+
+    function renderAgentCapabilities() {
+      const searchAgents = AGENT_CAPABILITIES.filter((agent) => agent.id === 'searchAgent');
+      if (!searchAgents.length) {
+        agentCapabilitiesDiv.innerHTML =
+          '<div class="empty-examples">لم يتم تحميل بيانات قدرات وكيل البحث بعد.</div>';
+        return;
+      }
+
+      agentCapabilitiesDiv.innerHTML = searchAgents
+        .map((agent) => `
+          <article class="agent-card">
+            <div class="agent-card-head">
+              <h4 class="agent-name">${esc(agent.label)}</h4>
+              <p class="agent-description">${esc(agent.description)}</p>
+            </div>
+            ${renderAgentList('ما يستطيع فعله', agent.capabilities)}
+            ${renderAgentTools(agent.tools)}
+            ${renderAgentList('الحدود', agent.boundaries)}
+          </article>`)
+        .join('');
+    }
+
+    function renderAgentList(title, items) {
+      if (!items?.length) return '';
+      return `
+        <div class="agent-group">
+          <div class="agent-group-title">${esc(title)}</div>
+          <ul class="agent-list">
+            ${items.map((item) => `<li>${esc(item)}</li>`).join('')}
+          </ul>
+        </div>`;
+    }
+
+    function renderAgentTools(tools) {
+      if (!tools?.length) return '';
+      return `
+        <div class="agent-group">
+          <div class="agent-group-title">الأدوات</div>
+          <div class="tool-chips">
+            ${tools.map((tool) => `<span class="tool-chip">${esc(tool)}</span>`).join('')}
+          </div>
+        </div>`;
     }
 
     function tagForEndpoint(endpoint) {
@@ -1043,6 +1246,7 @@
         renderAudit(data, res.headers.get('x-run-id'));
       } catch (err) {
         stopProgress();
+        renderSearchImpact(null);
         chartWrap.style.display = 'none';
         chartMeta.classList.remove('active');
         chartTypePill.classList.remove('active');
@@ -1143,6 +1347,7 @@
       runChip.className = 'run-chip ok';
       durationChip.textContent = audit.elapsedMs !== undefined ? `${audit.elapsedMs.toLocaleString()} ms` : '0 ms';
       resultSubtitle.textContent = summarizeAudit(data, audit);
+      renderSearchImpact(audit.searchImpact);
 
       let html = '';
       if (runId) html += auditRow('معرف التشغيل', `<span class="pill primary">${esc(runId)}</span>`);
@@ -1151,6 +1356,7 @@
       }
       html += auditRow('النية', `<span class="pill primary">${esc(intentLabels[data.intent] || data.intent)}</span>`);
       if (audit.elapsedMs !== undefined) html += auditRow('المدة', `<span>${audit.elapsedMs.toLocaleString()} ms</span>`);
+      if (audit.searchImpact) html += auditRow('تأثير وكيل البحث', codeBlock(audit.searchImpact));
       if (audit.plan) html += auditRow('خطة التنفيذ', codeBlock(audit.plan));
       if (audit.dataset?.rows?.length) {
         html += auditRow('البيانات المستخدمة', codeBlock({
@@ -1162,17 +1368,55 @@
       if (audit.pipeline?.length) html += auditRow('مسار MongoDB', codeBlock(audit.pipeline));
       if (audit.schema && Object.keys(audit.schema).length) html += auditRow('مخطط الحقول', codeBlock(audit.schema));
       if (audit.jsonSchema && Object.keys(audit.jsonSchema).length) html += auditRow('JSON Schema', codeBlock(audit.jsonSchema));
-      if (audit.enrichment?.rows?.length) {
+      if (audit.enrichment) {
         html += auditRow('نتائج وكيل البحث', codeBlock({
           rows: audit.enrichment.rows,
           schema: audit.enrichment.schema,
           source: audit.enrichment.source,
+          rowCount: audit.enrichment.rows?.length || 0,
+          citationCount: audit.enrichment.citations?.length || 0,
         }));
       }
       if (audit.enrichment?.citations?.length) html += auditRow('مصادر وكيل البحث', codeBlock(audit.enrichment.citations));
 
       auditBody.innerHTML = html;
       auditPanel.style.display = 'block';
+    }
+
+    function renderSearchImpact(impact) {
+      if (!impact) {
+        searchImpact.classList.remove('active');
+        searchImpact.innerHTML = '';
+        return;
+      }
+
+      const statusLabels = {
+        not_requested: 'لم يعمل',
+        requested_no_results: 'عمل بلا نتائج',
+        used: 'أثر على النتيجة',
+      };
+      const statusClass = impact.status === 'used'
+        ? 'used'
+        : impact.status === 'requested_no_results'
+          ? 'no-results'
+          : '';
+      const facts = [
+        `صفوف البحث: ${Number(impact.rowCount || 0).toLocaleString()}`,
+        `المصادر: ${Number(impact.citationCount || 0).toLocaleString()}`,
+        impact.topic ? `الموضوع: ${impact.topic}` : '',
+        impact.dimensions?.length ? `الأبعاد: ${impact.dimensions.join(', ')}` : '',
+      ].filter(Boolean);
+
+      searchImpact.innerHTML = `
+        <div class="impact-head">
+          <div class="impact-title">تأثير وكيل البحث</div>
+          <span class="impact-status ${statusClass}">${esc(statusLabels[impact.status] || impact.status)}</span>
+        </div>
+        <p class="impact-copy">${esc(impact.effect || '')}</p>
+        <div class="impact-facts">
+          ${facts.map((fact) => `<span class="pill">${esc(fact)}</span>`).join('')}
+        </div>`;
+      searchImpact.classList.add('active');
     }
 
     function summarizeAudit(data, audit) {
@@ -1205,6 +1449,7 @@
       progressBar.classList.add('active');
       chartMeta.classList.remove('active');
       chartTypePill.classList.remove('active');
+      renderSearchImpact(null);
       resultSubtitle.textContent = 'جار تنفيذ الطلب عبر الوكلاء.';
       runChip.textContent = 'قيد التشغيل';
       runChip.className = 'run-chip';
@@ -1264,6 +1509,7 @@
       auditPanel.style.display = 'none';
       chartMeta.classList.remove('active');
       chartTypePill.classList.remove('active');
+      renderSearchImpact(null);
       chartWrap.style.display = currentEndpoint === '/api/inquiry' ? 'none' : 'block';
       outputText.style.display = 'block';
       outputText.innerHTML = '<div class="placeholder">اختر اقتراحا أو اكتب طلبا لتبدأ.</div>';
@@ -1293,6 +1539,7 @@
     updateModeCopy();
     updateSelectedStore();
     renderExamples();
+    renderAgentCapabilities();
     resetResult();
     loadMeta();
   </script>

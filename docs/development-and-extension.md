@@ -9,20 +9,22 @@
 ## Import DB Export Samples
 
 The app does not query `samples/db-export/*.json` directly at runtime. To use
-exported snapshots, import selected collections into MongoDB:
+exported snapshots, import the data store catalog and selected collections into MongoDB:
 
 ```powershell
 npm run import:db-export
 ```
 
 By default this imports `service_requests`, `inspections`, `permits`, and
-`projects` with `tenantId=t_mind_qatar` in replace mode.
+`projects` with `tenantId=t_mind_qatar` in replace mode, and refreshes
+`data_stores` from `samples/datastore.json`.
 
 Optional environment variables:
 
 - `IMPORT_COLLECTIONS=service_requests,permits`
 - `IMPORT_TENANT_ID=t_mind_qatar`
 - `IMPORT_MODE=replace|append`
+- `IMPORT_DATA_STORES=false`
 
 ## Important Files
 
