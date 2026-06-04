@@ -3,21 +3,14 @@
   "version": "0.1.0",
   "description": "Datastore-driven analytics service for Mind Platform with Mastra Supervisor, MongoDB, Search, Writer, and deterministic chart runtime.",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "tsx src/server.ts",
+    "build": "tsc -p tsconfig.json --noEmit false --outDir dist",
+    "start": "node dist/server.js",
+    "reset": "tsx scripts/reset.ts",
     "mastra:dev": "mastra dev",
-    "typecheck": "tsc -p tsconfig.json",
-    "import:db-export": "tsx scripts/import-db-export.ts",
-    "smoke": "tsx scripts/smoke.ts",
-    "knowledge:index": "tsx scripts/build-knowledge-index.ts",
-    "db:check": "tsx scripts/check-mongo.ts",
-    "db:up": "docker compose up -d mongo mongo-express",
-    "db:down": "docker compose down",
-    "db:wait": "npm run db:check",
-    "db:reset": "npm run db:up && npm run db:wait && npm run import:db-export"
+    "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.0",

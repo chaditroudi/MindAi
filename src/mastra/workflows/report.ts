@@ -3,11 +3,13 @@ import { z } from 'zod';
 import { permissionScopeSchema } from '../schemas/datastore.js';
 import { taskPlanSchema, datasetSchema } from '../schemas/intent.js';
 import { chartResultSchema } from '../schemas/chart.js';
-import { runChartRuntime } from '../runtime/chart-runtime.js';
-import { runMongoDatasetQuery } from '../runtime/mongodb-runtime.js';
-import { runSearchEnrichment } from '../runtime/search-runtime.js';
-import { runSupervisorPlan } from '../runtime/supervisor-runtime.js';
-import { runReportWriter } from '../runtime/writer-runtime.js';
+import { executePipeline, executePipelineInMemory, validateRows } from '../../db/aggregation.js';
+import { dataStoreSchema } from '../schemas/datastore.js';
+import { resolveDataStores, findInDataStores } from '../../db/datastore.repository.js';
+import { validatePipelineForDataStore } from '../../db/pipeline-validator.js';
+import { runChartRuntime } from '../agents/chart.js';
+import { runSupervisorPlan } from '../agents/supervisor.js';
+import { runReportWriter } from '../agents/writer.js';
 
 const planStep = createStep({
   id: 'plan-report',
@@ -17,27 +19,32 @@ const planStep = createStep({
     scope: permissionScopeSchema,
     topic: z.string().optional(),
     dataStoreName: z.string().optional(),
+    datastores: z.array(dataStoreSchema).optional(),
+    dataset: datasetSchema.optional(),
   }),
   outputSchema: z.object({
     plan: taskPlanSchema,
     scope: permissionScopeSchema,
     prompt: z.string(),
+    datastores: z.array(dataStoreSchema).optional(),
+    sourceDataset: datasetSchema.optional(),
   }),
-  execute: async ({ inputData, mastra }) => {
-    return {
-      plan: await runSupervisorPlan({
-        mastra: mastra!,
-        prompt: inputData.prompt,
-        planningPrompt: inputData.planningPrompt,
-        intent: 'report',
-        scope: inputData.scope,
-        topic: inputData.topic,
-        dataStoreName: inputData.dataStoreName,
-      }),
-      scope: inputData.scope,
+  execute: async ({ inputData, mastra }) => ({
+    plan: await runSupervisorPlan({
+      mastra: mastra!,
       prompt: inputData.prompt,
-    };
-  },
+      planningPrompt: inputData.planningPrompt,
+      intent: 'report',
+      scope: inputData.scope,
+      topic: inputData.topic,
+      dataStoreName: inputData.dataStoreName,
+      datastores: inputData.datastores,
+    }),
+    scope: inputData.scope,
+    prompt: inputData.prompt,
+    datastores: inputData.datastores,
+    sourceDataset: inputData.dataset,
+  }),
 });
 
 const queryStep = createStep({
@@ -49,99 +56,81 @@ const queryStep = createStep({
     prompt: z.string(),
     dataset: datasetSchema,
   }),
-  execute: async ({ inputData, mastra }) => {
-    const queryResult = await runMongoDatasetQuery({
-      plan: inputData.plan,
-      scope: inputData.scope,
-    });
-
-    return {
-      plan: inputData.plan,
-      scope: inputData.scope,
-      prompt: inputData.prompt,
-      dataset: queryResult.dataset,
+  execute: async ({ inputData }) => {
+    const { plan, scope } = inputData;
+    const emptyDataset = {
+      rows: [],
+      schema: {},
+      source: inputData.sourceDataset?.source ?? 'mongodb' as const,
     };
-  },
-});
 
-const enrichmentStep = createStep({
-  id: 'enrichment',
-  inputSchema: planStep.outputSchema,
-  outputSchema: z.object({
-    enrichment: datasetSchema.optional(),
-  }),
-  execute: async ({ inputData, mastra }) => {
-    if (!inputData.plan.needsEnrichment || !inputData.plan.enrichment) {
-      return {};
+    if (!plan.needsData) {
+      return { ...inputData, dataset: emptyDataset };
     }
 
-    return {
-      enrichment: await runSearchEnrichment({
-        mastra: mastra!,
-        enrichment: inputData.plan.enrichment,
-        tenantId: inputData.scope.tenantId,
-        timeRange: inputData.plan.query.timeRange,
-        joinKey: inputData.plan.query.dimensions?.[0],
-        primarySchema: inputData.plan.query.dimensions?.reduce<Record<string, string>>(
-          (acc, d) => ({ ...acc, [d]: 'string' }),
-          {},
-        ),
-      }),
-    };
-  },
-});
+    if (!plan.pipeline?.length) {
+      throw new Error('Supervisor plan requires data but did not return a pipeline.');
+    }
 
-const gatherStep = createStep({
-  id: 'gather',
-  inputSchema: z.object({
-    query: z.object({
-      plan: taskPlanSchema,
-      scope: permissionScopeSchema,
-      prompt: z.string(),
-      dataset: datasetSchema,
-    }),
-    enrichment: z.object({
-      enrichment: datasetSchema.optional(),
-    }),
-  }),
-  outputSchema: z.object({
-    plan: taskPlanSchema,
-    scope: permissionScopeSchema,
-    prompt: z.string(),
-    dataset: datasetSchema,
-    enrichment: datasetSchema.optional(),
-  }),
-  execute: async ({ inputData }) => {
+    const allStores = await resolveDataStores(scope, inputData.datastores);
+    const dataStoreId = plan.query.dataStoreName ?? plan.query.dataStoreId;
+    const dataStore = dataStoreId ? findInDataStores(dataStoreId, allStores) : undefined;
+    if (!dataStore) {
+      throw new Error(`Supervisor selected unknown data store "${dataStoreId ?? 'undefined'}".`);
+    }
+
+    const validatedPipeline = validatePipelineForDataStore({
+      pipeline: plan.pipeline,
+      dataStore,
+      availableDataStores: allStores,
+    });
+
+    const executed = inputData.sourceDataset
+      ? executePipelineInMemory({
+          pipeline: validatedPipeline,
+          rows: inputData.sourceDataset.rows,
+          scope,
+        })
+      : await executePipeline({
+          pipeline: validatedPipeline,
+          collection: dataStore.collection,
+          scope,
+        });
+
+    const { rows, schema } = validateRows(executed.rows);
+
     return {
-      ...inputData.query,
-      enrichment: inputData.enrichment.enrichment,
+      ...inputData,
+      dataset: {
+        rows,
+        schema,
+        source: inputData.sourceDataset?.source ?? 'mongodb' as const,
+      },
     };
   },
 });
 
 const writeReportStep = createStep({
   id: 'write-report',
-  inputSchema: gatherStep.outputSchema,
+  inputSchema: queryStep.outputSchema,
   outputSchema: z.object({
     reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
     plan: taskPlanSchema,
-    enrichment: datasetSchema.optional(),
+    dataset: datasetSchema,
   }),
   execute: async ({ inputData, mastra }) => {
     const writePayload = await runReportWriter({
       mastra: mastra!,
       prompt: inputData.prompt,
       dataset: inputData.dataset,
-      enrichment: inputData.enrichment,
     });
-
-    return { reportSections: writePayload.reportSections, plan: inputData.plan, enrichment: inputData.enrichment };
+    return { reportSections: writePayload.reportSections, plan: inputData.plan, dataset: inputData.dataset };
   },
 });
 
 const chartStep = createStep({
   id: 'chart',
-  inputSchema: gatherStep.outputSchema,
+  inputSchema: queryStep.outputSchema,
   outputSchema: z.object({
     charts: z.array(chartResultSchema).optional(),
   }),
@@ -162,7 +151,6 @@ const chartStep = createStep({
         ],
       };
     }
-
     return {};
   },
 });
@@ -173,26 +161,22 @@ const finalizeStep = createStep({
     'write-report': z.object({
       reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
       plan: taskPlanSchema,
-      enrichment: datasetSchema.optional(),
+      dataset: datasetSchema,
     }),
-    chart: z.object({
-      charts: z.array(chartResultSchema).optional(),
-    }),
+    chart: z.object({ charts: z.array(chartResultSchema).optional() }),
   }),
   outputSchema: z.object({
     reportSections: z.array(z.object({ heading: z.string(), body: z.string() })),
     charts: z.array(chartResultSchema).optional(),
     plan: taskPlanSchema,
-    enrichment: datasetSchema.optional(),
+    dataset: datasetSchema,
   }),
-  execute: async ({ inputData }) => {
-    return {
-      reportSections: inputData['write-report'].reportSections,
-      charts: inputData.chart.charts,
-      plan: inputData['write-report'].plan,
-      enrichment: inputData['write-report'].enrichment,
-    };
-  },
+  execute: async ({ inputData }) => ({
+    reportSections: inputData['write-report'].reportSections,
+    charts: inputData.chart.charts,
+    plan: inputData['write-report'].plan,
+    dataset: inputData['write-report'].dataset,
+  }),
 });
 
 export const reportWorkflow = createWorkflow({
@@ -201,8 +185,7 @@ export const reportWorkflow = createWorkflow({
   outputSchema: finalizeStep.outputSchema,
 })
   .then(planStep)
-  .parallel([queryStep, enrichmentStep])
-  .then(gatherStep)
+  .then(queryStep)
   .parallel([writeReportStep, chartStep])
   .then(finalizeStep)
   .commit();

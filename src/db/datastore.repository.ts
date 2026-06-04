@@ -19,6 +19,7 @@ export class DataStoreRepository {
     ) ?? null;
   }
 
+
   async listAccessibleDataStores(scope: Pick<PermissionScope, 'allowedDataStores'> = {}): Promise<DataStore[]> {
     const dataStores = await this.loadDataStores();
     const allowed = new Set((scope.allowedDataStores ?? []).map(normalizeToken).filter(Boolean));
@@ -26,6 +27,10 @@ export class DataStoreRepository {
     return dataStores.filter(
       (ds) => allowed.has(normalizeToken(ds.name)) || allowed.has(normalizeToken(ds.collection)),
     );
+  }
+
+  invalidateCache() {
+    this.dataStoreCache = null;
   }
 
   private async loadDataStores() {
@@ -48,7 +53,35 @@ export class DataStoreRepository {
 
 export const dataStoreRepo = new DataStoreRepository();
 
-function normalizeToken(value: string | undefined) {
+// ─── Inline datastore helpers ─────────────────────────────────────────────────
+// Used when the caller passes datastores directly in the request body instead
+// of reading them from the MongoDB data_stores collection.
+
+export function resolveDataStores(
+  scope: Pick<PermissionScope, 'allowedDataStores'>,
+  inline?: DataStore[],
+): Promise<DataStore[]> | DataStore[] {
+  if (inline && inline.length > 0) {
+    const allowed = new Set((scope.allowedDataStores ?? []).map(normalizeToken).filter(Boolean));
+    if (allowed.size === 0) return inline;
+    return inline.filter(
+      (ds) => allowed.has(normalizeToken(ds.name)) || allowed.has(normalizeToken(ds.collection)),
+    );
+  }
+  return dataStoreRepo.listAccessibleDataStores(scope);
+}
+
+export function findInDataStores(name: string, stores: DataStore[]): DataStore | null {
+  const token = normalizeToken(name);
+  return (
+    stores.find(
+      (ds) =>
+        normalizeToken(ds.name) === token || normalizeToken(ds.collection) === token,
+    ) ?? null
+  );
+}
+
+export function normalizeToken(value: string | undefined) {
   return value?.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
 

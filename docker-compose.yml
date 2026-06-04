@@ -1,29 +1,11 @@
 services:
   mongo:
     image: mongo:7
-    container_name: mind-viz-mongo
+    restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
-      - mongo-data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  mongo-express:
-    image: mongo-express:1
-    container_name: mind-viz-mongo-ui
-    depends_on:
-      mongo:
-        condition: service_healthy
-    ports:
-      - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_SERVER: mongo
-      ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_BASICAUTH: false
+      - mongo_data:/data/db
 
 volumes:
-  mongo-data:
+  mongo_data:

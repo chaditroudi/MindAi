@@ -2,10 +2,12 @@ import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { permissionScopeSchema } from '../schemas/datastore.js';
 import { taskPlanSchema, datasetSchema } from '../schemas/intent.js';
-import { runMongoRecordFetch } from '../runtime/mongodb-runtime.js';
-import { runSearchEnrichment } from '../runtime/search-runtime.js';
-import { runSupervisorPlan } from '../runtime/supervisor-runtime.js';
-import { runInquiryWriter } from '../runtime/writer-runtime.js';
+import { executePipeline, executePipelineInMemory, validateRows } from '../../db/aggregation.js';
+import { dataStoreSchema } from '../schemas/datastore.js';
+import { resolveDataStores, findInDataStores } from '../../db/datastore.repository.js';
+import { validatePipelineForDataStore } from '../../db/pipeline-validator.js';
+import { runSupervisorPlan } from '../agents/supervisor.js';
+import { runInquiryWriter } from '../agents/writer.js';
 
 const planStep = createStep({
   id: 'plan-q',
@@ -15,27 +17,32 @@ const planStep = createStep({
     scope: permissionScopeSchema,
     topic: z.string().optional(),
     dataStoreName: z.string().optional(),
+    datastores: z.array(dataStoreSchema).optional(),
+    dataset: datasetSchema.optional(),
   }),
   outputSchema: z.object({
     plan: taskPlanSchema,
     scope: permissionScopeSchema,
     prompt: z.string(),
+    datastores: z.array(dataStoreSchema).optional(),
+    sourceDataset: datasetSchema.optional(),
   }),
-  execute: async ({ inputData, mastra }) => {
-    return {
-      plan: await runSupervisorPlan({
-        mastra: mastra!,
-        prompt: inputData.prompt,
-        planningPrompt: inputData.planningPrompt,
-        intent: 'general_question',
-        scope: inputData.scope,
-        topic: inputData.topic,
-        dataStoreName: inputData.dataStoreName,
-      }),
-      scope: inputData.scope,
+  execute: async ({ inputData, mastra }) => ({
+    plan: await runSupervisorPlan({
+      mastra: mastra!,
       prompt: inputData.prompt,
-    };
-  },
+      planningPrompt: inputData.planningPrompt,
+      intent: 'general_question',
+      scope: inputData.scope,
+      topic: inputData.topic,
+      dataStoreName: inputData.dataStoreName,
+      datastores: inputData.datastores,
+    }),
+    scope: inputData.scope,
+    prompt: inputData.prompt,
+    datastores: inputData.datastores,
+    sourceDataset: inputData.dataset,
+  }),
 });
 
 const fetchStep = createStep({
@@ -44,94 +51,73 @@ const fetchStep = createStep({
   outputSchema: z.object({
     plan: taskPlanSchema,
     prompt: z.string(),
+    scope: permissionScopeSchema,
     dataset: datasetSchema,
     collection: z.string().optional(),
   }),
   execute: async ({ inputData }) => {
-    const fetchResult = await runMongoRecordFetch({
-      plan: inputData.plan,
-      scope: inputData.scope,
-    });
-    return {
-      plan: inputData.plan,
-      prompt: inputData.prompt,
-      dataset: fetchResult.dataset,
-      collection: fetchResult.collection,
+    const { plan, scope } = inputData;
+    const emptyDataset = {
+      rows: [],
+      schema: {},
+      source: inputData.sourceDataset?.source ?? 'mongodb' as const,
     };
-  },
-});
 
-const enrichStep = createStep({
-  id: 'retrieve-context',
-  inputSchema: planStep.outputSchema,
-  outputSchema: z.object({
-    dataset: datasetSchema.optional(),
-    collection: z.string().optional(),
-  }),
-  execute: async ({ inputData, mastra }) => {
-    const shouldRetrieveContext =
-      inputData.plan.needsEnrichment && Boolean(inputData.plan.enrichment?.topic);
-
-    if (!shouldRetrieveContext) {
-      return {};
+    if (!plan.needsData) {
+      return { ...inputData, dataset: emptyDataset, collection: undefined };
     }
 
-    const knowledgeDataset = await runSearchEnrichment({
-      mastra: mastra!,
-      enrichment: inputData.plan.enrichment!,
-      tenantId: inputData.scope.tenantId,
-      timeRange: inputData.plan.query.timeRange,
-      joinKey: inputData.plan.query.dimensions?.[0],
+    if (!plan.pipeline?.length) {
+      throw new Error('Supervisor plan requires data but did not return a pipeline.');
+    }
+
+    const allStores = await resolveDataStores(scope, inputData.datastores);
+    const dataStoreId = plan.query.dataStoreName ?? plan.query.dataStoreId;
+    const dataStore = dataStoreId ? findInDataStores(dataStoreId, allStores) : undefined;
+    if (!dataStore) {
+      throw new Error(`Supervisor selected unknown data store "${dataStoreId ?? 'undefined'}".`);
+    }
+
+    const validatedPipeline = validatePipelineForDataStore({
+      pipeline: plan.pipeline,
+      dataStore,
+      availableDataStores: allStores,
     });
 
-    return {
-      dataset: knowledgeDataset,
-      collection: knowledgeDataset.rows.length > 0 ? 'knowledge' : undefined,
-    };
-  },
-});
+    const executed = inputData.sourceDataset
+      ? executePipelineInMemory({
+          pipeline: validatedPipeline,
+          rows: inputData.sourceDataset.rows,
+          scope,
+        })
+      : await executePipeline({
+          pipeline: validatedPipeline,
+          collection: dataStore.collection,
+          scope,
+        });
 
-const chooseContextStep = createStep({
-  id: 'choose-context',
-  inputSchema: z.object({
-    'fetch-records': z.object({
-      plan: taskPlanSchema,
-      prompt: z.string(),
-      dataset: datasetSchema,
-      collection: z.string().optional(),
-    }),
-    'retrieve-context': z.object({
-      dataset: datasetSchema.optional(),
-      collection: z.string().optional(),
-    }),
-  }),
-  outputSchema: z.object({
-    plan: taskPlanSchema,
-    prompt: z.string(),
-    dataset: datasetSchema,
-    collection: z.string().optional(),
-    enrichment: datasetSchema.optional(),
-  }),
-  execute: async ({ inputData }) => {
-    const retrieved = inputData['retrieve-context'];
-    const primary = inputData['fetch-records'];
+    const { rows, schema } = validateRows(executed.rows);
 
     return {
-      ...primary,
-      enrichment: retrieved.dataset,
+      ...inputData,
+      dataset: {
+        rows,
+        schema,
+        source: inputData.sourceDataset?.source ?? 'mongodb' as const,
+      },
+      collection: dataStore.collection,
     };
   },
 });
 
 const summarizeStep = createStep({
   id: 'summarize',
-  inputSchema: chooseContextStep.outputSchema,
+  inputSchema: fetchStep.outputSchema,
   outputSchema: z.object({
     summary: z.string(),
     recordLinks: z.array(z.object({ collection: z.string(), id: z.string(), label: z.string() })),
     plan: taskPlanSchema,
     dataset: datasetSchema,
-    enrichment: datasetSchema.optional(),
   }),
   execute: async ({ inputData, mastra }) => {
     const summaryPayload = await runInquiryWriter({
@@ -151,7 +137,6 @@ const summarizeStep = createStep({
       recordLinks,
       plan: inputData.plan,
       dataset: inputData.dataset,
-      enrichment: inputData.enrichment,
     };
   },
 });
@@ -162,7 +147,6 @@ export const generalQuestionWorkflow = createWorkflow({
   outputSchema: summarizeStep.outputSchema,
 })
   .then(planStep)
-  .parallel([fetchStep, enrichStep])
-  .then(chooseContextStep)
+  .then(fetchStep)
   .then(summarizeStep)
   .commit();

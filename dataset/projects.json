@@ -1,0 +1,72 @@
+[
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Road Expansion Phase 1",
+    "status": "in progress",
+    "muni": "m1",
+    "municipality": { "id": "m1", "name": "Doha" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Public Park Upgrade",
+    "status": "in progress",
+    "muni": "m1",
+    "municipality": { "id": "m1", "name": "Doha" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Drainage Modernization",
+    "status": "completed",
+    "muni": "m1",
+    "municipality": { "id": "m1", "name": "Doha" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Community Center Build",
+    "status": "in progress",
+    "muni": "m2",
+    "municipality": { "id": "m2", "name": "Al Rayyan" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Street Lighting Renewal",
+    "status": "planned",
+    "muni": "m2",
+    "municipality": { "id": "m2", "name": "Al Rayyan" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Waste Transfer Station",
+    "status": "in progress",
+    "muni": "m2",
+    "municipality": { "id": "m2", "name": "Al Rayyan" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Waterfront Landscaping",
+    "status": "in progress",
+    "muni": "m3",
+    "municipality": { "id": "m3", "name": "Al Wakrah" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "School Zone Improvements",
+    "status": "completed",
+    "muni": "m3",
+    "municipality": { "id": "m3", "name": "Al Wakrah" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Sports Facility Renovation",
+    "status": "in progress",
+    "muni": "m4",
+    "municipality": { "id": "m4", "name": "Umm Salal" }
+  },
+  {
+    "tenantId": "t_mind_qatar",
+    "title": "Coastal Road Maintenance",
+    "status": "in progress",
+    "muni": "m5",
+    "municipality": { "id": "m5", "name": "Al Khor" }
+  }
+]

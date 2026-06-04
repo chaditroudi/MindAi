@@ -1,7 +1,21 @@
 import { z } from 'zod';
-import { permissionScopeSchema } from '../mastra/schemas/datastore.js';
+import { permissionScopeSchema, dataStoreSchema } from '../mastra/schemas/datastore.js';
 import { chartResultSchema } from '../mastra/schemas/chart.js';
 import { datasetSchema, taskPlanSchema } from '../mastra/schemas/intent.js';
+
+const schemaStructureFieldSchema = z.object({
+  name: z.string().trim().min(1),
+  type: z.string().trim().min(1).optional(),
+  desc: z.string().trim().min(1).optional(),
+  description: z.string().trim().min(1).optional(),
+});
+
+const schemaStructureCollectionSchema = z.object({
+  collection: z.string().trim().min(1),
+  name: z.string().trim().min(1).optional(),
+  description: z.string().trim().min(1).optional(),
+  fields: z.array(schemaStructureFieldSchema).min(1),
+});
 
 export const promptRequestSchema = z.object({
   prompt: z.string().trim().min(1).max(4000),
@@ -11,6 +25,9 @@ export const promptRequestSchema = z.object({
   theme: z.enum(['light', 'dark', 'brand']).optional(),
   threadId: z.string().trim().min(1).max(200).optional(),
   resourceId: z.string().trim().min(1).max(200).optional(),
+  datastores: z.array(dataStoreSchema).min(1).optional(),
+  schemaStructure: z.array(schemaStructureCollectionSchema).min(1).optional(),
+  dataset: datasetSchema.optional(),
 });
 
 export const conversationRefSchema = z.object({
@@ -29,18 +46,6 @@ export const reportSectionSchema = z.object({
   body: z.string(),
 });
 
-export const searchImpactSchema = z.object({
-  status: z.enum(['not_requested', 'requested_no_results', 'used']),
-  requested: z.boolean(),
-  used: z.boolean(),
-  rowCount: z.number().int().nonnegative(),
-  citationCount: z.number().int().nonnegative(),
-  effect: z.string(),
-  source: z.string().optional(),
-  topic: z.string().optional(),
-  dimensions: z.array(z.string()).optional(),
-});
-
 export const inquiryResponseSchema = z.object({
   intent: z.literal('general_question'),
   summary: z.string(),
@@ -48,8 +53,7 @@ export const inquiryResponseSchema = z.object({
   conversation: conversationRefSchema,
   audit: z.object({
     plan: taskPlanSchema,
-    enrichment: datasetSchema.optional(),
-    searchImpact: searchImpactSchema,
+    dataset: datasetSchema.optional(),
     elapsedMs: z.number(),
   }),
 });
@@ -62,8 +66,6 @@ export const reportResponseSchema = z.object({
   audit: z.object({
     plan: taskPlanSchema,
     dataset: datasetSchema.optional(),
-    enrichment: datasetSchema.optional(),
-    searchImpact: searchImpactSchema,
     elapsedMs: z.number(),
   }),
 });
@@ -75,10 +77,8 @@ export const dashboardResponseSchema = z.object({
   audit: z.object({
     plan: taskPlanSchema,
     pipeline: z.array(z.record(z.unknown())),
+    dataset: datasetSchema.optional(),
     schema: z.record(z.string()).optional(),
-    jsonSchema: z.record(z.unknown()).optional(),
-    enrichment: datasetSchema.optional(),
-    searchImpact: searchImpactSchema,
     elapsedMs: z.number(),
   }),
 });
@@ -122,8 +122,61 @@ export const reviewMetaSchema = z.object({
   ),
 });
 
+export const searchResponseSchema = z.object({
+  intent: z.literal('search'),
+  summary: z.string(),
+  searchTerms: z.array(z.string()),
+  recordLinks: z.array(recordLinkSchema),
+  conversation: conversationRefSchema,
+  audit: z.object({
+    collection: z.string(),
+    elapsedMs: z.number(),
+  }),
+});
+
+// ─── History schemas ──────────────────────────────────────────────────────────
+
+export const historyResultSchema = z.object({
+  summary: z.string().optional(),
+  chart: z.record(z.unknown()).optional(),
+  reportSections: z.array(z.object({ heading: z.string(), body: z.string() })).optional(),
+  recordLinks: z.array(recordLinkSchema).optional(),
+  searchTerms: z.array(z.string()).optional(),
+  rows: z.array(z.record(z.unknown())).optional(),
+});
+
+export const historyEntrySchema = z.object({
+  id: z.string(),
+  tenantId: z.string(),
+  userId: z.string(),
+  intent: z.enum(['general_question', 'report', 'dashboard', 'search']),
+  prompt: z.string(),
+  pipeline: z.array(z.record(z.unknown())).optional(),
+  result: historyResultSchema,
+  durationMs: z.number(),
+  createdAt: z.string(),
+});
+
+export const historyListResponseSchema = z.object({
+  entries: z.array(historyEntrySchema),
+  total: z.number(),
+  limit: z.number(),
+  skip: z.number(),
+});
+
+export const historyQuerySchema = z.object({
+  tenantId: z.string().min(1),
+  userId: z.string().min(1),
+  intent: z.enum(['general_question', 'report', 'dashboard', 'search']).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  skip: z.coerce.number().int().min(0).default(0),
+});
+
 export type PromptRequest = z.infer<typeof promptRequestSchema>;
 export type InquiryResponse = z.infer<typeof inquiryResponseSchema>;
 export type ReportResponse = z.infer<typeof reportResponseSchema>;
 export type DashboardResponse = z.infer<typeof dashboardResponseSchema>;
+export type SearchResponse = z.infer<typeof searchResponseSchema>;
+export type HistoryEntry = z.infer<typeof historyEntrySchema>;
+export type HistoryListResponse = z.infer<typeof historyListResponseSchema>;
 export type ReviewMetaResponse = z.infer<typeof reviewMetaSchema>;

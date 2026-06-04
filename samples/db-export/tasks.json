@@ -1,1 +1,0 @@
-[{"_id":{"$oid":"697507336517a3cab17fad17"},"serial":"1769277235253TSKXH7H","name":"DetectNewRelations","status":"completed","input":{"dataStore":"1769277224270DTS850F"},"date":{"$date":"2026-01-24T17:53:55.253Z"},"retries":0,"logs":["starting task","no reference fields were found, task ended"]}]

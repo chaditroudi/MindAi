@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
-const nullToUndefined = (value: unknown) => value === null ? undefined : value;
-const optionalString = z.preprocess(nullToUndefined, z.string().optional());
+const optionalString = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => v ?? undefined);
 
 export const chartTypeSchema = z.enum([
   'line',
@@ -24,17 +27,11 @@ export const chartResultSchema = z.object({
   }),
 });
 
-/**
- * Structured output contract for the ChartPlannerAgent.
- * Contains field assignments only — never data values.
- * The deterministic chart builder consumes this and owns all rendering.
- */
 export const chartPlanSchema = z.object({
-  chartType: z.preprocess(nullToUndefined, chartTypeSchema.optional()),
+  chartType: chartTypeSchema.nullable().optional().transform((v) => v ?? undefined),
   xAxisField: optionalString,
   yAxisField: optionalString,
   groupByField: optionalString,
-  clusters: z.preprocess(nullToUndefined, z.array(z.string()).optional()),
   title: optionalString,
 });
 

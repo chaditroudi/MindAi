@@ -32,6 +32,20 @@ export interface DataStoreJoin {
   as: string;
 }
 
+export interface SchemaStructureField {
+  name: string;
+  type?: FieldType | string;
+  desc?: string;
+  description?: string;
+}
+
+export interface SchemaStructureCollection {
+  collection: string;
+  name?: string;
+  fields: SchemaStructureField[];
+  description?: string;
+}
+
 export interface DataStore {
   name: string;
   collection: string;
@@ -141,4 +155,5 @@ export interface TaskPlan {
   query: TaskQuery;
   enrichment?: EnrichmentPlan;
   chartHint?: ChartHint;
+  pipeline?: Record<string, unknown>[];
 }

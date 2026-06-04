@@ -40,18 +40,25 @@ Prompt suggestions in the UI are generated from the current data stores and fiel
 Prerequisites:
 
 - Node.js 20.9+
-- Docker Desktop for local MongoDB, or MongoDB on `127.0.0.1:27017`
+- MongoDB running locally on `127.0.0.1:27017`, or a custom MongoDB instance configured in `.env`
 - OpenRouter or Groq API key
 
 ```powershell
 copy .env.example .env
 npm install
-npm run db:up
-npm run import:db-export
 npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+The default `.env.example` already points to `mongodb://127.0.0.1:27017/mind_platform`. On first startup the app bootstraps MongoDB automatically by creating `data_stores` and the core sample collections if the database is empty.
+
+Production-style local run:
+
+```powershell
+npm run build
+npm start
+```
 
 Default model settings:
 
@@ -61,22 +68,5 @@ Default model settings:
 
 ## Data
 
-Datastore metadata lives in:
 
-- MongoDB collection: `data_stores`
 
-Imported record collections:
-
-- `service_requests`
-- `inspections`
-- `permits`
-- `projects`
-
-## Documentation
-
-- [Architecture](docs/architecture.md)
-- [API Reference](docs/api-reference.md)
-- [Data Model](docs/data-model.md)
-- [Setup and Operations](docs/setup-and-operations.md)
-- [Development Guide](docs/development-and-extension.md)
-- [Troubleshooting](docs/troubleshooting.md)

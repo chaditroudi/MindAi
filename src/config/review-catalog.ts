@@ -74,20 +74,20 @@ export interface AgentCapabilityDefinition {
 
 export const agentCapabilityCards: AgentCapabilityDefinition[] = [
   {
-    id: 'searchAgent',
-    label: 'وكيل البحث الداخلي',
-    description: 'يثري نتائج التحليلات بسياق من فهرس المعرفة الداخلي عندما تطلب خطة المشرف enrichment.',
+    id: 'supervisorAgent',
+    label: 'وكيل المشرف',
+    description: 'يحلل طلب المستخدم ويولّد خطة TaskPlan مع pipeline كامل لـ MongoDB.',
     capabilities: [
-      'البحث في مجموعات البيانات المصدرة وبيانات DataStore الوصفية',
-      'استخدام البحث الدلالي عند توفر الفهرس ثم الرجوع إلى البحث النصي المحلي',
-      'إرجاع rows وschema وcitations بصيغة منظمة لاستخدامها في التدقيق والدمج',
-      'مواءمة نتائج الإثراء مع مفاتيح الأبعاد القادمة من مجموعة MongoDB الأساسية',
+      'تصنيف النية: dashboard | report | general_question',
+      'بناء pipeline تجميع MongoDB مباشرة من الطلب وبيانات DataStore',
+      'اختيار DataStore المناسب وحقوله',
+      'تحديد chartHint لإرشاد وكيل المخططات',
     ],
-    tools: ['vectorSearch', 'vector-search'],
+    tools: [],
     boundaries: [
-      'لا يستخدم بحث الويب أو المصادر العامة',
-      'لا يخترع حقائق خارج نتائج فهرس المعرفة الداخلي',
-      'يعمل فقط عند تفعيل needsEnrichment في خطة المشرف',
+      'لا يخترع أسماء DataStore أو حقول غير موجودة',
+      'لا يُدرج tenantId في الـ pipeline',
+      'يلتزم بالمراحل المسموح بها فقط في MongoDB',
     ],
   },
 ];

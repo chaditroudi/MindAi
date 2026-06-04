@@ -97,6 +97,7 @@ export const taskPlanSchema = z.object({
   chartHint: z.preprocess(nullToUndefined, z
     .enum(['compare', 'trend', 'distribution', 'part_of_whole', 'geo', 'ranking'])
     .optional()),
+  pipeline: z.preprocess(nullToUndefined, z.array(z.record(z.unknown())).optional()),
 });
 
 export type TaskPlanInput = z.infer<typeof taskPlanSchema>;

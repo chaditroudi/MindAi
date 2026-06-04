@@ -263,6 +263,52 @@
       box-shadow: 0 0 0 3px var(--accent-soft);
     }
 
+    .search-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0 4px;
+    }
+
+    .search-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 0.84rem;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .search-toggle-label input[type="checkbox"] { display: none; }
+
+    .toggle-track {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--line);
+      flex-shrink: 0;
+      transition: background 180ms ease;
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+      transition: right 180ms ease;
+    }
+
+    .search-toggle-label input:checked ~ .toggle-track { background: var(--accent); }
+    .search-toggle-label input:checked ~ .toggle-track .toggle-thumb { right: calc(100% - 17px); }
+
+    .search-toggle-label.active { color: var(--accent-strong); font-weight: 650; }
+
     .action-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -802,6 +848,61 @@
       gap: 12px;
     }
 
+    .skills-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .skill-card {
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .skill-card-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .skill-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      white-space: nowrap;
+    }
+
+    .skill-agent {
+      font-size: 0.75rem;
+      color: var(--subtle);
+    }
+
+    .skill-name {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .skill-rule {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .skill-rule code {
+      background: var(--surface-3);
+      border-radius: 3px;
+      padding: 0 4px;
+      font-size: 0.75rem;
+      font-family: monospace;
+    }
+
     .audit-row {
       display: grid;
       grid-template-columns: 132px minmax(0, 1fr);
@@ -894,6 +995,14 @@
             </label>
             <textarea id="prompt" placeholder="سيتم تحميل أمثلة من بيانات المنصة" rows="5"></textarea>
           </section>
+
+          <div class="search-toggle-row">
+            <label class="search-toggle-label" id="search-toggle-label" for="search-enrich">
+              <input type="checkbox" id="search-enrich">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span>تفعيل وكيل البحث الداخلي</span>
+            </label>
+          </div>
 
           <div class="action-row">
             <div class="source-label" id="selected-store">مصدر البيانات: تلقائي</div>
@@ -1041,6 +1150,7 @@
     let EXAMPLES = JSON.parse(JSON.stringify(FALLBACK_EXAMPLES));
     let AGENT_CAPABILITIES = [];
     let conversation = null;
+    const DATASET_CACHE = new Map();
     const REQUEST_TIMEOUT_MS = 480000;
 
     let chart = echarts.init(chartDiv, null);
@@ -1217,24 +1327,43 @@
       return 'بحث';
     }
 
+    const searchEnrichToggle = document.getElementById('search-enrich');
+    const searchToggleLabel = document.getElementById('search-toggle-label');
+    searchEnrichToggle.addEventListener('change', () => {
+      searchToggleLabel.classList.toggle('active', searchEnrichToggle.checked);
+    });
+
     async function run() {
       const prompt = promptInput.value.trim();
       if (!prompt) return;
+
+      const useSearchEnrich = searchEnrichToggle.checked;
+      const finalPrompt = useSearchEnrich
+        ? `search internal platform knowledge: ${prompt}`
+        : prompt;
 
       startProgress();
       auditPanel.style.display = 'none';
 
       try {
+        const dashboardDataset = currentEndpoint === '/api/dashboard'
+          ? resolveDashboardDataset()
+          : undefined;
+        const dashboardDataStores = currentEndpoint === '/api/dashboard' && dashboardDataset
+          ? buildDashboardDataStores(dashboardDataset)
+          : undefined;
         const res = await fetchWithTimeout(currentEndpoint, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            prompt,
+            prompt: finalPrompt,
             scope: SCOPE,
             dataStoreName: selectedDataStoreName,
             theme: 'light',
             threadId: conversation?.threadId,
             resourceId: conversation?.resourceId,
+            ...(dashboardDataset ? { dataset: dashboardDataset } : {}),
+            ...(dashboardDataStores?.length ? { datastores: dashboardDataStores } : {}),
           }),
         }, REQUEST_TIMEOUT_MS);
 
@@ -1333,9 +1462,96 @@
       return map[type] || type || 'رسم';
     }
 
+    const SKILLS_BY_INTENT = {
+      dashboard: [
+        {
+          id: 'chart-selection',
+          name: 'Chart Selection',
+          agent: 'Chart Planner Agent',
+          rules: [
+            'rowCount ≤ 12 → <code>donut</code> | rowCount > 12 → <code>horizontalBar</code>',
+            'intentHint=ranking → <code>horizontalBar</code> sorted descending',
+            'groupByField omitted when secondary field has > 10 distinct values',
+            'Never output a chartType outside candidateTypes list',
+          ],
+        },
+        {
+          id: 'visualization-best-practices',
+          name: 'Visualization Best Practices',
+          agent: 'Chart Planner Agent',
+          rules: [
+            'Title in Arabic ≤ 8 words derived from user prompt, not raw field name',
+            '"top N" queries include N in title: <code>أعلى 5 بلديات</code>',
+            'Arabic city/region labels → prefer <code>horizontalBar</code> over bar when rowCount > 5',
+            'groupByField lines capped at 6 series for line charts',
+          ],
+        },
+      ],
+      report: [
+        {
+          id: 'chart-selection',
+          name: 'Chart Selection',
+          agent: 'Chart Planner Agent',
+          rules: [
+            'rowCount ≤ 12 → <code>donut</code> | rowCount > 12 → <code>horizontalBar</code>',
+            'intentHint=trend requires a temporal field, else fallback to first candidateType',
+          ],
+        },
+        {
+          id: 'visualization-best-practices',
+          name: 'Visualization Best Practices',
+          agent: 'Chart Planner Agent',
+          rules: [
+            'Title in Arabic ≤ 8 words derived from prompt',
+            'Arabic labels → prefer horizontalBar when rowCount > 5',
+          ],
+        },
+        {
+          id: 'data-interpretation',
+          name: 'Data Interpretation',
+          agent: 'Writer Agent',
+          rules: [
+            '<code>null</code> → "لا تتوفر بيانات لـ..." | <code>0</code> → "لم تُسجَّل أي..."',
+            'Ranking opens with "تصدّرت [الفئة] بـ [value]", mentions runner-up',
+            'Trend: describe direction, peak value + date, final trend sentence',
+            'Never invent figures not present in the dataset rows',
+          ],
+        },
+      ],
+      general_question: [
+        {
+          id: 'data-interpretation',
+          name: 'Data Interpretation',
+          agent: 'Writer Agent',
+          rules: [
+            '<code>null</code> → "لا تتوفر بيانات لـ..." | <code>0</code> → "لم تُسجَّل أي..."',
+            'Ranking opens with "تصدّرت [الفئة] بـ [value]"',
+            'Percent present → use it: "تمثل X نسبة Y% من الإجمالي"',
+            'Never round a value for narrative effect',
+          ],
+        },
+      ],
+    };
+
+    function renderSkills(intent) {
+      const skills = SKILLS_BY_INTENT[intent] || [];
+      if (!skills.length) return '';
+      const cards = skills.map((skill) => `
+        <div class="skill-card">
+          <div class="skill-card-head">
+            <span class="skill-badge">${esc(skill.id)}</span>
+            <span class="skill-agent">${esc(skill.agent)}</span>
+          </div>
+          <div class="skill-name">${esc(skill.name)}</div>
+          <div class="skill-rule">${skill.rules.map((r) => `• ${r}`).join('<br>')}</div>
+        </div>`).join('');
+      return auditRow('المهارات النشطة', `<div class="skills-grid">${cards}</div>`);
+    }
+
     function renderAudit(data, runId) {
       const audit = data.audit;
       if (!audit) return;
+      cacheDataset(data);
 
       const intentLabels = {
         dashboard: 'لوحة معلومات',
@@ -1356,6 +1572,7 @@
       }
       html += auditRow('النية', `<span class="pill primary">${esc(intentLabels[data.intent] || data.intent)}</span>`);
       if (audit.elapsedMs !== undefined) html += auditRow('المدة', `<span>${audit.elapsedMs.toLocaleString()} ms</span>`);
+      html += renderSkills(data.intent);
       if (audit.searchImpact) html += auditRow('تأثير وكيل البحث', codeBlock(audit.searchImpact));
       if (audit.plan) html += auditRow('خطة التنفيذ', codeBlock(audit.plan));
       if (audit.dataset?.rows?.length) {
@@ -1381,6 +1598,57 @@
 
       auditBody.innerHTML = html;
       auditPanel.style.display = 'block';
+    }
+
+    function cacheDataset(data) {
+      const dataset = data?.audit?.dataset;
+      const rows = dataset?.rows;
+      const schema = dataset?.schema;
+      if (!rows?.length || !schema || Object.keys(schema).length === 0) return;
+
+      const storeName = data?.audit?.plan?.query?.dataStoreName || data?.audit?.plan?.query?.dataStoreId || data?.dataStoreName;
+      if (storeName) {
+        DATASET_CACHE.set(storeName, dataset);
+      }
+      DATASET_CACHE.set('__last__', dataset);
+    }
+
+    function resolveDashboardDataset() {
+      if (selectedDataStoreName && DATASET_CACHE.has(selectedDataStoreName)) {
+        return DATASET_CACHE.get(selectedDataStoreName);
+      }
+      return DATASET_CACHE.get('__last__');
+    }
+
+    function buildDashboardDataStores(dataset) {
+      if (!dataset?.schema || Object.keys(dataset.schema).length === 0) return [];
+      const name = selectedDataStoreName || 'RequestDataset';
+      return [{
+        name,
+        collection: name,
+        description: 'Derived from request dataset schema for prompt-first planning.',
+        fields: Object.entries(dataset.schema).map(([fieldName, fieldType]) => ({
+          name: fieldName,
+          type: normalizeFieldType(fieldType),
+          role: inferFieldRole(fieldName, fieldType),
+        })),
+      }];
+    }
+
+    function normalizeFieldType(fieldType) {
+      const allowed = new Set(['string', 'number', 'integer', 'boolean', 'date', 'datetime', 'enum', 'reference', 'array', 'object', 'geo', 'text']);
+      return allowed.has(fieldType) ? fieldType : 'string';
+    }
+
+    function inferFieldRole(fieldName, fieldType) {
+      if (fieldType === 'date' || fieldType === 'datetime') return 'temporal';
+      if (fieldType === 'number' || fieldType === 'integer') {
+        return /^(value|count|total|sum|avg|average|amount|score|rate|quantity)$/i.test(fieldName)
+          ? 'measure'
+          : undefined;
+      }
+      if (/id$/i.test(fieldName)) return 'id';
+      return 'dimension';
     }
 
     function renderSearchImpact(impact) {

@@ -1,0 +1,7 @@
+[
+  { "id": "m1", "name": "Doha",      "tenantId": "t_mind_qatar" },
+  { "id": "m2", "name": "Al Rayyan", "tenantId": "t_mind_qatar" },
+  { "id": "m3", "name": "Al Wakrah", "tenantId": "t_mind_qatar" },
+  { "id": "m4", "name": "Umm Salal", "tenantId": "t_mind_qatar" },
+  { "id": "m5", "name": "Al Khor",   "tenantId": "t_mind_qatar" }
+]

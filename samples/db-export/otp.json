@@ -1,1 +1,0 @@
-[{"_id":{"$oid":"000000000000000000000002"},"email":"user@example.com","attempts":0,"created_at":{"$date":"2026-01-01T00:00:00.000Z"},"resend_attempts":0,"updated_at":{"$date":"2026-01-01T00:00:00.000Z"},"expires_at":{"$date":"2026-01-01T00:05:00.000Z"},"otp_hash":"OTP_HASH_PLACEHOLDER","purpose":"change-email"}]
