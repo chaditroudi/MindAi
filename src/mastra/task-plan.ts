@@ -1,23 +1,24 @@
 import { z } from 'zod';
 import { taskPlanSchema } from './schemas/intent.js';
-import type { DataStore } from '../types/index.js';
+import type { DataSource } from '../types/index.js';
 
 type TaskPlan = z.infer<typeof taskPlanSchema>;
 
 export function finalizeTaskPlan({
   plan,
-  availableDataStores,
+  availableSources,
   forcedIntent,
 }: {
   plan: TaskPlan;
   prompt?: string;
-  availableDataStores: DataStore[];
+  availableSources: DataSource[];
   forcedIntent?: TaskPlan['intent'];
 }): TaskPlan {
-  const dataStore = availableDataStores.find(
+  const requestedSource = plan.query.sourceName;
+  const source = availableSources.find(
     (ds) =>
-      normalize(ds.name) === normalize(plan.query.dataStoreName) ||
-      normalize(ds.collection) === normalize(plan.query.dataStoreName),
+      normalize(ds.name) === normalize(requestedSource) ||
+      normalize(ds.collection) === normalize(requestedSource),
   );
 
   return {
@@ -27,7 +28,7 @@ export function finalizeTaskPlan({
     needsChart: forcedIntent === 'dashboard' ? true : plan.needsChart,
     query: {
       ...plan.query,
-      dataStoreName: dataStore?.name ?? plan.query.dataStoreName,
+      sourceName: source?.name ?? requestedSource,
     },
   };
 }

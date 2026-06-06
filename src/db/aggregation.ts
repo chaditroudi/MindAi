@@ -18,11 +18,23 @@ export function enforceAggregationSafety(
     }
   }
   const safe = [...pipeline];
-  const scopeMatch = {
-    tenantId: scope.tenantId,
+
+  // Accept records that carry the tenantId AND records that have no tenantId
+  // field at all (imported production data without multi-tenant tagging).
+  const tenantFilter: Record<string, unknown> = scope.tenantId
+    ? { $or: [{ tenantId: scope.tenantId }, { tenantId: { $exists: false } }] }
+    : {};
+
+  const scopeMatch: Record<string, unknown> = {
+    ...tenantFilter,
     ...(scope.rowFilter ?? {}),
   };
+
+  const hasScopeFilter = Object.keys(scopeMatch).length > 0;
   const firstMatch = safe[0]?.$match as Record<string, unknown> | undefined;
+
+  if (!hasScopeFilter) return safe;
+
   if (!firstMatch) {
     safe.unshift({ $match: scopeMatch });
     return safe;

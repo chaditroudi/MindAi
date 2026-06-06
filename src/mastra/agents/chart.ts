@@ -1,10 +1,8 @@
 import { Agent } from '@mastra/core/agent';
-import type { Mastra } from '@mastra/core/mastra';
+import { generateObject } from 'ai';
 import { z } from 'zod';
 import { resolveModel } from '../model.js';
-import { composeWithSkills } from '../skills/compose.js';
-import { chartSelectionSkill } from '../skills/chart-selection/index.js';
-import { visualizationBestPracticesSkill } from '../skills/visualization-best-practices/index.js';
+
 import { chartPlanSchema, chartResultSchema, chartTypeSchema } from '../schemas/chart.js';
 import type { ChartPlan } from '../schemas/chart.js';
 import { datasetSchema } from '../schemas/intent.js';
@@ -136,10 +134,7 @@ HARD RULES
 
 export const chartPlannerAgent: Agent = new Agent({
   name: 'Chart Planner',
-  instructions: composeWithSkills(BASE_INSTRUCTIONS, [
-    chartSelectionSkill,
-    visualizationBestPracticesSkill,
-  ]),
+  instructions: BASE_INSTRUCTIONS,
   model: resolveModel('chart'),
 });
 
@@ -155,7 +150,6 @@ export type ChartRuntimeInput = {
   intentHint?: IntentHint;
   title?: string;
   theme?: 'light' | 'dark' | 'brand';
-  mastra: Mastra;
   preferredXAxisField?: string;
   preferredYAxisField?: string;
   preferredGroupByField?: string;
@@ -171,7 +165,7 @@ export type ChartRuntimeInput = {
 };
 
 export async function runChartRuntime({
-  dataset, intentHint, title, theme = 'light', mastra,
+  dataset, intentHint, title, theme = 'light',
   preferredXAxisField, preferredYAxisField, preferredGroupByField,
   sizeField, stackBars, bins, smooth, colorPalette, showDataZoom, yAxisMin, yAxisMax, labelFormat,
 }: ChartRuntimeInput) {
@@ -179,43 +173,52 @@ export async function runChartRuntime({
     return chartResultSchema.parse(buildChartFromDataset({ dataset, theme, title: title ?? 'No matching data' }));
   }
 
-  const plan = await runChartPlanner({ dataset, intentHint, title, mastra, preferredXAxisField, preferredYAxisField, preferredGroupByField });
+  let plan: ChartPlan | undefined;
+  try {
+    plan = await runChartPlanner({ dataset, intentHint, title, preferredXAxisField, preferredYAxisField, preferredGroupByField });
+  } catch {
+    // LLM returned invalid field names — fall through to auto-detection below
+  }
 
   return chartResultSchema.parse(buildChartFromDataset({
-    dataset, intentHint, theme, title: plan.title ?? title,
-    chartType: plan.chartType, xAxisField: plan.xAxisField, yAxisField: plan.yAxisField,
-    groupByField: plan.groupByField, sizeField, stackBars, bins, smooth, colorPalette, showDataZoom, yAxisMin, yAxisMax, labelFormat,
+    dataset, intentHint, theme,
+    title: plan?.title ?? title,
+    chartType: plan?.chartType,
+    xAxisField: plan?.xAxisField,
+    yAxisField: plan?.yAxisField,
+    groupByField: plan?.groupByField,
+    sizeField, stackBars, bins, smooth, colorPalette, showDataZoom, yAxisMin, yAxisMax, labelFormat,
   }));
 }
 
 async function runChartPlanner({
-  dataset, intentHint, title, mastra, preferredXAxisField, preferredYAxisField, preferredGroupByField,
+  dataset, intentHint, title, preferredXAxisField, preferredYAxisField, preferredGroupByField,
 }: {
-  dataset: Dataset; intentHint?: IntentHint; title?: string; mastra: Mastra;
+  dataset: Dataset; intentHint?: IntentHint; title?: string;
   preferredXAxisField?: string; preferredYAxisField?: string; preferredGroupByField?: string;
 }): Promise<ChartPlan> {
-  const planner = mastra.getAgent('chartPlannerAgent');
-  const candidates = getChartTypeCandidates(dataset);
-  const hidden = new Set(['_id', 'tenantId']);
-  const visibleFields = Object.keys(dataset.schema).filter((f) => !hidden.has(f) && !f.endsWith('Id') && !f.startsWith('__'));
-  const sampleRows = dataset.rows.slice(0, 3).map((row) => Object.fromEntries(visibleFields.map((f) => [f, row[f]])));
-
-  const result = await withTimeout(
-    planner.generate([{ role: 'user', content: JSON.stringify({
-      datasetSchema: Object.fromEntries(visibleFields.map((f) => [f, dataset.schema[f]])),
-      sampleRows, rowCount: dataset.rows.length,
-      supervisorHints: { intentHint: intentHint ?? null, suggestedXAxis: preferredXAxisField ?? null, suggestedYAxis: preferredYAxisField ?? null, suggestedGroupBy: preferredGroupByField ?? null },
-      userPrompt: title ?? '', candidateTypes: candidates,
-    }) }], { output: chartPlanSchema, maxTokens: 400, temperature: 0 }),
+  const candidates     = getChartTypeCandidates(dataset);
+  const hidden         = new Set(['_id', 'tenantId']);
+  const visible        = Object.keys(dataset.schema).filter((f) => !hidden.has(f) && !f.endsWith('Id') && !f.startsWith('__'));
+  const validSet       = new Set(visible);
+  const hint           = (f?: string) => (f && visible.includes(f) ? f : null);
+  const { object: plan } = await withTimeout(
+    generateObject({
+      model: resolveModel('chart'), schema: chartPlanSchema, maxTokens: 400, temperature: 0,
+      messages: [{ role: 'user', content: JSON.stringify({
+        datasetSchema: Object.fromEntries(visible.map((f) => [f, dataset.schema[f]])),
+        sampleRows: dataset.rows.slice(0, 3).map((row) => Object.fromEntries(visible.map((f) => [f, row[f]]))),
+        rowCount: dataset.rows.length,
+        supervisorHints: { intentHint: intentHint ?? null, suggestedXAxis: hint(preferredXAxisField), suggestedYAxis: hint(preferredYAxisField), suggestedGroupBy: hint(preferredGroupByField) },
+        userPrompt: title ?? '', candidateTypes: candidates,
+      }) }],
+    }),
     'chart.planner', envTimeout('CHART_TIMEOUT_MS', 8000),
   );
-
-  const plan = result.object;
-  const valid = new Set(visibleFields);
   if (!plan.chartType || !candidates.includes(plan.chartType)) throw new Error(`Invalid chartType: "${plan.chartType}"`);
-  if (!plan.xAxisField || !valid.has(plan.xAxisField)) throw new Error(`Invalid xAxisField: "${plan.xAxisField}"`);
-  if (!plan.yAxisField || !valid.has(plan.yAxisField)) throw new Error(`Invalid yAxisField: "${plan.yAxisField}"`);
-  if (plan.groupByField && !valid.has(plan.groupByField)) throw new Error(`Invalid groupByField: "${plan.groupByField}"`);
+  if (!plan.xAxisField || !validSet.has(plan.xAxisField)) throw new Error(`Invalid xAxisField: "${plan.xAxisField}"`);
+  if (!plan.yAxisField || !validSet.has(plan.yAxisField)) throw new Error(`Invalid yAxisField: "${plan.yAxisField}"`);
+  if (plan.groupByField && !validSet.has(plan.groupByField)) throw new Error(`Invalid groupByField: "${plan.groupByField}"`);
   return { ...plan, groupByField: plan.groupByField ?? undefined, title: plan.title ?? title };
 }
 

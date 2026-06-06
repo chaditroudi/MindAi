@@ -10,10 +10,11 @@ export async function getMongo(): Promise<{ client: MongoClient; db: Db }> {
   const dbName = process.env.MONGODB_DB;
   const timeoutMs = Number(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS ?? 8000);
   const maxRetries = Number(process.env.MONGODB_CONNECT_RETRIES ?? 1);
+
   if (!uri) throw new Error('MONGODB_URI or DB_URL is not set');
   if (!dbName) throw new Error('MONGODB_DB is not set');
 
-  let lastError: unknown;
+  let lastError: unknown = new Error('MongoDB connection failed before any attempt completed.');
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const nextClient = new MongoClient(uri, {
@@ -31,32 +32,22 @@ export async function getMongo(): Promise<{ client: MongoClient; db: Db }> {
       lastError = err;
       await nextClient.close().catch(() => undefined);
 
-      if (!isRetryableMongoConnectError(err) || attempt === maxRetries) {
-        throw formatMongoConnectionError(err, {
-          dbName,
-          maxRetries,
-          timeoutMs,
-        });
+      if (!isRetryableMongoConnectError(err) || attempt >= maxRetries) {
+        break;
       }
 
-      const delayMs = Math.min(500 * attempt, 2000);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      await new Promise((resolve) => setTimeout(resolve, Math.min(500 * attempt, 2000)));
     }
   }
 
-  throw formatMongoConnectionError(lastError, {
-    dbName,
-    maxRetries,
-    timeoutMs,
-  });
+  throw formatMongoConnectionError(lastError, { dbName, maxRetries, timeoutMs });
 }
 
 export async function closeMongo(): Promise<void> {
-  if (client) {
-    await client.close();
-    client = null;
-    db = null;
-  }
+  if (!client) return;
+  await client.close();
+  client = null;
+  db = null;
 }
 
 function isRetryableMongoConnectError(error: unknown) {
@@ -74,15 +65,7 @@ function isRetryableMongoConnectError(error: unknown) {
 
 function formatMongoConnectionError(
   error: unknown,
-  {
-    dbName,
-    maxRetries,
-    timeoutMs,
-  }: {
-    dbName: string;
-    maxRetries: number;
-    timeoutMs: number;
-  },
+  { dbName, maxRetries, timeoutMs }: MongoConfig,
 ) {
   const cause = error instanceof Error ? error.message : String(error);
   return new Error(
@@ -91,3 +74,9 @@ function formatMongoConnectionError(
       `Start local MongoDB or verify MONGODB_URI and MONGODB_DB. Cause: ${cause}`,
   );
 }
+
+type MongoConfig = {
+  dbName: string;
+  timeoutMs: number;
+  maxRetries: number;
+};

@@ -3,7 +3,7 @@ export type ReviewEndpoint = '/api/dashboard' | '/api/report' | '/api/inquiry';
 export interface ReviewPromptDefinition {
   label: string;
   prompt: string;
-  dataStoreName?: string;
+  sourceName?: string;
   topic?: string;
 }
 
@@ -79,13 +79,13 @@ export const agentCapabilityCards: AgentCapabilityDefinition[] = [
     description: 'يحلل طلب المستخدم ويولّد خطة TaskPlan مع pipeline كامل لـ MongoDB.',
     capabilities: [
       'تصنيف النية: dashboard | report | general_question',
-      'بناء pipeline تجميع MongoDB مباشرة من الطلب وبيانات DataStore',
-      'اختيار DataStore المناسب وحقوله',
+      'بناء pipeline تجميع MongoDB مباشرة من الطلب وبيانات المصدر',
+      'اختيار المصدر المناسب وحقوله',
       'تحديد chartHint لإرشاد وكيل المخططات',
     ],
     tools: [],
     boundaries: [
-      'لا يخترع أسماء DataStore أو حقول غير موجودة',
+      'لا يخترع أسماء مصادر أو حقول غير موجودة',
       'لا يُدرج tenantId في الـ pipeline',
       'يلتزم بالمراحل المسموح بها فقط في MongoDB',
     ],

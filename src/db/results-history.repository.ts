@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { getMongo } from './mongo.client.js';
-import type { IntentKind, DataStore } from '../types/index.js';
+import type { IntentKind, DataSource } from '../types/index.js';
 
 const COLLECTION = 'results_history';
 
@@ -10,7 +10,7 @@ export interface HistoryEntry {
   userId: string;
   intent: IntentKind | 'search';
   prompt: string;
-  datastores?: DataStore[];
+  sources?: DataSource[];
   pipeline?: Record<string, unknown>[];
   result: {
     summary?: string;

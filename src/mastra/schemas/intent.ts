@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const intentKindSchema = z.enum(['general_question', 'report', 'dashboard']);
 
 const sortDirectionSchema = z.enum(['asc', 'desc']);
-const nullToUndefined = (value: unknown) => value === null ? undefined : value;
+const nullToUndefined = (value: unknown) =>
+  value === null || value === '' ? undefined : value;
 const objectOrUndefined = (value: unknown) =>
   value === null || typeof value !== 'object' || Array.isArray(value) ? undefined : value;
 const positiveIntOrUndefined = (value: unknown) => {
@@ -34,8 +35,8 @@ export const taskPlanSchema = z.object({
   needsEnrichment: z.boolean(),
   needsChart: z.boolean(),
   query: z.object({
-    dataStoreId: optionalString,
-    dataStoreName: optionalString,
+    sourceId: optionalString,
+    sourceName: optionalString,
     metric: optionalString,
     metrics: optionalStringArray,
     aggregation: z.preprocess(nullToUndefined, z.enum(['sum', 'avg', 'count', 'min', 'max']).optional()),

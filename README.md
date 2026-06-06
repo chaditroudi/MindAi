@@ -6,7 +6,7 @@ The platform model is intentionally simple:
 
 ```text
 Platform
-  -> dataStores[]
+  -> sources[]
     -> name
     -> collection
     -> description
@@ -27,13 +27,13 @@ The app turns client prompts into one of three outputs:
 ```text
 Client prompt
   -> Express API
-  -> Supervisor Agent plans intent/data store/fields
+  -> Supervisor Agent plans intent/source/fields
   -> MongoDB Agent builds and executes aggregation
   -> Writer or Chart Agent/runtime formats the response
   -> JSON response
 ```
 
-Prompt suggestions in the UI are generated from the current data stores and fields through `/api/meta`; they are not static examples.
+Prompt suggestions in the UI are generated from the current sources and fields through `/api/meta`; they are not static examples.
 
 ## Quick Start
 
@@ -51,7 +51,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The default `.env.example` already points to `mongodb://127.0.0.1:27017/mind_platform`. On first startup the app bootstraps MongoDB automatically by creating `data_stores` and the core sample collections if the database is empty.
+The default `.env.example` already points to `mongodb://127.0.0.1:27017/mind_platform`. On first startup the app bootstraps MongoDB automatically by creating the `sources` metadata collection and the core sample collections if the database is empty.
 
 Production-style local run:
 
@@ -67,6 +67,5 @@ Default model settings:
 - `GROQ_MODEL=llama-3.3-70b-versatile` when `LLM_PROVIDER=groq`
 
 ## Data
-
 
 

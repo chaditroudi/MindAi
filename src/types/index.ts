@@ -12,7 +12,7 @@ export type FieldType =
   | 'geo'
   | 'text';
 
-export interface DataStoreField {
+export interface DataSourceField {
   name: string;
   label?: string;
   description?: string;
@@ -25,7 +25,7 @@ export interface DataStoreField {
   tags?: string[];
 }
 
-export interface DataStoreJoin {
+export interface DataSourceJoin {
   from: string;
   localField: string;
   foreignField: string;
@@ -46,19 +46,19 @@ export interface SchemaStructureCollection {
   description?: string;
 }
 
-export interface DataStore {
+export interface DataSource {
   name: string;
   collection: string;
   description?: string;
   tags?: string[];
-  fields: DataStoreField[];
-  joins?: DataStoreJoin[];
+  fields: DataSourceField[];
+  joins?: DataSourceJoin[];
 }
 
 export interface PermissionScope {
   userId: string;
   tenantId: string;
-  allowedDataStores?: string[];
+  allowedSources?: string[];
   rowFilter?: Record<string, unknown>;
 }
 
@@ -120,8 +120,8 @@ export interface TimeRange {
 }
 
 export interface TaskQuery {
-  dataStoreId?: string;
-  dataStoreName?: string;
+  sourceId?: string;
+  sourceName?: string;
   metric?: string;
   metrics?: string[];
   aggregation?: Aggregation;

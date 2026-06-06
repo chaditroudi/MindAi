@@ -15,7 +15,7 @@ export const fieldTypeSchema = z.enum([
   'text',
 ]);
 
-export const dataStoreFieldSchema = z.object({
+export const sourceFieldSchema = z.object({
   name: z.string(),
   label: z.string().optional(),
   description: z.string().optional(),
@@ -28,29 +28,29 @@ export const dataStoreFieldSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
-export const dataStoreJoinSchema = z.object({
+export const sourceJoinSchema = z.object({
   from: z.string(),
   localField: z.string(),
   foreignField: z.string(),
   as: z.string(),
 });
 
-export const dataStoreSchema = z.object({
+export const sourceSchema = z.object({
   name: z.string(),
   collection: z.string(),
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  fields: z.array(dataStoreFieldSchema),
-  joins: z.array(dataStoreJoinSchema).optional(),
+  fields: z.array(sourceFieldSchema),
+  joins: z.array(sourceJoinSchema).optional(),
 });
 
 export const platformSchema = z.object({
-  dataStores: z.array(dataStoreSchema),
+  sources: z.array(sourceSchema),
 });
 
 export const permissionScopeSchema = z.object({
   userId: z.string(),
   tenantId: z.string(),
-  allowedDataStores: z.array(z.string()).optional(),
+  allowedSources: z.array(z.string()).optional(),
   rowFilter: z.record(z.unknown()).optional(),
 });

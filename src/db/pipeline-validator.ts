@@ -1,4 +1,4 @@
-import type { DataStore, DataStoreField, DataStoreJoin } from '../types/index.js';
+import type { DataSource, DataSourceField } from '../types/index.js';
 
 const allowedStages = new Set([
   '$match',
@@ -18,24 +18,24 @@ interface JoinDefinition {
   localField: string;
   foreignField: string;
   as?: string;
-  foreignStore?: DataStore;
+  foreignStore?: DataSource;
 }
 
-export function validatePipelineForDataStore({
+export function validatePipelineForSource({
   pipeline,
-  dataStore,
-  availableDataStores,
+  dataSource,
+  availableSources,
 }: {
   pipeline: PipelineStage[];
-  dataStore: DataStore;
-  availableDataStores: DataStore[];
+  dataSource: DataSource;
+  availableSources: DataSource[];
 }): PipelineStage[] {
-  const dataStoreByCollection = new Map(
-    availableDataStores.map((candidate) => [candidate.collection, candidate]),
+  const sourceByCollection = new Map(
+    availableSources.map((candidate) => [candidate.collection, candidate]),
   );
 
-  let availableFields = buildRootFieldSet(dataStore.fields);
-  const allowedJoins = buildJoinDefinitions(dataStore, dataStoreByCollection);
+  let availableFields = buildRootFieldSet(dataSource.fields);
+  const allowedJoins = buildJoinDefinitions(dataSource, sourceByCollection);
 
   for (const stage of pipeline) {
     const operators = Object.keys(stage);
@@ -156,7 +156,7 @@ function validateLookupStage(
 
   if (!matchedJoin) {
     throw new Error(
-      `Lookup "${from}" via ${localField} -> ${foreignField} is not declared in datastore metadata.`,
+      `Lookup "${from}" via ${localField} -> ${foreignField} is not declared in source metadata.`,
     );
   }
 
@@ -284,20 +284,20 @@ function validateExpression(value: unknown, availableFields: Set<string>) {
 }
 
 function buildJoinDefinitions(
-  dataStore: DataStore,
-  dataStoreByCollection: Map<string, DataStore>,
+  dataSource: DataSource,
+  sourceByCollection: Map<string, DataSource>,
 ) {
   const joins: JoinDefinition[] = [];
 
-  for (const join of dataStore.joins ?? []) {
+  for (const join of dataSource.joins ?? []) {
     joins.push({
       ...join,
-      foreignStore: dataStoreByCollection.get(join.from),
+      foreignStore: sourceByCollection.get(join.from),
     });
   }
 
-  for (const field of dataStore.fields) {
-    const derived = deriveJoinFromReference(field, dataStoreByCollection);
+  for (const field of dataSource.fields) {
+    const derived = deriveJoinFromReference(field, sourceByCollection);
     if (!derived) continue;
 
     const exists = joins.some((candidate) => {
@@ -312,8 +312,8 @@ function buildJoinDefinitions(
 }
 
 function deriveJoinFromReference(
-  field: DataStoreField,
-  dataStoreByCollection: Map<string, DataStore>,
+  field: DataSourceField,
+  sourceByCollection: Map<string, DataSource>,
 ): JoinDefinition | undefined {
   if (!field.referenceTo) return undefined;
   const [collection, foreignField] = field.referenceTo.split('.');
@@ -323,18 +323,18 @@ function deriveJoinFromReference(
     from: collection,
     localField: field.name,
     foreignField,
-    foreignStore: dataStoreByCollection.get(collection),
+    foreignStore: sourceByCollection.get(collection),
   };
 }
 
-function buildRootFieldSet(fields: DataStoreField[]) {
+function buildRootFieldSet(fields: DataSourceField[]) {
   return new Set(fields.map((field) => field.name));
 }
 
 function extendFieldSet(
   current: Set<string>,
   alias: string,
-  foreignFields: DataStoreField[],
+  foreignFields: DataSourceField[],
 ) {
   const next = new Set(current);
   next.add(alias);

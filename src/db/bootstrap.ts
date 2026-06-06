@@ -24,13 +24,13 @@ export async function ensureMongoBootstrap() {
   }
   await bootstrapPromise;
 }
-
+  
 async function bootstrapMongo() {
   const { db } = await getMongo();
-  const existingDataStores = await db.collection('data_stores').countDocuments({}, { limit: 1 });
-  if (existingDataStores > 0) return;
+  const existingSources = await db.collection('sources').countDocuments({}, { limit: 1 });
+  if (existingSources > 0) return;
 
-  const dataStores = await readJsonArray(path.join(rootDir, 'dataset', 'datastores.json'));
+  const sources = await readJsonArray(path.join(rootDir, 'dataset', 'sources.json'));
   const collections = await Promise.all(
     DEFAULT_COLLECTIONS.map(async (collectionName) => ({
       collectionName,
@@ -38,9 +38,9 @@ async function bootstrapMongo() {
     })),
   );
 
-  await db.collection('data_stores').deleteMany({});
-  if (dataStores.length > 0) {
-    await db.collection('data_stores').insertMany(dataStores, { ordered: false });
+  await db.collection('sources').deleteMany({});
+  if (sources.length > 0) {
+    await db.collection('sources').insertMany(sources, { ordered: false });
   }
 
   for (const { collectionName, docs } of collections) {

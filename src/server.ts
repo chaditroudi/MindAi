@@ -10,7 +10,6 @@ import { closeMongo, getMongo } from './db/mongo.client.js';
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
-
 const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), '../public');
 app.use(express.static(publicDir));
 app.use('/api', apiRouter);
@@ -41,9 +40,9 @@ async function start() {
   const server = app.listen(PORT, () => {
     console.log(`Mind viz agents listening on http://localhost:${PORT}`);
     console.log(`  Review UI            http://localhost:${PORT}/`);
-    console.log(`  POST /api/inquiry    — home page search / inquiry`);
-    console.log(`  POST /api/report     — report page`);
-    console.log(`  POST /api/dashboard  — dashboard page single chart`);
+    console.log(`  POST /api/analytics  — supervisor chooses inquiry / dashboard / report tool`);
+    console.log(`  POST /api/search     — full-text keyword search`);
+    console.log(`  GET  /health         — MongoDB connectivity check`);
   });
 
   const shutdown = async (signal: string) => {

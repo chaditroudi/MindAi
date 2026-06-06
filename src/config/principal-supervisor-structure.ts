@@ -1,16 +1,11 @@
-import type { DataStore } from '../types/index.js';
+import type { DataSource } from '../types/index.js';
 
-export const PRINCIPAL_SUPERVISOR_DATASTORES: DataStore[] = [
+export const PRINCIPAL_SUPERVISOR_SOURCES: DataSource[] = [
   {
     name: 'municipalities',
     collection: 'municipalities',
     fields: [
-      {
-        name: 'name',
-        type: 'string',
-        role: 'dimension',
-        enumValues: ['Doha', 'Al Rayyan', 'Al Wakrah', 'Umm Salal', 'Al Khor'],
-      },
+      { name: 'name', type: 'string', role: 'dimension' },
       { name: 'id', type: 'string', role: 'id' },
     ],
   },
@@ -19,25 +14,13 @@ export const PRINCIPAL_SUPERVISOR_DATASTORES: DataStore[] = [
     collection: 'projects',
     fields: [
       { name: 'title', type: 'string', role: 'text' },
-      {
-        name: 'status',
-        type: 'string',
-        role: 'dimension',
-        enumValues: ['in progress', 'completed', 'planned', 'on hold', 'cancelled'],
-      },
+      { name: 'status', type: 'string', role: 'dimension' },
       {
         name: 'muni',
         type: 'string',
         role: 'id',
         description: 'municipality reference id',
         referenceTo: 'municipalities.id',
-      },
-      {
-        name: 'municipality',
-        type: 'string',
-        role: 'dimension',
-        description: 'municipality name (joined from municipalities)',
-        enumValues: ['Doha', 'Al Rayyan', 'Al Wakrah', 'Umm Salal', 'Al Khor'],
       },
     ],
     joins: [

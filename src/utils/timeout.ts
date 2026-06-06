@@ -1,27 +1,19 @@
-class OperationTimeoutError extends Error {
-  constructor(operation: string, timeoutMs: number) {
-    super(`${operation} timed out after ${timeoutMs}ms`);
-    this.name = 'OperationTimeoutError';
-  }
+export function envTimeout(name: string, defaultMs: number): number {
+  const raw = process.env[name];
+  if (!raw) return defaultMs;
+  const ms = Number(raw);
+  return Number.isFinite(ms) && ms > 0 ? ms : defaultMs;
 }
 
-export function envTimeout(name: string, fallbackMs: number) {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallbackMs;
-
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackMs;
-}
-
-export function withTimeout<T>(promise: Promise<T>, operation: string, timeoutMs: number): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new OperationTimeoutError(operation, timeoutMs)), timeoutMs);
-    timer.unref?.();
-  });
-
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
+export function withTimeout<T>(promise: Promise<T>, label: string, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Timeout: ${label} exceeded ${ms}ms`)),
+      ms,
+    );
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error as Error); },
+    );
   });
 }
