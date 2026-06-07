@@ -6,6 +6,7 @@ import { runChartAgent } from '../agents/chart.js';
 import { executePipeline } from '../../db/aggregation.js';
 import { findSource } from '../../db/source.repository.js';
 import { getSources } from '../../db/sources-cache.js';
+import { log } from '../../utils/logger.js';
 import type { Document } from 'mongodb';
 import type { IntentKind } from '../../types/index.js';
 
@@ -18,15 +19,22 @@ export type AnalyticsInput = z.infer<typeof analyticsInputSchema>;
 
 async function exec(ctx: AnalyticsInput, intent: IntentKind) {
   const sources = getSources();
-  const plan    = await runSupervisorPlan({ prompt: ctx.prompt, intent, sourceName: ctx.sourceName, sources });
+  log('analytics', `exec() | intent: ${intent} | sources: [${sources.map(s => s.name).join(', ')}]`);
 
-  if (!plan.needsData || !plan.pipeline?.length) return { plan, rows: [] as Document[] };
+  const plan = await runSupervisorPlan({ prompt: ctx.prompt, intent, sourceName: ctx.sourceName, sources });
+  log('analytics', `plan received | needsData: ${plan.needsData} | needsChart: ${plan.needsChart} | chartHint: ${plan.chartHint ?? '-'}`);
+
+  if (!plan.needsData || !plan.pipeline?.length) {
+    log('analytics', 'plan says no data needed — skipping pipeline execution');
+    return { plan, rows: [] as Document[] };
+  }
 
   const collection = findSource(plan.query.sourceName ?? '', sources)?.collection
     ?? plan.query.sourceName
     ?? '';
 
   const rows = await executePipeline({ pipeline: plan.pipeline, collection });
+  log('analytics', `pipeline executed | collection: "${collection}" | rows returned: ${rows.length}`);
   return { plan, rows };
 }
 
