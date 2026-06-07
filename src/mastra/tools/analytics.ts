@@ -1,3 +1,4 @@
+import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { runSupervisorPlan } from '../agents/supervisor-plan.js';
 import { runInquiryWriter, runReportWriter } from '../agents/writer.js';
@@ -29,6 +30,8 @@ async function exec(ctx: Ctx, intent: IntentKind) {
   return { plan, rows };
 }
 
+// ─── Plain functions (called directly when intent is known) ──────────────────
+
 export async function runDashboard(ctx: Ctx) {
   const { plan, rows } = await exec(ctx, 'dashboard');
   return runChartAgent({ rows, prompt: ctx.prompt, intentHint: plan.chartHint });
@@ -45,3 +48,29 @@ export async function runInquiry(ctx: Ctx) {
   if (!rows.length) return { summary: 'No matching data found.' };
   return runInquiryWriter({ prompt: ctx.prompt, rows });
 }
+
+// ─── Tools (registered on the supervisor agent for open-ended routing) ────────
+
+export const inquiryTool = createTool({
+  id:          'execute-inquiry',
+  description: 'Answer a general analytics question — counts, averages, lists, lookups.',
+  inputSchema:  analyticsInputSchema,
+  outputSchema: z.object({ summary: z.string() }),
+  execute: async ({ context: ctx }) => runInquiry(ctx),
+});
+
+export const dashboardTool = createTool({
+  id:          'build-dashboard',
+  description: 'Build a chart or visualization — charts, graphs, plots, trends, distributions.',
+  inputSchema:  analyticsInputSchema,
+  outputSchema: z.object({ chartType: z.string(), title: z.string(), option: z.record(z.unknown()) }),
+  execute: async ({ context: ctx }) => runDashboard(ctx),
+});
+
+export const reportTool = createTool({
+  id:          'generate-report',
+  description: 'Generate a structured analytical report — analysis, insights, detailed breakdown.',
+  inputSchema:  analyticsInputSchema,
+  outputSchema: z.object({ reportSections: z.array(z.object({ heading: z.string(), body: z.string() })) }),
+  execute: async ({ context: ctx }) => runReport(ctx),
+});
