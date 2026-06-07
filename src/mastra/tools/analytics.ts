@@ -49,7 +49,6 @@ export async function executeInquiry(ctx: AnalyticsInput) {
   return runInquiryWriter({ prompt: ctx.prompt, rows });
 }
 
-// ─── Tools registered on the supervisor agent for open-ended routing ──────────
 
 export const dashboardTool = createTool({
   id:          'build-dashboard',
