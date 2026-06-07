@@ -5,13 +5,13 @@ import { runInquiryWriter, runReportWriter } from '../agents/writer.js';
 import { runChartAgent } from '../agents/chart.js';
 import { executePipeline } from '../../db/aggregation.js';
 import { findSource } from '../../db/source.repository.js';
+import { getSources } from '../../db/sources-cache.js';
 import type { Document } from 'mongodb';
-import type { DataSource, IntentKind } from '../../types/index.js';
+import type { IntentKind } from '../../types/index.js';
 
 export const analyticsInputSchema = z.object({
   prompt:     z.string().describe('The user question or request'),
   sourceName: z.string().optional(),
-  sources:    z.array(z.unknown()).optional(),
   intent:     z.string().optional().describe('Selected mode: dashboard | report | general_question'),
 });
 
@@ -20,13 +20,13 @@ type Ctx = z.infer<typeof analyticsInputSchema>;
 const MODE_PREFIX = /^\[Mode:[^\]]+\]\s*/;
 
 async function exec(ctx: Ctx, intent: IntentKind) {
-  const sources      = ctx.sources as DataSource[] | undefined;
-  const cleanPrompt  = ctx.prompt.replace(MODE_PREFIX, '');
-  const plan         = await runSupervisorPlan({ prompt: cleanPrompt, intent, sourceName: ctx.sourceName, sources });
+  const sources     = getSources();
+  const cleanPrompt = ctx.prompt.replace(MODE_PREFIX, '');
+  const plan        = await runSupervisorPlan({ prompt: cleanPrompt, intent, sourceName: ctx.sourceName, sources });
 
   if (!plan.needsData || !plan.pipeline?.length) return { plan, rows: [] as Document[] };
 
-  const collection = findSource(plan.query.sourceName ?? '', sources ?? [])?.collection
+  const collection = findSource(plan.query.sourceName ?? '', sources)?.collection
     ?? plan.query.sourceName
     ?? '';
 
