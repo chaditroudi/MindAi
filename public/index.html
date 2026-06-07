@@ -1075,12 +1075,6 @@
   </div>
 
   <script>
-    const SCOPE = {
-      userId: 'u_review',
-      tenantId: 't_mind_qatar',
-      allowedDataStores: ['ServiceRequests', 'Inspections', 'Permits', 'Projects'],
-    };
-
     const MODE_COPY = {
       dashboard: {
         badge: 'لوحة المعلومات',
@@ -1125,11 +1119,7 @@
     const elapsedEl = document.getElementById('elapsed');
     const progressBar = document.getElementById('progress-bar');
     const progressFill = document.getElementById('progress-fill');
-    const auditPanel = document.getElementById('audit-panel');
-    const auditToggle = document.getElementById('audit-toggle');
-    const auditBody = document.getElementById('audit-body');
     const resultSubtitle = document.getElementById('result-subtitle');
-    const searchImpact = document.getElementById('search-impact');
     const runChip = document.getElementById('run-chip');
     const durationChip = document.getElementById('duration-chip');
 
@@ -1140,8 +1130,6 @@
     let progressStageIndex = 0;
     let EXAMPLES = JSON.parse(JSON.stringify(FALLBACK_EXAMPLES));
     let AGENT_CAPABILITIES = [];
-    let conversation = null;
-    const DATASET_CACHE = new Map();
     const REQUEST_TIMEOUT_MS = 480000;
 
     let chart = echarts.init(chartDiv, null);
@@ -1177,11 +1165,6 @@
         renderExamples();
         resetResult();
       });
-    });
-
-    auditToggle.addEventListener('click', () => {
-      const open = auditBody.classList.toggle('open');
-      auditToggle.classList.toggle('open', open);
     });
 
     promptInput.addEventListener('keydown', (event) => {
