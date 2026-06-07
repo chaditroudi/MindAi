@@ -3,6 +3,7 @@ import { resolveModel } from '../model.js';
 import { finalizeTaskPlan } from '../task-plan.js';
 import { normalizeToken } from '../../db/source.repository.js';
 import { parseJsonOutput } from '../../utils/json-output.js';
+import { log } from '../../utils/logger.js';
 import type { DataSource, TaskPlan, IntentKind } from '../../types/index.js';
 
 const PLAN_INTENT_FIX = /"intent"\s*:\s*"inquiry"/;
@@ -56,6 +57,10 @@ export async function runSupervisorPlan({
     );
   }
 
+  const compact = compactSources(sources, sourceName);
+  log('supervisor-plan', `LLM call → model: llama-3.3-70b | intent: ${intent} | sources: [${compact.map((s: { name: string }) => s.name).join(', ')}]`);
+  log('supervisor-plan', `prompt sent to LLM: "${prompt}"`);
+
   const { text } = await generateText({
     model:       resolveModel('supervisor'),
     maxTokens:   900,
@@ -68,7 +73,7 @@ export async function runSupervisorPlan({
           prompt,
           intent,
           sourceName,
-          availableSources: compactSources(sources, sourceName),
+          availableSources: compact,
         }),
       },
     ],
@@ -77,6 +82,8 @@ export async function runSupervisorPlan({
   const plan = parseJsonOutput(
     text.replace(PLAN_INTENT_FIX, '"intent": "general_question"')
   ) as TaskPlan;
+
+  log('supervisor-plan', `pipeline built | stages: ${plan.pipeline?.length ?? 0} | needsData: ${plan.needsData}`, plan.pipeline);
 
   return finalizeTaskPlan({ plan, availableSources: sources, forcedIntent: intent });
 }

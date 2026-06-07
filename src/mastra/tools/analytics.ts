@@ -41,20 +41,35 @@ async function exec(ctx: AnalyticsInput, intent: IntentKind) {
 // ─── Callable directly from the router (no Mastra runtime context needed) ────
 
 export async function executeDashboard(ctx: AnalyticsInput) {
+  log('analytics', `executeDashboard() | prompt: "${ctx.prompt}"`);
   const { plan, rows } = await exec(ctx, 'dashboard');
-  return runChartAgent({ rows, prompt: ctx.prompt, intentHint: plan.chartHint });
+  const chart = await runChartAgent({ rows, prompt: ctx.prompt, intentHint: plan.chartHint });
+  log('analytics', `executeDashboard() done | chartType: ${chart.chartType} | title: "${chart.title}"`);
+  return chart;
 }
 
 export async function executeReport(ctx: AnalyticsInput) {
+  log('analytics', `executeReport() | prompt: "${ctx.prompt}"`);
   const { rows } = await exec(ctx, 'report');
-  if (!rows.length) return { reportSections: [{ heading: 'No Data', body: 'No matching records found.' }] };
-  return runReportWriter({ prompt: ctx.prompt, rows });
+  if (!rows.length) {
+    log('analytics', 'executeReport() — no rows, returning empty report');
+    return { reportSections: [{ heading: 'No Data', body: 'No matching records found.' }] };
+  }
+  const result = await runReportWriter({ prompt: ctx.prompt, rows });
+  log('analytics', `executeReport() done | sections: ${result.reportSections.length}`);
+  return result;
 }
 
 export async function executeInquiry(ctx: AnalyticsInput) {
+  log('analytics', `executeInquiry() | prompt: "${ctx.prompt}"`);
   const { rows } = await exec(ctx, 'general_question');
-  if (!rows.length) return { summary: 'No matching data found.' };
-  return runInquiryWriter({ prompt: ctx.prompt, rows });
+  if (!rows.length) {
+    log('analytics', 'executeInquiry() — no rows, returning empty summary');
+    return { summary: 'No matching data found.' };
+  }
+  const result = await runInquiryWriter({ prompt: ctx.prompt, rows });
+  log('analytics', `executeInquiry() done | summary length: ${result.summary.length} chars`);
+  return result;
 }
 
 
