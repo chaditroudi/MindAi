@@ -22,16 +22,18 @@ Rules:
 - Never invent data. Use only the provided rows.
 - Output JSON only: { chartType, title, option }
 
-Chart type selection:
-- trend / temporal data          → line
-- ranking / top N                → bar
-- comparison                     → bar
-- part of whole, ≤ 12 categories → donut
-- part of whole, > 12 categories → bar
-- distribution                   → histogram
-- geo data                       → map
-- 2+ numeric fields              → scatter
-- fallback                       → bar
+Chart type guidance (pick what best fits the actual data shape):
+- trend / temporal series        → line
+- few ranked categories (≤ 10)   → bar (vertical) or horizontalBar if labels are long
+- many categories (> 10)         → horizontalBar
+- part of whole (≤ 6 slices)     → donut
+- distribution of values         → histogram
+- geo / location data            → map
+- correlation of 2 numeric fields → scatter
+- default                        → bar
+
+Always look at the actual rows first. If the data has long string labels, prefer horizontalBar.
+If it has short labels or numbers, prefer bar. Never force a type — choose what renders best.
 `;
 
 export async function runChartAgent({
