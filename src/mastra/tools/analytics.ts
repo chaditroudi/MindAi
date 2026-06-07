@@ -5,6 +5,7 @@ import { runInquiryWriter, runReportWriter } from '../agents/writer.js';
 import { runChartAgent } from '../agents/chart.js';
 import { executePipeline } from '../../db/aggregation.js';
 import { findSource } from '../../db/source.repository.js';
+import type { Document } from 'mongodb';
 import type { DataSource, IntentKind } from '../../types/index.js';
 
 export const analyticsInputSchema = z.object({
