@@ -24,10 +24,10 @@ Rules:
 
 Chart type selection:
 - trend / temporal data          → line
-- ranking / top N                → horizontalBar
-- comparison                     → bar or horizontalBar
+- ranking / top N                → bar
+- comparison                     → bar
 - part of whole, ≤ 12 categories → donut
-- part of whole, > 12 categories → horizontalBar
+- part of whole, > 12 categories → bar
 - distribution                   → histogram
 - geo data                       → map
 - 2+ numeric fields              → scatter

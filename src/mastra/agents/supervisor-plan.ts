@@ -22,7 +22,7 @@ Rules:
 - sum   => $sum: "$field"
 - avg   => $avg: "$field"
 - list  => raw fetch with $limit 50
-- top N => $sort + $limit with chartHint "ranking"
+- top N => $sort + $limit with chartHint "compare"
 - trend => use a valid temporal field
 
 Pipeline order: $match → $lookup → $unwind → $group → $project → $sort → $limit
