@@ -26,7 +26,7 @@ apiRouter.post('/analytics', async (req, res) => {
     // Merge the selected mode into the prompt so the supervisor agent routes correctly
     const hintedPrompt = intent ? `[Mode: ${intent}] ${prompt}` : prompt;
 
-    const body   = analyticsInputSchema.parse({ prompt: hintedPrompt, sourceName: resolvedSource, sources });
+    const body   = analyticsInputSchema.parse({ prompt: hintedPrompt, sourceName: resolvedSource, sources, intent });
     const result = await mastra.getAgent('supervisorAgent').generate(
       [{ role: 'user', content: JSON.stringify(body) }],
       { maxSteps: 2, temperature: 0 },
