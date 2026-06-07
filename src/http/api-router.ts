@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { mastra } from '../mastra/index.js';
-import { analyticsInputSchema } from '../mastra/tools/analytics.js';
+import { analyticsInputSchema, runDashboard, runReport, runInquiry } from '../mastra/tools/analytics.js';
 import { runSearchPlan } from '../mastra/agents/search.js';
 import { executePipeline } from '../db/aggregation.js';
 import { getSources, reloadSources } from '../db/sources-cache.js';
@@ -9,46 +8,41 @@ import type { DataSource } from '../types/index.js';
 
 export const apiRouter = Router();
 
-const TOOL_TO_INTENT: Record<string, string> = {
-  'execute-inquiry': 'general_question',
-  'build-dashboard': 'dashboard',
-  'generate-report': 'report',
-};
-
 // ─── Analytics ───────────────────────────────────────────────────────────────
 
 apiRouter.post('/analytics', async (req, res) => {
   try {
+    if (!getSources().length) {
+      res.status(400).json({
+        error:  'No data sources configured.',
+        action: 'Register a dataset first → POST /api/sources',
+      });
+      return;
+    }
+
     const { prompt, intent, sourceName, dataStoreName } = req.body as {
       prompt:         string;
       intent?:        string;
       sourceName?:    string;
       dataStoreName?: string;
     };
-    const resolvedSource = sourceName ?? dataStoreName;
-    const hintedPrompt   = intent ? `[Mode: ${intent}] ${prompt}` : prompt;
 
-    const body   = analyticsInputSchema.parse({ prompt: hintedPrompt, sourceName: resolvedSource, intent });
-    const result = await mastra.getAgent('supervisorAgent').generate(
-      [{ role: 'user', content: JSON.stringify(body) }],
-      { maxSteps: 2, temperature: 0 },
-    );
+    const ctx = analyticsInputSchema.parse({ prompt, sourceName: sourceName ?? dataStoreName });
 
-    const toolResult = result.toolResults?.at(-1);
-    if (toolResult?.result) {
-      const toolName       = (toolResult as { toolName?: string }).toolName ?? '';
-      const resolvedIntent = intent ?? TOOL_TO_INTENT[toolName] ?? 'general_question';
-
-      if (resolvedIntent === 'dashboard') {
-        res.json({ intent: 'dashboard', chart: toolResult.result });
-        return;
-      }
-
-      res.json({ intent: resolvedIntent, ...(toolResult.result as object) });
+    if (intent === 'dashboard') {
+      const chart = await runDashboard(ctx);
+      res.json({ intent: 'dashboard', chart });
       return;
     }
 
-    res.json({ intent: 'general_question', summary: result.text });
+    if (intent === 'report') {
+      const result = await runReport(ctx);
+      res.json({ intent: 'report', ...result });
+      return;
+    }
+
+    const result = await runInquiry(ctx);
+    res.json({ intent: 'general_question', ...result });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -58,6 +52,14 @@ apiRouter.post('/analytics', async (req, res) => {
 
 apiRouter.post('/search', async (req, res) => {
   try {
+    if (!getSources().length) {
+      res.status(400).json({
+        error:  'No data sources configured.',
+        action: 'Register a dataset first → POST /api/sources',
+      });
+      return;
+    }
+
     const { prompt, sourceName } = req.body as {
       prompt:      string;
       sourceName?: string;

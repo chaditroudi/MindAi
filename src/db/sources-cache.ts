@@ -10,7 +10,11 @@ export async function initSources(): Promise<void> {
     .find({}, { projection: { _id: 0 } })
     .toArray();
   cache = docs as unknown as DataSource[];
-  console.log(`  Sources: ${cache.length} dataset(s) loaded`);
+  if (cache.length) {
+    console.log(`  Sources: ${cache.length} dataset(s) loaded`);
+  } else {
+    console.warn('  Warning: no sources found — register datasets via POST /api/sources');
+  }
 }
 
 export function getSources(): DataSource[] {
