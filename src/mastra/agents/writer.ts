@@ -16,6 +16,7 @@ const reportSectionsSchema = z.object({
 });
 
 export async function runInquiryWriter({ prompt, rows }: { prompt: string; rows: unknown[] }) {
+  log('writer-agent', `runInquiryWriter | rows: ${rows.length}`);
   const { object } = await generateObject({
     model:       resolveModel('writer'),
     schema:      summarySchema,
@@ -31,6 +32,7 @@ export async function runInquiryWriter({ prompt, rows }: { prompt: string; rows:
 }
 
 export async function runReportWriter({ prompt, rows }: { prompt: string; rows: unknown[] }) {
+  log('writer-agent', `runReportWriter | rows: ${rows.length}`);
   const { object } = await generateObject({
     model:       resolveModel('writer'),
     schema:      reportSectionsSchema,
