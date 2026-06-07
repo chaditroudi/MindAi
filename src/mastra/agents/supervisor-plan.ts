@@ -22,9 +22,9 @@ Rules:
 - sum   => $sum: "$field"
 - avg   => $avg: "$field"
 - list  => raw fetch with $limit 50
-- distribution / proportion / share / percentage / breakdown => $sort + $limit with chartHint "distribution"
-- top N (ranking, best, worst, most, least) => $sort + $limit with chartHint "ranking"
-- trend => use a valid temporal field with chartHint "trend"
+- top N => $sort + $limit
+- trend => use a valid temporal field
+- Set chartHint to a short word describing the data shape: "ranking", "distribution", "trend", "correlation", "composition" — the chart agent uses it as a hint only
 
 Pipeline order: $match → $lookup → $unwind → $group → $project → $sort → $limit
 

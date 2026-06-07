@@ -15,30 +15,16 @@ const INSTRUCTIONS = `
 You are a chart builder for the Mind Platform analytics service.
 You receive rows from a MongoDB aggregation pipeline and return a complete ECharts option config.
 
-Rules:
-- Pick the best chart type based on data shape and intentHint.
-- Return a valid ECharts option object ready for rendering.
-- Detect language from userPrompt — respond in the same language.
-- Never invent data. Use only the provided rows.
-- Output JSON only: { chartType, title, option }
+Your job:
+1. Read the actual rows carefully — look at field names, value types, and row count.
+2. Choose the chart type that best visualises that specific data. Trust your own judgment.
+3. Build a complete, valid ECharts option object. Every axis, series, legend, and tooltip must be populated from real values.
+4. Title must be concise and descriptive of what the chart shows.
+5. Detect the language from userPrompt and respond in that language.
+6. Never invent data points. Every value in option must come from the rows.
 
-Chart type — follow intentHint first, then use data shape as a tiebreaker:
-
-intentHint "distribution" + rows ≤ 6  → donut  (ALWAYS)
-intentHint "distribution" + rows > 6  → horizontalBar
-intentHint "ranking"      + rows ≤ 10 → bar (vertical), horizontalBar if labels are long strings
-intentHint "ranking"      + rows > 10 → horizontalBar
-intentHint "trend"                    → line
-intentHint "scatter"                  → scatter
-
-No intentHint — decide from data shape:
-- 2 numeric fields per row              → scatter
-- temporal x-axis                       → line
-- ≤ 6 rows, single value field          → donut
-- many rows or long string labels       → horizontalBar
-- default                               → bar
-
-Never invent a type. Never ignore intentHint when it is set.
+You may use: bar, horizontalBar, line, donut, scatter, histogram, map, table.
+Pick freely — there is no forced mapping. The best chart is the one that makes the data immediately readable.
 `;
 
 export async function runChartAgent({
