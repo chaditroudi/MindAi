@@ -20,8 +20,6 @@
       --accent: #0f766e;
       --accent-strong: #0b5f59;
       --accent-soft: #e6f4f2;
-      --blue: #2563eb;
-      --blue-soft: #eaf1ff;
       --warning: #b54708;
       --warning-soft: #fff4e5;
       --error: #b42318;
@@ -51,6 +49,7 @@
       grid-template-rows: auto 1fr;
     }
 
+    /* ── Topbar ── */
     .topbar {
       position: sticky;
       top: 0;
@@ -64,14 +63,6 @@
       max-width: 1500px;
       margin: 0 auto;
       padding: 12px 22px;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 18px;
-      align-items: center;
-    }
-
-    .brand {
-      min-width: 0;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -86,38 +77,24 @@
       background: var(--accent);
       color: #fff;
       font-weight: 800;
-      letter-spacing: 0;
       flex-shrink: 0;
     }
 
-    .brand-copy {
-      display: grid;
-      gap: 2px;
-      min-width: 0;
-    }
+    .brand-copy { display: grid; gap: 2px; min-width: 0; }
 
-    .brand h1 {
+    .brand-copy h1 {
       margin: 0;
       font-size: 1rem;
       line-height: 1.35;
-      letter-spacing: 0;
     }
 
-    .brand p {
+    .brand-copy p {
       margin: 0;
       color: var(--muted);
       font-size: 0.81rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    .tenant-strip {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      justify-content: flex-end;
-      flex-wrap: wrap;
     }
 
     .pill {
@@ -140,6 +117,7 @@
       background: var(--accent-soft);
     }
 
+    /* ── Layout ── */
     .main {
       width: 100%;
       max-width: 1500px;
@@ -175,14 +153,9 @@
       gap: 12px;
     }
 
-    .panel-title {
-      margin: 0;
-      font-size: 0.95rem;
-      line-height: 1.4;
-      font-weight: 800;
-      letter-spacing: 0;
-    }
+    .panel-title { margin: 0; font-size: 0.95rem; font-weight: 800; }
 
+    /* ── Mode tabs ── */
     .mode-tabs {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -211,11 +184,8 @@
       box-shadow: 0 1px 4px rgba(16, 24, 40, 0.12);
     }
 
-    .side-body {
-      padding: 16px;
-      display: grid;
-      gap: 16px;
-    }
+    /* ── Side body ── */
+    .side-body { padding: 16px; display: grid; gap: 16px; }
 
     .mode-note {
       margin: 0;
@@ -239,11 +209,7 @@
       font-weight: 750;
     }
 
-    .field-label span {
-      color: var(--subtle);
-      font-weight: 600;
-      font-size: 0.75rem;
-    }
+    .field-label span { color: var(--subtle); font-weight: 600; font-size: 0.75rem; }
 
     textarea {
       width: 100%;
@@ -262,52 +228,6 @@
       border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-soft);
     }
-
-    .search-toggle-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 0 4px;
-    }
-
-    .search-toggle-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-size: 0.84rem;
-      color: var(--muted);
-      user-select: none;
-    }
-
-    .search-toggle-label input[type="checkbox"] { display: none; }
-
-    .toggle-track {
-      position: relative;
-      width: 36px;
-      height: 20px;
-      border-radius: 999px;
-      background: var(--line);
-      flex-shrink: 0;
-      transition: background 180ms ease;
-    }
-
-    .toggle-thumb {
-      position: absolute;
-      top: 3px;
-      right: 3px;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #fff;
-      box-shadow: 0 1px 3px rgba(0,0,0,.2);
-      transition: right 180ms ease;
-    }
-
-    .search-toggle-label input:checked ~ .toggle-track { background: var(--accent); }
-    .search-toggle-label input:checked ~ .toggle-track .toggle-thumb { right: calc(100% - 17px); }
-
-    .search-toggle-label.active { color: var(--accent-strong); font-weight: 650; }
 
     .action-row {
       display: grid;
@@ -336,27 +256,13 @@
       font-weight: 800;
     }
 
-    .primary-btn:hover:not(:disabled) {
-      background: var(--accent-strong);
-      border-color: var(--accent-strong);
-    }
+    .primary-btn:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
+    .primary-btn:disabled { opacity: 0.62; cursor: not-allowed; }
 
-    .primary-btn:disabled {
-      opacity: 0.62;
-      cursor: not-allowed;
-    }
+    /* ── Status / Progress ── */
+    .status-wrap { border-top: 1px solid var(--line-soft); background: var(--surface-2); }
 
-    .status-wrap {
-      border-top: 1px solid var(--line-soft);
-      background: var(--surface-2);
-    }
-
-    .progress {
-      display: none;
-      height: 4px;
-      background: var(--line-soft);
-    }
-
+    .progress { display: none; height: 4px; background: var(--line-soft); }
     .progress.active { display: block; }
 
     .progress-fill {
@@ -387,19 +293,8 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .status-title {
-      color: var(--accent-strong);
-      font-size: 0.84rem;
-      font-weight: 800;
-    }
-
-    .status-detail {
-      color: var(--muted);
-      font-size: 0.78rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    .status-title  { color: var(--accent-strong); font-size: 0.84rem; font-weight: 800; }
+    .status-detail { color: var(--muted); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .elapsed {
       direction: ltr;
@@ -409,10 +304,8 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .examples-section {
-      display: grid;
-      gap: 9px;
-    }
+    /* ── Examples ── */
+    .examples-section { display: grid; gap: 9px; }
 
     .examples-heading {
       display: flex;
@@ -421,20 +314,10 @@
       gap: 10px;
     }
 
-    .examples-heading h3 {
-      margin: 0;
-      font-size: 0.86rem;
-    }
+    .examples-heading h3 { margin: 0; font-size: 0.86rem; }
+    .examples-heading span { color: var(--subtle); font-size: 0.74rem; }
 
-    .examples-heading span {
-      color: var(--subtle);
-      font-size: 0.74rem;
-    }
-
-    .examples {
-      display: grid;
-      gap: 8px;
-    }
+    .examples { display: grid; gap: 8px; }
 
     .examples button {
       width: 100%;
@@ -451,15 +334,9 @@
       line-height: 1.45;
     }
 
-    .examples button:hover {
-      border-color: var(--accent);
-      background: #fbfffe;
-    }
+    .examples button:hover { border-color: var(--accent); background: #fbfffe; }
 
-    .example-title {
-      font-size: 0.88rem;
-      font-weight: 700;
-    }
+    .example-title { font-size: 0.88rem; font-weight: 700; }
 
     .example-meta {
       display: flex;
@@ -491,95 +368,10 @@
       line-height: 1.6;
     }
 
-    .agent-capabilities-section {
-      display: grid;
-      gap: 9px;
-    }
+    /* ── Workspace / Result ── */
+    .workspace { display: grid; gap: 18px; min-width: 0; }
 
-    .agent-capabilities {
-      display: grid;
-      gap: 8px;
-    }
-
-    .agent-card {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--surface);
-      padding: 12px;
-      display: grid;
-      gap: 12px;
-    }
-
-    .agent-card-head {
-      display: grid;
-      gap: 4px;
-    }
-
-    .agent-name {
-      margin: 0;
-      font-size: 0.88rem;
-      font-weight: 800;
-    }
-
-    .agent-description {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.78rem;
-      line-height: 1.65;
-    }
-
-    .agent-group {
-      display: grid;
-      gap: 6px;
-    }
-
-    .agent-group-title {
-      color: var(--muted);
-      font-size: 0.74rem;
-      font-weight: 800;
-    }
-
-    .agent-list {
-      margin: 0;
-      padding: 0 18px 0 0;
-      color: var(--text);
-      font-size: 0.78rem;
-      line-height: 1.7;
-    }
-
-    .agent-list li { margin: 0 0 3px; }
-
-    .tool-chips {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .tool-chip {
-      display: inline-flex;
-      align-items: center;
-      min-height: 24px;
-      padding: 0 8px;
-      border-radius: 999px;
-      border: 1px solid #bfdbfe;
-      background: var(--blue-soft);
-      color: var(--blue);
-      font-size: 0.73rem;
-      font-weight: 800;
-      direction: ltr;
-    }
-
-    .workspace {
-      display: grid;
-      gap: 18px;
-      min-width: 0;
-    }
-
-    .result-panel {
-      overflow: hidden;
-      min-height: 660px;
-    }
+    .result-panel { overflow: hidden; min-height: 660px; }
 
     .result-header {
       min-height: 56px;
@@ -591,11 +383,7 @@
       align-items: center;
     }
 
-    .result-title-block {
-      min-width: 0;
-      display: grid;
-      gap: 2px;
-    }
+    .result-title-block { min-width: 0; display: grid; gap: 2px; }
 
     .result-title-block p {
       margin: 0;
@@ -628,87 +416,10 @@
       white-space: nowrap;
     }
 
-    .run-chip.ok {
-      color: var(--accent-strong);
-      background: var(--accent-soft);
-      border-color: #b9ddd8;
-    }
+    .run-chip.ok   { color: var(--accent-strong); background: var(--accent-soft); border-color: #b9ddd8; }
+    .run-chip.warn { color: var(--warning); background: var(--warning-soft); border-color: #fedf89; }
 
-    .run-chip.warn {
-      color: var(--warning);
-      background: var(--warning-soft);
-      border-color: #fedf89;
-    }
-
-    .result-body {
-      padding: 16px;
-      display: grid;
-      gap: 14px;
-    }
-
-    .search-impact {
-      display: none;
-      gap: 8px;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--surface-2);
-    }
-
-    .search-impact.active { display: grid; }
-
-    .impact-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .impact-title {
-      font-size: 0.84rem;
-      font-weight: 800;
-    }
-
-    .impact-status {
-      display: inline-flex;
-      align-items: center;
-      min-height: 24px;
-      padding: 0 8px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      color: var(--muted);
-      background: var(--surface);
-      font-size: 0.72rem;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .impact-status.used {
-      color: var(--accent-strong);
-      border-color: #b9ddd8;
-      background: var(--accent-soft);
-    }
-
-    .impact-status.no-results {
-      color: var(--warning);
-      border-color: #fedf89;
-      background: var(--warning-soft);
-    }
-
-    .impact-copy {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.79rem;
-      line-height: 1.65;
-    }
-
-    .impact-facts {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
+    .result-body { padding: 16px; display: grid; gap: 14px; }
 
     .chart-meta {
       display: none;
@@ -719,18 +430,7 @@
     }
 
     .chart-meta.active { display: grid; }
-
-    .chart-title {
-      font-weight: 800;
-      overflow-wrap: anywhere;
-    }
-
-    .chart-subtitle {
-      color: var(--muted);
-      font-size: 0.83rem;
-      line-height: 1.5;
-      margin-top: 3px;
-    }
+    .chart-title { font-weight: 800; overflow-wrap: anywhere; }
 
     .chart-type {
       display: none;
@@ -754,10 +454,7 @@
       background: #fff;
     }
 
-    #chart {
-      width: 100%;
-      height: 520px;
-    }
+    #chart { width: 100%; height: 520px; }
 
     #output-text {
       display: none;
@@ -768,29 +465,9 @@
       line-height: 1.75;
     }
 
-    #output-text h3 {
-      margin: 0 0 6px;
-      font-size: 1rem;
-    }
-
-    #output-text p {
-      margin: 0 0 14px;
-      color: var(--muted);
-    }
-
+    #output-text h3 { margin: 0 0 6px; font-size: 1rem; }
+    #output-text p  { margin: 0 0 14px; color: var(--muted); }
     #output-text p:last-child { margin-bottom: 0; }
-
-    .record-link {
-      display: inline-flex;
-      margin: 4px 0 0 6px;
-      border: 1px solid #b9ddd8;
-      background: var(--accent-soft);
-      color: var(--accent-strong);
-      border-radius: 999px;
-      padding: 5px 9px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
 
     .placeholder {
       min-height: 410px;
@@ -814,125 +491,8 @@
       line-height: 1.65;
     }
 
-    .audit-panel {
-      overflow: hidden;
-    }
-
-    .audit-toggle {
-      width: 100%;
-      min-height: 52px;
-      border: 0;
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      padding: 13px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      font-weight: 800;
-    }
-
-    .audit-toggle:hover { background: var(--surface-2); }
-    .audit-toggle .arrow { transition: transform 180ms ease; }
-    .audit-toggle.open .arrow { transform: rotate(180deg); }
-
-    .audit-body {
-      display: none;
-      padding: 0 16px 16px;
-      border-top: 1px solid var(--line-soft);
-    }
-
-    .audit-body.open {
-      display: grid;
-      gap: 12px;
-    }
-
-    .skills-grid {
-      display: grid;
-      gap: 8px;
-    }
-
-    .skill-card {
-      border: 1px solid var(--line-soft);
-      border-radius: var(--radius-sm);
-      background: var(--surface-2);
-      padding: 10px 12px;
-      display: grid;
-      gap: 4px;
-    }
-
-    .skill-card-head {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .skill-badge {
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent-strong);
-      white-space: nowrap;
-    }
-
-    .skill-agent {
-      font-size: 0.75rem;
-      color: var(--subtle);
-    }
-
-    .skill-name {
-      font-size: 0.84rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .skill-rule {
-      font-size: 0.78rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .skill-rule code {
-      background: var(--surface-3);
-      border-radius: 3px;
-      padding: 0 4px;
-      font-size: 0.75rem;
-      font-family: monospace;
-    }
-
-    .audit-row {
-      display: grid;
-      grid-template-columns: 132px minmax(0, 1fr);
-      gap: 10px;
-      align-items: start;
-      padding-top: 12px;
-    }
-
-    .audit-key {
-      color: var(--muted);
-      font-size: 0.82rem;
-      font-weight: 800;
-    }
-
-    .audit-code {
-      direction: ltr;
-      text-align: left;
-      max-height: 300px;
-      overflow: auto;
-      white-space: pre;
-      background: #101828;
-      color: #d0d5dd;
-      border-radius: var(--radius);
-      padding: 12px;
-      font: 11.5px/1.55 Consolas, "Cascadia Mono", monospace;
-    }
-
+    /* ── Responsive ── */
     @media (max-width: 1060px) {
-      .topbar-inner { grid-template-columns: 1fr; }
-      .tenant-strip { justify-content: flex-start; }
       .main { grid-template-columns: 1fr; padding: 14px; }
       .side-panel { position: static; }
       .result-panel { min-height: 0; }
@@ -941,14 +501,12 @@
 
     @media (max-width: 620px) {
       .topbar-inner { padding: 12px 14px; }
-      .brand p { white-space: normal; }
       .mode-tabs { grid-template-columns: 1fr; }
       .action-row { grid-template-columns: 1fr; }
       .primary-btn { width: 100%; }
       .result-header { grid-template-columns: 1fr; }
       .result-actions { justify-content: flex-start; }
       .chart-meta { grid-template-columns: 1fr; }
-      .audit-row { grid-template-columns: 1fr; }
       #chart { height: 340px; }
     }
   </style>
@@ -957,17 +515,10 @@
   <div class="app">
     <header class="topbar">
       <div class="topbar-inner">
-        <div class="brand">
-          <div class="brand-mark">M</div>
-          <div class="brand-copy">
-            <h1>Mind Analytics Console</h1>
-            <p>واجهة اختبار مركزة لمسار الوكلاء من السؤال إلى الاستعلام والنتيجة.</p>
-          </div>
-        </div>
-        <div class="tenant-strip">
-          <span class="pill primary">tenant: t_mind_qatar</span>
-          <span class="pill">MongoDB</span>
-          <span class="pill">Mastra agents</span>
+        <div class="brand-mark">M</div>
+        <div class="brand-copy">
+          <h1>Mind Analytics Console</h1>
+          <p>واجهة اختبار مركزة لمسار الوكلاء من السؤال إلى الاستعلام والنتيجة.</p>
         </div>
       </div>
     </header>
@@ -981,7 +532,7 @@
 
         <nav class="mode-tabs" aria-label="mode">
           <button class="active" data-intent="dashboard" type="button">لوحة المعلومات</button>
-          <button data-intent="report" type="button">التقرير</button>
+          <button data-intent="report"  type="button">التقرير</button>
           <button data-intent="inquiry" type="button">الاستعلام</button>
         </nav>
 
@@ -996,14 +547,6 @@
             <textarea id="prompt" placeholder="سيتم تحميل أمثلة من بيانات المنصة" rows="5"></textarea>
           </section>
 
-          <div class="search-toggle-row">
-            <label class="search-toggle-label" id="search-toggle-label" for="search-enrich">
-              <input type="checkbox" id="search-enrich">
-              <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              <span>تفعيل وكيل البحث الداخلي</span>
-            </label>
-          </div>
-
           <div class="action-row">
             <div class="source-label" id="selected-store">مصدر البيانات: تلقائي</div>
             <button id="go" class="primary-btn" type="button">تشغيل</button>
@@ -1016,14 +559,6 @@
             </div>
             <div class="examples" id="examples"></div>
           </section>
-
-          <section class="agent-capabilities-section">
-            <div class="examples-heading">
-              <h3>قدرات وكيل البحث</h3>
-              <span>من /api/meta</span>
-            </div>
-            <div class="agent-capabilities" id="agent-capabilities"></div>
-          </section>
         </div>
 
         <div class="status-wrap">
@@ -1033,7 +568,7 @@
           <div class="status" id="run-status" aria-live="polite">
             <div class="spinner" aria-hidden="true"></div>
             <div>
-              <div class="status-title" id="status-title">جار التشغيل</div>
+              <div class="status-title"  id="status-title">جار التشغيل</div>
               <div class="status-detail" id="status-detail">تهيئة الطلب</div>
             </div>
             <div class="elapsed" id="elapsed">0s</div>
@@ -1056,20 +591,17 @@
 
           <div class="result-body">
             <div class="chart-meta" id="chart-meta">
-              <div>
-                <div class="chart-title" id="chart-meta-title"></div>
-                <div class="chart-subtitle" id="chart-meta-subtitle"></div>
-              </div>
+              <div class="chart-title" id="chart-meta-title"></div>
               <span class="chart-type" id="chart-type-pill"></span>
             </div>
 
             <div id="chart-wrap">
               <div id="chart"></div>
             </div>
+
             <div id="output-text"></div>
           </div>
         </section>
-
       </section>
     </main>
   </div>
@@ -1077,89 +609,92 @@
   <script>
     const MODE_COPY = {
       dashboard: {
-        badge: 'لوحة المعلومات',
-        note: 'ينشئ مخططا واحدا من بيانات MongoDB مع عرض خطة التنفيذ والمسار.',
-        placeholder: 'مثال: top 5 municipalities by service request count',
+        badge:       'لوحة المعلومات',
+        note:        'ينشئ مخططا واحدا من بيانات MongoDB.',
+        placeholder: 'مثال: أعلى 5 مصادر حسب العدد',
       },
       report: {
-        badge: 'التقرير',
-        note: 'ينشئ تقريرا تحليليا موجزا، ويمكن أن يضيف مخططا عند الحاجة.',
-        placeholder: 'مثال: analyze service request count by municipality over the last 90 days',
+        badge:       'التقرير',
+        note:        'ينشئ تقريرا تحليليا موجزا من بيانات MongoDB.',
+        placeholder: 'مثال: تحليل تفصيلي للبيانات',
       },
       inquiry: {
-        badge: 'الاستعلام',
-        note: 'يجلب سجلات مطابقة من MongoDB ثم يلخصها ويربطها بالعناصر.',
-        placeholder: 'مثال: find recent service requests where status is new',
+        badge:       'الاستعلام',
+        note:        'يجلب سجلات مطابقة ثم يلخصها.',
+        placeholder: 'مثال: ابحث في السجلات الأخيرة',
       },
     };
 
     const FALLBACK_EXAMPLES = {
-      dashboard: { placeholder: MODE_COPY['dashboard'].placeholder, prompts: [] },
-      report:    { placeholder: MODE_COPY['report'].placeholder,    prompts: [] },
-      inquiry:   { placeholder: MODE_COPY['inquiry'].placeholder,   prompts: [] },
+      dashboard: { placeholder: MODE_COPY.dashboard.placeholder, prompts: [] },
+      report:    { placeholder: MODE_COPY.report.placeholder,    prompts: [] },
+      inquiry:   { placeholder: MODE_COPY.inquiry.placeholder,   prompts: [] },
     };
 
-    const chartWrap = document.getElementById('chart-wrap');
-    const chartDiv = document.getElementById('chart');
-    const chartMeta = document.getElementById('chart-meta');
-    const chartMetaTitle = document.getElementById('chart-meta-title');
-    const chartMetaSubtitle = document.getElementById('chart-meta-subtitle');
-    const chartTypePill = document.getElementById('chart-type-pill');
-    const outputText = document.getElementById('output-text');
-    const promptInput = document.getElementById('prompt');
-    const goBtn = document.getElementById('go');
-    const examplesDiv = document.getElementById('examples');
-    const agentCapabilitiesDiv = document.getElementById('agent-capabilities');
-    const selectedStore = document.getElementById('selected-store');
-    const modeBadge = document.getElementById('mode-badge');
-    const modeNote = document.getElementById('mode-note');
-    const runStatus = document.getElementById('run-status');
-    const statusTitle = document.getElementById('status-title');
-    const statusDetail = document.getElementById('status-detail');
-    const elapsedEl = document.getElementById('elapsed');
-    const progressBar = document.getElementById('progress-bar');
-    const progressFill = document.getElementById('progress-fill');
-    const resultSubtitle = document.getElementById('result-subtitle');
-    const runChip = document.getElementById('run-chip');
-    const durationChip = document.getElementById('duration-chip');
-
-    let currentEndpoint = 'dashboard';
-    let selectedDataStoreName = undefined;
-    let progressTimer = null;
-    let progressStartedAt = 0;
-    let progressStageIndex = 0;
-    let EXAMPLES = JSON.parse(JSON.stringify(FALLBACK_EXAMPLES));
-    let AGENT_CAPABILITIES = [];
-    const REQUEST_TIMEOUT_MS = 480000;
-
-    let chart = echarts.init(chartDiv, null);
-    window.addEventListener('resize', () => chart.resize());
+    const INTENT_MAP = { dashboard: 'dashboard', report: 'report', inquiry: 'general_question' };
 
     const PROGRESS_STAGES = {
       dashboard: [
-        { label: 'تخطيط الطلب',   detail: 'المشرف يحول السؤال إلى خطة بيانات',  at: 0 },
-        { label: 'قراءة MongoDB', detail: 'بناء وتنفيذ aggregation',             at: 2500 },
-        { label: 'اختيار المخطط', detail: 'وكيل الرسم يحدد النوع والمحاور',      at: 6500 },
-        { label: 'تجهيز النتيجة', detail: 'إرجاع الرسم وتفاصيل التدقيق',        at: 9500 },
+        { label: 'تخطيط الطلب',   detail: 'المشرف يحول السؤال إلى خطة بيانات', at: 0     },
+        { label: 'قراءة MongoDB', detail: 'بناء وتنفيذ aggregation',            at: 2500  },
+        { label: 'اختيار المخطط', detail: 'وكيل الرسم يحدد النوع والمحاور',     at: 6500  },
+        { label: 'تجهيز النتيجة', detail: 'إرجاع الرسم',                        at: 9500  },
       ],
       report: [
-        { label: 'تخطيط التقرير', detail: 'المشرف يحدد البيانات المطلوبة',       at: 0 },
-        { label: 'قراءة MongoDB', detail: 'تنفيذ الاستعلام والتحقق من الصفوف',   at: 2500 },
-        { label: 'كتابة التقرير', detail: 'وكيل الكاتب يصيغ الأقسام',           at: 7000 },
-        { label: 'تجهيز النتيجة', detail: 'إرجاع التقرير والتدقيق',             at: 11000 },
+        { label: 'تخطيط التقرير', detail: 'المشرف يحدد البيانات المطلوبة',      at: 0     },
+        { label: 'قراءة MongoDB', detail: 'تنفيذ الاستعلام',                    at: 2500  },
+        { label: 'كتابة التقرير', detail: 'وكيل الكاتب يصيغ الأقسام',          at: 7000  },
+        { label: 'تجهيز النتيجة', detail: 'إرجاع التقرير',                      at: 11000 },
       ],
       inquiry: [
-        { label: 'تخطيط البحث',   detail: 'المشرف يحدد السجلات المطلوبة',       at: 0 },
-        { label: 'جلب السجلات',   detail: 'MongoDB يطبق المرشحات',              at: 2200 },
-        { label: 'تلخيص النتيجة', detail: 'وكيل الكاتب يصوغ الإجابة',          at: 5600 },
+        { label: 'تخطيط البحث',   detail: 'المشرف يحدد السجلات المطلوبة',      at: 0     },
+        { label: 'جلب السجلات',   detail: 'MongoDB يطبق المرشحات',             at: 2200  },
+        { label: 'تلخيص النتيجة', detail: 'وكيل الكاتب يصوغ الإجابة',         at: 5600  },
       ],
     };
 
-    document.querySelectorAll('.mode-tabs button').forEach((button) => {
-      button.addEventListener('click', () => {
-        document.querySelectorAll('.mode-tabs button').forEach((candidate) => candidate.classList.remove('active'));
-        button.classList.add('active');
-        currentEndpoint = button.dataset.intent;
+    // ── DOM refs ──────────────────────────────────────────────────────────────
+    const chartDiv       = document.getElementById('chart');
+    const chartWrap      = document.getElementById('chart-wrap');
+    const chartMeta      = document.getElementById('chart-meta');
+    const chartMetaTitle = document.getElementById('chart-meta-title');
+    const chartTypePill  = document.getElementById('chart-type-pill');
+    const outputText     = document.getElementById('output-text');
+    const promptInput    = document.getElementById('prompt');
+    const goBtn          = document.getElementById('go');
+    const examplesDiv    = document.getElementById('examples');
+    const selectedStore  = document.getElementById('selected-store');
+    const modeBadge      = document.getElementById('mode-badge');
+    const modeNote       = document.getElementById('mode-note');
+    const runStatus      = document.getElementById('run-status');
+    const statusTitle    = document.getElementById('status-title');
+    const statusDetail   = document.getElementById('status-detail');
+    const elapsedEl      = document.getElementById('elapsed');
+    const progressBar    = document.getElementById('progress-bar');
+    const progressFill   = document.getElementById('progress-fill');
+    const resultSubtitle = document.getElementById('result-subtitle');
+    const runChip        = document.getElementById('run-chip');
+    const durationChip   = document.getElementById('duration-chip');
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let currentMode           = 'dashboard';
+    let selectedDataStoreName = undefined;
+    let progressTimer         = null;
+    let progressStartedAt     = 0;
+    let EXAMPLES              = JSON.parse(JSON.stringify(FALLBACK_EXAMPLES));
+
+    const REQUEST_TIMEOUT_MS = 480_000;
+
+    // ── ECharts ───────────────────────────────────────────────────────────────
+    const chart = echarts.init(chartDiv, null);
+    window.addEventListener('resize', () => chart.resize());
+
+    // ── Mode tabs ─────────────────────────────────────────────────────────────
+    document.querySelectorAll('.mode-tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode           = btn.dataset.intent;
         selectedDataStoreName = undefined;
         updateModeCopy();
         renderExamples();
@@ -1167,11 +702,8 @@
       });
     });
 
-    promptInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        run();
-      }
+    promptInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); run(); }
     });
 
     promptInput.addEventListener('input', () => {
@@ -1181,11 +713,12 @@
 
     goBtn.addEventListener('click', run);
 
+    // ── UI helpers ────────────────────────────────────────────────────────────
     function updateModeCopy() {
-      const copy = MODE_COPY[currentEndpoint];
-      modeBadge.textContent = copy.badge;
-      modeNote.textContent = copy.note;
-      promptInput.placeholder = EXAMPLES[currentEndpoint]?.placeholder || copy.placeholder;
+      const copy = MODE_COPY[currentMode];
+      modeBadge.textContent   = copy.badge;
+      modeNote.textContent    = copy.note;
+      promptInput.placeholder = EXAMPLES[currentMode]?.placeholder || copy.placeholder;
     }
 
     function updateSelectedStore() {
@@ -1195,144 +728,78 @@
     }
 
     function renderExamples() {
-      const config = EXAMPLES[currentEndpoint] || FALLBACK_EXAMPLES[currentEndpoint];
-      promptInput.placeholder = config.placeholder || MODE_COPY[currentEndpoint].placeholder;
+      const config = EXAMPLES[currentMode] || FALLBACK_EXAMPLES[currentMode];
+      promptInput.placeholder = config.placeholder || MODE_COPY[currentMode].placeholder;
 
       if (!config.prompts?.length) {
         examplesDiv.innerHTML = '<div class="empty-examples">لم يتم تحميل اقتراحات بعد. يمكنك كتابة طلبك مباشرة.</div>';
         return;
       }
 
-      examplesDiv.innerHTML = config.prompts
-        .map(({ label, prompt, dataStoreName, tag }) => `
-          <button data-prompt="${escAttr(prompt)}" data-store="${escAttr(dataStoreName || '')}" type="button">
-            <span class="example-title">${esc(label)}</span>
-            <span class="example-meta">
-              ${tag ? `<span class="tag">${esc(tag)}</span>` : ''}
-              ${dataStoreName ? `<span>${esc(dataStoreName)}</span>` : '<span>Auto</span>'}
-            </span>
-          </button>`)
-        .join('');
+      examplesDiv.innerHTML = config.prompts.map(({ label, prompt, dataStoreName, tag }) => `
+        <button data-prompt="${escAttr(prompt)}" data-store="${escAttr(dataStoreName || '')}" type="button">
+          <span class="example-title">${esc(label)}</span>
+          <span class="example-meta">
+            ${tag           ? `<span class="tag">${esc(tag)}</span>` : ''}
+            ${dataStoreName ? `<span>${esc(dataStoreName)}</span>`   : '<span>Auto</span>'}
+          </span>
+        </button>`).join('');
 
-      examplesDiv.querySelectorAll('button').forEach((button) => {
-        button.addEventListener('click', () => {
-          promptInput.value = button.dataset.prompt;
-          selectedDataStoreName = button.dataset.store || undefined;
+      examplesDiv.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          promptInput.value     = btn.dataset.prompt;
+          selectedDataStoreName = btn.dataset.store || undefined;
           updateSelectedStore();
           run();
         });
       });
     }
 
+    // ── Meta ──────────────────────────────────────────────────────────────────
     async function loadMeta() {
       try {
-        const res = await fetch('/api/meta');
+        const res  = await fetch('/api/meta');
         const data = await res.json();
         if (!res.ok) return;
+
         EXAMPLES = Object.fromEntries(
-          data.modes.map((mode) => {
-            const key = mode.intent || mode.endpoint?.replace('/api/', '') || mode.endpoint;
-            return [
-              key,
-              {
-                placeholder: mode.placeholder || FALLBACK_EXAMPLES[key]?.placeholder,
-                prompts: (mode.prompts || []).map((prompt) => ({
-                  ...prompt,
-                  tag: tagForEndpoint(key),
-                })),
-              },
-            ];
-          }),
+          data.modes.map(mode => [
+            mode.intent,
+            {
+              placeholder: mode.placeholder || FALLBACK_EXAMPLES[mode.intent]?.placeholder,
+              prompts: (mode.prompts || []).map(p => ({ ...p, tag: tagForMode(mode.intent) })),
+            },
+          ])
         );
-        AGENT_CAPABILITIES = Array.isArray(data.agents) ? data.agents : [];
+
         updateModeCopy();
         renderExamples();
-        renderAgentCapabilities();
       } catch {
         renderExamples();
-        renderAgentCapabilities();
       }
     }
 
-    function renderAgentCapabilities() {
-      const searchAgents = AGENT_CAPABILITIES.filter((agent) => agent.id === 'searchAgent');
-      if (!searchAgents.length) {
-        agentCapabilitiesDiv.innerHTML =
-          '<div class="empty-examples">لم يتم تحميل بيانات قدرات وكيل البحث بعد.</div>';
-        return;
-      }
-
-      agentCapabilitiesDiv.innerHTML = searchAgents
-        .map((agent) => `
-          <article class="agent-card">
-            <div class="agent-card-head">
-              <h4 class="agent-name">${esc(agent.label)}</h4>
-              <p class="agent-description">${esc(agent.description)}</p>
-            </div>
-            ${renderAgentList('ما يستطيع فعله', agent.capabilities)}
-            ${renderAgentTools(agent.tools)}
-            ${renderAgentList('الحدود', agent.boundaries)}
-          </article>`)
-        .join('');
-    }
-
-    function renderAgentList(title, items) {
-      if (!items?.length) return '';
-      return `
-        <div class="agent-group">
-          <div class="agent-group-title">${esc(title)}</div>
-          <ul class="agent-list">
-            ${items.map((item) => `<li>${esc(item)}</li>`).join('')}
-          </ul>
-        </div>`;
-    }
-
-    function renderAgentTools(tools) {
-      if (!tools?.length) return '';
-      return `
-        <div class="agent-group">
-          <div class="agent-group-title">الأدوات</div>
-          <div class="tool-chips">
-            ${tools.map((tool) => `<span class="tool-chip">${esc(tool)}</span>`).join('')}
-          </div>
-        </div>`;
-    }
-
-    function tagForEndpoint(mode) {
+    function tagForMode(mode) {
       if (mode === 'dashboard') return 'رسم';
-      if (mode === 'report') return 'تقرير';
+      if (mode === 'report')    return 'تقرير';
       return 'بحث';
     }
 
-    const searchEnrichToggle = document.getElementById('search-enrich');
-    const searchToggleLabel = document.getElementById('search-toggle-label');
-    searchEnrichToggle.addEventListener('change', () => {
-      searchToggleLabel.classList.toggle('active', searchEnrichToggle.checked);
-    });
-
+    // ── Run ───────────────────────────────────────────────────────────────────
     async function run() {
       const prompt = promptInput.value.trim();
       if (!prompt) return;
 
-      const finalPrompt = searchEnrichToggle.checked
-        ? `search internal platform knowledge: ${prompt}`
-        : prompt;
-
-      const intentMap = { dashboard: 'dashboard', report: 'report', inquiry: 'general_question' };
-      const intent = intentMap[currentEndpoint] || 'general_question';
-
+      const intent = INTENT_MAP[currentMode] || 'general_question';
       startProgress();
 
       try {
         const startedAt = Date.now();
+
         const res = await fetchWithTimeout('/api/analytics', {
-          method: 'POST',
+          method:  'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            prompt:        finalPrompt,
-            intent,
-            dataStoreName: selectedDataStoreName,
-          }),
+          body:    JSON.stringify({ prompt, intent, dataStoreName: selectedDataStoreName }),
         }, REQUEST_TIMEOUT_MS);
 
         const data = await res.json();
@@ -1342,8 +809,8 @@
         render(data);
 
         const elapsed = Date.now() - startedAt;
-        runChip.textContent = 'اكتمل';
-        runChip.className = 'run-chip ok';
+        runChip.textContent      = 'اكتمل';
+        runChip.className        = 'run-chip ok';
         durationChip.textContent = `${elapsed.toLocaleString()} ms`;
         resultSubtitle.textContent = summarizeResult(data);
       } catch (err) {
@@ -1352,17 +819,17 @@
         chartMeta.classList.remove('active');
         chartTypePill.classList.remove('active');
         outputText.style.display = 'block';
-        outputText.innerHTML = `<div class="error">خطأ: ${esc(err.message)}</div>`;
-        resultSubtitle.textContent = 'فشل الطلب. راجع سجل الخادم أو تفاصيل الخطأ.';
+        outputText.innerHTML     = `<div class="error">خطأ: ${esc(err.message)}</div>`;
+        resultSubtitle.textContent = 'فشل الطلب. راجع سجل الخادم.';
         runChip.textContent = 'فشل';
-        runChip.className = 'run-chip warn';
+        runChip.className   = 'run-chip warn';
       } finally {
         resetControls();
       }
     }
 
     async function fetchWithTimeout(url, opts, ms) {
-      const ctrl = new AbortController();
+      const ctrl  = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), ms);
       try {
         return await fetch(url, { ...opts, signal: ctrl.signal });
@@ -1374,47 +841,38 @@
       }
     }
 
+    // ── Render ────────────────────────────────────────────────────────────────
     function render(data) {
       if (data.intent === 'dashboard' && data.chart) {
-        chartWrap.style.display = 'block';
+        chartWrap.style.display  = 'block';
         outputText.style.display = 'none';
-        renderChartResult(data.chart);
+        renderChart(data.chart);
         return;
       }
 
       if (data.intent === 'report') {
-        chartWrap.style.display = data.charts?.[0] ? 'block' : 'none';
-        outputText.style.display = 'block';
-        outputText.innerHTML = (data.reportSections || [])
-          .map((section) => `<h3>${esc(section.heading)}</h3><p>${esc(section.body)}</p>`)
-          .join('');
-        if (data.charts?.[0]) renderChartResult(data.charts[0]);
-        else {
-          chartMeta.classList.remove('active');
-          chartTypePill.classList.remove('active');
-        }
-        return;
-      }
-
-      if (data.intent === 'general_question') {
         chartWrap.style.display = 'none';
         chartMeta.classList.remove('active');
         chartTypePill.classList.remove('active');
         outputText.style.display = 'block';
-        outputText.innerHTML =
-          `<p>${esc(data.summary || '')}</p>` +
-          (data.recordLinks || [])
-            .map((link) => `<span class="record-link">${esc(link.label)}</span>`)
-            .join('');
+        outputText.innerHTML = (data.reportSections || [])
+          .map(s => `<h3>${esc(s.heading)}</h3><p>${esc(s.body)}</p>`)
+          .join('');
+        return;
       }
+
+      chartWrap.style.display = 'none';
+      chartMeta.classList.remove('active');
+      chartTypePill.classList.remove('active');
+      outputText.style.display = 'block';
+      outputText.innerHTML     = `<p>${esc(data.summary || '')}</p>`;
     }
 
-    function renderChartResult(chartData) {
+    function renderChart(chartData) {
       chart.clear();
       chart.setOption(chartData.option, true);
       chartMetaTitle.textContent = chartData.title || 'الرسم البياني';
-      chartMetaSubtitle.textContent = chartData.accessibility?.description || '';
-      chartTypePill.textContent = chartTypeLabel(chartData.chartType);
+      chartTypePill.textContent  = chartTypeLabel(chartData.chartType);
       chartTypePill.classList.add('active');
       chartMeta.classList.add('active');
       window.setTimeout(() => chart.resize(), 0);
@@ -1422,14 +880,14 @@
 
     function chartTypeLabel(type) {
       const map = {
-        line: 'اتجاه خطي',
-        bar: 'أعمدة',
+        line:          'اتجاه خطي',
+        bar:           'أعمدة',
         horizontalBar: 'أعمدة أفقية',
-        scatter: 'مبعثر',
-        donut: 'حلقي',
-        map: 'خريطة',
-        histogram: 'توزيع',
-        table: 'جدول',
+        scatter:       'مبعثر',
+        donut:         'حلقي',
+        map:           'خريطة',
+        histogram:     'توزيع',
+        table:         'جدول',
       };
       return map[type] || type || 'رسم';
     }
@@ -1441,13 +899,13 @@
       return `${store} · ملخص البيانات`;
     }
 
+    // ── Progress ──────────────────────────────────────────────────────────────
     function startProgress() {
-      const stages = PROGRESS_STAGES[currentEndpoint];
+      const stages = PROGRESS_STAGES[currentMode];
       progressStartedAt = Date.now();
-      progressStageIndex = 0;
-      goBtn.disabled = true;
-      goBtn.textContent = 'جار التشغيل';
-      promptInput.disabled = true;
+      goBtn.disabled         = true;
+      goBtn.textContent      = 'جار التشغيل';
+      promptInput.disabled   = true;
       setDisabled(examplesDiv.querySelectorAll('button'), true);
       setDisabled(document.querySelectorAll('.mode-tabs button'), true);
       runStatus.classList.add('active');
@@ -1455,32 +913,26 @@
       chartMeta.classList.remove('active');
       chartTypePill.classList.remove('active');
       resultSubtitle.textContent = 'جار تنفيذ الطلب عبر الوكلاء.';
-      runChip.textContent = 'قيد التشغيل';
-      runChip.className = 'run-chip';
-      durationChip.textContent = '0 ms';
-      outputText.style.display = 'block';
-      outputText.innerHTML = '<div class="placeholder">جار تجهيز النتيجة...</div>';
-      if (currentEndpoint !== 'inquiry') {
-        chartWrap.style.display = 'block';
-        chart.clear();
-      } else {
-        chartWrap.style.display = 'none';
-      }
+      runChip.textContent        = 'قيد التشغيل';
+      runChip.className          = 'run-chip';
+      durationChip.textContent   = '0 ms';
+      chartWrap.style.display    = currentMode === 'inquiry' ? 'none' : 'block';
+      outputText.style.display   = 'block';
+      outputText.innerHTML       = '<div class="placeholder">جار تجهيز النتيجة...</div>';
+      if (currentMode !== 'inquiry') chart.clear();
       updateProgress(stages);
       progressTimer = setInterval(() => updateProgress(stages), 500);
     }
 
     function updateProgress(stages) {
-      const ms = Date.now() - progressStartedAt;
-      const next = stages.findLastIndex((stage) => ms >= stage.at);
-      progressStageIndex = Math.max(0, Math.min(next, stages.length - 1));
-      const current = stages[progressStageIndex];
-      const stageEnd = stages[progressStageIndex + 1]?.at ?? current.at + 9000;
-      const ratio = Math.min(0.9, Math.max(0, (ms - current.at) / Math.max(1, stageEnd - current.at)));
-      const pct = ((progressStageIndex + ratio) / stages.length) * 100;
-      statusTitle.textContent = current.label;
-      statusDetail.textContent = current.detail;
-      elapsedEl.textContent = `${Math.floor(ms / 1000)}s`;
+      const ms  = Date.now() - progressStartedAt;
+      const idx = Math.max(0, Math.min(stages.findLastIndex(s => ms >= s.at), stages.length - 1));
+      const cur = stages[idx];
+      const end = stages[idx + 1]?.at ?? cur.at + 9000;
+      const pct = ((idx + Math.min(0.9, (ms - cur.at) / Math.max(1, end - cur.at))) / stages.length) * 100;
+      statusTitle.textContent  = cur.label;
+      statusDetail.textContent = cur.detail;
+      elapsedEl.textContent    = `${Math.floor(ms / 1000)}s`;
       progressFill.style.width = `${Math.min(92, Math.max(8, pct))}%`;
     }
 
@@ -1488,7 +940,7 @@
       clearInterval(progressTimer);
       progressTimer = null;
       progressFill.style.width = '100%';
-      statusTitle.textContent = 'اكتملت النتيجة';
+      statusTitle.textContent  = 'اكتملت النتيجة';
       statusDetail.textContent = 'تم تجهيز العرض';
     }
 
@@ -1502,8 +954,8 @@
 
     function resetControls() {
       setTimeout(() => stopProgress(), 650);
-      goBtn.disabled = false;
-      goBtn.textContent = 'تشغيل';
+      goBtn.disabled       = false;
+      goBtn.textContent    = 'تشغيل';
       promptInput.disabled = false;
       setDisabled(examplesDiv.querySelectorAll('button'), false);
       setDisabled(document.querySelectorAll('.mode-tabs button'), false);
@@ -1512,36 +964,34 @@
     function resetResult() {
       chartMeta.classList.remove('active');
       chartTypePill.classList.remove('active');
-      chartWrap.style.display = currentEndpoint === 'inquiry' ? 'none' : 'block';
+      chartWrap.style.display  = currentMode === 'inquiry' ? 'none' : 'block';
       outputText.style.display = 'block';
-      outputText.innerHTML = '<div class="placeholder">اختر اقتراحا أو اكتب طلبا لتبدأ.</div>';
+      outputText.innerHTML     = '<div class="placeholder">اختر اقتراحا أو اكتب طلبا لتبدأ.</div>';
       resultSubtitle.textContent = 'اختر مثالا أو اكتب طلبا لتبدأ.';
-      runChip.textContent = 'جاهز';
-      runChip.className = 'run-chip';
+      runChip.textContent      = 'جاهز';
+      runChip.className        = 'run-chip';
       durationChip.textContent = '0 ms';
       chart.clear();
     }
 
-    function setDisabled(elements, value) {
-      elements.forEach((element) => { element.disabled = value; });
+    function setDisabled(els, val) { els.forEach(el => { el.disabled = val; }); }
+
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     }
 
-    function esc(value) {
-      return String(value ?? '').replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char]));
-    }
-
-    function escAttr(value) {
-      return String(value ?? '')
+    function escAttr(v) {
+      return String(v ?? '')
         .replace(/&/g, '&amp;')
         .replace(/"/g, '&quot;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
     }
 
+    // ── Init ──────────────────────────────────────────────────────────────────
     updateModeCopy();
     updateSelectedStore();
     renderExamples();
-    renderAgentCapabilities();
     resetResult();
     loadMeta();
   </script>
