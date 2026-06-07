@@ -30,41 +30,15 @@ async function exec(ctx: Ctx, intent: IntentKind) {
   return { plan, rows };
 }
 
-// ─── Plain functions (called directly when intent is known) ──────────────────
-
-export async function runDashboard(ctx: Ctx) {
-  const { plan, rows } = await exec(ctx, 'dashboard');
-  return runChartAgent({ rows, prompt: ctx.prompt, intentHint: plan.chartHint });
-}
-
-export async function runReport(ctx: Ctx) {
-  const { rows } = await exec(ctx, 'report');
-  if (!rows.length) return { reportSections: [{ heading: 'No Data', body: 'No matching records found.' }] };
-  return runReportWriter({ prompt: ctx.prompt, rows });
-}
-
-export async function runInquiry(ctx: Ctx) {
-  const { rows } = await exec(ctx, 'general_question');
-  if (!rows.length) return { summary: 'No matching data found.' };
-  return runInquiryWriter({ prompt: ctx.prompt, rows });
-}
-
-// ─── Tools (registered on the supervisor agent for open-ended routing) ────────
-
-export const inquiryTool = createTool({
-  id:          'execute-inquiry',
-  description: 'Answer a general analytics question — counts, averages, lists, lookups.',
-  inputSchema:  analyticsInputSchema,
-  outputSchema: z.object({ summary: z.string() }),
-  execute: async ({ context: ctx }) => runInquiry(ctx),
-});
-
 export const dashboardTool = createTool({
   id:          'build-dashboard',
   description: 'Build a chart or visualization — charts, graphs, plots, trends, distributions.',
   inputSchema:  analyticsInputSchema,
   outputSchema: z.object({ chartType: z.string(), title: z.string(), option: z.record(z.unknown()) }),
-  execute: async ({ context: ctx }) => runDashboard(ctx),
+  execute: async ({ context: ctx }) => {
+    const { plan, rows } = await exec(ctx, 'dashboard');
+    return runChartAgent({ rows, prompt: ctx.prompt, intentHint: plan.chartHint });
+  },
 });
 
 export const reportTool = createTool({
@@ -72,5 +46,21 @@ export const reportTool = createTool({
   description: 'Generate a structured analytical report — analysis, insights, detailed breakdown.',
   inputSchema:  analyticsInputSchema,
   outputSchema: z.object({ reportSections: z.array(z.object({ heading: z.string(), body: z.string() })) }),
-  execute: async ({ context: ctx }) => runReport(ctx),
+  execute: async ({ context: ctx }) => {
+    const { rows } = await exec(ctx, 'report');
+    if (!rows.length) return { reportSections: [{ heading: 'No Data', body: 'No matching records found.' }] };
+    return runReportWriter({ prompt: ctx.prompt, rows });
+  },
+});
+
+export const inquiryTool = createTool({
+  id:          'execute-inquiry',
+  description: 'Answer a general analytics question — counts, averages, lists, lookups.',
+  inputSchema:  analyticsInputSchema,
+  outputSchema: z.object({ summary: z.string() }),
+  execute: async ({ context: ctx }) => {
+    const { rows } = await exec(ctx, 'general_question');
+    if (!rows.length) return { summary: 'No matching data found.' };
+    return runInquiryWriter({ prompt: ctx.prompt, rows });
+  },
 });

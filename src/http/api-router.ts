@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { mastra } from '../mastra/index.js';
-import { analyticsInputSchema, runDashboard, runReport, runInquiry } from '../mastra/tools/analytics.js';
+import { analyticsInputSchema, dashboardTool, reportTool, inquiryTool } from '../mastra/tools/analytics.js';
 import { runSearchPlan } from '../mastra/agents/search.js';
 import { executePipeline } from '../db/aggregation.js';
 import { getSources, reloadSources } from '../db/sources-cache.js';
@@ -36,21 +36,21 @@ apiRouter.post('/analytics', async (req, res) => {
 
     const ctx = analyticsInputSchema.parse({ prompt, sourceName: sourceName ?? dataStoreName });
 
-    // Intent known from dropdown → call tool directly, no routing LLM needed
+    // Intent known from dropdown → execute tool directly, no routing LLM needed
     if (intent === 'dashboard') {
-      const chart = await runDashboard(ctx);
+      const chart = await dashboardTool.execute({ context: ctx });
       res.json({ intent: 'dashboard', chart });
       return;
     }
 
     if (intent === 'report') {
-      const result = await runReport(ctx);
+      const result = await reportTool.execute({ context: ctx });
       res.json({ intent: 'report', ...result });
       return;
     }
 
     if (intent === 'general_question' || intent === 'inquiry') {
-      const result = await runInquiry(ctx);
+      const result = await inquiryTool.execute({ context: ctx });
       res.json({ intent: 'general_question', ...result });
       return;
     }
