@@ -1,7 +1,6 @@
 import { generateText } from 'ai';
 import { resolveModel } from '../model.js';
 import { finalizeTaskPlan } from '../task-plan.js';
-import { PRINCIPAL_SUPERVISOR_SOURCES } from '../../config/principal-supervisor-structure.js';
 import { normalizeToken } from '../../db/source.repository.js';
 import { parseJsonOutput } from '../../utils/json-output.js';
 import type { DataSource, TaskPlan, IntentKind } from '../../types/index.js';
@@ -49,9 +48,13 @@ export async function runSupervisorPlan({
   prompt:      string;
   intent:      IntentKind;
   sourceName?: string;
-  sources?:    DataSource[];
+  sources:     DataSource[];
 }) {
-  const available = sources?.length ? sources : PRINCIPAL_SUPERVISOR_SOURCES;
+  if (!sources.length) {
+    throw new Error(
+      'No data sources configured. Register at least one dataset via POST /api/sources.',
+    );
+  }
 
   const { text } = await generateText({
     model:       resolveModel('supervisor'),
@@ -65,7 +68,7 @@ export async function runSupervisorPlan({
           prompt,
           intent,
           sourceName,
-          availableSources: compactSources(available, sourceName),
+          availableSources: compactSources(sources, sourceName),
         }),
       },
     ],
@@ -75,7 +78,7 @@ export async function runSupervisorPlan({
     text.replace(PLAN_INTENT_FIX, '"intent": "general_question"')
   ) as TaskPlan;
 
-  return finalizeTaskPlan({ plan, availableSources: available, forcedIntent: intent });
+  return finalizeTaskPlan({ plan, availableSources: sources, forcedIntent: intent });
 }
 
 function compactSources(sources: DataSource[], filterName?: string) {

@@ -1,7 +1,7 @@
 import { generateText } from 'ai';
 import { z } from 'zod';
 import { resolveModel } from '../model.js';
-import { PRINCIPAL_SUPERVISOR_SOURCES } from '../../config/principal-supervisor-structure.js';
+import { getSources } from '../../db/sources-cache.js';
 import { parseJsonOutput } from '../../utils/json-output.js';
 import type { DataSource } from '../../types/index.js';
 
@@ -36,7 +36,7 @@ export async function runSearchPlan({
   sourceName?: string;
   sources?:    DataSource[];
 }): Promise<SearchPlan> {
-  const available    = sources?.length ? sources : PRINCIPAL_SUPERVISOR_SOURCES;
+  const available     = sources?.length ? sources : getSources();
   const compactStores = available.map(ds => ({
     name:       ds.name,
     collection: ds.collection,
@@ -53,7 +53,14 @@ export async function runSearchPlan({
     temperature: 0,
     messages: [
       { role: 'system', content: INSTRUCTIONS },
-      { role: 'user',   content: JSON.stringify({ userQuery: prompt, preferredSource: sourceName ?? null, availableSources: compactStores }) },
+      {
+        role:    'user',
+        content: JSON.stringify({
+          userQuery:        prompt,
+          preferredSource:  sourceName ?? null,
+          availableSources: compactStores,
+        }),
+      },
     ],
   });
 
