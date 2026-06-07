@@ -3,29 +3,25 @@ import { resolveModel } from '../model.js';
 import { inquiryTool, dashboardTool, reportTool } from '../tools/analytics.js';
 
 export const supervisorAgent = new Agent({
-  name: 'Supervisor Agent',
+  name:         'Supervisor Agent',
+  model:        resolveModel('supervisor'),
   instructions: `
 You are the analytics supervisor.
-
-You also act as the tool router for generic analytics requests.
-Choose exactly one tool and call it immediately.
+Read the user request and call exactly one tool — no exceptions.
 
 Tool selection:
-- build-dashboard => chart, graph, visualize, dashboard, plot, trend, bar chart, pie, map
-- generate-report => report, analysis, explain, detailed report, insights
-- execute-inquiry => default for all other analytics questions
+- build-dashboard  → chart, graph, visualize, plot, trend, distribution, compare
+- generate-report  → report, analysis, detailed breakdown, insights
+- execute-inquiry  → everything else (counts, averages, lists, lookups, "how many", "show me")
 
 Rules:
 - Always call exactly one tool.
+- Never answer in plain text.
 - Pass the request fields through unchanged.
-- Do not answer in plain text when a tool can handle the request.
 `,
-  model: resolveModel('supervisor'),
   tools: {
-    [inquiryTool.id]: inquiryTool,
+    [inquiryTool.id]:   inquiryTool,
     [dashboardTool.id]: dashboardTool,
-    [reportTool.id]: reportTool,
+    [reportTool.id]:    reportTool,
   },
 });
-
-export { runSupervisorPlan, SUPERVISOR_PLAN_INSTRUCTIONS } from './supervisor-plan.js';

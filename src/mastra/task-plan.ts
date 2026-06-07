@@ -1,38 +1,31 @@
-import { z } from 'zod';
-import { taskPlanSchema } from './schemas/intent.js';
-import type { DataSource } from '../types/index.js';
-
-type TaskPlan = z.infer<typeof taskPlanSchema>;
+import type { DataSource, TaskPlan } from '../types/index.js';
 
 export function finalizeTaskPlan({
   plan,
   availableSources,
   forcedIntent,
 }: {
-  plan: TaskPlan;
-  prompt?: string;
+  plan:             TaskPlan;
   availableSources: DataSource[];
-  forcedIntent?: TaskPlan['intent'];
+  forcedIntent?:    TaskPlan['intent'];
 }): TaskPlan {
-  const requestedSource = plan.query.sourceName;
-  const source = availableSources.find(
-    (ds) =>
-      normalize(ds.name) === normalize(requestedSource) ||
-      normalize(ds.collection) === normalize(requestedSource),
+  const token  = normalize(plan.query.sourceName);
+  const source = availableSources.find(s =>
+    normalize(s.name) === token || normalize(s.collection) === token
   );
 
   return {
     ...plan,
-    intent: forcedIntent ?? plan.intent,
+    intent:          forcedIntent ?? plan.intent,
     needsEnrichment: false,
-    needsChart: forcedIntent === 'dashboard' ? true : plan.needsChart,
+    needsChart:      forcedIntent === 'dashboard' ? true : plan.needsChart,
     query: {
       ...plan.query,
-      sourceName: source?.name ?? requestedSource,
+      sourceName: source?.name ?? plan.query.sourceName,
     },
   };
 }
 
-function normalize(v: string | undefined) {
+function normalize(v?: string) {
   return v?.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
