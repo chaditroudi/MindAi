@@ -54,7 +54,7 @@ export async function runSupervisorPlan({
   const available = sources?.length ? sources : PRINCIPAL_SUPERVISOR_SOURCES;
 
   const { text } = await generateText({
-    model:       resolveModel(),
+    model:       resolveModel('supervisor'),
     maxTokens:   900,
     temperature: 0,
     messages: [
