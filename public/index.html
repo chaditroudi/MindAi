@@ -1091,17 +1091,17 @@
     };
 
     const MODE_COPY = {
-      '/api/dashboard': {
+      dashboard: {
         badge: 'لوحة المعلومات',
         note: 'ينشئ مخططا واحدا من بيانات MongoDB مع عرض خطة التنفيذ والمسار.',
         placeholder: 'مثال: top 5 municipalities by service request count',
       },
-      '/api/report': {
+      report: {
         badge: 'التقرير',
         note: 'ينشئ تقريرا تحليليا موجزا، ويمكن أن يضيف مخططا عند الحاجة.',
         placeholder: 'مثال: analyze service request count by municipality over the last 90 days',
       },
-      '/api/inquiry': {
+      inquiry: {
         badge: 'الاستعلام',
         note: 'يجلب سجلات مطابقة من MongoDB ثم يلخصها ويربطها بالعناصر.',
         placeholder: 'مثال: find recent service requests where status is new',
@@ -1109,9 +1109,9 @@
     };
 
     const FALLBACK_EXAMPLES = {
-      '/api/dashboard': { placeholder: MODE_COPY['/api/dashboard'].placeholder, prompts: [] },
-      '/api/report': { placeholder: MODE_COPY['/api/report'].placeholder, prompts: [] },
-      '/api/inquiry': { placeholder: MODE_COPY['/api/inquiry'].placeholder, prompts: [] },
+      dashboard: { placeholder: MODE_COPY['dashboard'].placeholder, prompts: [] },
+      report:    { placeholder: MODE_COPY['report'].placeholder,    prompts: [] },
+      inquiry:   { placeholder: MODE_COPY['inquiry'].placeholder,   prompts: [] },
     };
 
     const chartWrap = document.getElementById('chart-wrap');
@@ -1142,7 +1142,7 @@
     const runChip = document.getElementById('run-chip');
     const durationChip = document.getElementById('duration-chip');
 
-    let currentEndpoint = '/api/dashboard';
+    let currentEndpoint = 'dashboard';
     let selectedDataStoreName = undefined;
     let progressTimer = null;
     let progressStartedAt = 0;
@@ -1157,22 +1157,22 @@
     window.addEventListener('resize', () => chart.resize());
 
     const PROGRESS_STAGES = {
-      '/api/dashboard': [
-        { label: 'تخطيط الطلب', detail: 'المشرف يحول السؤال إلى خطة بيانات', at: 0 },
-        { label: 'قراءة MongoDB', detail: 'بناء وتنفيذ aggregation آمن', at: 2500 },
-        { label: 'اختيار المخطط', detail: 'وكيل الرسم يحدد النوع والمحاور', at: 6500 },
-        { label: 'تجهيز النتيجة', detail: 'إرجاع الرسم وتفاصيل التدقيق', at: 9500 },
+      dashboard: [
+        { label: 'تخطيط الطلب',   detail: 'المشرف يحول السؤال إلى خطة بيانات',  at: 0 },
+        { label: 'قراءة MongoDB', detail: 'بناء وتنفيذ aggregation',             at: 2500 },
+        { label: 'اختيار المخطط', detail: 'وكيل الرسم يحدد النوع والمحاور',      at: 6500 },
+        { label: 'تجهيز النتيجة', detail: 'إرجاع الرسم وتفاصيل التدقيق',        at: 9500 },
       ],
-      '/api/report': [
-        { label: 'تخطيط التقرير', detail: 'المشرف يحدد البيانات المطلوبة', at: 0 },
-        { label: 'قراءة MongoDB', detail: 'تنفيذ الاستعلام والتحقق من الصفوف', at: 2500 },
-        { label: 'كتابة التقرير', detail: 'وكيل الكاتب يصيغ الأقسام', at: 7000 },
-        { label: 'تجهيز النتيجة', detail: 'إرجاع التقرير والتدقيق', at: 11000 },
+      report: [
+        { label: 'تخطيط التقرير', detail: 'المشرف يحدد البيانات المطلوبة',       at: 0 },
+        { label: 'قراءة MongoDB', detail: 'تنفيذ الاستعلام والتحقق من الصفوف',   at: 2500 },
+        { label: 'كتابة التقرير', detail: 'وكيل الكاتب يصيغ الأقسام',           at: 7000 },
+        { label: 'تجهيز النتيجة', detail: 'إرجاع التقرير والتدقيق',             at: 11000 },
       ],
-      '/api/inquiry': [
-        { label: 'تخطيط البحث', detail: 'المشرف يحدد السجلات المطلوبة', at: 0 },
-        { label: 'جلب السجلات', detail: 'MongoDB يطبق المرشحات والصلاحيات', at: 2200 },
-        { label: 'تلخيص النتيجة', detail: 'وكيل الكاتب يصوغ الإجابة', at: 5600 },
+      inquiry: [
+        { label: 'تخطيط البحث',   detail: 'المشرف يحدد السجلات المطلوبة',       at: 0 },
+        { label: 'جلب السجلات',   detail: 'MongoDB يطبق المرشحات',              at: 2200 },
+        { label: 'تلخيص النتيجة', detail: 'وكيل الكاتب يصوغ الإجابة',          at: 5600 },
       ],
     };
 
@@ -1180,7 +1180,7 @@
       button.addEventListener('click', () => {
         document.querySelectorAll('.mode-tabs button').forEach((candidate) => candidate.classList.remove('active'));
         button.classList.add('active');
-        currentEndpoint = button.dataset.endpoint;
+        currentEndpoint = button.dataset.intent;
         selectedDataStoreName = undefined;
         updateModeCopy();
         renderExamples();
@@ -1256,16 +1256,19 @@
         const data = await res.json();
         if (!res.ok) return;
         EXAMPLES = Object.fromEntries(
-          data.modes.map((mode) => [
-            mode.endpoint,
-            {
-              placeholder: mode.placeholder || FALLBACK_EXAMPLES[mode.endpoint]?.placeholder,
-              prompts: (mode.prompts || []).map((prompt) => ({
-                ...prompt,
-                tag: tagForEndpoint(mode.endpoint),
-              })),
-            },
-          ]),
+          data.modes.map((mode) => {
+            const key = mode.intent || mode.endpoint?.replace('/api/', '') || mode.endpoint;
+            return [
+              key,
+              {
+                placeholder: mode.placeholder || FALLBACK_EXAMPLES[key]?.placeholder,
+                prompts: (mode.prompts || []).map((prompt) => ({
+                  ...prompt,
+                  tag: tagForEndpoint(key),
+                })),
+              },
+            ];
+          }),
         );
         AGENT_CAPABILITIES = Array.isArray(data.agents) ? data.agents : [];
         updateModeCopy();
