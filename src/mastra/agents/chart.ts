@@ -22,18 +22,23 @@ Rules:
 - Never invent data. Use only the provided rows.
 - Output JSON only: { chartType, title, option }
 
-Chart type guidance (pick what best fits the actual data shape):
-- trend / temporal series        → line
-- few ranked categories (≤ 10)   → bar (vertical) or horizontalBar if labels are long
-- many categories (> 10)         → horizontalBar
-- part of whole (≤ 6 slices)     → donut
-- distribution of values         → histogram
-- geo / location data            → map
-- correlation of 2 numeric fields → scatter
-- default                        → bar
+Chart type — follow intentHint first, then use data shape as a tiebreaker:
 
-Always look at the actual rows first. If the data has long string labels, prefer horizontalBar.
-If it has short labels or numbers, prefer bar. Never force a type — choose what renders best.
+intentHint "distribution" + rows ≤ 6  → donut  (ALWAYS)
+intentHint "distribution" + rows > 6  → horizontalBar
+intentHint "ranking"      + rows ≤ 10 → bar (vertical), horizontalBar if labels are long strings
+intentHint "ranking"      + rows > 10 → horizontalBar
+intentHint "trend"                    → line
+intentHint "scatter"                  → scatter
+
+No intentHint — decide from data shape:
+- 2 numeric fields per row              → scatter
+- temporal x-axis                       → line
+- ≤ 6 rows, single value field          → donut
+- many rows or long string labels       → horizontalBar
+- default                               → bar
+
+Never invent a type. Never ignore intentHint when it is set.
 `;
 
 export async function runChartAgent({

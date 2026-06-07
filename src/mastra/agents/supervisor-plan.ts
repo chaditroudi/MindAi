@@ -22,8 +22,9 @@ Rules:
 - sum   => $sum: "$field"
 - avg   => $avg: "$field"
 - list  => raw fetch with $limit 50
-- top N => $sort + $limit with chartHint "ranking"
-- trend => use a valid temporal field
+- distribution / proportion / share / percentage / breakdown => $sort + $limit with chartHint "distribution"
+- top N (ranking, best, worst, most, least) => $sort + $limit with chartHint "ranking"
+- trend => use a valid temporal field with chartHint "trend"
 
 Pipeline order: $match → $lookup → $unwind → $group → $project → $sort → $limit
 
