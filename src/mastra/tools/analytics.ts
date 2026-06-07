@@ -14,9 +14,9 @@ export const analyticsInputSchema = z.object({
   sourceName: z.string().optional(),
 });
 
-type Ctx = z.infer<typeof analyticsInputSchema>;
+export type AnalyticsInput = z.infer<typeof analyticsInputSchema>;
 
-async function exec(ctx: Ctx, intent: IntentKind) {
+async function exec(ctx: AnalyticsInput, intent: IntentKind) {
   const sources = getSources();
   const plan    = await runSupervisorPlan({ prompt: ctx.prompt, intent, sourceName: ctx.sourceName, sources });
 
@@ -30,15 +30,33 @@ async function exec(ctx: Ctx, intent: IntentKind) {
   return { plan, rows };
 }
 
+// ─── Callable directly from the router (no Mastra runtime context needed) ────
+
+export async function executeDashboard(ctx: AnalyticsInput) {
+  const { plan, rows } = await exec(ctx, 'dashboard');
+  return runChartAgent({ rows, prompt: ctx.prompt, intentHint: plan.chartHint });
+}
+
+export async function executeReport(ctx: AnalyticsInput) {
+  const { rows } = await exec(ctx, 'report');
+  if (!rows.length) return { reportSections: [{ heading: 'No Data', body: 'No matching records found.' }] };
+  return runReportWriter({ prompt: ctx.prompt, rows });
+}
+
+export async function executeInquiry(ctx: AnalyticsInput) {
+  const { rows } = await exec(ctx, 'general_question');
+  if (!rows.length) return { summary: 'No matching data found.' };
+  return runInquiryWriter({ prompt: ctx.prompt, rows });
+}
+
+// ─── Tools registered on the supervisor agent for open-ended routing ──────────
+
 export const dashboardTool = createTool({
   id:          'build-dashboard',
   description: 'Build a chart or visualization — charts, graphs, plots, trends, distributions.',
   inputSchema:  analyticsInputSchema,
   outputSchema: z.object({ chartType: z.string(), title: z.string(), option: z.record(z.unknown()) }),
-  execute: async ({ context: ctx }) => {
-    const { plan, rows } = await exec(ctx, 'dashboard');
-    return runChartAgent({ rows, prompt: ctx.prompt, intentHint: plan.chartHint });
-  },
+  execute: async ({ context: ctx }) => executeDashboard(ctx),
 });
 
 export const reportTool = createTool({
@@ -46,11 +64,7 @@ export const reportTool = createTool({
   description: 'Generate a structured analytical report — analysis, insights, detailed breakdown.',
   inputSchema:  analyticsInputSchema,
   outputSchema: z.object({ reportSections: z.array(z.object({ heading: z.string(), body: z.string() })) }),
-  execute: async ({ context: ctx }) => {
-    const { rows } = await exec(ctx, 'report');
-    if (!rows.length) return { reportSections: [{ heading: 'No Data', body: 'No matching records found.' }] };
-    return runReportWriter({ prompt: ctx.prompt, rows });
-  },
+  execute: async ({ context: ctx }) => executeReport(ctx),
 });
 
 export const inquiryTool = createTool({
@@ -58,9 +72,5 @@ export const inquiryTool = createTool({
   description: 'Answer a general analytics question — counts, averages, lists, lookups.',
   inputSchema:  analyticsInputSchema,
   outputSchema: z.object({ summary: z.string() }),
-  execute: async ({ context: ctx }) => {
-    const { rows } = await exec(ctx, 'general_question');
-    if (!rows.length) return { summary: 'No matching data found.' };
-    return runInquiryWriter({ prompt: ctx.prompt, rows });
-  },
+  execute: async ({ context: ctx }) => executeInquiry(ctx),
 });
