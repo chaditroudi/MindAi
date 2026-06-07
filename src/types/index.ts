@@ -55,19 +55,7 @@ export interface DataSource {
   joins?: DataSourceJoin[];
 }
 
-export interface PermissionScope {
-  userId: string;
-  tenantId: string;
-  allowedSources?: string[];
-  rowFilter?: Record<string, unknown>;
-}
-
 export type IntentKind = 'general_question' | 'report' | 'dashboard';
-
-export interface ConversationRef {
-  threadId: string;
-  resourceId: string;
-}
 
 export type DatasetRow = Record<string, string | number | boolean | null>;
 

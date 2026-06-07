@@ -1,4 +1,4 @@
-import type { DataSource, PermissionScope } from '../types/index.js';
+import type { DataSource } from '../types/index.js';
 
 export function normalizeToken(value?: string) {
   return value?.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '') ?? '';
