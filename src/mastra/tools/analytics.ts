@@ -19,7 +19,7 @@ async function exec(ctx: Ctx, intent: IntentKind) {
   const sources = ctx.sources as DataSource[] | undefined;
   const plan    = await runSupervisorPlan({ prompt: ctx.prompt, intent, sourceName: ctx.sourceName, sources });
 
-  if (!plan.needsData || !plan.pipeline?.length) return { plan, rows: [] };
+  if (!plan.needsData || !plan.pipeline?.length) return { plan, rows: [] as Document[] };
 
   const collection = findSource(plan.query.sourceName ?? '', sources ?? [])?.collection
     ?? plan.query.sourceName
