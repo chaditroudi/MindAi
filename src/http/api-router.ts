@@ -14,17 +14,19 @@ const TOOL_TO_INTENT: Record<string, string> = {
 
 apiRouter.post('/analytics', async (req, res) => {
   try {
-    const { prompt, intent, sourceName, sources } = req.body as {
-      prompt:      string;
-      intent?:     string;
-      sourceName?: string;
-      sources?:    unknown[];
+    const { prompt, intent, sourceName, dataStoreName, sources } = req.body as {
+      prompt:        string;
+      intent?:       string;
+      sourceName?:   string;
+      dataStoreName?: string;
+      sources?:      unknown[];
     };
+    const resolvedSource = sourceName ?? dataStoreName;
 
     // Merge the selected mode into the prompt so the supervisor agent routes correctly
     const hintedPrompt = intent ? `[Mode: ${intent}] ${prompt}` : prompt;
 
-    const body   = analyticsInputSchema.parse({ prompt: hintedPrompt, sourceName, sources });
+    const body   = analyticsInputSchema.parse({ prompt: hintedPrompt, sourceName: resolvedSource, sources });
     const result = await mastra.getAgent('supervisorAgent').generate(
       [{ role: 'user', content: JSON.stringify(body) }],
       { maxSteps: 2, temperature: 0 },

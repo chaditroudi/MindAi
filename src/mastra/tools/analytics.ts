@@ -12,13 +12,17 @@ export const analyticsInputSchema = z.object({
   prompt:     z.string().describe('The user question or request'),
   sourceName: z.string().optional(),
   sources:    z.array(z.unknown()).optional(),
+  intent:     z.string().optional().describe('Selected mode: dashboard | report | general_question'),
 });
 
 type Ctx = z.infer<typeof analyticsInputSchema>;
 
+const MODE_PREFIX = /^\[Mode:[^\]]+\]\s*/;
+
 async function exec(ctx: Ctx, intent: IntentKind) {
-  const sources = ctx.sources as DataSource[] | undefined;
-  const plan    = await runSupervisorPlan({ prompt: ctx.prompt, intent, sourceName: ctx.sourceName, sources });
+  const sources      = ctx.sources as DataSource[] | undefined;
+  const cleanPrompt  = ctx.prompt.replace(MODE_PREFIX, '');
+  const plan         = await runSupervisorPlan({ prompt: cleanPrompt, intent, sourceName: ctx.sourceName, sources });
 
   if (!plan.needsData || !plan.pipeline?.length) return { plan, rows: [] as Document[] };
 
@@ -36,9 +40,10 @@ export const inquiryTool = createTool({
   inputSchema:  analyticsInputSchema,
   outputSchema: z.object({ summary: z.string() }),
   execute: async ({ context: ctx }) => {
-    const { rows } = await exec(ctx, 'general_question');
+    const cleanPrompt = ctx.prompt.replace(MODE_PREFIX, '');
+    const { rows }    = await exec(ctx, 'general_question');
     if (!rows.length) return { summary: 'No matching data found.' };
-    return runInquiryWriter({ prompt: ctx.prompt, rows });
+    return runInquiryWriter({ prompt: cleanPrompt, rows });
   },
 });
 
@@ -48,8 +53,9 @@ export const dashboardTool = createTool({
   inputSchema:  analyticsInputSchema,
   outputSchema: z.object({ chartType: z.string(), title: z.string(), option: z.record(z.unknown()) }),
   execute: async ({ context: ctx }) => {
+    const cleanPrompt    = ctx.prompt.replace(MODE_PREFIX, '');
     const { plan, rows } = await exec(ctx, 'dashboard');
-    return runChartAgent({ rows, prompt: ctx.prompt, intentHint: plan.chartHint });
+    return runChartAgent({ rows, prompt: cleanPrompt, intentHint: plan.chartHint });
   },
 });
 
@@ -59,8 +65,9 @@ export const reportTool = createTool({
   inputSchema:  analyticsInputSchema,
   outputSchema: z.object({ reportSections: z.array(z.object({ heading: z.string(), body: z.string() })) }),
   execute: async ({ context: ctx }) => {
-    const { rows } = await exec(ctx, 'report');
+    const cleanPrompt = ctx.prompt.replace(MODE_PREFIX, '');
+    const { rows }    = await exec(ctx, 'report');
     if (!rows.length) return { reportSections: [{ heading: 'No Data', body: 'No matching records found.' }] };
-    return runReportWriter({ prompt: ctx.prompt, rows });
+    return runReportWriter({ prompt: cleanPrompt, rows });
   },
 });
