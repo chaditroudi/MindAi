@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { mastra } from '../mastra/index.js';
 import { analyticsInputSchema, runDashboard, runReport, runInquiry } from '../mastra/tools/analytics.js';
 import { runSearchPlan } from '../mastra/agents/search.js';
 import { executePipeline } from '../db/aggregation.js';
@@ -7,6 +8,12 @@ import { getMongo } from '../db/mongo.client.js';
 import type { DataSource } from '../types/index.js';
 
 export const apiRouter = Router();
+
+const TOOL_TO_INTENT: Record<string, string> = {
+  'execute-inquiry': 'general_question',
+  'build-dashboard': 'dashboard',
+  'generate-report': 'report',
+};
 
 // ─── Analytics ───────────────────────────────────────────────────────────────
 
@@ -29,6 +36,7 @@ apiRouter.post('/analytics', async (req, res) => {
 
     const ctx = analyticsInputSchema.parse({ prompt, sourceName: sourceName ?? dataStoreName });
 
+    // Intent known from dropdown → call tool directly, no routing LLM needed
     if (intent === 'dashboard') {
       const chart = await runDashboard(ctx);
       res.json({ intent: 'dashboard', chart });
@@ -41,8 +49,32 @@ apiRouter.post('/analytics', async (req, res) => {
       return;
     }
 
-    const result = await runInquiry(ctx);
-    res.json({ intent: 'general_question', ...result });
+    if (intent === 'general_question' || intent === 'inquiry') {
+      const result = await runInquiry(ctx);
+      res.json({ intent: 'general_question', ...result });
+      return;
+    }
+
+    // No intent → supervisor agent decides which tool to call
+    const agentResult = await mastra.getAgent('supervisorAgent').generate(
+      [{ role: 'user', content: JSON.stringify(ctx) }],
+      { maxSteps: 2, temperature: 0 },
+    );
+
+    const toolResult    = agentResult.toolResults?.at(-1);
+    const toolName      = (toolResult as { toolName?: string } | undefined)?.toolName ?? '';
+    const detectedIntent = TOOL_TO_INTENT[toolName] ?? 'general_question';
+
+    if (toolResult?.result) {
+      if (detectedIntent === 'dashboard') {
+        res.json({ intent: 'dashboard', chart: toolResult.result });
+        return;
+      }
+      res.json({ intent: detectedIntent, ...(toolResult.result as object) });
+      return;
+    }
+
+    res.json({ intent: 'general_question', summary: agentResult.text });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
