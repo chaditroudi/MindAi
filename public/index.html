@@ -1324,9 +1324,9 @@
         </div>`;
     }
 
-    function tagForEndpoint(endpoint) {
-      if (endpoint === '/api/dashboard') return 'رسم';
-      if (endpoint === '/api/report') return 'تقرير';
+    function tagForEndpoint(mode) {
+      if (mode === 'dashboard') return 'رسم';
+      if (mode === 'report') return 'تقرير';
       return 'بحث';
     }
 
@@ -1349,22 +1349,24 @@
       auditPanel.style.display = 'none';
 
       try {
-        const dashboardDataset = currentEndpoint === '/api/dashboard'
+        const dashboardDataset = currentEndpoint === 'dashboard'
           ? resolveDashboardDataset()
           : undefined;
-        const dashboardDataStores = currentEndpoint === '/api/dashboard' && dashboardDataset
+        const dashboardDataStores = currentEndpoint === 'dashboard' && dashboardDataset
           ? buildDashboardDataStores(dashboardDataset)
           : undefined;
-        const res = await fetchWithTimeout(currentEndpoint, {
+
+        // Map inquiry tab to backend intent value
+        const intentMap = { dashboard: 'dashboard', report: 'report', inquiry: 'general_question' };
+        const intent = intentMap[currentEndpoint] || 'general_question';
+
+        const res = await fetchWithTimeout('/api/analytics', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            prompt: finalPrompt,
-            scope: SCOPE,
+            prompt:       finalPrompt,
+            intent,
             dataStoreName: selectedDataStoreName,
-            theme: 'light',
-            threadId: conversation?.threadId,
-            resourceId: conversation?.resourceId,
             ...(dashboardDataset ? { dataset: dashboardDataset } : {}),
             ...(dashboardDataStores?.length ? { datastores: dashboardDataStores } : {}),
           }),
@@ -1727,7 +1729,7 @@
       durationChip.textContent = '0 ms';
       outputText.style.display = 'block';
       outputText.innerHTML = '<div class="placeholder">جار تجهيز النتيجة...</div>';
-      if (currentEndpoint !== '/api/inquiry') {
+      if (currentEndpoint !== 'inquiry') {
         chartWrap.style.display = 'block';
         chart.clear();
       } else {
@@ -1781,7 +1783,7 @@
       chartMeta.classList.remove('active');
       chartTypePill.classList.remove('active');
       renderSearchImpact(null);
-      chartWrap.style.display = currentEndpoint === '/api/inquiry' ? 'none' : 'block';
+      chartWrap.style.display = currentEndpoint === 'inquiry' ? 'none' : 'block';
       outputText.style.display = 'block';
       outputText.innerHTML = '<div class="placeholder">اختر اقتراحا أو اكتب طلبا لتبدأ.</div>';
       resultSubtitle.textContent = 'اختر مثالا أو اكتب طلبا لتبدأ.';
