@@ -78,6 +78,7 @@ CHARITHINT — pick exactly one based on what the data represents:
   "scatter"      → correlation between two numeric fields
 
 RULES:
+- Always set query.sourceName to the root collection name (e.g. "Films" or "Directors").
 - Use ONLY fields from the schema above. Never invent field names.
 - Use $lookup only when the join is explicitly needed.
 - Pipeline order: $match → $lookup → $unwind → $group → $project → $sort → $limit

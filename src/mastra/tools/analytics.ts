@@ -29,9 +29,15 @@ async function exec(ctx: AnalyticsInput, intent: IntentKind) {
     return { plan, rows: [] as Document[] };
   }
 
-  const collection = findSource(plan.query.sourceName ?? '', sources)?.collection
-    ?? plan.query.sourceName
-    ?? '';
+  const resolvedSource =
+    findSource(plan.query.sourceName ?? '', sources) ??
+    findSource(ctx.sourceName ?? '', sources) ??
+    sources[0];
+
+  if (!resolvedSource) throw new Error('No source could be resolved for this query.');
+
+  const collection = resolvedSource.collection;
+  log('analytics', `resolved collection: "${collection}" from sourceName: "${plan.query.sourceName ?? '(none)'}"`);
 
   const rows = await executePipeline({ pipeline: plan.pipeline, collection });
   log('analytics', `pipeline executed | collection: "${collection}" | rows returned: ${rows.length}`);
