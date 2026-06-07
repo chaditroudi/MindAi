@@ -1,6 +1,7 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { resolveModel } from '../model.js';
+import { log } from '../../utils/logger.js';
 
 export const chartResultSchema = z.object({
   chartType: z.enum(['bar', 'horizontalBar', 'line', 'donut', 'scatter', 'histogram', 'map', 'table']),
@@ -42,6 +43,8 @@ export async function runChartAgent({
   prompt:      string;
   intentHint?: string;
 }) {
+  log('chart-agent', `LLM call | rows: ${rows.length} | intentHint: ${intentHint ?? '-'}`);
+
   const { object } = await generateObject({
     model:       resolveModel('chart'),
     schema:      chartResultSchema,
@@ -58,5 +61,6 @@ export async function runChartAgent({
     }],
   });
 
+  log('chart-agent', `done | chartType: ${object.chartType} | title: "${object.title}"`);
   return object;
 }

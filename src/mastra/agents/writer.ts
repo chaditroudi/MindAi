@@ -1,6 +1,7 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { resolveModel } from '../model.js';
+import { log } from '../../utils/logger.js';
 
 const INSTRUCTIONS = `
 You are a data insight writer for the Mind Platform analytics service.
