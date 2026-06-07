@@ -9,7 +9,7 @@ export async function initSources(): Promise<void> {
     .collection('sources')
     .find({}, { projection: { _id: 0 } })
     .toArray();
-  cache = docs as DataSource[];
+  cache = docs as unknown as DataSource[];
   console.log(`  Sources: ${cache.length} dataset(s) loaded`);
 }
 
