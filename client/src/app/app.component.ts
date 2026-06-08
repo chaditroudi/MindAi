@@ -62,7 +62,7 @@ const CHART_LABELS: Record<string, string> = {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.css',
+  styleUrls: ['./app.component.css'],
 })
 export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('chartHost') private readonly chartHost?: ElementRef<HTMLDivElement>;
@@ -284,7 +284,13 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private updateStage(stages: Stage[]): void {
     const elapsedMs = Date.now() - this.startedAt;
-    const currentIndex = Math.max(0, Math.min(stages.findLastIndex((stage) => elapsedMs >= stage.at), stages.length - 1));
+    let currentIndex = 0;
+    for (let index = stages.length - 1; index >= 0; index -= 1) {
+      if (elapsedMs >= stages[index].at) {
+        currentIndex = index;
+        break;
+      }
+    }
     const currentStage = stages[currentIndex];
     const nextAt = stages[currentIndex + 1]?.at ?? currentStage.at + 9000;
     const fraction = Math.min(0.9, (elapsedMs - currentStage.at) / Math.max(1, nextAt - currentStage.at));
@@ -315,16 +321,22 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private resetView(): void {
     this.chart?.clear();
+    this.clearTimers();
     this.reportSections = [];
     this.summaryText = '';
     this.errorMessage = '';
     this.chartTitle = '';
     this.chartTypeLabel = '';
     this.displayState = 'placeholder';
+    this.statusVisible = false;
+    this.statusLabel = 'جار التشغيل';
+    this.statusDetail = 'تهيئة الطلب';
     this.workspaceSubtitle = 'اختر مثالاً أو اكتب طلباً للبدء.';
     this.statusTone = 'default';
     this.statusText = 'جاهز';
     this.durationText = '0 ms';
+    this.elapsedText = '0s';
+    this.progressWidth = 0;
   }
 
   private clearTimers(): void {
