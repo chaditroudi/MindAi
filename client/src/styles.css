@@ -1,0 +1,11 @@
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Segoe UI", "Noto Sans Arabic", Tahoma, sans-serif;
+  background: #f0f2f5;
+  color: #1f2328;
+  direction: rtl;
+}

@@ -1,0 +1,132 @@
+<div class="shell">
+  <main class="workspace">
+    <div class="workspace-top">
+      <div>
+        <div class="workspace-title">النتيجة</div>
+        <div class="workspace-subtitle">{{ workspaceSubtitle }}</div>
+      </div>
+      <div class="chip-row">
+        <span class="chip" [class.ok]="statusTone === 'ok'" [class.err]="statusTone === 'err'">
+          <span class="chip-dot"></span>{{ statusText }}
+        </span>
+        <span class="chip">{{ durationText }}</span>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="chart-header" [class.active]="displayState === 'chart'">
+        <div class="chart-name">{{ chartTitle }}</div>
+        <span class="chart-type-badge" [class.active]="displayState === 'chart'">{{ chartTypeLabel }}</span>
+      </div>
+
+      <div class="result-body">
+        <div class="placeholder-wrap" [style.display]="displayState === 'placeholder' ? 'grid' : 'none'">
+          <div>
+            <div class="placeholder-icon">◈</div>
+            <div class="placeholder-title">لا توجد نتيجة بعد</div>
+            <div class="placeholder-text">اختر الوضع المناسب من الشريط الجانبي، ثم اكتب سؤالك أو اختر مثالاً لتبدأ.</div>
+          </div>
+        </div>
+
+        <div id="chart-wrap" [style.display]="displayState === 'chart' ? 'block' : 'none'">
+          <div #chartHost id="chart"></div>
+        </div>
+
+        <div id="output-text" [style.display]="displayState === 'text' ? 'block' : 'none'">
+          <div *ngIf="errorMessage" class="error-box">⚠ {{ errorMessage }}</div>
+
+          <ng-container *ngIf="!errorMessage && reportSections.length">
+            <ng-container *ngFor="let section of reportSections">
+              <h3>{{ section.heading }}</h3>
+              <p>{{ section.body }}</p>
+            </ng-container>
+          </ng-container>
+
+          <p *ngIf="!errorMessage && !reportSections.length">{{ summaryText }}</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">M</div>
+      <div class="brand-text">
+        <h1>Mind Analytics</h1>
+        <p>مسار الوكلاء · MongoDB · Groq</p>
+      </div>
+    </div>
+
+    <div class="sidebar-body">
+      <nav class="mode-tabs" aria-label="mode">
+        <button type="button" [class.active]="currentMode === 'dashboard'" [disabled]="isRunning" (click)="setMode('dashboard')">لوحة البيانات</button>
+        <button type="button" [class.active]="currentMode === 'report'" [disabled]="isRunning" (click)="setMode('report')">التقرير</button>
+        <button type="button" [class.active]="currentMode === 'inquiry'" [disabled]="isRunning" (click)="setMode('inquiry')">الاستعلام</button>
+      </nav>
+
+      <p class="mode-hint">{{ modeHint }}</p>
+
+      <div>
+        <div class="field-top">
+          <span class="field-label">السؤال</span>
+          <span class="field-hint">Enter للتشغيل</span>
+        </div>
+        <textarea
+          rows="5"
+          placeholder="اكتب سؤالك هنا..."
+          [(ngModel)]="prompt"
+          [disabled]="isRunning"
+          (ngModelChange)="clearSelectedStore()"
+          (keydown)="onPromptKeydown($event)"
+        ></textarea>
+      </div>
+
+      <div>
+        <div class="source-row" style="margin-bottom: 10px;">
+          <span class="source-badge">
+            <span class="source-dot" [class.active]="!!selectedStore"></span>
+            <span>{{ sourceText }}</span>
+          </span>
+        </div>
+        <button class="run-btn" type="button" [disabled]="isRunning" (click)="run()">
+          <span>{{ isRunning ? 'جار التشغيل...' : '▶ تشغيل' }}</span>
+        </button>
+      </div>
+
+      <div>
+        <div class="section-head">
+          <span class="section-title">اقتراحات</span>
+          <span class="section-sub">من /api/meta</span>
+        </div>
+
+        <div class="examples" *ngIf="currentExamples.length; else emptyExamples">
+          <button class="ex-btn" type="button" *ngFor="let example of currentExamples" [disabled]="isRunning" (click)="useExample(example)">
+            <span class="ex-title">{{ example.label }}</span>
+            <span class="ex-meta">
+              <span class="ex-tag" *ngIf="example.tag">{{ example.tag }}</span>
+              <span *ngIf="example.dataStoreName">{{ example.dataStoreName }}</span>
+            </span>
+          </button>
+        </div>
+
+        <ng-template #emptyExamples>
+          <div class="empty-hint">لا توجد اقتراحات. اكتب سؤالك مباشرة.</div>
+        </ng-template>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="progressWidth"></div>
+      </div>
+      <div class="status-row" [class.active]="statusVisible" aria-live="polite">
+        <div class="spinner"></div>
+        <div class="status-copy">
+          <div class="status-label">{{ statusLabel }}</div>
+          <div class="status-detail">{{ statusDetail }}</div>
+        </div>
+        <div class="elapsed-badge">{{ elapsedText }}</div>
+      </div>
+    </div>
+  </aside>
+</div>

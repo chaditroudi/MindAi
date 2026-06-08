@@ -6,7 +6,9 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:client": "npm --prefix client start",
     "build": "tsc -p tsconfig.json --noEmit false --outDir dist",
+    "build:client": "npm --prefix client run build",
     "start": "node dist/server.js",
     "seed": "tsx scripts/seed.ts",
     "reset": "tsx scripts/reset.ts",
