@@ -31,6 +31,8 @@ export class PipelineService {
   private readonly logger = new Logger(PipelineService.name);
 
   constructor(
+    @InjectConnection()
+    private readonly connection: Connection,
     private readonly cache: CacheService,
     private readonly history: HistoryService,
     private readonly chartRepo: ChartResultsRepository,
@@ -109,7 +111,7 @@ export class PipelineService {
     collection: string,
     pipeline: unknown[],
   ): Promise<Record<string, unknown>[]> {
-    const db = mongoose.connection.db;
+    const db = this.connection.db;
     if (!db) throw new Error('MongoDB connection not ready');
     const timeoutMs = Number(process.env['MONGODB_PIPELINE_TIMEOUT_MS']) || 30_000;
     return db
