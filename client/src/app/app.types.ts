@@ -5,7 +5,6 @@ export type ModeKey = 'dashboard' | 'report' | 'inquiry';
 export interface PromptExample {
   label: string;
   prompt: string;
-  dataStoreName?: string;
   tag?: string;
 }
 
@@ -17,50 +16,116 @@ export interface MetaMode {
 
 export interface MetaResponse {
   modes: MetaMode[];
-  sources: Array<{
-    name: string;
-    collection: string;
-    description: string;
-    fieldCount: number;
-  }>;
 }
 
 export interface AnalyticsRequest {
-  prompt: string;
-  intent: 'dashboard' | 'report' | 'general_question';
-  dataStoreName?: string;
+  prompt:    string;
+  intent:    'dashboard' | 'report' | 'general_question';
+  sessionId: string | null;
 }
 
 export interface ReportSection {
   heading: string;
-  body: string;
+  body:    string;
 }
 
-export interface DashboardChart {
-  title?: string;
-  chartType?: string;
-  option: EChartsCoreOption;
+export type WidgetType =
+  | 'line_chart' | 'area_chart' | 'multi_line_chart'
+  | 'bar_chart'  | 'horizontal_bar_chart'
+  | 'grouped_bar_chart' | 'stacked_bar_chart'
+  | 'donut_chart' | 'scatter_plot' | 'kpi_card' | 'table';
+
+export interface WidgetSpec {
+  id:       string;
+  type:     WidgetType;
+  title:    string;
+  insight?: string;
+  option?:  EChartsCoreOption;
+  columns?: string[];
+  rows?:    Record<string, unknown>[];
+  value?:   number;
 }
+
+export interface DashboardSpec {
+  layout:   'executive' | 'analytical' | 'operational';
+  title:    string;
+  summary:  string;
+  widgets:  WidgetSpec[];
+}
+
+// ─── Stored result per assistant message ─────────────────────────────────────
+
+export interface MessageResult {
+  type:             'dashboard' | 'report' | 'inquiry' | 'report+chart';
+  dashboardSpec?:   DashboardSpec;
+  reportSections?:  ReportSection[];
+  summary?:         string;
+  durationMs:       number;
+}
+
+// ─── Conversation messages ────────────────────────────────────────────────────
+
+export interface ConversationMessage {
+  messageId:  string;
+  role:       'user' | 'assistant';
+  prompt?:    string;
+  intent?:    ModeKey;
+  result?:    MessageResult;
+  createdAt?: string;
+}
+
+// ─── Saved results ────────────────────────────────────────────────────────────
+
+export interface SavedResultSummary {
+  id:        string;
+  title:     string;
+  prompt:    string;
+  intent:    ModeKey;
+  createdAt: string;
+}
+
+export interface SavedResultDetail extends SavedResultSummary {
+  result: MessageResult;
+}
+
+// ─── Session ──────────────────────────────────────────────────────────────────
+
+export interface SessionSummary {
+  sessionId:    string;
+  title:        string;
+  intent:       string;
+  createdAt:    string;
+  updatedAt:    string;
+  messageCount: number;
+}
+
+export interface SessionDetail {
+  session:  SessionSummary;
+  messages: ConversationMessage[];
+}
+
+// ─── API responses ────────────────────────────────────────────────────────────
 
 export interface DashboardResponse {
-  intent: 'dashboard';
-  chart: DashboardChart;
+  intent:    'dashboard';
+  chart:     DashboardSpec;
+  sessionId: string;
+  messageId: string;
 }
 
 export interface ReportResponse {
-  intent: 'report';
+  intent:          'report';
   reportSections?: ReportSection[];
+  sessionId:       string;
+  messageId:       string;
 }
 
 export interface InquiryResponse {
-  intent: 'general_question' | 'inquiry';
-  summary?: string;
+  intent:     'general_question' | 'inquiry';
+  summary?:   string;
+  sessionId:  string;
+  messageId:  string;
 }
 
 export type AnalyticsResponse = DashboardResponse | ReportResponse | InquiryResponse;
 
-export interface Stage {
-  label: string;
-  detail: string;
-  at: number;
-}

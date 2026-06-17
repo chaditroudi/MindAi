@@ -1,11 +1,23 @@
-html, body {
-  height: 100%;
-  margin: 0;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-body {
-  font-family: "Segoe UI", "Noto Sans Arabic", Tahoma, sans-serif;
-  background: #f0f2f5;
-  color: #1f2328;
-  direction: rtl;
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    background: #f9fafb;
+    color: #111827;
+  }
+
+  button, input, textarea, select { font: inherit; }
 }

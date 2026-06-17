@@ -7,20 +7,28 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "dev:client": "npm --prefix client start",
-    "build": "tsc -p tsconfig.json --noEmit false --outDir dist",
+    "build": "tsc -p tsconfig.build.json",
     "build:client": "npm --prefix client run build",
     "start": "node dist/server.js",
     "seed": "tsx scripts/seed.ts",
     "reset": "tsx scripts/reset.ts",
-    "mastra:dev": "mastra dev",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:smoke": "tsx scripts/test-prompts.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.0",
-    "@mastra/core": "^0.10.0",
+    "@mastra/core": "^1.41.0",
+    "@mastra/libsql": "^1.12.1",
+    "@mastra/memory": "^1.20.2",
+    "ai": "^4.3.19",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
     "mongodb": "^6.10.0",
     "tsx": "^4.19.0",
     "zod": "^3.23.8"
@@ -29,8 +37,10 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.1.8",
     "mastra": "^0.10.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.8"
   },
   "engines": {
     "node": ">=20.9.0"

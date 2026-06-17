@@ -4,320 +4,565 @@
 
 ```
 src/
-├── server.ts                        ← entry point
+├── server.ts                              ← entry point, Express app, graceful shutdown
+├── config.ts                              ← all env vars with typed defaults
+├── types/index.ts                         ← shared TypeScript interfaces
+│
 ├── http/
-│   └── api-router.ts                ← all HTTP routes
+│   └── api-router.ts                      ← all HTTP routes, auth, request ID
+│
 ├── db/
-│   ├── mongo.client.ts              ← MongoDB singleton
-│   ├── sources-cache.ts             ← datasets loaded at startup
-│   ├── aggregation.ts               ← runs pipeline against MongoDB
-│   └── source.repository.ts         ← findSource() helper
-├── mastra/
-│   ├── index.ts                     ← Mastra instance
-│   ├── model.ts                     ← Groq LLM client
-│   ├── tools/
-│   │   └── analytics.ts             ← 3 createTool + execute functions
-│   └── agents/
-│       ├── supervisor.ts            ← routing Agent with 3 tools
-│       ├── supervisor-plan.ts       ← builds MongoDB pipeline via LLM
-│       ├── chart.ts                 ← builds ECharts config via LLM
-│       ├── writer.ts                ← generates summaries/reports via LLM
-│       └── search.ts                ← builds $regex search pipeline
-└── types/index.ts                   ← all TypeScript types
+│   ├── mongo.client.ts                    ← MongoDB singleton connection
+│   ├── sources-cache.ts                   ← DataSource[] loaded at startup
+│   ├── aggregation.ts                     ← executes pipeline against MongoDB ($limit guard)
+│   ├── source.repository.ts               ← normalizeToken() helper
+│   ├── prompt-cache.ts                    ← MongoDB TTL cache (7 days, SHA-256 key)
+│   └── results-history.repository.ts      ← MongoDB pipeline run log
+│
+├── utils/
+│   └── logger.ts                          ← colored console logger + AsyncLocalStorage request ID
+│
+└── mastra/
+    ├── index.ts                           ← Mastra instance registration
+    ├── model.ts                           ← Groq LLM client + AbortSignal factory
+    ├── task-plan.ts                       ← finalizeTaskPlan() — post-processes LLM plan
+    ├── memory-store.ts                    ← LibSQL conversation sessions + messages
+    │
+    ├── tools/
+    │   └── analytics.ts                   ← orchestrator: runAggregation → skill chain
+    │                                         also exports 3 Mastra createTool wrappers
+    └── agents/
+        ├── analytics-agent.ts             ← Mastra Agent (free-text routing, 3 tools)
+        ├── supervisor-plan.ts             ← LLM call #1: builds MongoDB pipeline
+        ├── task-plan.ts                   ← validates/cleans the plan output
+        ├── chart.render.ts                ← deterministic ECharts renderers (no LLM)
+        └── skills/
+            ├── index.ts                   ← re-exports all skills
+            ├── aggregation.ts             ← cache check → plan → execute → save history
+            ├── chart.ts                   ← deterministic chart planning (no LLM)
+            └── writer.ts                  ← LLM call #2 (report/inquiry): writes narrative
+
+scripts/
+├── seed.ts                                ← populates MongoDB with sample data
+└── dump-memory.ts                         ← prints all sessions/messages to stdout or file
+
+data/
+└── memory.db                              ← LibSQL/SQLite (conversation memory)
 ```
 
 ---
 
-## Layer 1 — Startup (`server.ts`)
+## Startup Sequence (`server.ts`)
 
 ```
-node start
-  → getMongo()         connects to MongoDB (singleton, retries)
-  → initSources()      loads all docs from `sources` collection into memory cache
-  → app.listen(3000)   HTTP server ready
+1. getMongo()       → connect to MongoDB (singleton, retries on failure)
+2. initSources()    → load all docs from `sources` collection → in-memory cache
+3. initCache()      → create TTL index on prompt_cache (7 days) + intent index
+4. app.listen(3000) → HTTP server ready
 ```
 
-If the `sources` collection is empty → warning logged, server still starts, every analytics request returns `400`.
+Security applied at boot:
+- `helmet()` → sets security headers (X-Frame-Options, CSP off, etc.)
+- `cors()` → open in dev; restricted to `ALLOWED_ORIGINS` env var in production
+- `x-powered-by` disabled
 
 ---
 
-## Layer 2 — Sources Cache (`sources-cache.ts`)
+## Sources Cache (`db/sources-cache.ts`)
 
-Loaded once at startup. All agents read from it via `getSources()` — no DB hit per request.
+Loaded once at startup via `initSources()`. All LLM calls read from it via `getSources()` — zero DB hits per request.
 
 ```json
 {
-  "name": "Films",
-  "collection": "films",
-  "description": "...",
+  "name": "Projects",
+  "collection": "projects",
+  "description": "Municipal infrastructure projects",
   "fields": [
-    { "name": "title",   "type": "string",  "role": "dimension" },
-    { "name": "genre",   "type": "enum",    "enumValues": ["Action", "Drama"] },
-    { "name": "year",    "type": "integer", "role": "temporal" },
-    { "name": "revenue", "type": "number",  "role": "measure" }
+    { "name": "status",   "type": "enum",    "enumValues": ["Active","Closed"] },
+    { "name": "region",   "type": "string"                                     },
+    { "name": "budget",   "type": "number"                                     },
+    { "name": "year",     "type": "integer", "role": "temporal"                },
+    { "name": "muni",     "type": "string",  "desc": "reference to municipalities" }
   ]
 }
 ```
 
----
-
-## Layer 3 — HTTP Routes (`api-router.ts`)
-
-| Method   | Path                        | Purpose                        |
-|----------|-----------------------------|--------------------------------|
-| `POST`   | `/api/analytics`            | main AI query                  |
-| `POST`   | `/api/search`               | keyword search                 |
-| `GET`    | `/api/meta`                 | available modes + example prompts |
-| `GET`    | `/api/sources`              | list registered datasets       |
-| `POST`   | `/api/sources`              | register / update a dataset    |
-| `DELETE` | `/api/sources/:collection`  | remove a dataset               |
+Reference detection in `resolveReference()` handles FK fields in 3 ways:
+1. Explicit `field.referenceTo` property
+2. Field description contains "reference", " id", or "ref "
+3. Field name is a prefix/abbreviation of a collection name (`muni` → `municipalities`)
 
 ---
 
-## Layer 4 — Analytics Route (the main flow)
+## HTTP Routes (`http/api-router.ts`)
 
-Request body from frontend:
+### Middleware (applied to every request)
+1. **Request ID** — assigns a UUID via `AsyncLocalStorage`; every log line in that request carries it
+2. **API key** — reads `x-api-key` header, validates against `process.env.API_KEY`; skipped for `/meta` and `/provider`
 
+### Route table
+
+| Method   | Path                           | Auth | Purpose                                   |
+|----------|--------------------------------|:----:|-------------------------------------------|
+| `POST`   | `/api/analytics`               | ✓    | Main AI query (dashboard / report / inquiry) |
+| `GET`    | `/api/meta`                    | —    | Available sources + example prompts        |
+| `GET`    | `/api/cache`                   | ✓    | List prompt cache entries                  |
+| `DELETE` | `/api/cache`                   | ✓    | Clear all cache, or one entry by `{ key }` |
+| `GET`    | `/api/history/results`         | ✓    | List past pipeline runs (MongoDB)          |
+| `GET`    | `/api/history/results/:id`     | ✓    | Full run detail (rows + pipeline)          |
+| `GET`    | `/api/history/sessions`        | ✓    | List conversation sessions (LibSQL)        |
+| `GET`    | `/api/history/sessions/:id`    | ✓    | Session detail with all messages           |
+| `DELETE` | `/api/history/sessions/:id`    | ✓    | Delete a session                           |
+| `GET`    | `/api/sources`                 | ✓    | List registered datasets                   |
+| `POST`   | `/api/sources`                 | ✓    | Register / update a dataset               |
+| `DELETE` | `/api/sources/:collection`     | ✓    | Remove a dataset                           |
+| `GET`    | `/health`                      | —    | MongoDB ping + sources count               |
+| `GET`    | `/api/provider`                | —    | Returns `{ provider: "groq" }`             |
+
+---
+
+## Main Analytics Flow (`POST /api/analytics`)
+
+Request body:
 ```json
-{ "prompt": "top 5 films by revenue", "intent": "dashboard", "sourceName": "Films" }
+{ "prompt": "show projects by status", "intent": "dashboard", "sessionId": "abc-123" }
 ```
 
-Two paths in `api-router.ts`:
+`prompt` is validated: min 1 char, max 1000 chars.
+
+### Intent routing
 
 ```
-intent is "dashboard" / "report" / "inquiry"
-  → call executeXxx(ctx) directly         ← NO routing LLM call, fast
-
-intent is missing / undefined
-  → supervisorAgent.generate(prompt)      ← LLM decides which tool to call
+intent = "dashboard"  → executeDashboard(prompt, context)
+intent = "report"     → executeReport(prompt, context)
+intent = "inquiry"    → executeInquiry(prompt, context)
+intent = null/missing → analyticsAgent.generate(prompt)   ← agent picks the tool
 ```
+
+### Session + memory (before the LLM call)
+
+```
+sessionId provided & exists in LibSQL  → reuse thread
+sessionId missing / unknown            → create new UUID thread
+
+ensureThread(sessionId, prompt, intent)  → create or update thread title
+getMemoryContext(sessionId)              → load last 20 messages as CoreMessage[]
+```
+
+The `context` array is passed all the way down to the supervisor LLM call.
 
 ---
 
-## Layer 5 — Tools (`mastra/tools/analytics.ts`)
+## Aggregation Skill (`skills/aggregation.ts`)
 
-Three `createTool` definitions. Each tool has an `execute` function that delegates to a plain `executeXxx` function. The tools are registered on the supervisor agent; the plain functions are called directly by the router.
+This is the central skill — called by all three executors.
 
 ```
-analyticsInputSchema   { prompt, sourceName? }
+runAggregation(prompt, intent, context)
 
-exec(ctx, intent)      shared internal function:
-  1. getSources()                          → all datasets from memory cache
-  2. runSupervisorPlan(prompt, intent, sources)  → LLM builds MongoDB pipeline
-  3. if needsData → executePipeline(pipeline, collection) → rows[]
+  1. PROMPT CACHE CHECK (only when context = [])
+     key = SHA-256(intent + ":" + normalised_prompt).slice(0,24)
+     getCached() → MongoDB prompt_cache
+       HIT  → return cached AggregationResult immediately (0 LLM calls)
+       MISS → continue
+
+  2. LLM CALL #1 — runSupervisorPlan()
+     Builds MongoDB aggregation pipeline from schema + prompt + context
+     Model: llama-3.3-70b-versatile (Groq), temp=0, maxRetries=3
+
+  3. PIPELINE EXECUTION — executePipeline()
+     Safety guard: if no $limit stage → inject { $limit: 500 }
+     db.collection(name).aggregate(pipeline, { allowDiskUse: true })
+
+  4. SAVE TO results_history (fire-and-forget)
+     MongoDB: prompt, intent, collection, pipeline, rows, rowCount, durationMs
+
+  5. SAVE TO prompt_cache (fire-and-forget, only when context = [])
+     MongoDB: SHA-256 key, result, TTL 7 days
+
   return { plan, rows }
-
-executeDashboard(ctx)  → exec(ctx, 'dashboard')        → runChartAgent(rows, prompt)
-executeReport(ctx)     → exec(ctx, 'report')           → runReportWriter(rows, prompt)
-executeInquiry(ctx)    → exec(ctx, 'general_question') → runInquiryWriter(rows, prompt)
-
-dashboardTool  → execute: ctx => executeDashboard(ctx)   ← used by supervisor agent
-reportTool     → execute: ctx => executeReport(ctx)
-inquiryTool    → execute: ctx => executeInquiry(ctx)
 ```
+
+**Cache bypass rule:** when `context.length > 0` (follow-up in a session), the cache is skipped entirely — a cached answer from an isolated prompt cannot correctly answer a context-dependent follow-up.
 
 ---
 
-## Layer 6 — Supervisor Plan (`agents/supervisor-plan.ts`)
+## LLM Call #1 — Supervisor Plan (`agents/supervisor-plan.ts`)
 
-The most important LLM call. Given the user prompt and all source schemas, the LLM builds a complete MongoDB aggregation pipeline.
+Produces the MongoDB aggregation pipeline from natural language.
 
-**Input sent to LLM:**
+**System prompt contains:**
+- Full schema for every registered collection (exact field names, types, roles)
+- Ready-to-copy pipeline templates for each collection (group, sum, avg, count, trend, raw list, join)
+- Join (`$lookup`) templates for any FK fields detected by `resolveReference()`
+- Intent-specific rules (dashboard strategy + chartHint / report shape / inquiry patterns)
+- Arabic prompt examples
 
+**User message:**
 ```json
-{
-  "prompt": "top 5 films by revenue",
-  "intent": "dashboard",
-  "availableSources": [
-    {
-      "name": "Films",
-      "collection": "films",
-      "fields": [
-        { "name": "title",   "type": "string", "role": "dimension" },
-        { "name": "revenue", "type": "number", "role": "measure"   }
-      ]
-    }
-  ]
-}
+{ "prompt": "top 10 regions by budget", "intent": "dashboard" }
 ```
 
-**Output (TaskPlan JSON):**
-
+**Output (TaskPlan):**
 ```json
 {
-  "intent":     "dashboard",
   "needsData":  true,
-  "needsChart": true,
+  "strategy":   "ranking",
   "chartHint":  "ranking",
-  "query":      { "sourceName": "Films" },
+  "query":      { "sourceName": "Projects" },
   "pipeline": [
-    { "$group":   { "_id": "$title", "revenue": { "$sum": "$revenue" } } },
-    { "$sort":    { "revenue": -1 } },
-    { "$limit":   5 },
-    { "$project": { "_id": 0, "title": "$_id", "revenue": 1 } }
+    { "$group":   { "_id": "$region", "value": { "$sum": "$budget" } } },
+    { "$sort":    { "value": -1 } },
+    { "$limit":   10 },
+    { "$project": { "_id": 0, "label": "$_id", "value": 1 } }
   ]
 }
 ```
 
----
-
-## Layer 7 — Pipeline Execution (`db/aggregation.ts`)
-
-```ts
-db.collection('films').aggregate(pipeline, { allowDiskUse: true, maxTimeMS: 30000 })
-```
-
-Returns rows like:
-
-```json
-[
-  { "title": "Avatar",   "revenue": 2847246203 },
-  { "title": "Avengers", "revenue": 2797800564 }
-]
-```
+`finalizeTaskPlan()` post-processes the output: normalises `sourceName`, fills missing `skills[]`, validates that `needsData=false` pipelines are truly empty.
 
 ---
 
-## Layer 8 — Chart Agent (`agents/chart.ts`)
+## Chart Skill — fully deterministic (`skills/chart.ts`)
 
-Receives `{ rows, userPrompt, intentHint }`, returns a complete ECharts `option` config.
+Called only for `dashboard` intent. **Zero LLM calls** — all decisions are pure code.
 
-```json
-{
-  "chartType": "horizontalBar",
-  "title": "Top 5 Films by Revenue",
-  "option": {
-    "xAxis": { "type": "value" },
-    "yAxis": { "type": "category", "data": ["Avatar", "Avengers"] },
-    "series": [{ "type": "bar", "data": [2847246203, 2797800564] }]
-  }
+**Step 1 — Data shape analysis:**
+```
+analyzeDataShape(rows, schemaFields?) → DataShapeAnalysis {
+  detectedShape:       "grouped_pairs" | "time_series" | "scatter_capable" | "multi_field"
+  numericFields:       ["value"]
+  temporalFields:      ["year"]
+  categoricalFields:   ["label"]
+  isGroupedPairs:      true
+  isTimeSeriesCapable: false
+  isScatterCapable:    false
 }
 ```
 
-Frontend renders this directly with ECharts — no transformation needed.
+Temporal detection uses three layers (most to least reliable):
+1. **Name-based** — field name is or contains `year`, `month`, `quarter`, `date`, `week`, `day`
+2. **Schema-based** — field has `role=temporal` or `type=date/datetime` in the DataSource definition
+3. **Value-based** — every non-null value is a year integer (1900–2100) or an ISO date string (`YYYY-MM-DD`)
+
+`schemaFields` comes from `getSources()` (the in-memory sources cache), passed in from `analytics.ts` via `source?.fields`.
+
+**Step 2 — chartHint reconciliation:**
+
+`reconcileChartHint(hint, shape)` downgrades impossible hints from the supervisor:
+- `scatter` but `isScatterCapable=false` → `distribution` or `ranking`
+- `trend` but `isTimeSeriesCapable=false` → `distribution` or `ranking`
+
+**Step 3 — Deterministic chart type selection:**
+
+```
+determineChartType(shape, chartHint, rowCount) → ChartableType
+
+  time_series shape:
+    chartHint=compare  → bar_chart
+    default            → line_chart
+
+  all-numeric, no labels → scatter_plot
+
+  chartHint=scatter + isScatterCapable → scatter_plot
+
+  chartHint=ranking | compare  → rowCount > 8 ? horizontal_bar_chart : bar_chart
+  chartHint=part_of_whole      → donut_chart
+  chartHint=distribution       → rowCount <= 12 ? donut_chart : horizontal_bar_chart
+  chartHint=trend (non-series) → rowCount > 8 ? horizontal_bar_chart : bar_chart
+  default                      → rowCount <= 10 ? donut_chart : horizontal_bar_chart
+```
+
+**Step 4 — Field assignment, title, insight:**
+
+```
+assignFields(shape, type)    → { labelField, valueField } or { xField, valueField } or { xField, yField }
+deriveTitle(type, fields)    → "region by budget" / "value over year" / "x vs y"
+computeInsight(rows, plan)   → "Paris leads with 1,200 (34%)." / "Peak at 2023: 8,500."
+```
+
+**Step 5 — Deterministic rendering (`chart.render.ts`):**
+
+```
+renderWidget(plan, rows, keys, id)
+  → validates every field name against actual row keys (drops widget if unknown field)
+  → renderBar / renderLine / renderDonut / renderScatter / renderTable
+  → each renderer computes all values from the real rows
+```
+
+**Overview vs analytical layout:**
+- `strategy=overview` or `shape=multi_field` → `buildOverviewPlans()` → up to 3 widgets (distribution + top-10 + trend line)
+- All other strategies → `buildPrimaryPlan()` → single focused widget
+
+Output: `DashboardSpec { layout, title, summary, widgets[] }` — complete ECharts configs.
 
 ---
 
-## Layer 8 — Writer Agent (`agents/writer.ts`)
+## LLM Call #2 — Writer Skill (`skills/writer.ts`)
 
-Two functions depending on intent:
+Called for `report` and `inquiry` intents.
 
+**Inquiry** (1–3 sentences, lead with key number):
 ```
-runInquiryWriter({ prompt, rows })
-  → { summary: "There are 1,240 films in the database..." }
+runInquirySkill({ prompt, rows })
+  maxTokens: 512
+  → { summary: "There are 342 active projects across 8 municipalities. ..." }
+```
 
+**Report** (5-section structure):
+```
 runReportWriter({ prompt, rows })
+  maxTokens: 2048
   → { reportSections: [
-        { heading: "Overview",      body: "..." },
-        { heading: "Key Findings",  body: "..." }
+      { heading: "Overview",         body: "..." },
+      { heading: "Key Findings",     body: "..." },
+      { heading: "Breakdown",        body: "..." },
+      { heading: "Trends",           body: "..." },
+      { heading: "Recommendations",  body: "..." }
     ]}
 ```
 
----
+Both calls: `temperature=0`, `maxRetries=3`, language auto-detected (Arabic or English).
 
-## Layer 9 — Supervisor Agent (`agents/supervisor.ts`)
-
-Only used when **no intent is provided** (free-text mode). Mastra `Agent` with 3 tools registered. LLM reads the prompt and calls the matching tool via function calling.
-
-```ts
-new Agent({
-  model: resolveModel('supervisor'),   // Groq llama-3.3-70b-versatile
-  tools: { dashboardTool, reportTool, inquiryTool }
-})
-```
+Empty data handling: 0 rows → fixed response without speculating ("No records found…").
 
 ---
 
-## Layer 10 — Model (`mastra/model.ts`)
+## Analytics Agent (`agents/analytics-agent.ts`)
 
-Single Groq client using `@ai-sdk/openai` compatible adapter. Role-specific model override via env:
+Used **only** when `intent` is missing or unknown. Mastra `Agent` with 3 tools.
+
+The agent reads the prompt and calls exactly one tool (`buildDashboard`, `generateReport`, or `executeInquiry`). The tool then runs the normal 2-call path internally.
+
+Disambiguation rules built into the agent instructions:
+- `"show"`, `"chart"`, `"dashboard"`, `"اعرض"`, `"مخطط"` → `buildDashboard`
+- `"report"`, `"analysis"`, `"تقرير"`, `"تحليل"` → `generateReport`
+- `"how many"`, `"count"`, `"كم عدد"`, `"find"` → `executeInquiry`
+- Ambiguous → `buildDashboard` (default)
+
+---
+
+## Conversation Memory (`mastra/memory-store.ts`)
+
+Stored in **SQLite** (`./data/memory.db`) via LibSQL + `@mastra/memory`.
 
 ```
-GROQ_SUPERVISOR_MODEL=...   (default: llama-3.3-70b-versatile)
-GROQ_WRITER_MODEL=...
-GROQ_CHART_MODEL=...
-GROQ_SEARCH_MODEL=...
-GROQ_MODEL=...              (fallback for all roles)
+LibSQL tables:
+  mastra_threads   → one row per session (id, title, intent, createdAt, updatedAt)
+  mastra_messages  → one row per message (role, content, metadata.uiMessage)
+```
+
+`uiMessage` in metadata stores the full `ConversationMessage` object (prompt, intent, result type, durationMs) for the UI history endpoints.
+
+**What memory does:**
+- Loads last 20 messages as `CoreMessage[]` per request
+- Passes them to the supervisor LLM so follow-up prompts work ("now filter by X")
+
+**What memory does NOT do:**
+- Does not cache results (that is `prompt_cache`)
+- Does not store raw pipeline rows (that is `results_history`)
+- Does not affect rendering or report content directly
+
+**Dump memory to text:**
+```bash
+npm run dump:memory
+npx tsx scripts/dump-memory.ts output.txt
 ```
 
 ---
 
-## Full Request Flow — Dashboard (intent known)
+## Prompt Cache (`db/prompt-cache.ts`)
+
+Stored in **MongoDB** collection `prompt_cache`.
 
 ```
-Frontend
-  POST /api/analytics
-  { prompt: "top 5 films by revenue", intent: "dashboard", sourceName: "Films" }
+Key:    SHA-256(intent + ":" + normalised_prompt).slice(0, 24)
+TTL:    7 days (MongoDB TTL index on createdAt)
+Bypass: always when context.length > 0 (multi-turn session)
 
-api-router.ts
-  → getSources().length check               if 0 → 400
-  → intent === "dashboard"
-  → executeDashboard({ prompt, sourceName })
-
-analytics.ts: executeDashboard()
-  → exec(ctx, 'dashboard')
-      → getSources()                        cache, no DB hit
-      → runSupervisorPlan(...)              LLM call #1 — builds pipeline
-      → executePipeline(pipeline, 'films')  MongoDB aggregation
-      → returns { plan, rows }
-  → runChartAgent({ rows, prompt, intentHint: "ranking" })   LLM call #2
-  → returns { chartType, title, option }
-
-api-router.ts
-  → res.json({ intent: "dashboard", chart: { chartType, title, option } })
-
-Frontend
-  → renders ECharts with option config
+On HIT:  returns full AggregationResult — 0 LLM calls, 0 DB aggregation
+On MISS: runs full pipeline, saves result fire-and-forget
 ```
 
-**2 LLM calls total. No wasted routing call.**
+```json
+{
+  "_id":       "a3f2b1c9d4e5f6a7b8c9d0e1",
+  "intent":    "dashboard",
+  "prompt":    "show projects by status",
+  "result":    { "plan": {...}, "rows": [...] },
+  "createdAt": "2026-06-13T09:00:00Z",
+  "hitCount":  3,
+  "lastHitAt": "2026-06-13T11:00:00Z"
+}
+```
+
+Manage via API:
+```
+GET    /api/cache         → list all entries (result payload excluded)
+DELETE /api/cache         → clear all entries
+DELETE /api/cache + body { key } → delete one entry
+```
 
 ---
 
-## Full Request Flow — No Intent (free-text)
+## Results History (`db/results-history.repository.ts`)
 
-```
-Frontend
-  POST /api/analytics
-  { prompt: "show me something interesting" }   ← no intent
+Every pipeline execution is saved to MongoDB collection `results_history` (fire-and-forget).
 
-api-router.ts
-  → intent is undefined
-  → supervisorAgent.generate(prompt, { maxSteps: 2 })
-
-supervisor.ts (Mastra Agent)
-  → LLM call #1: reads prompt → decides "build-dashboard"
-  → calls dashboardTool.execute(ctx)
-      → executeDashboard(ctx)
-          → LLM call #2: supervisor-plan builds pipeline
-          → MongoDB aggregation
-          → LLM call #3: chart agent
-
-api-router.ts
-  → toolResults[0].toolName === "build-dashboard"
-  → res.json({ intent: "dashboard", chart: ... })
+```json
+{
+  "_id":        "ObjectId",
+  "prompt":     "show projects by status",
+  "intent":     "dashboard",
+  "collection": "projects",
+  "pipeline":   [...],
+  "rows":       [...],
+  "rowCount":   8,
+  "durationMs": 312,
+  "createdAt":  "2026-06-13T09:00:00Z"
+}
 ```
 
-**3 LLM calls. The routing call is justified — intent was genuinely unknown.**
+Query via API:
+```
+GET /api/history/results?intent=dashboard&skip=0&limit=20
+GET /api/history/results/:id
+```
+
+---
+
+## MongoDB Collections Summary
+
+| Collection        | Purpose                            | TTL       |
+|-------------------|------------------------------------|-----------|
+| `sources`         | DataSource definitions             | permanent |
+| `prompt_cache`    | Cached AggregationResult per prompt| 7 days    |
+| `results_history` | Every pipeline run log             | permanent |
 
 ---
 
 ## LLM Call Summary
 
-| Scenario             | Routing call | Plan call | Output call | Total |
-|----------------------|:------------:|:---------:|:-----------:|:-----:|
-| Intent from dropdown | —            | ✓         | ✓           | 2     |
-| Free-text, no intent | ✓            | ✓         | ✓           | 3     |
-| needsData = false    | —            | ✓         | —           | 1     |
+| Scenario                          | Routing | Plan  | Writer | Total |
+|-----------------------------------|:-------:|:-----:|:------:|:-----:|
+| Intent known, cache HIT           | —       | —     | —      | **0** |
+| Dashboard — cache MISS            | —       | ✓     | —      | **1** |
+| Report / inquiry — cache MISS     | —       | ✓     | ✓      | **2** |
+| Any intent — follow-up (ctx)      | —       | ✓     | ✓/—    | **1–2** |
+| Free-text (agent routing)         | ✓       | ✓     | ✓/—    | **2–3** |
+| `needsData = false`               | —       | ✓     | —      | **1** |
+
+> Dashboard intent costs **1 LLM call** — the chart skill is fully deterministic code (no LLM).
+
+All LLM calls: `temperature=0`, `maxRetries=3`, per-role `AbortSignal` timeout.
+
+---
+
+## Full Request Flows
+
+### Dashboard — intent known, cache miss
+
+```
+POST /api/analytics  { prompt, intent: "dashboard", sessionId }
+  │
+  ├─ Zod validate prompt (min 1, max 1000)
+  ├─ Load / create LibSQL session thread
+  ├─ getMemoryContext() → last 20 msgs as CoreMessage[]
+  │
+  └─ executeDashboard(prompt, context)
+       └─ runAggregation(prompt, "dashboard", context)
+            ├─ getCached() → MISS
+            ├─ runSupervisorPlan() → LLM #1 → TaskPlan + pipeline
+            ├─ executePipeline() → MongoDB → rows[]
+            │    └─ $limit guard injects { $limit: 500 } if missing
+            ├─ historyRepo.save() → results_history (async)
+            └─ setCached() → prompt_cache (async)
+         └─ runChart(rows, prompt, strategy, chartHint, source?.fields)
+              ├─ analyzeDataShape(rows, schemaFields) → shape analysis
+              ├─ reconcileChartHint()                 → fix impossible hints
+              ├─ determineChartType() + assignFields() → deterministic plan
+              ├─ deriveTitle() + computeInsight()      → from real data
+              └─ renderWidget() × N                   → deterministic ECharts configs
+
+  ├─ saveConversationTurn() → LibSQL thread
+  └─ res.json({ intent: "dashboard", chart: DashboardSpec, sessionId })
+```
+
+### Free-text — no intent
+
+```
+POST /api/analytics  { prompt: "analyse our data", sessionId }
+  │
+  └─ analyticsAgent.generate(prompt, { maxSteps: 2 })
+       ├─ LLM #1 (routing): reads prompt → picks "buildDashboard"
+       └─ buildDashboardTool.execute() → executeDashboard()
+            └─ (same path as above: LLM #2 = supervisor only; chart is deterministic)
+```
+
+### Follow-up in same session
+
+```
+Turn 1: "show projects by status"     → context=[], cache eligible
+Turn 2: "now filter only completed"   → context=[2 msgs], cache BYPASSED
+                                         supervisor sees prior turn → adds $match
+```
+
+---
+
+## Model & Retry (`mastra/model.ts`)
+
+```typescript
+const groq = createOpenAI({
+  baseURL: 'https://api.groq.com/openai/v1',
+  apiKey:  GROQ_API_KEY,
+});
+
+resolveModel(role)  → checks GROQ_${ROLE}_MODEL env var, falls back to GROQ_MODEL
+freshSignal(role)   → AbortSignal.timeout(config.llm.timeouts[role])
+```
+
+All `generateObject` calls pass `maxRetries: 3` — the AI SDK retries automatically on Groq 429 rate-limit errors with exponential backoff.
 
 ---
 
 ## Environment Variables
 
 ```env
+# Required
 MONGODB_URI=mongodb://localhost:27017
+GROQ_API_KEY=gsk_...
+
+# Optional — server
+PORT=3000
 MONGODB_DB=mindai
-GROQ_API_KEY=your_key_here
-GROQ_MODEL=llama-3.3-70b-versatile     # optional, overrides all roles
-PORT=3000                               # optional, default 3000
+ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+API_KEY=your-secret-key                  # enables x-api-key header auth
+SHUTDOWN_TIMEOUT_MS=10000
+
+# Optional — LLM models (all default to llama-3.3-70b-versatile)
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_SUPERVISOR_MODEL=...           # plan generation
+GROQ_WRITER_MODEL=...               # report / inquiry narrative
+
+# Optional — timeouts (ms)
+SUPERVISOR_TIMEOUT_MS=8000
+WRITER_TIMEOUT_MS=8000
+
+# Optional — LibSQL (defaults to local file)
+LIBSQL_URL=file:./data/memory.db
 ```
+
+---
+
+## Key Design Decisions
+
+| Decision | Reason |
+|----------|--------|
+| Schema injected into every LLM system prompt | Prevents hallucinated field names |
+| `temperature: 0` on all LLM calls | Reproducible, deterministic pipelines |
+| Chart skill is 100% deterministic code | No LLM for dashboards — type, fields, title, insight all derived from data shape + schema |
+| Prompt cache bypassed when `context.length > 0` | Context-dependent answers must not be served from cache |
+| Fire-and-forget for cache + history writes | Never blocks the HTTP response |
+| `$limit: 500` safety guard | Prevents unbounded aggregations from crashing the server |
+| `maxRetries: 3` on all LLM calls | Handles Groq 429 rate limits transparently |
+| Request ID via `AsyncLocalStorage` | Every log line for a request shares the same ID — easy tracing |

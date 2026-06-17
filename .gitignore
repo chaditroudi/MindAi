@@ -6,3 +6,12 @@ dist/
 .mastra/
 .DS_Store
 coverage/
+
+# Angular build cache
+client/.angular/
+
+# Runtime data
+data/
+
+# Build / tool caches
+.cache/

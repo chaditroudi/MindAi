@@ -1,42 +1,87 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom, Observable, throwError, TimeoutError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
-import type { AnalyticsRequest, AnalyticsResponse, MetaResponse } from './app.types';
+
+export class ApiError extends Error {
+  constructor(message: string, readonly code: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+import type {
+  AnalyticsRequest, AnalyticsResponse,
+  MetaResponse, SessionSummary, SessionDetail,
+  SavedResultSummary, SavedResultDetail, MessageResult, ModeKey,
+} from './app.types';
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly http = inject(HttpClient);
 
   getMeta(): Promise<MetaResponse> {
-    return this.request(this.http.get<MetaResponse>('/api/meta'));
+    return this.req(this.http.get<MetaResponse>('/api/meta'));
   }
 
-  runAnalytics(payload: AnalyticsRequest): Promise<AnalyticsResponse> {
-    return this.request(this.http.post<AnalyticsResponse>('/api/analytics', payload));
+  saveKey(userId: string, apiKey: string): Promise<{ ok: boolean }> {
+    return this.req(this.http.post<{ ok: boolean }>('/api/key', { userId, apiKey }));
   }
 
-  private request<T>(stream: Observable<T>): Promise<T> {
+  deleteKey(userId: string): Promise<{ ok: boolean }> {
+    return this.req(this.http.delete<{ ok: boolean }>(`/api/key/${userId}`));
+  }
+
+  runAnalytics(payload: AnalyticsRequest, userId: string): Promise<AnalyticsResponse> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.post<AnalyticsResponse>('/api/analytics', payload, { headers }));
+  }
+
+  saveResult(userId: string, payload: { title: string; prompt: string; intent: ModeKey; result: MessageResult }): Promise<{ ok: boolean; id: string }> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.post<{ ok: boolean; id: string }>('/api/saved', payload, { headers }));
+  }
+
+  listSavedResults(userId: string): Promise<SavedResultSummary[]> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.get<SavedResultSummary[]>('/api/saved', { headers }));
+  }
+
+  getSavedResult(userId: string, id: string): Promise<SavedResultDetail> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.get<SavedResultDetail>(`/api/saved/${id}`, { headers }));
+  }
+
+  deleteSavedResult(userId: string, id: string): Promise<{ ok: boolean }> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.delete<{ ok: boolean }>(`/api/saved/${id}`, { headers }));
+  }
+
+  listSessions(): Promise<SessionSummary[]> {
+    return this.req(this.http.get<SessionSummary[]>('/api/history/sessions'));
+  }
+
+  getSession(sessionId: string): Promise<SessionDetail> {
+    return this.req(this.http.get<SessionDetail>(`/api/history/sessions/${sessionId}`));
+  }
+
+  deleteSession(sessionId: string): Promise<{ ok: boolean }> {
+    return this.req(this.http.delete<{ ok: boolean }>(`/api/history/sessions/${sessionId}`));
+  }
+
+  private req<T>(stream: Observable<T>): Promise<T> {
     return firstValueFrom(
       stream.pipe(
         timeout(480_000),
         catchError((error: unknown) => {
-          if (error instanceof TimeoutError) {
-            return throwError(() => new Error('انتهت المهلة. تحقق من الخادم.'));
-          }
-
+          if (error instanceof TimeoutError)
+            return throwError(() => new Error('Request timed out. Check that the server is running.'));
           if (error instanceof HttpErrorResponse) {
-            const message = typeof error.error?.error === 'string'
-              ? error.error.error
-              : error.message;
-            return throwError(() => new Error(message));
+            const message = typeof error.error?.error === 'string' ? error.error.error : error.message;
+            const code    = typeof error.error?.code  === 'string' ? error.error.code  : undefined;
+            return throwError(() => code ? new ApiError(message, code) : new Error(message));
           }
-
-          if (error instanceof Error) {
-            return throwError(() => error);
-          }
-
-          return throwError(() => new Error('حدث خطأ غير متوقع.'));
+          if (error instanceof Error) return throwError(() => error);
+          return throwError(() => new Error('An unexpected error occurred.'));
         }),
       ),
     );
