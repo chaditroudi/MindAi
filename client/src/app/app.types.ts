@@ -104,6 +104,13 @@ export interface SessionDetail {
   messages: ConversationMessage[];
 }
 
+// ─── Provider ────────────────────────────────────────────────────────────────
+
+export interface ProviderResponse {
+  provider:      string;
+  hasGlobalKey:  boolean;
+}
+
 // ─── API responses ────────────────────────────────────────────────────────────
 
 export interface DashboardResponse {

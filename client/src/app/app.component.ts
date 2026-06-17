@@ -97,6 +97,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     void this.loadMeta();
     void this.loadSessions();
     void this.loadSavedResults();
+    void this.checkGlobalKey();
   }
 
   ngAfterViewChecked(): void {
@@ -293,7 +294,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       const durationMs = Date.now() - this.timerStart;
 
       const currentMessages = this.st.snap.messages;
-      const assistantMsg    = this.buildAssistantMessage(data, durationMs);
+      const assistantMsg    = this.buildAssistantMessage(data, durationMs, prompt.trim());
 
       this.st.patch({
         phase:     'done',
@@ -351,7 +352,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.st.patch({
           phase: 'done', durationMs,
           sessionId: data.sessionId,
-          messages: [...this.st.snap.messages, this.buildAssistantMessage(data, durationMs)],
+          messages: [...this.st.snap.messages, this.buildAssistantMessage(data, durationMs, pendingPrompt)],
         });
       }
       void this.loadSessions();

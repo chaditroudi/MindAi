@@ -2,12 +2,12 @@ import {
   Controller, Get, Post, Delete, Param, Body, Headers,
   UnauthorizedException, NotFoundException, BadRequestException, HttpCode,
 } from '@nestjs/common';
-import { IsString, IsIn, MinLength, MaxLength, IsNotEmpty } from 'class-validator';
+import { IsString, IsIn, IsOptional, MaxLength } from 'class-validator';
 import { SavedResultsService } from './saved-results.service';
 
 class SaveDto {
-  @IsString() @IsNotEmpty() @MaxLength(200) title!: string;
-  @IsString() @IsNotEmpty() @MaxLength(1000) prompt!: string;
+  @IsString() @MaxLength(200) title!: string;
+  @IsOptional() @IsString() @MaxLength(1000) prompt?: string;
   @IsIn(['dashboard', 'report', 'inquiry']) intent!: 'dashboard' | 'report' | 'inquiry';
   result: unknown;
 }
@@ -49,7 +49,7 @@ export class SavedResultsController {
   ) {
     const userId = requireUserId(rawUserId);
     if (dto.result === undefined) throw new BadRequestException('result is required');
-    const id = await this.service.save({ userId, ...dto });
+    const id = await this.service.save({ userId, ...dto, prompt: dto.prompt ?? '' });
     return { ok: true, id };
   }
 

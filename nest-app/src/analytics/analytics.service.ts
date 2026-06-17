@@ -121,7 +121,8 @@ export class AnalyticsService {
         result = await this.pipeline.executeDashboard(prompt, memoryContext, userApiKey);
       } else if (intent === 'report') {
         result = await this.pipeline.executeReport(prompt, memoryContext, userApiKey);
-      } else if (intent === 'inquiry') {
+      } else if (intent === 'inquiry' || intent === 'general_question') {
+        // Angular sends 'general_question' for the Inquiry tab — treat both the same
         result = await this.pipeline.executeInquiry(prompt, memoryContext, userApiKey);
       } else {
         this.logger.log('no intent — routing through analyticsAgent');
