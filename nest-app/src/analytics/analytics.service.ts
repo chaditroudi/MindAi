@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import type { CoreMessage } from 'ai';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -82,7 +83,7 @@ export class AnalyticsService {
     private readonly cfg: ConfigService,
   ) {}
 
-  private async executeByIntent(intent: string | undefined, prompt: string, memoryContext: string, apiKey: string): Promise<unknown> {
+  private async executeByIntent(intent: string | undefined, prompt: string, memoryContext: CoreMessage[], apiKey: string): Promise<unknown> {
     if (intent === 'dashboard') {
       return this.pipeline.executeDashboard(prompt, memoryContext, apiKey);
     }
