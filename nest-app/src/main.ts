@@ -31,6 +31,19 @@ async function bootstrap() {
 
   const logger = app.get(AppLogger);
   logger.log(`NestJS + Mongoose ready on http://localhost:${port}`, 'bootstrap');
+
+  // AI configuration summary — surfaces missing/misconfigured AI settings at startup
+  const groqKey = process.env['GROQ_API_KEY'];
+  if (!groqKey?.trim()) {
+    logger.warn('GROQ_API_KEY is not set — all AI requests will require a per-user key', 'AI');
+  } else {
+    const supervisorModel = process.env['GROQ_SUPERVISOR_MODEL'] ?? 'llama-3.3-70b-versatile';
+    const chartModel      = process.env['GROQ_CHART_MODEL']      ?? 'llama-3.1-8b-instant';
+    const writerModel     = process.env['GROQ_WRITER_MODEL']      ?? 'llama-3.1-8b-instant';
+    logger.log(`AI ready | supervisor: ${supervisorModel} | chart: ${chartModel} | writer: ${writerModel}`, 'AI');
+  }
+  const memoryPath = process.env['LIBSQL_URL'] ?? 'file:./data/memory.db';
+  logger.log(`Session memory: ${memoryPath}`, 'AI');
 }
 
 bootstrap().catch(err => {
