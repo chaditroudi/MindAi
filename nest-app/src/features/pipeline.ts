@@ -27,7 +27,7 @@ async function buildPlan(
   prompt: string, intent: IntentKind, sources: DataSource[], context: CoreMessage[], apiKey?: string,
 ): Promise<TaskPlan> {
   const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey });
-  log('pipeline', `plan built | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData}`);
+  log('pipeline', `plan built | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`);
   logTrace('pipeline', `plan pipeline`, plan.pipeline);
   return plan;
 }
@@ -35,10 +35,15 @@ async function buildPlan(
 function resolvePipeline(
   plan: TaskPlan, sources: DataSource[],
 ): { pipeline: Record<string, unknown>[]; collection: string } | null {
-  if (!plan.skills.includes('aggregation') || !plan.pipeline?.length) return null;
+  if (!plan.skills.includes('aggregation') || !plan.pipeline?.length) {
+    log('pipeline', 'skipping pipeline — no aggregation skill or empty pipeline');
+    return null;
+  }
   const token  = normalizeToken(plan.query.sourceName ?? '');
   const source = sources.find(s => normalizeToken(s.name) === token || normalizeToken(s.collection) === token);
-  if (!source?.collection && !plan.query.sourceName) return null;
+  if (!source?.collection && !plan.query.sourceName) {
+    throw new Error('Cannot resolve collection: no source name provided and no matching data source found');
+  }
   const col = source?.collection ?? plan.query.sourceName!;
   for (const stage of plan.pipeline) {
     const op = Object.keys(stage)[0];
@@ -55,9 +60,37 @@ async function runPipeline(pipeline: Record<string, unknown>[], col: string): Pr
     .toArray() as Promise<Record<string, unknown>[]>;
 }
 
+function flushResults(
+  intent: IntentKind,
+  prompt: string,
+  plan: TaskPlan,
+  collection: string,
+  rows: Record<string, unknown>[],
+  durationMs: number,
+): void {
+  if (rows.length) {
+    setCached(intent, prompt, { plan, rows })
+      .catch(err => log('pipeline', `cache write failed: ${err}`));
+  }
+  // Save to results_history — mirrors original histRepo.save()
+  const db = mongoose.connection.db;
+  if (db) {
+    const entry = {
+      prompt, intent, collection,
+      pipeline: plan.pipeline ?? [],
+      rows, rowCount: rows.length, durationMs,
+      createdAt: new Date(), updatedAt: new Date(),
+    };
+    db.collection('results_history').insertOne(entry)
+      .then(r => { if (r.insertedId) log('pipeline', `saved to results_history | rows: ${rows.length}`); })
+      .catch(err => log('pipeline', `history save failed: ${err}`));
+  }
+}
+
 export async function aggregate(
   prompt: string, intent: IntentKind, context: CoreMessage[] = [], apiKey?: string,
 ): Promise<AggregationResult> {
+  const t0 = Date.now();
   const sources = getSources();
 
   const cached = await checkCache(intent, prompt, context);
@@ -67,12 +100,19 @@ export async function aggregate(
   const validated = resolvePipeline(plan, sources);
   if (!validated) return { plan, rows: [] };
 
-  const rows = await runPipeline(validated.pipeline, validated.collection);
-  log('pipeline', `result | collection: ${validated.collection} | rows: ${rows.length}`);
+  const { pipeline, collection } = validated;
+  const rows = await runPipeline(pipeline, collection);
+  const durationMs = Date.now() - t0;
 
   if (rows.length) {
-    setCached(intent, prompt, { plan, rows })
-      .catch(err => log('pipeline', `cache write failed: ${err}`));
+    const allEmpty = Object.values(rows[0]).every(v => v === null || v === undefined || v === 0 || v === '');
+    log('pipeline', `result | collection: ${collection} | rows: ${rows.length} | allEmpty: ${allEmpty}`);
+    logTrace('pipeline', `result sample (first 5 rows)`, rows.slice(0, 5));
+  } else {
+    log('pipeline', `result | collection: ${collection} | rows: 0`);
   }
+
+  flushResults(intent, prompt, plan, collection, rows, durationMs);
+
   return { plan, rows };
 }
