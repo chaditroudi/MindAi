@@ -82,6 +82,26 @@ export class AnalyticsService {
     private readonly cfg: ConfigService,
   ) {}
 
+  private async executeByIntent(intent: string | undefined, prompt: string, memoryContext: string, apiKey: string): Promise<unknown> {
+    if (intent === 'dashboard') {
+      return this.pipeline.executeDashboard(prompt, memoryContext, apiKey);
+    }
+    if (intent === 'report') {
+      return this.pipeline.executeReport(prompt, memoryContext, apiKey);
+    }
+    if (intent === 'inquiry' || intent === 'general_question') {
+      return this.pipeline.executeInquiry(prompt, memoryContext, apiKey);
+    }
+    // Free-text — route through agent
+    this.logger.log('no intent — routing through analyticsAgent');
+    const agentResponse = await analyticsAgent.generateLegacy(
+      [{ role: 'user', content: prompt }],
+      { maxSteps: 2 },
+    );
+    const toolResult = agentResponse.toolResults?.[0];
+    return toolResult?.result ?? { summary: agentResponse.text ?? 'No result.' };
+  }
+
   async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
     const { userId, intent, sessionId: incoming } = req;
     const prompt = promptSchema.parse(req.prompt);
@@ -90,13 +110,11 @@ export class AnalyticsService {
       throw new BadRequestException('No data sources configured. Run the seed script first.');
     }
 
-    // Per-user key takes priority; fall back to the server-level GROQ_API_KEY for testing/shared deployments
-    const userApiKey =
-      (await this.userKeys.get(userId))?.trim() ||
-      this.cfg.get<string>('llm.groqApiKey')?.trim() ||
-      null;
+    const storedKey = (await this.userKeys.get(userId))?.trim() || null;
+    const globalKey = this.cfg.get<string>('llm.groqApiKey')?.trim() || null;
+    const primaryKey = storedKey || globalKey;
 
-    if (!userApiKey) {
+    if (!primaryKey) {
       throw new UnauthorizedException('No API key found. Please enter your Groq API key in settings.');
     }
 
@@ -117,30 +135,35 @@ export class AnalyticsService {
     let result: unknown;
 
     try {
-      if (intent === 'dashboard') {
-        result = await this.pipeline.executeDashboard(prompt, memoryContext, userApiKey);
-      } else if (intent === 'report') {
-        result = await this.pipeline.executeReport(prompt, memoryContext, userApiKey);
-      } else if (intent === 'inquiry' || intent === 'general_question') {
-        // Angular sends 'general_question' for the Inquiry tab — treat both the same
-        result = await this.pipeline.executeInquiry(prompt, memoryContext, userApiKey);
-      } else {
-        this.logger.log('no intent — routing through analyticsAgent');
-        const agentResponse = await analyticsAgent.generateLegacy(
-          [{ role: 'user', content: prompt }],
-          { maxSteps: 2 },
-        );
-        const toolResult = agentResponse.toolResults?.[0];
-        result = toolResult?.result ?? { summary: agentResponse.text ?? 'No result.' };
-      }
+      result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey);
     } catch (err) {
       if (isInvalidKeyError(err)) {
-        throw Object.assign(
-          new UnauthorizedException('Invalid Groq API key. Please update it in settings.'),
-          { code: 'INVALID_API_KEY' },
-        );
-      }
-      if (isProviderRateLimitError(err)) {
+        // If the per-user key was the culprit and we have a valid global key, auto-fallback
+        if (storedKey && globalKey && storedKey !== globalKey) {
+          this.logger.warn(`Per-user key for user ${userId} rejected — deleting and retrying with global key`);
+          void this.userKeys.delete(userId).catch(() => {});
+          try {
+            result = await this.executeByIntent(intent, prompt, memoryContext, globalKey);
+          } catch (retryErr) {
+            if (isProviderRateLimitError(retryErr)) {
+              const retryIn = extractRetryDelay(retryErr);
+              const message = retryIn
+                ? `Groq API quota reached. Try again in ${retryIn}.`
+                : 'Groq API quota reached. Please try again later.';
+              throw Object.assign(new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS), { code: 'LLM_RATE_LIMIT' });
+            }
+            throw Object.assign(
+              new UnauthorizedException('Global Groq API key is also invalid. Contact the administrator.'),
+              { code: 'INVALID_API_KEY' },
+            );
+          }
+        } else {
+          throw Object.assign(
+            new UnauthorizedException('Invalid Groq API key. Please update it in settings.'),
+            { code: 'INVALID_API_KEY' },
+          );
+        }
+      } else if (isProviderRateLimitError(err)) {
         const retryIn = extractRetryDelay(err);
         const message = retryIn
           ? `Groq API quota reached. Try again in ${retryIn} or use a different API key.`
@@ -149,8 +172,9 @@ export class AnalyticsService {
           new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS),
           { code: 'LLM_RATE_LIMIT' },
         );
+      } else {
+        throw err;
       }
-      throw err;
     }
 
     this.logger.log(`done in ${Date.now() - t0}ms`);

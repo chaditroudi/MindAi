@@ -23,7 +23,11 @@ export class UserKeysController {
   @Post('key')
   async save(@Body() dto: SaveKeyDto) {
     if (!dto.userId || !dto.apiKey) throw new BadRequestException('userId and apiKey are required');
-    await this.service.save(dto.userId, dto.apiKey);
+    const key = dto.apiKey.trim();
+    if (!key.startsWith('gsk_')) {
+      throw new BadRequestException('Invalid Groq API key. Keys must start with "gsk_". Get yours at console.groq.com');
+    }
+    await this.service.save(dto.userId, key);
     return { ok: true };
   }
 
