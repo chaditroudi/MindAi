@@ -1,4 +1,4 @@
-import { Controller, Get, Delete, Body } from '@nestjs/common';
+import { Controller, Get, Delete, Param } from '@nestjs/common';
 import { CacheService } from './cache.service';
 
 @Controller('api/cache')
@@ -10,9 +10,15 @@ export class CacheController {
     return this.cache.list();
   }
 
+  /** Delete a single entry by its SHA-256 key */
+  @Delete(':key')
+  deleteOne(@Param('key') key: string) {
+    return this.cache.deleteEntry(key);
+  }
+
+  /** Clear all cache entries */
   @Delete()
-  async remove(@Body() body: { key?: string }) {
-    if (body.key) return this.cache.deleteEntry(body.key);
+  clearAll() {
     return this.cache.clearAll();
   }
 }

@@ -2,8 +2,10 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 
-// Public paths skip server-level API key auth
-const PUBLIC_PATHS = new Set(['/api/provider', '/api/meta', '/api/key', '/health']);
+// Exact public paths
+const PUBLIC_EXACT = new Set(['/api/provider', '/api/meta', '/health']);
+// Prefix-matched public paths (covers parameterised sub-routes too)
+const PUBLIC_PREFIXES = ['/api/key'];
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
@@ -13,8 +15,9 @@ export class ApiKeyGuard implements CanActivate {
     const requiredKey = this.cfg.get<string>('server.apiKey');
     if (!requiredKey) return true; // key not configured — allow all
 
-    const req  = ctx.switchToHttp().getRequest<Request>();
-    if (PUBLIC_PATHS.has(req.path)) return true;
+    const req = ctx.switchToHttp().getRequest<Request>();
+    if (PUBLIC_EXACT.has(req.path)) return true;
+    if (PUBLIC_PREFIXES.some(p => req.path === p || req.path.startsWith(p + '/'))) return true;
 
     const provided = Array.isArray(req.headers['x-api-key'])
       ? req.headers['x-api-key'][0]
