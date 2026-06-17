@@ -93,7 +93,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       localStorage.setItem('mind_user_id', userId);
     }
     const hasKey = localStorage.getItem('mind_has_key') === '1';
-    this.st.patch({ userId, hasKey, showKeyModal: !hasKey });
+    // Start with modal hidden — checkGlobalKey decides whether to show it
+    this.st.patch({ userId, hasKey, showKeyModal: false });
     void this.loadMeta();
     void this.loadSessions();
     void this.loadSavedResults();
@@ -186,7 +187,18 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   handleInvalidKey(): void {
     localStorage.removeItem('mind_has_key');
-    this.st.patch({ hasKey: false, keyRejected: true, showKeyModal: true, phase: 'idle' });
+    // Delete the bad per-user key so subsequent requests fall back to the global key
+    void this.api.deleteKey(this.st.snap.userId).catch(() => {});
+    void this.api.getProvider().then(({ hasGlobalKey }) => {
+      if (hasGlobalKey) {
+        // Global key is available — silently recover, no modal needed
+        this.st.patch({ hasKey: true, keyRejected: false, phase: 'idle' });
+      } else {
+        this.st.patch({ hasKey: false, keyRejected: true, showKeyModal: true, phase: 'idle' });
+      }
+    }).catch(() => {
+      this.st.patch({ hasKey: false, keyRejected: true, showKeyModal: true, phase: 'idle' });
+    });
   }
 
   async clearApiKey(): Promise<void> {
@@ -439,10 +451,19 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private async checkGlobalKey(): Promise<void> {
     try {
       const { hasGlobalKey } = await this.api.getProvider();
-      if (hasGlobalKey && !this.st.snap.hasKey) {
+      if (hasGlobalKey) {
+        // Server key available — user never needs to enter a personal key
         this.st.patch({ hasKey: true, showKeyModal: false });
+      } else if (!this.st.snap.hasKey) {
+        // No global key and no saved user key — need to prompt
+        this.st.patch({ showKeyModal: true });
       }
-    } catch { /* non-critical — server might not be up yet */ }
+    } catch {
+      // Server unreachable — fall back to localStorage state
+      if (!this.st.snap.hasKey) {
+        this.st.patch({ showKeyModal: true });
+      }
+    }
   }
 
   private async loadSessions(): Promise<void> {
