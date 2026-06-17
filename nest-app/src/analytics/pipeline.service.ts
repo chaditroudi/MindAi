@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import mongoose from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
 import type { CoreMessage } from 'ai';
 import { runSupervisorPlan } from '../ai/planner';
 import { runChart } from '../ai/chart';
