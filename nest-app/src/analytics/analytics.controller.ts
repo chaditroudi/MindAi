@@ -2,6 +2,7 @@ import {
   Controller, Post, Get, Body, Headers,
   UnauthorizedException, BadRequestException, HttpException, HttpStatus,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { AnalyticsService } from './analytics.service';
 
@@ -19,11 +20,15 @@ function requireUserId(raw: string | undefined): string {
 
 @Controller('api')
 export class AnalyticsController {
-  constructor(private readonly analytics: AnalyticsService) {}
+  constructor(
+    private readonly analytics: AnalyticsService,
+    private readonly cfg: ConfigService,
+  ) {}
 
   @Get('provider')
   getProvider() {
-    return { provider: 'groq' };
+    const hasGlobalKey = !!(this.cfg.get<string>('llm.groqApiKey')?.trim());
+    return { provider: 'groq', hasGlobalKey };
   }
 
   @Post('analytics')
