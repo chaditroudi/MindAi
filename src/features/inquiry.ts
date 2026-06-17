@@ -19,8 +19,7 @@ export async function executeInquiry(
   }
 
   log('inquiry', `rows: ${rows.length} | prompt: "${prompt}"`);
-  const result = await runInquirySkill({ rows, prompt, apiKey })
-    .catch(() => ({ summary: 'Could not summarize results. Please try again.' }));
+  const result = await runInquirySkill({ rows, prompt, apiKey });
   log('inquiry', 'done');
   return result;
 }
