@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { getSources } from '../sources/sources-cache';
@@ -78,6 +79,7 @@ export class AnalyticsService {
   constructor(
     private readonly pipeline: PipelineService,
     private readonly userKeys: UserKeysService,
+    private readonly cfg: ConfigService,
   ) {}
 
   async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
@@ -88,7 +90,12 @@ export class AnalyticsService {
       throw new BadRequestException('No data sources configured. Run the seed script first.');
     }
 
-    const userApiKey = await this.userKeys.get(userId);
+    // Per-user key takes priority; fall back to the server-level GROQ_API_KEY for testing/shared deployments
+    const userApiKey =
+      (await this.userKeys.get(userId))?.trim() ||
+      this.cfg.get<string>('llm.groqApiKey')?.trim() ||
+      null;
+
     if (!userApiKey) {
       throw new UnauthorizedException('No API key found. Please enter your Groq API key in settings.');
     }
