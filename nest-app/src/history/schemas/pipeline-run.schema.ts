@@ -3,7 +3,7 @@ import { Schema as MongooseSchema, type HydratedDocument } from 'mongoose';
 
 export type PipelineRunDocument = HydratedDocument<PipelineRun>;
 
-@Schema({ collection: 'results_history', versionKey: false, timestamps: true })
+@Schema({ collection: 'results_history', versionKey: false, timestamps: true, suppressReservedKeysWarning: true })
 export class PipelineRun {
   @Prop({ required: true, index: true })
   prompt: string;

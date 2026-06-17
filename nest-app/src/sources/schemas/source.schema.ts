@@ -4,7 +4,7 @@ import type { DataSourceField } from '../../types';
 
 export type SourceDocument = HydratedDocument<Source>;
 
-@Schema({ collection: 'sources', versionKey: false, timestamps: true })
+@Schema({ collection: 'sources', versionKey: false, timestamps: true, suppressReservedKeysWarning: true })
 export class Source {
   @Prop({ required: true, trim: true })
   name: string;
