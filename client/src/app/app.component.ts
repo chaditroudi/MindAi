@@ -424,16 +424,25 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   // private
 
-  private buildAssistantMessage(data: AnalyticsResponse, durationMs: number): ConversationMessage {
-    const base = { messageId: data.messageId, role: 'assistant' as const };
+  private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
+    const base = { messageId: data.messageId, role: 'assistant' as const, prompt };
 
     if (data.intent === 'dashboard' && 'chart' in data) {
-      return { ...base, result: { type: 'dashboard', dashboardSpec: (data as DashboardResponse).chart, durationMs } };
+      return { ...base, intent: 'dashboard', result: { type: 'dashboard', dashboardSpec: (data as DashboardResponse).chart, durationMs } };
     }
     if (data.intent === 'report') {
-      return { ...base, result: { type: 'report', reportSections: (data as ReportResponse).reportSections ?? [], durationMs } };
+      return { ...base, intent: 'report', result: { type: 'report', reportSections: (data as ReportResponse).reportSections ?? [], durationMs } };
     }
-    return { ...base, result: { type: 'inquiry', summary: (data as InquiryResponse).summary ?? '', durationMs } };
+    return { ...base, intent: 'inquiry', result: { type: 'inquiry', summary: (data as InquiryResponse).summary ?? '', durationMs } };
+  }
+
+  private async checkGlobalKey(): Promise<void> {
+    try {
+      const { hasGlobalKey } = await this.api.getProvider();
+      if (hasGlobalKey && !this.st.snap.hasKey) {
+        this.st.patch({ hasKey: true, showKeyModal: false });
+      }
+    } catch { /* non-critical — server might not be up yet */ }
   }
 
   private async loadSessions(): Promise<void> {
