@@ -20,7 +20,10 @@ export async function executeInquiry(
 
   log('inquiry', `rows: ${rows.length} | prompt: "${prompt}"`);
   const result = await runInquirySkill({ rows, prompt, apiKey })
-    .catch(() => ({ summary: 'Could not summarize results. Please try again.' }));
+    .catch((err: unknown) => {
+      log('inquiry', `runInquirySkill failed: ${err instanceof Error ? err.message : String(err)}`);
+      return { summary: 'Could not summarize results. Please try again.' };
+    });
   log('inquiry', 'done');
   return result;
 }
