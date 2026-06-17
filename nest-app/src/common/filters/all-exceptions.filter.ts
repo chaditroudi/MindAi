@@ -50,7 +50,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
       // Pick up code attached via Object.assign(new UnauthorizedException(), { code })
       if (!errorCode) {
-        const attached = (exception as Record<string, unknown>)['code'];
+        const attached = (exception as unknown as Record<string, unknown>)['code'];
         if (typeof attached === 'string') errorCode = attached;
       }
     } else {
