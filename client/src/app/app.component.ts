@@ -175,13 +175,19 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async saveApiKey(key: string): Promise<void> {
     const trimmed = key.trim();
     if (!trimmed) return;
+    if (!trimmed.startsWith('gsk_')) {
+      // Wrong key format — show error inline without hiding the modal
+      this.st.patch({ keyRejected: true });
+      return;
+    }
     const { userId } = this.st.snap;
     try {
       await this.api.saveKey(userId, trimmed);
       localStorage.setItem('mind_has_key', '1');
       this.st.patch({ hasKey: true, keyRejected: false, showKeyModal: false });
     } catch (err) {
-      this.st.setError(err instanceof Error ? err.message : 'Failed to save API key.');
+      // Show error inside the modal (not a full-page error)
+      this.st.patch({ keyRejected: true });
     }
   }
 
