@@ -1,4 +1,11 @@
-import { Injectable, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { getSources } from '../sources/sources-cache';
@@ -23,6 +30,31 @@ function isInvalidKeyError(err: unknown): boolean {
     msg.includes('incorrect api key') || msg.includes('authentication') ||
     msg.includes('api key')
   );
+}
+
+function isProviderRateLimitError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  const code = (err as { statusCode?: number; status?: number }).statusCode
+    ?? (err as { status?: number }).status;
+
+  if (code === 429) return true;
+
+  return (
+    msg.includes('429') ||
+    msg.includes('rate limit') ||
+    msg.includes('too many requests') ||
+    msg.includes('tokens per day') ||
+    msg.includes('tpm') ||
+    msg.includes('rpm') ||
+    msg.includes('service tier') ||
+    msg.includes('quota')
+  );
+}
+
+function extractRetryDelay(err: unknown): string | null {
+  const msg = err instanceof Error ? err.message : String(err);
+  const match = /try again in\s+([^.]+(?:\.\d+s)?)/i.exec(msg);
+  return match?.[1]?.trim() ?? null;
 }
 
 export interface AnalyticsRequest {
@@ -98,6 +130,16 @@ export class AnalyticsService {
         throw Object.assign(
           new UnauthorizedException('Invalid Groq API key. Please update it in settings.'),
           { code: 'INVALID_API_KEY' },
+        );
+      }
+      if (isProviderRateLimitError(err)) {
+        const retryIn = extractRetryDelay(err);
+        const message = retryIn
+          ? `Groq API quota reached. Try again in ${retryIn} or use a different API key.`
+          : 'Groq API quota reached. Please try again later or use a different API key.';
+        throw Object.assign(
+          new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS),
+          { code: 'LLM_RATE_LIMIT' },
         );
       }
       throw err;

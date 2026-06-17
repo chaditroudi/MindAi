@@ -30,7 +30,7 @@ export class CacheService {
       .findOneAndUpdate(
         { key },
         { $inc: { hitCount: 1 }, $set: { lastHitAt: new Date() } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .lean<PromptCacheDocument>();
 

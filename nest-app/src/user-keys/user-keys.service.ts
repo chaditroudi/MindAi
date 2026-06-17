@@ -14,7 +14,7 @@ export class UserKeysService {
     await this.model.findOneAndUpdate(
       { userId },
       { $set: { apiKey } },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: 'after' },
     );
   }
 
