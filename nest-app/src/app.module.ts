@@ -34,7 +34,7 @@ const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
     ...(angularBuilt
       ? [ServeStaticModule.forRoot({
           rootPath: angularDist,
-          exclude:  ['/api{/*path}', '/health'],
+          renderPath: /^(?!\/(?:api(?:\/|$)|health$)).*/,
         })]
       : []),
   ],
