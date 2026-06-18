@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { getSources } from '../sources/sources-cache';
 import { UserKeysService } from '../user-keys/user-keys.service';
 import { PipelineService } from './pipeline.service';
+import { MemoryService } from '../memory/memory.service';
 import { analyticsAgent } from '../session/agent';
 import {
   sessionExists, ensureThread, getMemoryContext, saveConversationTurn,
@@ -81,6 +82,7 @@ export class AnalyticsService {
     private readonly pipeline: PipelineService,
     private readonly userKeys: UserKeysService,
     private readonly cfg: ConfigService,
+    private readonly memory: MemoryService,
   ) {}
 
   private async executeByIntent(intent: string | undefined, prompt: string, memoryContext: CoreMessage[], apiKey: string): Promise<unknown> {
@@ -128,7 +130,17 @@ export class AnalyticsService {
     const sessionId  = requested && await sessionExists(requested) ? requested : randomUUID();
 
     await ensureThread(sessionId, prompt, displayIntent);
-    const memoryContext = await getMemoryContext(sessionId);
+    const sessionContext = await getMemoryContext(sessionId);
+
+    // Retrieve long-term memories from MongoDB and prepend as context messages
+    const longTermMemory = await this.memory.getRelevantContext(userId, prompt);
+    const memoryMessages: CoreMessage[] = longTermMemory
+      ? [
+          { role: 'user' as const, content: `[Long-term memory from previous sessions]\n${longTermMemory}` },
+          { role: 'assistant' as const, content: 'Noted. I will use this context.' },
+        ]
+      : [];
+    const memoryContext: CoreMessage[] = [...memoryMessages, ...sessionContext];
 
     this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'free-text'} | session: ${sessionId}`);
 
