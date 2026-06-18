@@ -5,6 +5,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AppLogger } from './common/logger/app.logger';
+import { warmupEmbeddings } from './ai/embeddings';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -43,6 +44,9 @@ async function bootstrap() {
   }
   const memoryPath = process.env['LIBSQL_URL'] ?? 'file:./data/memory.db';
   logger.log(`Session memory: ${memoryPath}`, 'AI');
+
+  // Warm up local embedding model in background (downloads ~25MB on first run)
+  warmupEmbeddings();
 }
 
 bootstrap().catch(err => {
