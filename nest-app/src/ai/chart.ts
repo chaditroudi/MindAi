@@ -481,7 +481,10 @@ export async function runChart(
     log('chart:llm', `done in ${Date.now() - planStart}ms | proposed: ${plan.widgets.length} widget(s)`);
     logTrace('chart:llm', `widget plan`, plan);
   } catch (err) {
-    log('chart', `generateObject failed: ${err instanceof Error ? err.message : err}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    log('chart', `generateObject failed: ${msg}`);
+    // Rethrow rate-limit errors — the caller handles them as real errors
+    if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('429')) throw err;
     return { layout: 'analytical', title: prompt, summary: 'Chart planning failed.', widgets: [] };
   }
 
