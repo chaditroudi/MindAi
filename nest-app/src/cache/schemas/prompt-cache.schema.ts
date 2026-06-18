@@ -5,7 +5,6 @@ export type PromptCacheDocument = HydratedDocument<PromptCache>;
 
 @Schema({ collection: 'prompt_cache', versionKey: false })
 export class PromptCache {
-  /** SHA-256 derived key: intent + normalised prompt */
   @Prop({ required: true, unique: true, index: true })
   key: string;
 
