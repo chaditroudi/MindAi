@@ -38,7 +38,6 @@ export class PipelineService {
     private readonly chartRepo: ChartResultsRepository,
   ) {}
 
-  // ── Core aggregation ────────────────────────────────────────────────────────
 
   async aggregate(
     prompt: string,
