@@ -242,6 +242,106 @@
 .session-item:hover .session-delete { display: flex; }
 .session-delete:hover { background: #fee2e2; color: #dc2626; }
 
+/* ── Memory panel ──────────────────────────────────────────────────────────── */
+.memory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.memory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.25rem 0.5rem;
+}
+
+.memory-header-text {
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.memory-clear-btn {
+  font-size: 0.7rem;
+  color: #dc2626;
+  background: none;
+  border: 1px solid #fca5a5;
+  border-radius: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.memory-clear-btn:hover { background: #fee2e2; }
+
+.memory-item {
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.memory-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.memory-type-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.memory-goal    .memory-type-badge { background: #dbeafe; color: #1d4ed8; }
+.memory-insight .memory-type-badge { background: #fef9c3; color: #854d0e; }
+.memory-preference .memory-type-badge { background: #ede9fe; color: #6d28d9; }
+.memory-context .memory-type-badge { background: #dcfce7; color: #166534; }
+.memory-decision .memory-type-badge { background: #ffedd5; color: #9a3412; }
+
+.memory-importance {
+  display: flex;
+  gap: 2px;
+}
+
+.importance-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+.importance-dot--on { background: #6366f1; }
+
+.memory-content {
+  font-size: 0.78rem;
+  color: #374151;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.memory-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.memory-tag {
+  font-size: 0.62rem;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+}
+
 /* ── Workspace ─────────────────────────────────────────────────────────────── */
 .workspace {
   flex: 1;
