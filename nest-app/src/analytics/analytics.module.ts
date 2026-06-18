@@ -8,6 +8,7 @@ import { PipelineService } from './pipeline.service';
 import { UserKeysModule } from '../user-keys/user-keys.module';
 import { CacheModule } from '../cache/cache.module';
 import { HistoryModule } from '../history/history.module';
+import { MemoryModule } from '../memory/memory.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { HistoryModule } from '../history/history.module';
     UserKeysModule,
     CacheModule,
     HistoryModule,
+    MemoryModule,
   ],
   controllers: [AnalyticsController],
   providers:   [AnalyticsService, PipelineService, ChartResultsRepository],

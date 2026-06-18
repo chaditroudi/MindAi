@@ -216,6 +216,14 @@ export class AnalyticsService {
     saveConversationTurn({ threadId: sessionId, prompt, intent: displayIntent, assistant: assistantMessage })
       .catch(err => this.logger.error(`saveConversationTurn failed: ${err}`));
 
+    // Extract and persist long-term memories from this turn (fire-and-forget)
+    const responseSummary =
+      resolvedType === 'inquiry'   ? ((r.summary as string) ?? '')
+      : resolvedType === 'report'  ? `Report generated: ${prompt}`
+      : `Dashboard generated: ${prompt}`;
+    this.memory.extractAndSave(userId, sessionId, prompt, responseSummary, primaryKey)
+      .catch(err => this.logger.warn(`memory.extractAndSave failed: ${err}`));
+
     if (resolvedType === 'dashboard') {
       return { intent: 'dashboard', chart: result, sessionId, messageId };
     }
