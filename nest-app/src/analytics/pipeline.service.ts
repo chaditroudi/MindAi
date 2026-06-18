@@ -144,7 +144,7 @@ export class PipelineService {
     prompt: string,
     context: CoreMessage[] = [],
     apiKey?: string,
-  ): Promise<DashboardSpec> {
+  ): Promise<DashboardSpec | { summary: string }> {
     // Full dashboard cache (both LLM calls)
     if (!context.length) {
       const cached = await this.cache.getCached<DashboardSpec>(DASHBOARD_FULL_INTENT, prompt);
