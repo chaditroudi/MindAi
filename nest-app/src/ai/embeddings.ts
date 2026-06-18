@@ -1,25 +1,33 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { pipeline, env } = require('@xenova/transformers') as typeof import('@xenova/transformers');
-
-import { log } from '../common/logger/app.logger';
 import * as path from 'node:path';
+import { log } from '../common/logger/app.logger';
 
-// Cache models inside the nest-app directory so they survive rebuilds
-env.cacheDir = path.resolve(__dirname, '..', '..', '.model-cache');
+// Dynamic import is required — @xenova/transformers is ESM-only and cannot be require()'d
+type XenovaModule = typeof import('@xenova/transformers');
+type EmbeddingPipeline = Awaited<ReturnType<XenovaModule['pipeline']>>;
 
-// Singleton pipeline — initialised once, reused for every embedding request
-let _pipe: ReturnType<typeof pipeline> extends Promise<infer T> ? T : never;
-let _loading: Promise<typeof _pipe> | null = null;
+let _module:  XenovaModule | null = null;
+let _pipe:    EmbeddingPipeline | null = null;
+let _loading: Promise<EmbeddingPipeline> | null = null;
 
-async function getPipeline(): Promise<typeof _pipe> {
+async function getModule(): Promise<XenovaModule> {
+  if (!_module) {
+    _module = (await import('@xenova/transformers')) as XenovaModule;
+    // Cache models inside the project so they survive npm install
+    _module.env.cacheDir = path.resolve(__dirname, '..', '..', '.model-cache');
+  }
+  return _module;
+}
+
+async function getPipeline(): Promise<EmbeddingPipeline> {
   if (_pipe) return _pipe;
   if (_loading) return _loading;
 
   _loading = (async () => {
-    log('embeddings', 'loading all-MiniLM-L6-v2 (downloads ~25MB on first run)...');
+    const { pipeline } = await getModule();
+    log('embeddings', 'loading all-MiniLM-L6-v2 (~25MB download on first run)...');
     const p = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    log('embeddings', 'model ready');
-    _pipe = p as typeof _pipe;
+    log('embeddings', 'embedding model ready');
+    _pipe = p as EmbeddingPipeline;
     _loading = null;
     return _pipe;
   })();
@@ -27,7 +35,7 @@ async function getPipeline(): Promise<typeof _pipe> {
   return _loading;
 }
 
-/** Warm up the model in the background at server start (optional but avoids first-request delay). */
+/** Warm up the model in the background at server start (avoids delay on first user query). */
 export function warmupEmbeddings(): void {
   getPipeline().catch(err =>
     log('embeddings', `warmup failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`),
@@ -35,21 +43,19 @@ export function warmupEmbeddings(): void {
 }
 
 /**
- * Returns a normalised 384-dimensional embedding vector for the given text.
- * Uses all-MiniLM-L6-v2 running fully locally via WASM — no API key required.
+ * Returns a normalised 384-dimensional embedding vector.
+ * Uses all-MiniLM-L6-v2 via WASM — fully local, no API key required.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   const pipe = await getPipeline();
-  const output = await (pipe as (text: string, opts: object) => Promise<{ data: Float32Array }>)(
-    text,
-    { pooling: 'mean', normalize: true },
-  );
-  return Array.from(output.data);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const output = await (pipe as any)(text, { pooling: 'mean', normalize: true });
+  return Array.from(output.data as Float32Array);
 }
 
-/** Cosine similarity between two L2-normalised vectors (range -1 to 1). */
+/** Cosine similarity between two L2-normalised vectors. */
 export function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
-  return dot; // vectors are already normalised so |a|=|b|=1
+  return dot; // already normalised → |a|=|b|=1
 }
