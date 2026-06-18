@@ -12,7 +12,7 @@ export class ApiError extends Error {
 import type {
   AnalyticsRequest, AnalyticsResponse, ProviderResponse,
   MetaResponse, SessionSummary, SessionDetail,
-  SavedResultSummary, SavedResultDetail, MessageResult, ModeKey,
+  SavedResultSummary, SavedResultDetail, MessageResult, ModeKey, MemoryItem,
 } from './app.types';
 
 @Injectable({ providedIn: 'root' })
@@ -58,6 +58,16 @@ export class AnalyticsApiService {
   deleteSavedResult(userId: string, id: string): Promise<{ ok: boolean }> {
     const headers = new HttpHeaders({ 'X-User-Id': userId });
     return this.req(this.http.delete<{ ok: boolean }>(`/api/saved/${id}`, { headers }));
+  }
+
+  listMemories(userId: string): Promise<MemoryItem[]> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.get<MemoryItem[]>('/api/memory', { headers }));
+  }
+
+  clearMemories(userId: string): Promise<{ ok: boolean; deleted: number }> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.delete<{ ok: boolean; deleted: number }>('/api/memory', { headers }));
   }
 
   listSessions(): Promise<SessionSummary[]> {

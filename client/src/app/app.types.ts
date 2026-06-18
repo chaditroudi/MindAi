@@ -104,6 +104,19 @@ export interface SessionDetail {
   messages: ConversationMessage[];
 }
 
+// ─── Long-term memory ────────────────────────────────────────────────────────
+
+export type MemoryType = 'goal' | 'insight' | 'preference' | 'context' | 'decision';
+
+export interface MemoryItem {
+  _id:        string;
+  type:       MemoryType;
+  content:    string;
+  tags:       string[];
+  importance: number;
+  createdAt:  string;
+}
+
 // ─── Provider ────────────────────────────────────────────────────────────────
 
 export interface ProviderResponse {

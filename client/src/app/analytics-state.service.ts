@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
-import type { ModeKey, PromptExample, ConversationMessage, SessionSummary, SavedResultSummary, SavedResultDetail } from './app.types';
+import type { ModeKey, PromptExample, ConversationMessage, SessionSummary, SavedResultSummary, SavedResultDetail, MemoryItem } from './app.types';
 
 export type Phase = 'idle' | 'loading' | 'done' | 'error';
 
