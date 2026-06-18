@@ -40,7 +40,6 @@ export function freshSignal(role: AgentRole): AbortSignal {
   return AbortSignal.timeout(ms);
 }
 
-/** Returns the model name that will be used for a given role (for logging/diagnostics). */
 export function modelName(role: AgentRole): string {
   return process.env[ROLE_ENV_KEYS[role]]?.trim() ?? ROLE_DEFAULTS[role];
 }
