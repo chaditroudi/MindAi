@@ -11,6 +11,8 @@ export class MemoryItem {
   @Prop({ required: true }) content!: string;
   @Prop({ type: [String], default: [] }) tags!: string[];
   @Prop({ min: 1, max: 5, default: 3 }) importance!: number;
+  /** 384-dim normalised vector from all-MiniLM-L6-v2 — used for cosine similarity retrieval */
+  @Prop({ type: [Number], default: [] }) embedding!: number[];
 }
 
 export type MemoryItemDocument = MemoryItem & Document;
