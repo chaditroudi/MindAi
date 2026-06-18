@@ -44,13 +44,7 @@ function getLlmChartTypes(): [ChartType, ...ChartType[]] {
   return cfg.types.filter(d => !d.llmHidden).map(d => d.type) as [ChartType, ...ChartType[]];
 }
 
-const chartOptionsSchema = z.object({
-  color:   z.array(z.string()).optional(),
-  legend:  z.record(z.unknown()).optional(),
-  tooltip: z.record(z.unknown()).optional(),
-  title:   z.record(z.unknown()).optional(),
-  grid:    z.record(z.unknown()).optional(),
-}).optional();
+const chartOptionsSchema = z.record(z.unknown()).optional();
 
 interface WidgetPlan {
   type:          string;
@@ -375,7 +369,7 @@ function renderWidget(plan: WidgetPlan, rows: DataRow[], keys: Set<string>, id: 
 }
 
 const MAX_WIDGETS    = Number(process.env['CHART_MAX_WIDGETS'] ?? 3);
-const MAX_TOKENS     = Number(process.env['CHART_MAX_TOKENS']  ?? 1000);
+const MAX_TOKENS     = Number(process.env['CHART_MAX_TOKENS']  ?? 500);
 const LLM_CHART_TYPES = getLlmChartTypes();
 
 const widgetSchema = z.object({
