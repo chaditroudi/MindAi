@@ -14,7 +14,7 @@ export class MemoryService {
    */
   async getRelevantContext(userId: string, prompt: string): Promise<string> {
     try {
-      const memories = await this.repo.findRelevant(userId, prompt, 8);
+      const memories = await this.repo.findRelevant(userId, prompt, 3);
       if (!memories.length) return '';
 
       return memories

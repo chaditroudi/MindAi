@@ -62,7 +62,7 @@ const libsql = new LibSQLStore({
 
 export const memory = new Memory({
   storage: libsql,
-  options: { lastMessages: 20 },
+  options: { lastMessages: 6 },
 });
 
 const RESOURCE_ID = 'mindai';
