@@ -12,7 +12,7 @@ const ROLE_ENV_KEYS: Record<AgentRole, string> = {
 
 const ROLE_DEFAULTS: Record<AgentRole, string> = {
   supervisor: 'llama-3.3-70b-versatile',
-  chart:      'llama-3.1-8b-instant',
+  chart:      'llama-3.3-70b-versatile',
   writer:     'llama-3.3-70b-versatile',
   memory:     'llama-3.1-8b-instant',
 };
