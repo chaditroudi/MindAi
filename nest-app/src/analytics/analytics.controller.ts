@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Body, Headers,
-  UnauthorizedException, BadRequestException, HttpException, HttpStatus,
+  UnauthorizedException, HttpException, HttpStatus,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';

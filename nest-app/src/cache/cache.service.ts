@@ -13,7 +13,6 @@ export class CacheService {
     private readonly model: Model<PromptCacheDocument>,
   ) {}
 
-  // ── Key derivation ──────────────────────────────────────────────────────────
 
   cacheKey(intent: string, prompt: string): string {
     return createHash('sha256')
@@ -22,7 +21,6 @@ export class CacheService {
       .slice(0, 24);
   }
 
-  // ── Cache read/write (used by PipelineService) ──────────────────────────────
 
   async getCached<T>(intent: string, prompt: string): Promise<T | null> {
     const key = this.cacheKey(intent, prompt);
@@ -50,7 +48,6 @@ export class CacheService {
     this.logger.log(`CACHE SAVE | key: ${key} | intent: ${intent}`);
   }
 
-  // ── HTTP-facing methods (used by CacheController) ───────────────────────────
 
   async list() {
     const entries = await this.model
