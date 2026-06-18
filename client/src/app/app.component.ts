@@ -494,6 +494,46 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     } catch { /* non-critical */ }
   }
 
+  async loadMemories(): Promise<void> {
+    const { userId } = this.st.snap;
+    if (!userId) return;
+    try {
+      const memories = await this.api.listMemories(userId);
+      this.st.patch({ memories });
+    } catch { /* non-critical */ }
+  }
+
+  async clearMemories(): Promise<void> {
+    const { userId } = this.st.snap;
+    if (!userId) return;
+    try {
+      await this.api.clearMemories(userId);
+      this.st.patch({ memories: [] });
+    } catch { /* non-critical */ }
+  }
+
+  memoryTypeIcon(type: string): string {
+    const icons: Record<string, string> = {
+      goal:       '🎯',
+      insight:    '💡',
+      preference: '⭐',
+      context:    '📌',
+      decision:   '✅',
+    };
+    return icons[type] ?? '🧠';
+  }
+
+  memoryTypeColor(type: string): string {
+    const colors: Record<string, string> = {
+      goal:       'memory-goal',
+      insight:    'memory-insight',
+      preference: 'memory-preference',
+      context:    'memory-context',
+      decision:   'memory-decision',
+    };
+    return colors[type] ?? '';
+  }
+
   private async loadMeta(): Promise<void> {
     try {
       const data    = await this.api.getMeta();
