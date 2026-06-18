@@ -132,20 +132,25 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     const { userId } = this.st.snap;
     if (!msg.result || !msg.messageId) return;
     const title = (msg.prompt ?? msg.result.type ?? 'Result').slice(0, 120);
+    const intentMap: Record<string, ModeKey> = {
+      dashboard: 'dashboard', report: 'report',
+      inquiry: 'inquiry', general_question: 'inquiry',
+    };
+    const intent = intentMap[msg.intent ?? ''] ?? 'inquiry';
     try {
       const { id } = await this.api.saveResult(userId, {
         title,
         prompt: msg.prompt ?? '',
-        intent: (msg.intent ?? 'inquiry') as ModeKey,
+        intent,
         result: msg.result as MessageResult,
       });
       this.savedIds.add(msg.messageId);
       const fresh = await this.api.listSavedResults(userId);
-      this.st.patch({ savedResults: fresh });
-      // flip to saved tab so the user sees it appear
-      this.st.patch({ sidebarOpen: true, sidebarTab: 'saved' });
+      this.st.patch({ savedResults: fresh, sidebarOpen: true, sidebarTab: 'saved' });
       void id;
-    } catch { /* non-critical */ }
+    } catch (err) {
+      console.error('saveResult failed:', err);
+    }
   }
 
   async openSaved(item: SavedResultSummary): Promise<void> {

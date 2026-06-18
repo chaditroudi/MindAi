@@ -2,14 +2,21 @@ import {
   Controller, Get, Post, Delete, Param, Body, Headers,
   UnauthorizedException, NotFoundException, BadRequestException, HttpCode,
 } from '@nestjs/common';
-import { IsString, IsIn, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, Allow } from 'class-validator';
 import { SavedResultsService } from './saved-results.service';
+
+const INTENT_MAP: Record<string, 'dashboard' | 'report' | 'inquiry'> = {
+  dashboard:        'dashboard',
+  report:           'report',
+  inquiry:          'inquiry',
+  general_question: 'inquiry',
+};
 
 class SaveDto {
   @IsString() @MaxLength(200) title!: string;
   @IsOptional() @IsString() @MaxLength(1000) prompt?: string;
-  @IsIn(['dashboard', 'report', 'inquiry']) intent!: 'dashboard' | 'report' | 'inquiry';
-  result: unknown;
+  @IsString() intent!: string;
+  @Allow() result: unknown;
 }
 
 function requireUserId(raw: string | undefined): string {
@@ -22,7 +29,6 @@ function requireUserId(raw: string | undefined): string {
 export class SavedResultsController {
   constructor(private readonly service: SavedResultsService) {}
 
-  // Phase 1 — read routes
   @Get()
   async list(@Headers('x-user-id') rawUserId: string) {
     const userId = requireUserId(rawUserId);
@@ -40,7 +46,6 @@ export class SavedResultsController {
     return item;
   }
 
-  // Phase 2 — write routes (included here so the module is complete)
   @Post()
   @HttpCode(201)
   async save(
@@ -48,8 +53,17 @@ export class SavedResultsController {
     @Headers('x-user-id') rawUserId: string,
   ) {
     const userId = requireUserId(rawUserId);
-    if (dto.result === undefined) throw new BadRequestException('result is required');
-    const id = await this.service.save({ userId, ...dto, prompt: dto.prompt ?? '' });
+    if (dto.result === undefined || dto.result === null) {
+      throw new BadRequestException('result is required');
+    }
+    const intent = INTENT_MAP[dto.intent] ?? 'inquiry';
+    const id = await this.service.save({
+      userId,
+      title:  dto.title,
+      prompt: dto.prompt ?? '',
+      intent,
+      result: dto.result,
+    });
     return { ok: true, id };
   }
 
