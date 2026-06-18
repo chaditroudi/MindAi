@@ -157,7 +157,9 @@ export class PipelineService {
     const { plan, rows } = await this.aggregate(prompt, 'dashboard', context, apiKey);
 
     if (!plan.skills.includes('chart')) {
-      throw new Error('Planner did not produce a chart execution path for this request.');
+      // Conversational or memory-based question — answer it as text instead of a chart
+      this.logger.log('dashboard → falling back to inquiry (needsData: false)');
+      return this.executeInquiry(prompt, context, apiKey);
     }
     if (!rows.length) {
       throw new Error('No data found. Try rephrasing your question or checking the data source.');
