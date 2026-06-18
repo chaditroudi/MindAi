@@ -98,6 +98,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     void this.loadMeta();
     void this.loadSessions();
     void this.loadSavedResults();
+    void this.loadMemories();
     void this.checkGlobalKey();
   }
 

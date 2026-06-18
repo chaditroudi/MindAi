@@ -18,10 +18,11 @@ export interface AppState {
 
   // Sidebar
   sidebarOpen:   boolean;
-  sidebarTab:    'history' | 'saved';
+  sidebarTab:    'history' | 'saved' | 'memory';
   sessions:      SessionSummary[];
   savedResults:  SavedResultSummary[];
   viewingSaved:  SavedResultDetail | null;
+  memories:      MemoryItem[];
 
   // Report format suggestion
   pendingSuggestion: boolean;
@@ -50,6 +51,7 @@ const INITIAL: AppState = {
   sessions:      [],
   savedResults:  [],
   viewingSaved:  null,
+  memories:      [],
 
   pendingSuggestion: false,
   pendingPrompt:     '',
