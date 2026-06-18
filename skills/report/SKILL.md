@@ -123,7 +123,10 @@ Never speculate. Never invent. Never suggest what the data "might" show.
 
 Generates a structured analytical report with 3–5 sections from data returned
 by `runAggregation`. Returns `{ reportSections: { heading, body }[] }`.
-Max 1,200 tokens (`REPORT_MAX_TOKENS`). No row limit (up to 8,000 chars, `WRITER_MAX_CHARS`).
+
+Max 1,200 tokens (`REPORT_MAX_TOKENS`).
+
+ No row limit (up to 8,000 chars, `WRITER_MAX_CHARS`).
 
 ## Chain Position
 
