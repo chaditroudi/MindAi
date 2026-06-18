@@ -209,8 +209,7 @@ export class PipelineService {
         s => s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
       );
       const [reportResult, chartResult] = await Promise.all([
-        runReportSkill({ rows, prompt, withChart: true, apiKey })
-          .catch(() => ({ reportSections: [{ heading: 'Error', body: 'Could not generate report sections.' }] })),
+        runReportSkill({ rows, prompt, withChart: true, apiKey }),
         runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
           .catch(() => ({ layout: 'analytical' as const, title: prompt, summary: '', widgets: [] })),
       ]);
@@ -218,8 +217,7 @@ export class PipelineService {
       return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
     }
 
-    const result = await runReportSkill({ rows, prompt, apiKey })
-      .catch(() => ({ reportSections: [{ heading: 'Error', body: 'Could not generate report sections.' }] }));
+    const result = await runReportSkill({ rows, prompt, apiKey });
     this.logger.log(`report done | sections: ${result.reportSections.length}`);
     return result;
   }
@@ -239,8 +237,7 @@ export class PipelineService {
     }
 
     this.logger.log(`inquiry | rows: ${rows.length}`);
-    const result = await runInquirySkill({ rows, prompt, apiKey })
-      .catch(() => ({ summary: 'Could not summarize results. Please try again.' }));
+    const result = await runInquirySkill({ rows, prompt, apiKey });
     this.logger.log('inquiry done');
     return result;
   }
