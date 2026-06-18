@@ -329,6 +329,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       });
 
       void this.loadSessions();
+      setTimeout(() => void this.loadMemories(), 3000);
 
     } catch (err) {
       this.st.patch({ messages: this.st.snap.messages.filter(m => m.messageId !== tempId) });

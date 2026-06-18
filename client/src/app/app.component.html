@@ -63,6 +63,13 @@
               <span class="sidebar-tab-count">{{ s.savedResults.length }}</span>
             }
           </button>
+          <button class="sidebar-tab" [class.sidebar-tab--active]="s.sidebarTab === 'memory'"
+            (click)="st.patch({ sidebarTab: 'memory' }); loadMemories()">
+            Memory
+            @if (s.memories.length) {
+              <span class="sidebar-tab-count">{{ s.memories.length }}</span>
+            }
+          </button>
         </div>
         @if (s.sidebarTab === 'history') {
           <button class="new-btn" (click)="newSession()" title="New session">
@@ -119,6 +126,51 @@
                   <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
               </button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (s.sidebarTab === 'memory') {
+        <div class="memory-panel">
+          <div class="memory-header">
+            <span class="memory-header-text">
+              {{ s.memories.length }} memory item{{ s.memories.length !== 1 ? 's' : '' }} stored
+            </span>
+            @if (s.memories.length) {
+              <button class="memory-clear-btn" (click)="clearMemories()" title="Clear all memories">
+                Clear all
+              </button>
+            }
+          </div>
+
+          @if (!s.memories.length) {
+            <div class="session-empty">
+              No memories yet.<br>
+              Memories are extracted automatically after each AI response.
+            </div>
+          }
+
+          @for (mem of s.memories; track mem._id) {
+            <div class="memory-item {{ memoryTypeColor(mem.type) }}">
+              <div class="memory-item-top">
+                <span class="memory-type-badge">
+                  {{ memoryTypeIcon(mem.type) }} {{ mem.type }}
+                </span>
+                <span class="memory-importance" [title]="'Importance: ' + mem.importance + '/5'">
+                  @for (i of [1,2,3,4,5]; track i) {
+                    <span class="importance-dot" [class.importance-dot--on]="i <= mem.importance"></span>
+                  }
+                </span>
+              </div>
+              <p class="memory-content">{{ mem.content }}</p>
+              @if (mem.tags.length) {
+                <div class="memory-tags">
+                  @for (tag of mem.tags; track tag) {
+                    <span class="memory-tag">#{{ tag }}</span>
+                  }
+                </div>
+              }
             </div>
           }
         </div>
