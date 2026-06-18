@@ -39,7 +39,7 @@ async function bootstrap() {
   } else {
     const supervisorModel = process.env['GROQ_SUPERVISOR_MODEL'] ?? 'llama-3.3-70b-versatile';
     const chartModel      = process.env['GROQ_CHART_MODEL']      ?? 'llama-3.3-70b-versatile';
-    const writerModel     = process.env['GROQ_WRITER_MODEL']      ?? 'llama-3.1-8b-instant';
+    const writerModel     = process.env['GROQ_WRITER_MODEL']      ?? 'llama-3.3-70b-versatile';
     logger.log(`AI ready | supervisor: ${supervisorModel} | chart: ${chartModel} | writer: ${writerModel}`, 'AI');
   }
   const memoryPath = process.env['LIBSQL_URL'] ?? 'file:./data/memory.db';
