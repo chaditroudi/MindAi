@@ -32,7 +32,6 @@ async function bootstrap() {
   const logger = app.get(AppLogger);
   logger.log(`NestJS + Mongoose ready on http://localhost:${port}`, 'bootstrap');
 
-  // AI configuration summary — surfaces missing/misconfigured AI settings at startup
   const groqKey = process.env['GROQ_API_KEY'];
   if (!groqKey?.trim()) {
     logger.warn('GROQ_API_KEY is not set — all AI requests will require a per-user key', 'AI');
