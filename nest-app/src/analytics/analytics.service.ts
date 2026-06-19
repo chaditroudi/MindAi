@@ -142,7 +142,8 @@ export class AnalyticsService {
   private async executeByIntent(
     intent: string | undefined,
     prompt: string,
-    memoryContext: CoreMessage[],    apiKey: string,
+    memoryContext: CoreMessage[],
+    apiKey: string,
   ): Promise<unknown> {
     switch (intent) {
       case 'dashboard':
@@ -182,7 +183,8 @@ export class AnalyticsService {
 
     this.logger.log(
       `prompt: "${prompt}" | intent: ${req.intent ?? 'free-text'} | session: ${sessionId}`,
-    );    const t0 = Date.now();
+    );
+    const t0 = Date.now();
     const { result, effectiveApiKey } = await this.runWithFallback(
       req.intent,
       prompt,
@@ -239,7 +241,8 @@ export class AnalyticsService {
   }> {
     const displayIntent = this.toDisplayIntent(req.intent);
     const requested =
-      typeof req.sessionId === 'string' && req.sessionId.trim()        ? req.sessionId.trim()
+      typeof req.sessionId === 'string' && req.sessionId.trim()
+        ? req.sessionId.trim()
         : null;
     const sessionId =
       requested && (await sessionExists(requested)) ? requested : randomUUID();
@@ -247,7 +250,8 @@ export class AnalyticsService {
     return { sessionId, displayIntent };
   }
 
-  private toDisplayIntent(intent: string | undefined): SessionIntent {    if (intent === 'dashboard') return 'dashboard';
+  private toDisplayIntent(intent: string | undefined): SessionIntent {
+    if (intent === 'dashboard') return 'dashboard';
     if (intent === 'report') return 'report';
     return 'inquiry';
   }
@@ -285,7 +289,8 @@ export class AnalyticsService {
   ): Promise<{ result: unknown; effectiveApiKey: string }> {
     try {
       const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey);
-      return { result, effectiveApiKey: primaryKey };    } catch (err) {
+      return { result, effectiveApiKey: primaryKey };
+    } catch (err) {
       return this.handleExecutionError(err, {
         intent,
         prompt,
@@ -367,7 +372,8 @@ export class AnalyticsService {
           Object.assign(
             new HttpException(
               { error: buildRateLimitMessage(retryErr ?? err, true) },
-              HttpStatus.TOO_MANY_REQUESTS,            ),
+              HttpStatus.TOO_MANY_REQUESTS,
+            ),
             { code: ERROR_CODES.LLM_RATE_LIMIT },
           ),
         onOther: (retryErr) => {
