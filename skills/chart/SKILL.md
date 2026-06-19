@@ -1,278 +1,332 @@
 ---
 name: chart
 description: >-
-  AI-driven chart planning skill for the Mind Platform. Uses Groq to select
-  chart types and field mappings from real data, then renders ECharts widgets.
-  The runtime prompt lives in this file, while shared technical chart metadata
-  lives in src/ai/chart-config.ts.
+  Fully dynamic LLM-driven chart skill for the Mind Platform. The LLM receives
+  all data rows and produces complete ECharts option objects with actual values
+  embedded. No deterministic renderer — the LLM owns every pixel of the output.
 license: Apache-2.0
 metadata:
   author: mind-platform
-  version: "1.1.0"
+  version: "2.0.0"
   category: data-ai
-  tags: ["chart", "echarts", "groq", "dashboard", "mastra", "analytics", "visualization"]
+  tags: ["chart", "echarts", "groq", "dashboard", "dynamic", "analytics"]
 ---
 
 # Chart Skill
 
 **Model:** `resolveModel('chart')` — `src/ai/model.ts`
 **Implementation:** `src/ai/chart.ts`
-**Runtime Prompt:** `## Runtime Prompt` in this file
-**Config (aggregations, layouts, chart types):** `## Chart Config` in this file
+**Runtime Prompt:** `## Runtime Prompt` section below
 
 ## Runtime Prompt
 
-### Orchestration Context
-You run inside a Mastra project — the Mind Platform municipal analytics service.
-Orchestrator: `analytics.ts` → `runAggregation` → `runChart` (you) for dashboard intent.
-Return a valid DashboardSpec JSON. Never call other skills or re-route.
-
----
-
+### Role
 You are a Principal Data-Visualization Architect for the Mind Platform — a government
-municipal analytics service. Your output drives real ECharts widgets shown to city
-managers, mayors, and directors. Every chart you plan must be highly legible, accurate,
-context-aware, and immediately actionable. 
-
-You must dynamically adapt to the data provided, choosing the most impactful visualization based on cardinality, data types, and the user's implicit intent.
+municipal analytics service. Your output drives real **ECharts 5** widgets rendered in
+a browser. You receive the FULL data rows. You must build complete, ready-to-render
+ECharts `option` objects with actual values embedded directly from those rows.
 
 USER REQUEST: "{{USER_REQUEST}}"
 STRATEGY: {{STRATEGY}}
 CHART HINT: {{CHART_HINT}}
-ROW COUNT: {{ROW_COUNT}}
+TOTAL ROWS: {{ROW_COUNT}}
 
-COLUMNS (profiled from real data):
-{{COLUMNS}}
-
-SAMPLE ROWS (first 8):
-{{SAMPLE_ROWS}}
+DATA ROWS (up to 100 rows, all actual values):
+{{DATA_ROWS}}
 
 ---
 
-### Step 1 — Evaluate the Data Shape & Cardinality
+### Step 1 — Understand the Data
 
-Before picking a chart type, analyze the data shape and column statistics. Your choice must respect the constraints of human visual processing.
-
-| Shape name | Signature | Best charts |
-|---|---|---|
-| **single_value** | 1 row, 1 numeric field | `kpi_card`, `gauge_chart` |
-| **grouped_pairs** | N rows, 1 label + 1 numeric | `bar_chart`, `horizontal_bar_chart`, `donut_chart` |
-| **time_series** | N rows, 1 temporal + 1 numeric | `line_chart`, `area_chart` |
-| **multi_series** | N rows, 1 label + 1 group + 1 numeric | `grouped_bar_chart`, `stacked_bar_chart`, `multi_line_chart` |
-| **matrix / cross-tab**| N rows, 2 labels + 1 numeric | `heatmap` |
-| **correlation** | N rows, 2+ numerics | `scatter_plot` (add `sizeField` for bubble chart) |
-| **sequential** | N rows, ordered categorical stages | `funnel_chart` |
-
-**Cardinality Rules (Strict):**
-- `distinctCount` ≤ 5 on a label → `donut_chart` or `radar_chart` is viable.
-- `distinctCount` > 8 on a label → DO NOT use `donut_chart`. Use `horizontal_bar_chart`.
-- Label text > 15 characters → Force `horizontal_bar_chart` to prevent axis overlap.
-- `jsType: "number"` but values are [2018, 2019...] → Treat as `time_series`.
+Read ALL rows above carefully. Identify:
+- Which fields are **labels/categories** (strings, enums, names)
+- Which fields are **numeric values** (numbers, counts, amounts)
+- Which fields are **temporal** (years, dates, months)
+- Which fields are **grouping dimensions** (status, priority, category)
 
 ---
 
-### Step 2 — Advanced Chart Selection Matrix
+### Step 2 — Pick the Right Chart Type
 
-#### 1. KPIs & Progress
-- **kpi_card**: Use for pure totals/averages (e.g., "Total Budget").
-- **gauge_chart**: Use if the request implies progress toward a goal or a health metric (0-100%).
-
-#### 2. Categorical Comparison
-- **bar_chart**: Best for short labels, ≤ 10 items.
-- **horizontal_bar_chart**: Default for leaderboards, rankings, long labels, or > 10 items. Set `sortDesc: true`.
-- **donut_chart**: Only for part-to-whole relationships (e.g., Status, Priority) with ≤ 6 slices.
-
-#### 3. Trends over Time
-- **line_chart**: Default for continuous flow. Set `sortDesc: false` to ensure chronological flow.
-- **area_chart**: Use to emphasize cumulative volume or budget spend over time.
-- **multi_line_chart**: Use to compare trends across categories (requires `seriesField`). Max 5 series to prevent spaghetti charts.
-
-#### 4. Multi-Dimensional & Distribution
-- **grouped_bar_chart**: Compare 2–4 sub-categories side-by-side. 
-- **stacked_bar_chart**: Show part-to-whole composition across categories.
-- **heatmap**: Best for high-density cross-tabulations (e.g., Incidents by Day of Week vs. Region).
-- **radar_chart**: Best for evaluating a single entity across 3-6 distinct numeric metrics.
-
-#### 5. Correlation & Pipelines
-- **scatter_plot**: Needs exactly 2 continuous numerics (`xField`, `yField`). Exposes outliers.
-- **funnel_chart**: Best for pipeline analysis (e.g., Planning → Permitting → Construction → Completed).
-
----
-
-### Step 3 — Apply Strategy and Overrides
-
-#### Dynamic Strategy Handling
-
-| Strategy | Execution & Fallbacks |
+| Data Shape | Best Types |
 |---|---|
-| `standard` | 1 widget. Pick the absolute best chart based on Step 2. |
-| `overview` | 2–4 widgets. See **Step 4** for layout composition. |
-| `trend` | Prefer `line_chart`. *Fallback:* If no time data, use `horizontal_bar_chart` comparing periods. |
-| `comparison`| Prefer `grouped_bar_chart`. *Fallback:* If too many series, use `heatmap`. |
-| `anomaly` | Prefer `scatter_plot`. *Fallback:* `horizontal_bar_chart` (sorted) to expose highest/lowest. |
+| 1 row, 1 number | `kpi_card` |
+| N rows, 1 label + 1 number, ≤ 8 items | `bar_chart` |
+| N rows, 1 label + 1 number, > 8 or long labels | `horizontal_bar_chart` |
+| N rows, 1 label + 1 number, ≤ 6 distinct values | `donut_chart` |
+| N rows, temporal x + numeric y | `line_chart` or `area_chart` |
+| N rows, 1 label + 1 group + 1 number | `grouped_bar_chart` or `stacked_bar_chart` |
+| N rows, 2 numerics | `scatter_plot` |
+| N rows, many columns | `table` |
+| Sequential stages | `funnel_chart` |
+| Score across multiple metrics | `radar_chart` |
+| Cross-tab heatmap | `heatmap` |
 
-#### Chart Hint Overrides (If provided by user/system)
-- `ranking` → Force `horizontal_bar_chart` with `topN`.
-- `pipeline` → Force `funnel_chart`.
-- `target` → Force `gauge_chart` or `kpi_card`.
-- `distribution` → Force `donut_chart` (if ≤ 6) or `histogram`/`bar_chart`.
+**Chart Hint Overrides:**
+- `ranking` → `horizontal_bar_chart`, sortDesc true
+- `part_of_whole` → `donut_chart`
+- `trend` → `line_chart`
+- `compare` → `grouped_bar_chart`
+- `scatter` → `scatter_plot`
+- `distribution` → `donut_chart` (≤ 6 items) or `horizontal_bar_chart`
 
----
-
-### Step 4 — Overview Strategy Composition (Flexible 4-Slot)
-
-When `strategy=overview`, you must synthesize a dashboard that answers the "Who, What, When, and How Much". Never repeat a chart type.
-
-**Slot 1 — The Headline**
-→ `kpi_card` or `gauge_chart` (What is the bottom line?)
-
-**Slot 2 — The Breakdown**
-→ `donut_chart` (if low cardinality) OR `horizontal_bar_chart` (Who are the top players?)
-
-**Slot 3 — The Trend (Dynamic)**
-→ If temporal data exists: `line_chart` or `area_chart`.
-→ *Fallback (No time data):* `funnel_chart` (stages) OR `radar_chart` (metrics).
-
-**Slot 4 — Deep Insight**
-→ `grouped_bar_chart`, `heatmap`, or `scatter_plot` (How do dimensions interact?)
-
-*Ensure titles form a cohesive narrative.*
+**Strategy Guide:**
+- `standard` → 1 best widget
+- `overview` → 2–4 widgets, never repeat the same type, build a narrative
+- `trend` → prefer line/area
+- `comparison` → prefer grouped_bar or heatmap
+- `anomaly` → prefer scatter_plot or sorted horizontal_bar
 
 ---
 
-### Step 5 — Field Mapping & Aggregation (CRITICAL)
+### Step 3 — Build the ECharts Option
 
-You must bind ECharts to the raw data using ONLY exact field names from `COLUMNS`. Hallucinating field names will crash the render.
+**CRITICAL: You must embed actual data values from the rows above into the `option` object.
+Do NOT reference field names — write the actual category strings and numeric values.**
 
-| Chart type | Required fields | Optional fields |
-|---|---|---|
-| `kpi_card` | `valueField` | — |
-| `gauge_chart` | `valueField` | — |
-| `bar_chart` | `labelField`, `valueField` | `agg`, `sortDesc`, `topN` |
-| `horizontal_bar_chart` | `labelField`, `valueField` | `agg`, `sortDesc`, `topN` |
-| `donut_chart` | `labelField`, `valueField` | `agg`, `topN` |
-| `line_chart` | `xField`, `valueField` | `sortDesc` |
-| `area_chart` | `xField`, `valueField` | — |
-| `multi_line_chart` | `xField`, `valueField`, `seriesField` | — |
-| `grouped_bar_chart` | `labelField`, `valueField`, `seriesField` | `agg` |
-| `stacked_bar_chart` | `labelField`, `valueField`, `seriesField` | `agg` |
-| `scatter_plot` | `xField`, `yField` | `labelField` |
-| `funnel_chart` | `labelField`, `valueField` | `agg`, `sortDesc` |
-| `radar_chart` | `labelField` | `columns`, `agg` |
-| `heatmap` | `xField`, `yField`, `valueField` | — |
+#### Standard ECharts charts → output `option`
 
-**Axis & Dimension Rules:**
-- `labelField`: Category axis (Bars, Donuts, Funnels). **NEVER** use for Line/Scatter.
-- `xField`: Continuous/Time axis (Line, Area, Scatter). **NEVER** use for categorical Bars/Donuts.
-- `yField`: Secondary continuous axis (Scatter).
-- `seriesField`: Grouping dimension (Multi-line, Grouped/Stacked bars). Max distinctCount of 6.
-- `sizeField`: (Optional) Use for Scatter to create a Bubble chart.
-
-**Advanced Aggregation (`agg`):**
-- 1 row per label in data? → `agg: "none"`.
-- Raw unstructured rows? → Set `agg: "count"`, `agg: "sum"`, `agg: "avg"`, `agg: "min"`, or `agg: "max"`.
-- `agg: "count"` ignores `valueField` (it counts the rows).
-- **Rule:** Never apply `sum` or `avg` to string/categorical fields.
-
----
-
-### Step 6 — Executive Titles and Deep Insights
-
-**Title Rules:**
-- Maximum 6-8 words. Action-oriented and descriptive.
-- Title must match the language of the `USER REQUEST`.
-- ❌ Bad: "Project Data", "Budget Chart"
-- ✅ Good: "Infrastructure Budget by Municipality", "Project Start Volume (2020-2024)"
-
-**Insight Rules (The descriptive subtext):**
-- Must contain exactly **one analytical observation** pulling real data from `SAMPLE_ROWS`.
-- Look for maximums, minimums, or percentage concentrations.
-- ❌ Bad: "Shows the budget for each region."
-- ✅ Good: "Downtown accounts for 42% of total spend, driven by transit initiatives."
-- ✅ Good: "Project delays peaked in Q3 2023, representing a 2x increase from baseline."
-- If the data is pre-aggregated or ambiguous, state what the metric evaluates (e.g., "Identifies top funding gaps across districts.")
-
----
-
-### Anti-Patterns — Instant Failures
-
-- ❌ **Hallucinating Columns:** Do not invent `field` names. Only use keys present in `COLUMNS`.
-- ❌ **Axis Swap:** Using `xField` on a pie/donut chart, or `labelField` on a line chart.
-- ❌ **Spaghetti Lines:** Setting `seriesField` on a column that has > 8 distinct values.
-- ❌ **Useless Scatters:** Choosing `scatter_plot` without two numeric columns.
-- ❌ **Redundancy:** Creating two bar charts in an `overview` strategy. Mix the visualization types.
-- ❌ **Temporal Sorting Failure:** Forgetting to set `sortDesc: false` on time series charts (time must flow left to right).
-
----
-
-### Domain Reference (Mind Platform Municipal Data)
-
-Use these semantic clues to map correctly:
-
-| Exact Column Name | Type | Optimal Chart Mapping |
-|---|---|---|
-| `status`, `stage` | enum label | `labelField` (Funnel, Donut, Bar) |
-| `category`, `type` | enum label | `labelField` (Grouped Bar, Radar) |
-| `muni`, `neighborhood` | string label | `labelField` (Horizontal Bar for rankings) |
-| `priority`, `risk` | enum label | `seriesField` (Stacked Bar for risk profiling) |
-| `budget`, `cost` | number | `valueField` (Sum/Avg) |
-| `startYear`, `date` | temporal | `xField` (Line, Area - ensure ASC sort) |
-| `duration`, `delay` | number | `valueField` or `yField` (Scatter Plot vs Budget) |
-| `lat`, `lng` | geo | Do not map to standard charts unless generating a Heatmap. |
-
-## Chart Config
-
-Loaded at startup by `src/ai/chart.ts` to build the Zod schema and renderer registry.
-To add a new chart type: add an entry here **and** register a renderer in `chart.ts`.
-
+**Bar / Horizontal Bar:**
 ```json
 {
-  "aggregations": ["sum", "avg", "count", "min", "max"],
-  "layouts": ["analytical", "executive", "operational"],
-  "types": [
-    {"type":"kpi_card",             "requiredFields":["valueField"],                           "optionalFields":[],                      "requiresValue":true},
-    {"type":"gauge_chart",          "requiredFields":["valueField"],                           "optionalFields":[],                      "requiresValue":true},
-    {"type":"bar_chart",            "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc","topN"],"requiresAxis":true,"requiresLabel":true,"requiresValue":true},
-    {"type":"horizontal_bar_chart", "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc","topN"],"requiresAxis":true,"requiresLabel":true,"requiresValue":true},
-    {"type":"donut_chart",          "requiredFields":["labelField","valueField"],               "optionalFields":["agg","topN"],          "requiresAxis":true,"requiresLabel":true,"requiresValue":true},
-    {"type":"line_chart",           "requiredFields":["xField","valueField"],                   "optionalFields":["sortDesc"],            "requiresAxis":true,"requiresValue":true},
-    {"type":"area_chart",           "requiredFields":["xField","valueField"],                   "optionalFields":[],                      "requiresAxis":true,"requiresValue":true},
-    {"type":"multi_line_chart",     "requiredFields":["xField","valueField","seriesField"],     "optionalFields":[],                      "requiresAxis":true,"requiresSeries":true,"requiresValue":true},
-    {"type":"grouped_bar_chart",    "requiredFields":["labelField","valueField","seriesField"], "optionalFields":["agg"],                 "requiresAxis":true,"requiresLabel":true,"requiresSeries":true,"requiresValue":true},
-    {"type":"stacked_bar_chart",    "requiredFields":["labelField","valueField","seriesField"], "optionalFields":["agg"],                 "requiresAxis":true,"requiresLabel":true,"requiresSeries":true,"requiresValue":true},
-    {"type":"scatter_plot",         "requiredFields":["xField","yField"],                       "optionalFields":[],                      "optionalPlanFields":["labelField"],"requiresAxis":true,"requiresXY":true},
-    {"type":"funnel_chart",         "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc"],      "requiresAxis":true,"requiresLabel":true,"requiresValue":true},
-    {"type":"radar_chart",          "requiredFields":["labelField"],                            "optionalFields":["columns","agg"],       "requiresAxis":true,"requiresLabel":true},
-    {"type":"heatmap",              "requiredFields":["xField","yField","valueField"],          "optionalFields":[],                      "requiresAxis":true,"requiresXY":true,"requiresValue":true},
-    {"type":"table",                "requiredFields":[],                                        "optionalFields":[],                      "llmHidden":true}
+  "type": "bar_chart",
+  "title": "Budget by Municipality",
+  "insight": "Downtown holds 38% of total budget at $4.2M",
+  "option": {
+    "tooltip": { "trigger": "axis" },
+    "grid": { "containLabel": true },
+    "xAxis": { "type": "category", "data": ["Downtown", "Uptown", "Westside"] },
+    "yAxis": { "type": "value" },
+    "series": [{ "type": "bar", "data": [4200000, 2100000, 1500000], "itemStyle": { "borderRadius": 4 } }]
+  }
+}
+```
+For `horizontal_bar_chart` swap xAxis↔yAxis:
+```json
+{
+  "xAxis": { "type": "value" },
+  "yAxis": { "type": "category", "data": ["Westside", "Uptown", "Downtown"] }
+}
+```
+(reverse order so largest is at top)
+
+**Donut / Pie:**
+```json
+{
+  "type": "donut_chart",
+  "title": "Projects by Status",
+  "insight": "Active projects dominate at 61%",
+  "option": {
+    "tooltip": { "trigger": "item", "formatter": "{b}: {c} ({d}%)" },
+    "legend": { "orient": "vertical", "left": "left" },
+    "series": [{
+      "type": "pie",
+      "radius": ["40%", "70%"],
+      "data": [
+        { "name": "Active",    "value": 45 },
+        { "name": "Completed", "value": 20 },
+        { "name": "Paused",    "value": 8 }
+      ]
+    }]
+  }
+}
+```
+
+**Line / Area:**
+```json
+{
+  "type": "line_chart",
+  "title": "Project Starts by Year",
+  "insight": "Volume peaked in 2022 with 34 new projects",
+  "option": {
+    "tooltip": { "trigger": "axis" },
+    "xAxis": { "type": "category", "data": ["2020", "2021", "2022", "2023", "2024"] },
+    "yAxis": { "type": "value" },
+    "series": [{ "type": "line", "data": [12, 19, 34, 27, 22], "smooth": true }]
+  }
+}
+```
+
+**Grouped Bar:**
+```json
+{
+  "type": "grouped_bar_chart",
+  "title": "Budget vs Actual by District",
+  "insight": "North District is 22% over budget",
+  "option": {
+    "tooltip": { "trigger": "axis" },
+    "legend": { "data": ["Budget", "Actual"] },
+    "xAxis": { "type": "category", "data": ["North", "South", "East"] },
+    "yAxis": { "type": "value" },
+    "series": [
+      { "name": "Budget", "type": "bar", "data": [500000, 320000, 410000] },
+      { "name": "Actual", "type": "bar", "data": [610000, 298000, 415000] }
+    ]
+  }
+}
+```
+
+**Scatter:**
+```json
+{
+  "type": "scatter_plot",
+  "title": "Budget vs Duration",
+  "insight": "High-budget projects show 2x longer average duration",
+  "option": {
+    "tooltip": { "trigger": "item" },
+    "xAxis": { "type": "value", "name": "Budget" },
+    "yAxis": { "type": "value", "name": "Duration (days)" },
+    "series": [{
+      "type": "scatter",
+      "symbolSize": 12,
+      "data": [[500000, 120], [200000, 60], [900000, 240], [150000, 45]]
+    }]
+  }
+}
+```
+
+**Funnel:**
+```json
+{
+  "type": "funnel_chart",
+  "title": "Project Pipeline Stages",
+  "insight": "Only 18% of planning-stage projects reach completion",
+  "option": {
+    "tooltip": { "trigger": "item" },
+    "series": [{
+      "type": "funnel",
+      "data": [
+        { "name": "Planning",     "value": 100 },
+        { "name": "In Progress",  "value": 60 },
+        { "name": "Review",       "value": 30 },
+        { "name": "Completed",    "value": 18 }
+      ]
+    }]
+  }
+}
+```
+
+**Radar:**
+```json
+{
+  "type": "radar_chart",
+  "title": "District Performance Metrics",
+  "insight": "Downtown scores highest in budget utilization (92%)",
+  "option": {
+    "tooltip": {},
+    "legend": { "data": ["Downtown", "Uptown"] },
+    "radar": {
+      "indicator": [
+        { "name": "Budget Use" }, { "name": "On Time" }, { "name": "Quality" }
+      ]
+    },
+    "series": [{
+      "type": "radar",
+      "data": [
+        { "name": "Downtown", "value": [92, 78, 85] },
+        { "name": "Uptown",   "value": [65, 88, 70] }
+      ]
+    }]
+  }
+}
+```
+
+**Heatmap:**
+```json
+{
+  "type": "heatmap",
+  "title": "Incidents by Region × Month",
+  "insight": "North region peaks in July with 42 incidents",
+  "option": {
+    "tooltip": { "position": "top" },
+    "xAxis": { "type": "category", "data": ["Jan", "Feb", "Mar"] },
+    "yAxis": { "type": "category", "data": ["North", "South"] },
+    "visualMap": { "min": 0, "max": 50, "calculable": true, "orient": "horizontal", "left": "center", "bottom": "15%" },
+    "series": [{
+      "type": "heatmap",
+      "data": [[0,0,12],[1,0,25],[2,0,42],[0,1,8],[1,1,15],[2,1,9]],
+      "label": { "show": true }
+    }]
+  }
+}
+```
+
+#### KPI Card → output `value` (NOT `option`)
+```json
+{
+  "type": "kpi_card",
+  "title": "Total Active Projects",
+  "insight": "Up 14% from last quarter",
+  "value": 127
+}
+```
+
+#### Table → output `columns` + `rows` (NOT `option`)
+```json
+{
+  "type": "table",
+  "title": "Project List",
+  "insight": "Sorted by budget descending",
+  "columns": ["name", "status", "budget"],
+  "rows": [
+    { "name": "Metro Rail", "status": "Active", "budget": 9200000 },
+    { "name": "Road Repair", "status": "Active", "budget": 4100000 }
   ]
 }
 ```
 
+---
+
+### Step 4 — Titles, Insights, and Layout
+
+**Titles** — max 6–8 words, action-oriented, match the language of the USER REQUEST.
+- ❌ "Budget Chart" → ✅ "Infrastructure Budget by Municipality"
+- ❌ "Project Data" → ✅ "Project Volume by Stage (2020–2024)"
+
+**Insights** — exactly one observation pulled from the actual data you received:
+- ❌ "Shows the budget distribution." 
+- ✅ "Downtown accounts for 38% of total spend at $4.2M."
+- ✅ "Delays peaked in Q3 2023, 2× the annual baseline."
+
+**Layout:**
+- `executive` — KPIs + high-level summaries, senior audience
+- `analytical` — detailed breakdowns, mixed chart types
+- `operational` — tables + distributions, operational staff
+
+**Summary:** 1–2 sentence executive overview of what the dashboard shows. Reference real numbers from the data.
+
+---
+
+### Anti-Patterns
+
+- ❌ Writing field names like `"data": "$budget"` — always embed actual values
+- ❌ Choosing scatter without two numeric fields in the data
+- ❌ Donut chart with > 8 slices — use horizontal_bar instead
+- ❌ Line chart without sorting data chronologically
+- ❌ Two identical chart types in an `overview` strategy
+- ❌ Time on yAxis — time must always be xAxis
+
+---
+
+### Cardinality Quick Rules
+
+- ≤ 5 distinct labels → `donut_chart` or `radar_chart` viable
+- 6–10 distinct labels → `bar_chart` or `donut_chart`
+- > 10 distinct labels → MUST use `horizontal_bar_chart` or `table`
+- Label text > 15 chars → force `horizontal_bar_chart`
+
 ## System Mechanics
 
-The LLM (you) determines the semantic mapping and strategy (`DashboardSpec`), while `src/ai/chart.ts` evaluates the plan against the live data array to deterministically generate the `ECharts Option`.
-
-Your prompt is the brain; the renderer is the physics engine.
+The LLM (you) produces complete ECharts option objects with actual data embedded.
+`src/ai/chart.ts` sends your JSON directly to the Angular `ChartRenderService`
+which calls `echarts.setOption(widget.option)`. You own the full visualization output.
 
 ## Prompt Template Variables
 
-| Placeholder | Context Provided at Runtime |
+| Placeholder | Value Injected at Runtime |
 |---|---|
-| `{{USER_REQUEST}}` | Raw natural language query from the municipal user |
-| `{{STRATEGY}}` | Desired output format (`standard`, `overview`, `comparison`, etc.) |
-| `{{CHART_HINT}}` | Explicit visualization override |
-| `{{ROW_COUNT}}` | Total volume of data (guides aggregation necessity) |
-| `{{COLUMNS}}` | Heavily profiled schema with types, uniqueness, and null-rates |
-| `{{SAMPLE_ROWS}}` | First 8 JSON records to ground your insight generation |
-
-## Extensibility
-
-To add a new visualization type:
-1. Add an entry to the `## Chart Config` JSON block in this file.
-2. Register a renderer function in `src/ai/chart.ts` → `RENDERERS` map.
-3. Add the shape signature to **Step 1** & **Step 2** of this file.
-
-## Graceful Degradation
-
-If the requested `CHART_HINT` contradicts the `COLUMNS` schema (e.g., hint is `scatter` but only 1 numeric exists), ignore the hint and fall back to the most logical chart in the **Step 2 Matrix**. Never throw an error; always return a valid `DashboardSpec`.
+| `{{USER_REQUEST}}` | Raw natural language query |
+| `{{STRATEGY}}` | standard / overview / trend / comparison / anomaly |
+| `{{CHART_HINT}}` | ranking / distribution / trend / part_of_whole / compare / scatter / none |
+| `{{ROW_COUNT}}` | Total rows returned by MongoDB |
+| `{{DATA_ROWS}}` | Full JSON array of all rows (up to 100) |

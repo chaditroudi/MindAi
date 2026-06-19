@@ -33,14 +33,9 @@ const MODE_META: Record<ModeKey, { label: string; hint: string }> = {
   inquiry:   { label: 'Inquiry',   hint: 'Direct answer to a data question' },
 };
 
-const CHART_WIDGET_TYPES = new Set<WidgetType>([
-  'line_chart', 'area_chart', 'multi_line_chart',
-  'bar_chart', 'horizontal_bar_chart', 'grouped_bar_chart',
-  'stacked_bar_chart', 'donut_chart', 'scatter_plot',
-]);
-
-const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
+const WIDGET_TYPE_LABELS: Record<string, string> = {
   table:                'Table',
+  kpi_card:             'KPI',
   line_chart:           'Trend',
   area_chart:           'Area',
   multi_line_chart:     'Multi-line',
@@ -50,7 +45,10 @@ const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   stacked_bar_chart:    'Stacked',
   donut_chart:          'Share',
   scatter_plot:         'Scatter',
-  kpi_card:             'KPI',
+  gauge_chart:          'Gauge',
+  funnel_chart:         'Funnel',
+  radar_chart:          'Radar',
+  heatmap:              'Heatmap',
 };
 
 type WidgetDisplayKind = 'chart' | 'kpi' | 'table' | 'unknown';
@@ -409,20 +407,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   trackByMsgId(_: number, m: ConversationMessage): string { return m.messageId; }
 
   widgetTypeLabel(widget: WidgetSpec): string {
-    if (widget.type in WIDGET_TYPE_LABELS) {
-      return WIDGET_TYPE_LABELS[widget.type as WidgetType];
-    }
-
-    switch (this.widgetDisplayKind(widget)) {
-      case 'chart':
-        return 'Chart';
-      case 'kpi':
-        return 'KPI';
-      case 'table':
-        return 'Table';
-      default:
-        return 'Widget';
-    }
+    return WIDGET_TYPE_LABELS[widget.type]
+      ?? widget.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
   widgetKey(msgId: string, widgetId: string): string {

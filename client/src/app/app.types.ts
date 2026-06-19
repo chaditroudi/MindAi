@@ -29,11 +29,7 @@ export interface ReportSection {
   body:    string;
 }
 
-export type WidgetType =
-  | 'line_chart' | 'area_chart' | 'multi_line_chart'
-  | 'bar_chart'  | 'horizontal_bar_chart'
-  | 'grouped_bar_chart' | 'stacked_bar_chart'
-  | 'donut_chart' | 'scatter_plot' | 'kpi_card' | 'table';
+export type WidgetType = string;
 
 export interface WidgetSpec {
   id:       string;
