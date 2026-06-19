@@ -180,18 +180,22 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     const trimmed = key.trim();
     if (!trimmed) return;
     if (!trimmed.startsWith('gsk_')) {
-      // Wrong key format — show error inline without hiding the modal
-      this.st.patch({ keyRejected: true });
+      this.st.patch({
+        keyRejected: true,
+        keyErrorText: 'Keys must start with "gsk_". Get yours at console.groq.com',
+      });
       return;
     }
     const { userId } = this.st.snap;
     try {
       await this.api.saveKey(userId, trimmed);
       localStorage.setItem('mind_has_key', '1');
-      this.st.patch({ hasKey: true, keyRejected: false, showKeyModal: false });
+      this.st.patch({ hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false });
     } catch (err) {
-      // Show error inside the modal (not a full-page error)
-      this.st.patch({ keyRejected: true });
+      const message = err instanceof Error
+        ? err.message
+        : 'Failed to verify the API key. Please try again.';
+      this.st.patch({ keyRejected: true, keyErrorText: message });
     }
   }
 

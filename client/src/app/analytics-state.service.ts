@@ -29,10 +29,11 @@ export interface AppState {
   pendingPrompt:     string;
 
   // API key (stored in MongoDB; userId is the local reference)
-  userId:       string;
-  hasKey:       boolean;
-  keyRejected:  boolean;
-  showKeyModal: boolean;
+  userId:        string;
+  hasKey:        boolean;
+  keyRejected:   boolean;
+  keyErrorText:  string;
+  showKeyModal:  boolean;
 }
 
 const INITIAL: AppState = {
@@ -56,10 +57,11 @@ const INITIAL: AppState = {
   pendingSuggestion: false,
   pendingPrompt:     '',
 
-  userId:       '',
-  hasKey:       false,
-  keyRejected:  false,
-  showKeyModal: false,
+  userId:        '',
+  hasKey:        false,
+  keyRejected:   false,
+  keyErrorText:  '',
+  showKeyModal:  false,
 };
 
 @Injectable({ providedIn: 'root' })
