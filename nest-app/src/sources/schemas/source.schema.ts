@@ -15,7 +15,6 @@ export class Source {
   @Prop()
   description?: string;
 
-  // Flexible array — field types are validated at the service layer
   @Prop({ type: [Object], required: true })
   fields: DataSourceField[];
 
