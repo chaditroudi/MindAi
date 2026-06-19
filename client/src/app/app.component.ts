@@ -16,7 +16,7 @@ import { AnalyticsApiService, ApiError } from './analytics-api.service';
 import { AnalyticsStateService } from './analytics-state.service';
 import { ChartRenderService } from './chart-render.service';
 import type {
-  ModeKey, PromptExample, WidgetSpec, WidgetType,
+  ModeKey, PromptExample, WidgetSpec,
   AnalyticsResponse, DashboardResponse, InquiryResponse, ReportResponse,
   ConversationMessage, MessageResult, SavedResultSummary,
 } from './app.types';
@@ -535,9 +535,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private widgetDisplayKind(widget: WidgetSpec): WidgetDisplayKind {
     if (this.hasChartOption(widget)) return 'chart';
     if (typeof widget.value === 'number') return 'kpi';
-    if (Array.isArray(widget.columns) || Array.isArray(widget.rows)) return 'table';
-    if (CHART_WIDGET_TYPES.has(widget.type as WidgetType)) return 'chart';
     if (widget.type === 'kpi_card') return 'kpi';
+    if (Array.isArray(widget.columns) || Array.isArray(widget.rows)) return 'table';
     if (widget.type === 'table') return 'table';
     return 'unknown';
   }
