@@ -10,38 +10,73 @@ import type { CoreMessage } from 'ai';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+
 import { getSources } from '../sources/sources-cache';
 import { UserKeysService } from '../user-keys/user-keys.service';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { analyticsAgent } from '../session/agent';
 import {
-  sessionExists, ensureThread, getMemoryContext, saveConversationTurn,
-  type SessionIntent, type MessageResult, type ConversationMessage,
+  sessionExists,
+  ensureThread,
+  getMemoryContext,
+  saveConversationTurn,
+  type SessionIntent,
+  type MessageResult,
+  type ConversationMessage,
 } from '../session/memory';
 
-const promptSchema = z.string().min(1, 'Prompt is required').max(1000, 'Prompt must be 1000 characters or fewer');
+// ============================================================================
+// Constants & Schemas
+// ============================================================================
+
+const promptSchema = z  .string()
+  .min(1, 'Prompt is required')
+  .max(1000, 'Prompt must be 1000 characters or fewer');
+
+const RESOLVED_TYPES = ['dashboard', 'report', 'inquiry'] as const;
+type ResolvedType = (typeof RESOLVED_TYPES)[number];
+
+const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
+const MAX_AGENT_STEPS = 2;
+
+const ERROR_CODES = {
+  INVALID_API_KEY: 'INVALID_API_KEY',
+  LLM_RATE_LIMIT: 'LLM_RATE_LIMIT',
+} as const;
+
+// ============================================================================
+// Error classification helpers
+// ============================================================================
+
+function getErrorStatus(err: unknown): number | undefined {
+  return (err as { statusCode?: number; status?: number }).statusCode
+    ?? (err as { status?: number }).status;
+}
+
+function getErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 function isInvalidKeyError(err: unknown): boolean {
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  const code = (err as { statusCode?: number; status?: number }).statusCode
-    ?? (err as { status?: number }).status;
-  if (code === 401 || code === 403) return true;
+  const status = getErrorStatus(err);
+  if (status === 401 || status === 403) return true;
+  const msg = getErrorMessage(err).toLowerCase();
   return (
-    msg.includes('401') || msg.includes('403') ||
-    msg.includes('invalid_api_key') || msg.includes('invalid api key') ||
-    msg.includes('incorrect api key') || msg.includes('authentication') ||
+    msg.includes('401') ||
+    msg.includes('403') ||
+    msg.includes('invalid_api_key') ||
+    msg.includes('invalid api key') ||
+    msg.includes('incorrect api key') ||
+    msg.includes('authentication') ||
     msg.includes('api key')
   );
 }
 
 function isProviderRateLimitError(err: unknown): boolean {
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  const code = (err as { statusCode?: number; status?: number }).statusCode
-    ?? (err as { status?: number }).status;
-
-  if (code === 429) return true;
-
+  const status = getErrorStatus(err);
+  if (status === 429) return true;
+  const msg = getErrorMessage(err).toLowerCase();
   return (
     msg.includes('429') ||
     msg.includes('rate limit') ||
@@ -55,24 +90,39 @@ function isProviderRateLimitError(err: unknown): boolean {
 }
 
 function extractRetryDelay(err: unknown): string | null {
-  const msg = err instanceof Error ? err.message : String(err);
-  const match = /try again in\s+([^.]+(?:\.\d+s)?)/i.exec(msg);
+  const match = /try again in\s+([^.]+(?:\.\d+s)?)/i.exec(getErrorMessage(err));
   return match?.[1]?.trim() ?? null;
 }
 
+function buildRateLimitMessage(err: unknown, withKeyHint: boolean): string {
+  const retryIn = extractRetryDelay(err);
+  const suffix = withKeyHint ? ' or use a different API key.' : '.';
+  if (retryIn) return `Groq API quota reached. Try again in ${retryIn}${suffix}`;  return withKeyHint
+    ? 'Groq API quota reached. Please try again later or use a different API key.'
+    : 'Groq API quota reached. Please try again later.';
+}
+
+// ============================================================================
+// Types
+// ============================================================================
+
 export interface AnalyticsRequest {
-  prompt:     string;
-  intent?:    string;
+  prompt: string;
+  intent?: string;
   sessionId?: string | null;
-  userId:     string;
+  userId: string;
 }
 
 export interface AnalyticsResponse {
-  intent:    string;
+  intent: string;
   sessionId: string;
   messageId: string;
   [key: string]: unknown;
 }
+
+// ============================================================================
+// Service
+// ============================================================================
 
 @Injectable()
 export class AnalyticsService {
@@ -85,179 +135,390 @@ export class AnalyticsService {
     private readonly memory: MemoryService,
   ) {}
 
-  private async executeByIntent(intent: string | undefined, prompt: string, memoryContext: CoreMessage[], apiKey: string): Promise<unknown> {
-    if (intent === 'dashboard') {
-      return this.pipeline.executeDashboard(prompt, memoryContext, apiKey);
+  // --------------------------------------------------------------------------
+  // Intent execution
+  // --------------------------------------------------------------------------
+
+  private async executeByIntent(
+    intent: string | undefined,
+    prompt: string,
+    memoryContext: CoreMessage[],    apiKey: string,
+  ): Promise<unknown> {
+    switch (intent) {
+      case 'dashboard':
+        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey);
+      case 'report':
+        return this.pipeline.executeReport(prompt, memoryContext, apiKey);
+      case 'inquiry':
+      case 'general_question':
+        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey);
+      default:
+        return this.executeFreeText(prompt);
     }
-    if (intent === 'report') {
-      return this.pipeline.executeReport(prompt, memoryContext, apiKey);
-    }
-    if (intent === 'inquiry' || intent === 'general_question') {
-      return this.pipeline.executeInquiry(prompt, memoryContext, apiKey);
-    }
-    // Free-text — route through agent
+  }
+
+  private async executeFreeText(prompt: string): Promise<unknown> {
     this.logger.log('no intent — routing through analyticsAgent');
     const agentResponse = await analyticsAgent.generateLegacy(
       [{ role: 'user', content: prompt }],
-      { maxSteps: 2 },
+      { maxSteps: MAX_AGENT_STEPS },
     );
     const toolResult = agentResponse.toolResults?.[0];
     return toolResult?.result ?? { summary: agentResponse.text ?? 'No result.' };
   }
 
+  // --------------------------------------------------------------------------
+  // Public API
+  // --------------------------------------------------------------------------
+
   async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
-    const { userId, intent, sessionId: incoming } = req;
     const prompt = promptSchema.parse(req.prompt);
 
+    this.ensureDataSources();
+    const { storedKey, globalKey, primaryKey } = await this.resolveApiKeys(req.userId);
+    const { sessionId, displayIntent } = await this.resolveSession(req);
+
+    const memoryContext = await this.buildMemoryContext(req.userId, sessionId, prompt);
+
+    this.logger.log(
+      `prompt: "${prompt}" | intent: ${req.intent ?? 'free-text'} | session: ${sessionId}`,
+    );    const t0 = Date.now();
+    const { result, effectiveApiKey } = await this.runWithFallback(
+      req.intent,
+      prompt,
+      memoryContext,
+      primaryKey,
+      storedKey,
+      globalKey,
+      req.userId,
+    );
+    this.logger.log(`done in ${Date.now() - t0}ms`);
+
+    return this.buildResponse({
+      result,
+      prompt,
+      effectiveApiKey,
+      sessionId,
+      displayIntent,
+      userId: req.userId,
+      durationMs: Date.now() - t0,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Setup helpers
+  // --------------------------------------------------------------------------
+
+  private ensureDataSources(): void {
     if (!getSources().length) {
       throw new BadRequestException('No data sources configured. Run the seed script first.');
     }
+  }
 
+  private async resolveApiKeys(userId: string): Promise<{
+    storedKey: string | null;
+    globalKey: string | null;
+    primaryKey: string;
+  }> {
     const storedKey = (await this.userKeys.get(userId))?.trim() || null;
-    const globalKey = this.cfg.get<string>('llm.groqApiKey')?.trim() || null;
+    const globalKey = this.cfg.get('llm.groqApiKey')?.trim() || null;
     const primaryKey = storedKey || globalKey;
 
     if (!primaryKey) {
-      throw new UnauthorizedException('No API key found. Please enter your Groq API key in settings.');
+      throw new UnauthorizedException(
+        'No API key found. Please enter your Groq API key in settings.',
+      );
     }
 
-    const displayIntent: SessionIntent =
-      intent === 'dashboard' ? 'dashboard'
-      : intent === 'report'  ? 'report'
-      : 'inquiry';
+    return { storedKey, globalKey, primaryKey };
+  }
 
-    const requested  = typeof incoming === 'string' && incoming.trim() ? incoming.trim() : null;
-    const sessionId  = requested && await sessionExists(requested) ? requested : randomUUID();
+  private async resolveSession(req: AnalyticsRequest): Promise<{
+    sessionId: string;
+    displayIntent: SessionIntent;
+  }> {
+    const displayIntent = this.toDisplayIntent(req.intent);
+    const requested =
+      typeof req.sessionId === 'string' && req.sessionId.trim()        ? req.sessionId.trim()
+        : null;
+    const sessionId =
+      requested && (await sessionExists(requested)) ? requested : randomUUID();
+    await ensureThread(sessionId, req.prompt, displayIntent);
+    return { sessionId, displayIntent };
+  }
 
-    await ensureThread(sessionId, prompt, displayIntent);
+  private toDisplayIntent(intent: string | undefined): SessionIntent {    if (intent === 'dashboard') return 'dashboard';
+    if (intent === 'report') return 'report';
+    return 'inquiry';
+  }
+
+  private async buildMemoryContext(
+    userId: string,
+    sessionId: string,
+    prompt: string,
+  ): Promise<CoreMessage[]> {
     const sessionContext = await getMemoryContext(sessionId);
+    const longTerm = await this.memory.getRelevantContext(userId, prompt);
+    if (!longTerm) return sessionContext;
+    return [
+      {
+        role: 'user',
+        content: `[Long-term memory from previous sessions]\n${longTerm}`,
+      },
+      { role: 'assistant', content: 'Noted. I will use this context.' },
+      ...sessionContext,
+    ];
+  }
 
-    // Retrieve long-term memories from MongoDB and prepend as context messages
-    const longTermMemory = await this.memory.getRelevantContext(userId, prompt);
-    const memoryMessages: CoreMessage[] = longTermMemory
-      ? [
-          { role: 'user' as const, content: `[Long-term memory from previous sessions]\n${longTermMemory}` },
-          { role: 'assistant' as const, content: 'Noted. I will use this context.' },
-        ]
-      : [];
-    const memoryContext: CoreMessage[] = [...memoryMessages, ...sessionContext];
+  // --------------------------------------------------------------------------
+  // Execution with key fallback
+  // --------------------------------------------------------------------------
 
-    this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'free-text'} | session: ${sessionId}`);
-
-    const t0 = Date.now();
-    let result: unknown;
-    let effectiveApiKey = primaryKey;
-
+  private async runWithFallback(
+    intent: string | undefined,
+    prompt: string,
+    memoryContext: CoreMessage[],
+    primaryKey: string,
+    storedKey: string | null,
+    globalKey: string | null,
+    userId: string,
+  ): Promise<{ result: unknown; effectiveApiKey: string }> {
     try {
-      result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey);
-    } catch (err) {
-      if (isInvalidKeyError(err)) {
-        // If the per-user key was the culprit and we have a valid global key, auto-fallback
-        if (storedKey && globalKey && storedKey !== globalKey) {
-          this.logger.warn(`Per-user key for user ${userId} rejected — deleting and retrying with global key`);
-          void this.userKeys.delete(userId).catch(() => {});
-          try {
-            result = await this.executeByIntent(intent, prompt, memoryContext, globalKey);
-            effectiveApiKey = globalKey;
-          } catch (retryErr) {
-            if (isProviderRateLimitError(retryErr)) {
-              const retryIn = extractRetryDelay(retryErr);
-              const message = retryIn
-                ? `Groq API quota reached. Try again in ${retryIn}.`
-                : 'Groq API quota reached. Please try again later.';
-              throw Object.assign(new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS), { code: 'LLM_RATE_LIMIT' });
-            }
-            throw Object.assign(
-              new UnauthorizedException('Global Groq API key is also invalid. Contact the administrator.'),
-              { code: 'INVALID_API_KEY' },
-            );
-          }
-        } else {
-          throw Object.assign(
-            new UnauthorizedException('Invalid Groq API key. Please update it in settings.'),
-            { code: 'INVALID_API_KEY' },
-          );
-        }
-      } else if (isProviderRateLimitError(err)) {
-        if (storedKey && globalKey && storedKey !== globalKey) {
-          this.logger.warn(`Per-user key for user ${userId} hit quota — retrying with global key`);
-          try {
-            result = await this.executeByIntent(intent, prompt, memoryContext, globalKey);
-            effectiveApiKey = globalKey;
-          } catch (retryErr) {
-            if (isInvalidKeyError(retryErr)) {
-              throw Object.assign(
-                new UnauthorizedException('Global Groq API key is invalid. Contact the administrator.'),
-                { code: 'INVALID_API_KEY' },
-              );
-            }
-            if (isProviderRateLimitError(retryErr)) {
-              const retryIn = extractRetryDelay(retryErr) ?? extractRetryDelay(err);
-              const message = retryIn
-                ? `Groq API quota reached. Try again in ${retryIn} or use a different API key.`
-                : 'Groq API quota reached. Please try again later or use a different API key.';
-              throw Object.assign(
-                new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS),
-                { code: 'LLM_RATE_LIMIT' },
-              );
-            }
-            throw retryErr;
-          }
-        } else {
-          const retryIn = extractRetryDelay(err);
-          const message = retryIn
-            ? `Groq API quota reached. Try again in ${retryIn} or use a different API key.`
-            : 'Groq API quota reached. Please try again later or use a different API key.';
-          throw Object.assign(
-            new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS),
-            { code: 'LLM_RATE_LIMIT' },
-          );
-        }
-      } else {
-        throw err;
+      const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey);
+      return { result, effectiveApiKey: primaryKey };    } catch (err) {
+      return this.handleExecutionError(err, {
+        intent,
+        prompt,
+        memoryContext,
+        storedKey,
+        globalKey,
+        userId,
+      });
+    }
+  }
+
+  private async handleExecutionError(
+    err: unknown,
+    ctx: {
+      intent: string | undefined;
+      prompt: string;
+      memoryContext: CoreMessage[];
+      storedKey: string | null;
+      globalKey: string | null;
+      userId: string;
+    },
+  ): Promise<{ result: unknown; effectiveApiKey: string }> {
+    const { intent, prompt, memoryContext, storedKey, globalKey, userId } = ctx;
+    const canFallback = !!(storedKey && globalKey && storedKey !== globalKey);
+
+    if (isInvalidKeyError(err)) {
+      if (!canFallback) {
+        throw Object.assign(
+          new UnauthorizedException('Invalid Groq API key. Please update it in settings.'),
+          { code: ERROR_CODES.INVALID_API_KEY },
+        );
       }
+      return this.retryWithGlobalKey({
+        intent,
+        prompt,
+        memoryContext,
+        userId,
+        storedKey,
+        globalKey: globalKey!,
+        onInvalid: () =>
+          Object.assign(
+            new UnauthorizedException('Global Groq API key is also invalid. Contact the administrator.'),
+            { code: ERROR_CODES.INVALID_API_KEY },
+          ),
+        onRateLimit: (retryErr) =>
+          Object.assign(
+            new HttpException(
+              { error: buildRateLimitMessage(retryErr, false) },
+              HttpStatus.TOO_MANY_REQUESTS,
+            ),
+            { code: ERROR_CODES.LLM_RATE_LIMIT },
+          ),
+      });
     }
 
-    this.logger.log(`done in ${Date.now() - t0}ms`);
+    if (isProviderRateLimitError(err)) {
+      if (!canFallback) {
+        throw Object.assign(
+          new HttpException(
+            { error: buildRateLimitMessage(err, true) },
+            HttpStatus.TOO_MANY_REQUESTS,
+          ),
+          { code: ERROR_CODES.LLM_RATE_LIMIT },
+        );
+      }
+      return this.retryWithGlobalKey({
+        intent,
+        prompt,
+        memoryContext,
+        userId,
+        storedKey,
+        globalKey: globalKey!,
+        onInvalid: () =>
+          Object.assign(
+            new UnauthorizedException('Global Groq API key is invalid. Contact the administrator.'),
+            { code: ERROR_CODES.INVALID_API_KEY },
+          ),
+        onRateLimit: (retryErr) =>
+          Object.assign(
+            new HttpException(
+              { error: buildRateLimitMessage(retryErr ?? err, true) },
+              HttpStatus.TOO_MANY_REQUESTS,            ),
+            { code: ERROR_CODES.LLM_RATE_LIMIT },
+          ),
+        onOther: (retryErr) => {
+          throw retryErr;
+        },
+      });
+    }
 
+    throw err;
+  }
+
+  private async retryWithGlobalKey(opts: {
+    intent: string | undefined;
+    prompt: string;
+    memoryContext: CoreMessage[];
+    userId: string;
+    storedKey: string;
+    globalKey: string;
+    onInvalid: () => never;
+    onRateLimit: (retryErr: unknown) => never;
+    onOther?: (retryErr: unknown) => never;
+  }): Promise<{ result: unknown; effectiveApiKey: string }> {
+    this.logger.warn(`Per-user key for user ${opts.userId} rejected — deleting and retrying with global key`);
+    void this.userKeys.delete(opts.userId).catch(() => undefined);
+    try {
+      const result = await this.executeByIntent(
+        opts.intent,
+        opts.prompt,
+        opts.memoryContext,
+        opts.globalKey,
+      );
+      return { result, effectiveApiKey: opts.globalKey };
+    } catch (retryErr) {
+      if (isInvalidKeyError(retryErr)) opts.onInvalid();
+      if (isProviderRateLimitError(retryErr)) opts.onRateLimit(retryErr);
+      if (opts.onOther) opts.onOther(retryErr);
+      throw retryErr;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Response building
+  // --------------------------------------------------------------------------
+
+  private resolveType(result: unknown): ResolvedType {
+    if (result && typeof result === 'object' && 'widgets' in result) return 'dashboard';
+    if (result && typeof result === 'object' && 'reportSections' in result) return 'report';
+    return 'inquiry';
+  }
+
+  private toMessageResult(
+    type: ResolvedType,
+    result: unknown,
+    durationMs: number,
+  ): MessageResult {
     const r = result as Record<string, unknown>;
-    const resolvedType: 'dashboard' | 'report' | 'inquiry' =
-      r && 'widgets' in r         ? 'dashboard'
-      : r && 'reportSections' in r ? 'report'
-      : 'inquiry';
+    switch (type) {
+      case 'dashboard':        return {
+          type: 'dashboard',
+          dashboardSpec: result as MessageResult['dashboardSpec'],
+          durationMs,
+        };
+      case 'report':
+        return {
+          type: 'report',
+          reportSections: (r.reportSections as MessageResult['reportSections']) ?? [],
+          durationMs,
+        };
+      case 'inquiry':
+        return {
+          type: 'inquiry',
+          summary: (r.summary as string) ?? '',
+          durationMs,
+        };
+    }
+  }
 
-    const messageResult: MessageResult =
-      resolvedType === 'dashboard'
-        ? { type: 'dashboard', dashboardSpec: result as MessageResult['dashboardSpec'], durationMs: Date.now() - t0 }
-        : resolvedType === 'report'
-          ? { type: 'report', reportSections: (r.reportSections as MessageResult['reportSections']) ?? [], durationMs: Date.now() - t0 }
-          : { type: 'inquiry', summary: (r.summary as string) ?? '', durationMs: Date.now() - t0 };
+  private buildResponseSummary(type: ResolvedType, prompt: string, result: unknown): string {
+    const r = result as Record<string, unknown>;
+    if (type === 'inquiry') return (r.summary as string) ?? '';
+    if (type === 'report') return `Report generated: ${prompt}`;
+    return `Dashboard generated: ${prompt}`;
+  }
 
+  private buildResponse(params: {
+    result: unknown;
+    prompt: string;
+    effectiveApiKey: string;
+    sessionId: string;
+    displayIntent: SessionIntent;
+    userId: string;
+    durationMs: number;
+  }): AnalyticsResponse {
+    const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs } = params;
+    const type = this.resolveType(result);    const messageResult = this.toMessageResult(type, result, durationMs);
     const messageId = randomUUID();
+
     const assistantMessage: ConversationMessage & { role: 'assistant'; result: MessageResult } = {
       messageId,
-      role:      'assistant',
-      result:    messageResult,
+      role: 'assistant',
+      result: messageResult,
       createdAt: new Date().toISOString(),
     };
 
-    saveConversationTurn({ threadId: sessionId, prompt, intent: displayIntent, assistant: assistantMessage })
-      .catch(err => this.logger.error(`saveConversationTurn failed: ${err}`));
+    void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, effectiveApiKey });
 
-    // Extract long-term memories — skip if response has no real content (saves tokens)
-    const responseSummary =
-      resolvedType === 'inquiry'  ? ((r.summary as string) ?? '')
-      : resolvedType === 'report' ? `Report generated: ${prompt}`
-      : `Dashboard generated: ${prompt}`;
-    const worthExtracting = responseSummary.length > 30;
-    if (worthExtracting) {
-      this.memory.extractAndSave(userId, sessionId, prompt, responseSummary, effectiveApiKey)
-        .catch(err => this.logger.warn(`memory.extractAndSave failed: ${err}`));
-    }
-
-    if (resolvedType === 'dashboard') {
+    if (type === 'dashboard') {
       return { intent: 'dashboard', chart: result, sessionId, messageId };
     }
-    return { intent: resolvedType, ...(result as object), sessionId, messageId };
+    return { intent: type, ...(result as object), sessionId, messageId };
+  }
+
+  private async persistTurn(params: {
+    sessionId: string;
+    prompt: string;
+    displayIntent: SessionIntent;
+    assistantMessage: ConversationMessage & { role: 'assistant'; result: MessageResult };
+  }): Promise<void> {
+    try {
+      await saveConversationTurn({
+        threadId: params.sessionId,
+        prompt: params.prompt,
+        intent: params.displayIntent,
+        assistant: params.assistantMessage,
+      });
+    } catch (err) {
+      this.logger.error(`saveConversationTurn failed: ${err}`);
+    }
+  }
+
+  private async maybeExtractMemory(params: {
+    type: ResolvedType;
+    prompt: string;
+    result: unknown;
+    userId: string;
+    sessionId: string;
+    effectiveApiKey: string;
+  }): Promise<void> {
+    const summary = this.buildResponseSummary(params.type, params.prompt, params.result);
+    if (summary.length <= MIN_SUMMARY_LENGTH_FOR_MEMORY) return;
+    try {
+      await this.memory.extractAndSave(
+        params.userId,
+        params.sessionId,
+        params.prompt,
+        summary,
+        params.effectiveApiKey,
+      );
+    } catch (err) {
+      this.logger.warn(`memory.extractAndSave failed: ${err}`);
+    }
   }
 }
