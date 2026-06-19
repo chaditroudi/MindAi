@@ -104,12 +104,13 @@ export class MemoryRepository {
     return scored.slice(0, limit).map(s => s.doc);
   }
 
-  async listByUser(userId: string, limit = 50): Promise<RawDoc[]> {
+  async listByUser(userId: string, limit = 50): Promise<Omit<RawDoc, 'embedding'>[]> {
     return this.model
       .find({ userId })
+      .select('-embedding')
       .sort({ importance: -1, createdAt: -1 })
       .limit(limit)
-      .lean() as unknown as RawDoc[];
+      .lean() as unknown as Omit<RawDoc, 'embedding'>[];
   }
 
   async deleteByUser(userId: string): Promise<number> {
