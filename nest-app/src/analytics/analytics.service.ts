@@ -146,6 +146,7 @@ export class AnalyticsService {
 
     const t0 = Date.now();
     let result: unknown;
+    let effectiveApiKey = primaryKey;
 
     try {
       result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey);
@@ -157,6 +158,7 @@ export class AnalyticsService {
           void this.userKeys.delete(userId).catch(() => {});
           try {
             result = await this.executeByIntent(intent, prompt, memoryContext, globalKey);
+            effectiveApiKey = globalKey;
           } catch (retryErr) {
             if (isProviderRateLimitError(retryErr)) {
               const retryIn = extractRetryDelay(retryErr);
@@ -177,14 +179,40 @@ export class AnalyticsService {
           );
         }
       } else if (isProviderRateLimitError(err)) {
-        const retryIn = extractRetryDelay(err);
-        const message = retryIn
-          ? `Groq API quota reached. Try again in ${retryIn} or use a different API key.`
-          : 'Groq API quota reached. Please try again later or use a different API key.';
-        throw Object.assign(
-          new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS),
-          { code: 'LLM_RATE_LIMIT' },
-        );
+        if (storedKey && globalKey && storedKey !== globalKey) {
+          this.logger.warn(`Per-user key for user ${userId} hit quota — retrying with global key`);
+          try {
+            result = await this.executeByIntent(intent, prompt, memoryContext, globalKey);
+            effectiveApiKey = globalKey;
+          } catch (retryErr) {
+            if (isInvalidKeyError(retryErr)) {
+              throw Object.assign(
+                new UnauthorizedException('Global Groq API key is invalid. Contact the administrator.'),
+                { code: 'INVALID_API_KEY' },
+              );
+            }
+            if (isProviderRateLimitError(retryErr)) {
+              const retryIn = extractRetryDelay(retryErr) ?? extractRetryDelay(err);
+              const message = retryIn
+                ? `Groq API quota reached. Try again in ${retryIn} or use a different API key.`
+                : 'Groq API quota reached. Please try again later or use a different API key.';
+              throw Object.assign(
+                new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS),
+                { code: 'LLM_RATE_LIMIT' },
+              );
+            }
+            throw retryErr;
+          }
+        } else {
+          const retryIn = extractRetryDelay(err);
+          const message = retryIn
+            ? `Groq API quota reached. Try again in ${retryIn} or use a different API key.`
+            : 'Groq API quota reached. Please try again later or use a different API key.';
+          throw Object.assign(
+            new HttpException({ error: message }, HttpStatus.TOO_MANY_REQUESTS),
+            { code: 'LLM_RATE_LIMIT' },
+          );
+        }
       } else {
         throw err;
       }
@@ -223,7 +251,7 @@ export class AnalyticsService {
       : `Dashboard generated: ${prompt}`;
     const worthExtracting = responseSummary.length > 30;
     if (worthExtracting) {
-      this.memory.extractAndSave(userId, sessionId, prompt, responseSummary, primaryKey)
+      this.memory.extractAndSave(userId, sessionId, prompt, responseSummary, effectiveApiKey)
         .catch(err => this.logger.warn(`memory.extractAndSave failed: ${err}`));
     }
 
