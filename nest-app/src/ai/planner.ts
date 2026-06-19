@@ -4,10 +4,18 @@ import { z } from 'zod';
 import { resolveModel, freshSignal } from './model';
 import { normalizeToken } from '../sources/source.repository';
 import { log, logTrace } from '../common/logger/app.logger';
-import { buildPlannerPrompt } from '../prompts/planner.prompt';
+import { buildPlannerPrompt, PLANNER_DEFAULT_STRATEGY, PLANNER_STRATEGIES } from '../prompts/planner.prompt';
 import type { DataSource, TaskPlan, IntentKind } from '../types';
 
 const MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
+const STRATEGY_ENUM = z.enum(PLANNER_STRATEGIES as [string, ...string[]]);
+
+function strategySchema() {
+  return z.preprocess(
+    value => typeof value === 'string' ? value.trim().toLowerCase() : value,
+    STRATEGY_ENUM,
+  );
+}
 
 // The planner asks the LLM for a typed "task plan" that the rest of the
 // pipeline can execute. The schema changes slightly by intent so dashboards
@@ -24,7 +32,7 @@ function buildPlanSchema(intent: IntentKind) {
 
   if (intent === 'dashboard') {
     return base.extend({
-      strategy:  z.enum(['standard', 'trend', 'comparison', 'anomaly', 'overview']).default('standard'),
+      strategy:  strategySchema().catch(PLANNER_DEFAULT_STRATEGY).default(PLANNER_DEFAULT_STRATEGY),
       chartHint: z.string().catch('distribution').default('distribution'),
     });
   }
@@ -32,7 +40,7 @@ function buildPlanSchema(intent: IntentKind) {
   if (intent === 'report') {
     return base.extend({
       wantChart: z.boolean().default(false),
-      strategy:  z.enum(['standard', 'trend', 'comparison', 'anomaly', 'overview']).optional(),
+      strategy:  strategySchema().optional(),
       chartHint: z.string().optional(),
     });
   }

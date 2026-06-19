@@ -49,7 +49,7 @@ export interface DataSource {
 }
 
 export type IntentKind = 'general_question' | 'report' | 'dashboard';
-export type SkillKind  = 'standard' | 'trend' | 'comparison' | 'anomaly' | 'overview';
+export type SkillKind  = string;
 export type ExecutionSkillKind = 'aggregation' | 'chart' | 'report' | 'inquiry';
 
 export interface WidgetSpec {
