@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MindAI — Complete Developer Guide</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;color:#111827;background:#fff;font-size:13px;line-height:1.7}
+.cover{min-height:100vh;background:linear-gradient(135deg,#1e1b4b,#4338ca,#6366f1);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;page-break-after:always}
+.cover h1{font-size:56px;font-weight:700;color:#fff;letter-spacing:-2px;margin-bottom:10px}
+.cover .sub{font-size:20px;color:rgba(255,255,255,.7);margin-bottom:40px;font-weight:300}
+.cover-badges{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.cb{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);padding:5px 14px;border-radius:100px;font-size:11px;font-weight:500}
+.cover-foot{color:rgba(255,255,255,.35);font-size:11px;margin-top:50px}
+.wrap{max-width:920px;margin:0 auto;padding:0 48px}
+.ch{padding:52px 48px 36px;max-width:920px;margin:0 auto;page-break-before:always}
+.ch-head{display:flex;align-items:center;gap:14px;margin-bottom:36px;padding-bottom:20px;border-bottom:2px solid #e0e7ff}
+.ch-num{background:#6366f1;color:#fff;width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0}
+.ch-title{font-size:24px;font-weight:700;letter-spacing:-.5px}
+.ch-desc{color:#6b7280;font-size:12px;margin-top:2px}
+h2{font-size:17px;font-weight:600;margin:32px 0 12px;color:#111827}
+h3{font-size:14px;font-weight:600;margin:22px 0 8px;color:#111827}
+h4{font-size:12px;font-weight:600;margin:16px 0 6px;color:#6366f1;text-transform:uppercase;letter-spacing:.4px}
+p{margin-bottom:10px;font-size:12.5px}
+pre{background:#1e1b4b;border-radius:9px;padding:16px 18px;overflow-x:auto;margin:12px 0;border:1px solid #312e81}
+pre code{font-family:'JetBrains Mono',monospace;color:#c4b5fd;font-size:11px;line-height:1.7}
+code{font-family:'JetBrains Mono',monospace;background:#f3f4f6;padding:1px 5px;border-radius:3px;font-size:11px;color:#b91c1c}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}
+th{background:#6366f1;color:#fff;padding:8px 11px;text-align:left;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+td{padding:8px 11px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+tr:nth-child(even) td{background:#f8fafc}
+.note{border-radius:7px;padding:12px 14px;margin:12px 0;display:flex;gap:10px;font-size:12px}
+.note-info{background:#eff6ff;border-left:3px solid #3b82f6}
+.note-warn{background:#fffbeb;border-left:3px solid #f59e0b}
+.note-tip{background:#f0fdf4;border-left:3px solid #10b981}
+.note-icon{font-size:14px;flex-shrink:0}
+ul,ol{padding-left:18px;margin-bottom:10px}
+li{margin-bottom:3px;font-size:12.5px}
+.badge{display:inline-block;padding:1px 7px;border-radius:100px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.bg{background:#dbeafe;color:#1e40af}
+.gg{background:#dcfce7;color:#166534}
+.bp{background:#ede9fe;color:#6d28d9}
+.bo{background:#ffedd5;color:#9a3412}
+.br{background:#fee2e2;color:#991b1b}
+.bk{background:#f3f4f6;color:#4b5563}
+.flow-step{display:flex;gap:12px;margin-bottom:6px;align-items:flex-start}
+.fn{background:#6366f1;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:2px}
+.fa{color:#9ca3af;font-size:11px;margin:2px 0 2px 26px}
+.fb{font-size:12px}
+.fb strong{color:#6366f1}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.card{border:1px solid #e5e7eb;border-radius:9px;padding:14px}
+.ci{font-size:20px;margin-bottom:6px}
+.ct{font-weight:600;font-size:13px;margin-bottom:3px}
+.cd{font-size:11.5px;color:#6b7280}
+.arch{background:#f8fafc;border:1px solid #e5e7eb;border-radius:11px;padding:20px;margin:14px 0;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:2.1;color:#374151;text-align:center}
+.ab{display:inline-block;background:#6366f1;color:#fff;padding:5px 14px;border-radius:5px;font-weight:600;margin:1px}
+.ab.g{background:#10b981}.ab.o{background:#f59e0b}.ab.b{background:#0ea5e9}.ab.d{background:#1e1b4b}.ab.gr{background:#6b7280}
+.tbar{display:flex;align-items:center;gap:8px;margin:5px 0}
+.tlabel{width:90px;font-size:10.5px;color:#6b7280;text-align:right}
+.ttrack{flex:1;height:7px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+.tfill{height:100%;border-radius:4px;background:#6366f1}
+.tcount{font-size:11px;font-weight:600;width:60px}
+hr{border:none;border-top:1px solid #e5e7eb;margin:24px 0}
+@media print{body{font-size:11px}.ch{page-break-before:always}pre,table,.note,.card{break-inside:avoid}h2,h3{break-after:avoid}@page{margin:14mm 14mm}}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div style="font-size:52px;margin-bottom:24px">🧠</div>
+  <h1>MindAI</h1>
+  <div class="sub">Complete Developer &amp; Manager Guide · Full Codebase Reference</div>
+  <div class="cover-badges">
+    <span class="cb">NestJS 11</span><span class="cb">Angular 21</span>
+    <span class="cb">MongoDB</span><span class="cb">Groq LLM</span>
+    <span class="cb">Vercel AI SDK</span><span class="cb">Mastra 1.41</span>
+    <span class="cb">ECharts 5</span><span class="cb">LibSQL</span>
+  </div>
+  <div class="cover-foot">June 2026 · chaditroudi · To save as PDF: Ctrl+P → Save as PDF in Chrome</div>
+</div>
+
+<!-- ═══════════════════════════════════════ CH1 OVERVIEW ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">1</div><div><div class="ch-title">What Is MindAI?</div><div class="ch-desc">Purpose, what it does, and how it feels to use it</div></div></div>
+
+<p>MindAI is an <strong>AI-powered municipal analytics platform</strong>. Users type questions in plain Arabic or English — like <em>"show me the top 5 municipalities by budget"</em> or <em>"summarize high-priority projects"</em> — and the system responds with:</p>
+
+<div class="card-grid">
+  <div class="card"><div class="ci">📊</div><div class="ct">Dashboard</div><div class="cd">Interactive ECharts visualizations (bar, line, donut, scatter, heatmap…) generated from real MongoDB data.</div></div>
+  <div class="card"><div class="ci">📄</div><div class="ct">Report</div><div class="cd">Structured 1–5 section analytical narrative with optional charts.</div></div>
+  <div class="card"><div class="ci">💬</div><div class="ct">Inquiry</div><div class="cd">Direct 1–3 sentence factual answer pulled from data.</div></div>
+  <div class="card"><div class="ci">🧠</div><div class="ct">Memory</div><div class="cd">Remembers user goals and preferences across sessions automatically.</div></div>
+</div>
+
+<h2>1.1 The Technology Stack</h2>
+<table>
+<tr><th>Layer</th><th>Technology</th><th>Version</th><th>Role</th></tr>
+<tr><td>Runtime</td><td>Node.js</td><td>22.x</td><td>JavaScript server runtime</td></tr>
+<tr><td>Backend</td><td>NestJS</td><td>11</td><td>REST API framework with dependency injection</td></tr>
+<tr><td>Frontend</td><td>Angular</td><td>21</td><td>Single-page web application</td></tr>
+<tr><td>Primary DB</td><td>MongoDB</td><td>7+</td><td>Domain data, cache, history, memory, saved results</td></tr>
+<tr><td>Session DB</td><td>LibSQL (SQLite)</td><td>–</td><td>Fast local conversation session storage</td></tr>
+<tr><td>LLM Provider</td><td>Groq</td><td>–</td><td>Llama 3.3 70B / 3.1 8B inference (fast, free tier)</td></tr>
+<tr><td>AI SDK</td><td>Vercel AI SDK</td><td>4.x</td><td>Structured LLM output via Zod schema</td></tr>
+<tr><td>Agent Framework</td><td>Mastra</td><td>1.41</td><td>Multi-step AI agent + session memory</td></tr>
+<tr><td>Embeddings</td><td>@xenova/transformers</td><td>2.x</td><td>Local 384-dim vectors, no API key needed</td></tr>
+<tr><td>Charts</td><td>ECharts</td><td>5.5</td><td>Interactive browser visualizations</td></tr>
+<tr><td>Language</td><td>TypeScript</td><td>5.x</td><td>Full-stack type safety</td></tr>
+</table>
+
+<h2>1.2 Directory Structure</h2>
+<pre><code>MindAi-main/
+├── nest-app/              ← NestJS backend (API server, port 3000/3001)
+│   ├── src/
+│   │   ├── ai/            ← LLM calls: planner, chart, writer, embeddings, memory-skill
+│   │   ├── analytics/     ← Core orchestrator + pipeline executor
+│   │   ├── cache/         ← MongoDB prompt cache (TTL 7 days)
+│   │   ├── common/        ← Logger, middleware, guards, exception filter
+│   │   ├── config/        ← NestJS ConfigModule setup
+│   │   ├── database/      ← MongoDB connection (Mongoose)
+│   │   ├── features/      ← Mastra-path features: dashboard.ts, report.ts, inquiry.ts
+│   │   ├── history/       ← Pipeline run audit log + session listing
+│   │   ├── memory/        ← Long-term memory: extract + retrieve (MongoDB)
+│   │   ├── prompts/       ← System prompt builders for each LLM call
+│   │   ├── session/       ← LibSQL session memory + Mastra agent
+│   │   ├── sources/       ← Data source registry (in-memory cache)
+│   │   ├── types/         ← Shared TypeScript interfaces
+│   │   └── user-keys/     ← Per-user Groq API key storage
+│   ├── dist/              ← Compiled JS output (what Node.js runs)
+│   ├── data/memory.db     ← LibSQL SQLite file
+│   └── .env               ← All secrets + model config
+│
+├── client/                ← Angular 21 frontend
+│   └── src/app/
+│       ├── app.component.ts/.html/.css   ← Root component (all UI)
+│       ├── analytics-state.service.ts    ← Reactive state store
+│       ├── analytics-api.service.ts      ← HTTP client
+│       ├── chart-render.service.ts       ← ECharts init/dispose
+│       └── app.types.ts                  ← All TypeScript interfaces
+│
+├── skills/                ← LLM instruction files (loaded at startup)
+│   ├── chart/SKILL.md     ← Chart type selection + field mapping rules
+│   ├── aggregation/SKILL.md  ← MongoDB pipeline generation rules
+│   ├── inquiry/SKILL.md   ← Factual answer format
+│   ├── report/SKILL.md    ← Report structure (5 sections)
+│   ├── memory/SKILL.md    ← Memory extraction rules
+│   └── analytics/SKILL.md   ← Intent routing
+│
+└── MINDAI_GUIDE.html      ← This document</code></pre>
+
+<h2>1.3 System Architecture</h2>
+<div class="arch">
+  <div><span class="ab b">Browser — Angular 21</span></div>
+  <div>↕ HTTP / REST &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+  <div><span class="ab d">NestJS API — port 3000</span></div>
+  <div>↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+  <div><span class="ab">Analytics Service</span> → <span class="ab">Pipeline Service</span> → <span class="ab g">Planner LLM (70B)</span></div>
+  <div>↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+  <div><span class="ab o">MongoDB Aggregation</span> → <span class="ab g">Chart Renderer</span> or <span class="ab g">Writer LLM (70B)</span></div>
+  <div>↕ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↕ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+  <div><span class="ab gr">LibSQL sessions</span> &nbsp;&nbsp;&nbsp; <span class="ab gr">MongoDB memory/cache</span></div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════ CH2 BOOT ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">2</div><div><div class="ch-title">Boot &amp; Quick Start</div><div class="ch-desc">How to install, configure, and run the platform</div></div></div>
+
+<h2>2.1 Prerequisites</h2>
+<table>
+<tr><th>Requirement</th><th>Version</th><th>Notes</th></tr>
+<tr><td>Node.js</td><td>20.9+</td><td>v22 recommended</td></tr>
+<tr><td>MongoDB</td><td>4.4+</td><td>Local or Atlas. DB name: <code>mind_platform</code></td></tr>
+<tr><td>Groq API key</td><td>–</td><td>Free at console.groq.com · 6,000 TPM limit</td></tr>
+<tr><td>npm</td><td>9+</td><td>Bundled with Node.js</td></tr>
+</table>
+
+<h2>2.2 Environment Variables <code>nest-app/.env</code></h2>
+<pre><code># MongoDB
+MONGODB_URI=mongodb://127.0.0.1:27017/mind_platform
+MONGODB_DB=mind_platform
+
+# Groq models (per role)
+GROQ_API_KEY=gsk_...
+GROQ_SUPERVISOR_MODEL=llama-3.3-70b-versatile
+GROQ_CHART_MODEL=llama-3.3-70b-versatile
+GROQ_WRITER_MODEL=llama-3.3-70b-versatile
+GROQ_MEMORY_MODEL=llama-3.1-8b-instant    # 8B saves tokens — bg extraction only
+
+# Token budgets (max response tokens per LLM call)
+PLANNER_MAX_TOKENS=600
+CHART_MAX_TOKENS=1000
+INQUIRY_MAX_TOKENS=400
+REPORT_MAX_TOKENS=900
+
+# Timeouts (ms)
+SUPERVISOR_TIMEOUT_MS=30000
+CHART_TIMEOUT_MS=30000
+WRITER_TIMEOUT_MS=30000
+
+# Server
+PORT=3000
+NODE_ENV=development</code></pre>
+
+<h2>2.3 Build &amp; Run Commands</h2>
+<pre><code># 1 — Install backend
+cd nest-app && npm install
+
+# 2 — Build backend
+npm run build           # → compiles TypeScript to dist/
+
+# 3 — Install & build Angular frontend
+cd ../client && npm install
+npm run build           # → dist/mind-ui/browser/
+
+# 4 — Start the server (serves API + Angular together)
+cd ../nest-app
+node dist/main.js       # → http://localhost:3000</code></pre>
+
+<h2>2.4 Server Startup Sequence</h2>
+<div class="flow-step"><div class="fn">1</div><div class="fb"><strong>NestFactory.create(AppModule)</strong> — Bootstrap all modules, apply global middleware</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">2</div><div class="fb"><strong>DatabaseModule</strong> — Connect to MongoDB via Mongoose, verify connection</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">3</div><div class="fb"><strong>SourcesService</strong> — Load all data sources from MongoDB into in-memory cache</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">4</div><div class="fb"><strong>ServeStaticModule</strong> — Detect Angular build at <code>client/dist/mind-ui/browser/</code>, serve it</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">5</div><div class="fb"><strong>Listen on PORT</strong> — HTTP server ready, log startup message</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">6</div><div class="fb"><strong>warmupEmbeddings()</strong> — Background: load all-MiniLM-L6-v2 WASM model (~25 MB, one-time download)</div></div>
+
+<div class="note note-info"><div class="note-icon">ℹ️</div><div>On the very first run, the embedding model downloads ~25 MB in the background. The server is fully functional during this time — memory retrieval gracefully degrades until the model is ready.</div></div>
+
+<h2>2.5 Global Middleware &amp; Guards (applied to every request)</h2>
+<table>
+<tr><th>Layer</th><th>File</th><th>What It Does</th></tr>
+<tr><td>RequestIdMiddleware</td><td>common/middleware/request-id.middleware.ts</td><td>Generates a unique 8-char ID per request. Every log line for that request shares this ID — makes tracing trivial</td></tr>
+<tr><td>ApiKeyGuard</td><td>common/guards/api-key.guard.ts</td><td>Validates that an API key exists before passing to controllers</td></tr>
+<tr><td>AllExceptionsFilter</td><td>common/filters/all-exceptions.filter.ts</td><td>Catches all unhandled errors, formats them as clean JSON <code>{ error: "message" }</code></td></tr>
+<tr><td>Helmet</td><td>main.ts</td><td>Security headers (CSP disabled to allow ECharts inline scripts)</td></tr>
+<tr><td>ValidationPipe</td><td>main.ts</td><td>Auto-validates all DTOs, strips unknown fields (<code>whitelist: true</code>)</td></tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════════ CH3 BACKEND ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">3</div><div><div class="ch-title">NestJS Backend — All Modules</div><div class="ch-desc">Every module, controller, service, and what they own</div></div></div>
+
+<h2>3.1 Module Map</h2>
+<table>
+<tr><th>Module</th><th>Key Files</th><th>Responsibility</th></tr>
+<tr><td><strong>AppModule</strong></td><td>app.module.ts</td><td>Root. Imports all modules, registers global guard + filter, applies RequestId middleware</td></tr>
+<tr><td><strong>DatabaseModule</strong></td><td>database/database.module.ts<br>mongo.client.ts</td><td>Mongoose connection. Exports the Connection for injection</td></tr>
+<tr><td><strong>SourcesModule</strong></td><td>sources/</td><td>Data source CRUD (MongoDB). Loads all sources into <code>sources-cache.ts</code> on startup</td></tr>
+<tr><td><strong>AnalyticsModule</strong></td><td>analytics/</td><td>Core pipeline: AnalyticsService (orchestrator) + PipelineService (LLM + MongoDB)</td></tr>
+<tr><td><strong>CacheModule</strong></td><td>cache/</td><td>MongoDB prompt cache with 7-day TTL. Hit = zero LLM calls</td></tr>
+<tr><td><strong>HistoryModule</strong></td><td>history/</td><td>Stores every pipeline run. Also provides session listing via LibSQL</td></tr>
+<tr><td><strong>MemoryModule</strong></td><td>memory/</td><td>Long-term memory: extract facts from conversations → store with embeddings → retrieve by similarity</td></tr>
+<tr><td><strong>SavedResultsModule</strong></td><td>saved-results/</td><td>Let users bookmark dashboards/reports. Stored in MongoDB</td></tr>
+<tr><td><strong>UserKeysModule</strong></td><td>user-keys/</td><td>Per-user Groq API key. Overrides the global key if set</td></tr>
+</table>
+
+<h2>3.2 All HTTP Routes</h2>
+<table>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/health</td><td>Returns <code>{"ok":true,"mongo":"connected","sources":N}</code></td></tr>
+<tr><td><span class="badge bg">POST</span></td><td>/api/analytics</td><td><strong>Main query endpoint</strong> — prompt → dashboard / report / inquiry</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/api/provider</td><td>Provider name + whether a global key is configured</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/api/meta</td><td>Available modes + AI-generated example prompts per mode</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/api/sources</td><td>List all registered datasets</td></tr>
+<tr><td><span class="badge bg">POST</span></td><td>/api/sources</td><td>Register or update a dataset definition</td></tr>
+<tr><td><span class="badge br">DELETE</span></td><td>/api/sources/:col</td><td>Remove a dataset</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/api/history/results</td><td>Paginated list of past pipeline runs</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/api/history/sessions</td><td>All LibSQL conversation sessions</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/api/history/sessions/:id</td><td>Full session with all messages</td></tr>
+<tr><td><span class="badge br">DELETE</span></td><td>/api/history/sessions/:id</td><td>Delete a session and all its messages</td></tr>
+<tr><td><span class="badge bg">POST</span></td><td>/api/key</td><td>Save a per-user Groq API key</td></tr>
+<tr><td><span class="badge br">DELETE</span></td><td>/api/key/:userId</td><td>Remove a per-user key</td></tr>
+<tr><td><span class="badge bg">POST</span></td><td>/api/saved</td><td>Save a dashboard or report result</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/api/saved</td><td>List saved results for a user</td></tr>
+<tr><td><span class="badge br">DELETE</span></td><td>/api/saved/:id</td><td>Delete a saved result</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/api/memory</td><td>List long-term memories for a user</td></tr>
+<tr><td><span class="badge br">DELETE</span></td><td>/api/memory</td><td>Clear all memories for a user</td></tr>
+<tr><td><span class="badge gg">GET</span></td><td>/* (Angular)</td><td>All other URLs served by Angular SPA via ServeStaticModule</td></tr>
+</table>
+
+<h2>3.3 Analytics Service — The Orchestrator</h2>
+<p>File: <code>analytics/analytics.service.ts</code> · Method: <code>run(req)</code></p>
+<p>Every single user query flows through this method in order:</p>
+<div class="flow-step"><div class="fn">1</div><div class="fb"><strong>Validate prompt</strong> — Zod: min 1 char, max 1000 chars</div></div>
+<div class="flow-step"><div class="fn">2</div><div class="fb"><strong>Resolve API key</strong> — per-user MongoDB key → global env key → 401 if neither</div></div>
+<div class="flow-step"><div class="fn">3</div><div class="fb"><strong>Session management</strong> — reuse session if valid ID exists in LibSQL, else create new UUID</div></div>
+<div class="flow-step"><div class="fn">4</div><div class="fb"><strong>Load session context</strong> — <code>getMemoryContext()</code> returns last 6 messages from LibSQL</div></div>
+<div class="flow-step"><div class="fn">5</div><div class="fb"><strong>Long-term memory</strong> — embed prompt → cosine search → inject top-3 memories as fake prior messages</div></div>
+<div class="flow-step"><div class="fn">6</div><div class="fb"><strong>Route by intent</strong> — dashboard / report / inquiry / free-text agent</div></div>
+<div class="flow-step"><div class="fn">7</div><div class="fb"><strong>Error handling</strong> — invalid key → auto-retry with global key · 429 rate limit → user-friendly message</div></div>
+<div class="flow-step"><div class="fn">8</div><div class="fb"><strong>Fire-and-forget</strong> — save turn to LibSQL + extract memories to MongoDB (never blocks response)</div></div>
+
+<h2>3.4 Pipeline Service — LLM + MongoDB Execution</h2>
+<p>File: <code>analytics/pipeline.service.ts</code></p>
+<table>
+<tr><th>Method</th><th>Intent</th><th>LLM Calls</th><th>What Happens</th></tr>
+<tr><td><code>executeDashboard()</code></td><td>dashboard</td><td>1 (planner) + 1 (chart)</td><td>Plan → aggregate → chart render → cache full result</td></tr>
+<tr><td><code>executeReport()</code></td><td>report</td><td>1 (planner) + 1–2 (writer ± chart)</td><td>Plan → aggregate → writer + chart in parallel</td></tr>
+<tr><td><code>executeInquiry()</code></td><td>inquiry</td><td>1 (planner) + 1 (writer)</td><td>Plan → aggregate → writer (1–3 sentence answer)</td></tr>
+<tr><td><code>aggregate()</code></td><td>(shared)</td><td>1 (planner)</td><td>Cache check → planner → safety check → MongoDB aggregate → flush to history</td></tr>
+</table>
+
+<div class="note note-warn"><div class="note-icon">⚠️</div><div><strong>Pipeline Safety:</strong> These MongoDB operators are always rejected before execution: <code>$function</code>, <code>$merge</code>, <code>$out</code>, <code>$where</code>, <code>$eval</code>. They would allow arbitrary code execution or data modification.</div></div>
+
+<div class="note note-tip"><div class="note-icon">💡</div><div><strong>Dashboard → Inquiry Fallback:</strong> When a user asks a conversational question on the Dashboard tab (e.g., "What did we find last time?"), the planner returns <code>needsData: false</code> and <code>skills: []</code>. Instead of throwing an error, the pipeline falls back to <code>executeInquiry()</code> which answers from memory context.</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════ CH4 AI LAYER ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">4</div><div><div class="ch-title">AI Layer — Every LLM Call</div><div class="ch-desc">Planner, Chart, Writer, Memory, Embeddings — fully documented</div></div></div>
+
+<h2>4.1 Model Configuration</h2>
+<p>File: <code>ai/model.ts</code> · Function: <code>resolveModel(role, apiKey?)</code></p>
+<table>
+<tr><th>Role</th><th>Env Variable</th><th>Default Model</th><th>Used For</th><th>Why This Model</th></tr>
+<tr><td><code>supervisor</code></td><td>GROQ_SUPERVISOR_MODEL</td><td>llama-3.3-70b-versatile</td><td>MongoDB pipeline planning</td><td>Needs strong reasoning to write complex aggregations</td></tr>
+<tr><td><code>chart</code></td><td>GROQ_CHART_MODEL</td><td>llama-3.3-70b-versatile</td><td>Chart type + field mapping</td><td>Needs to understand data shape and pick correct chart</td></tr>
+<tr><td><code>writer</code></td><td>GROQ_WRITER_MODEL</td><td>llama-3.3-70b-versatile</td><td>Inquiry answers + reports</td><td>Language quality matters for manager-facing reports</td></tr>
+<tr><td><code>memory</code></td><td>GROQ_MEMORY_MODEL</td><td>llama-3.1-8b-instant</td><td>Background memory extraction</td><td>Just JSON extraction — 8B is enough, saves ~700 tokens/request from the 6000 TPM budget</td></tr>
+</table>
+
+<p>All LLM calls use <strong>temperature: 0</strong> (fully deterministic, same prompt = same result) and <strong>maxRetries: 1</strong> (Vercel AI SDK auto-retries 429 with exponential backoff).</p>
+
+<h2>4.2 Planner — Supervisor LLM</h2>
+<p>File: <code>ai/planner.ts</code> · Called once per request</p>
+<p>Converts a natural language prompt + available data sources → structured <code>TaskPlan</code> with a MongoDB aggregation pipeline.</p>
+<pre><code>// Input to LLM
+{ prompt: "top 5 municipalities by budget", intent: "dashboard" }
+
+// LLM Output (Zod-validated)
+{
+  needsData: true,
+  query: { sourceName: "municipalities" },
+  pipeline: [
+    { "$group": { "_id": "$name", "total": { "$sum": "$budget" } } },
+    { "$sort": { "total": -1 } },
+    { "$limit": 5 }
+  ],
+  strategy: "standard",
+  chartHint: "ranking"
+}</code></pre>
+<table>
+<tr><th>Parameter</th><th>Value</th><th>Why</th></tr>
+<tr><td>Max tokens</td><td>600</td><td>Planner output is small JSON — 600 is enough and saves quota</td></tr>
+<tr><td>Mode</td><td>json</td><td>Forces Groq to return raw JSON without markdown wrappers</td></tr>
+<tr><td>Schema injection</td><td>Full field definitions per source</td><td>LLM can only reference fields that actually exist in the data</td></tr>
+<tr><td>Context</td><td>Last 6 session messages</td><td>Enables follow-up queries ("show me just the top 3")</td></tr>
+</table>
+
+<h2>4.3 Chart Skill — Hybrid Architecture (Approach C)</h2>
+<p>File: <code>ai/chart.ts</code> · Prompt: <code>skills/chart/SKILL.md</code></p>
+
+<div class="note note-tip"><div class="note-icon">⭐</div><div><strong>Key Design:</strong> The chart skill is a hybrid — the LLM decides WHAT to show (chart type, field mapping, customizations), but TypeScript code decides HOW to render it (ECharts option generation). This gives flexibility without wasting tokens.</div></div>
+
+<h4>Three Output Modes</h4>
+<table>
+<tr><th>Mode</th><th>When LLM Uses It</th><th>What LLM Outputs</th><th>What TypeScript Does</th></tr>
+<tr><td><strong>Standard</strong></td><td>Most charts (bar, line, donut…)</td><td><code>type</code> + field names (<code>labelField</code>, <code>valueField</code>)</td><td>Deterministic renderer builds full ECharts option from real data</td></tr>
+<tr><td><strong>+ chartOptions</strong></td><td>Needs custom colors/tooltip/marklines</td><td>Same + partial ECharts override object</td><td>Render base → <code>deepMerge(base, chartOptions)</code></td></tr>
+<tr><td><strong>custom</strong></td><td>Mixed or unusual chart (bar+line combo)</td><td>Full ECharts option in <code>chartOptions</code></td><td>Pass through directly to ECharts</td></tr>
+</table>
+
+<h4>Available Chart Types</h4>
+<table>
+<tr><th>Type</th><th>Required Fields</th><th>When to Use</th></tr>
+<tr><td>kpi_card</td><td>valueField</td><td>Single headline number</td></tr>
+<tr><td>gauge_chart</td><td>valueField</td><td>Progress toward a goal (0–100%)</td></tr>
+<tr><td>bar_chart</td><td>labelField, valueField</td><td>≤ 10 short labels</td></tr>
+<tr><td>horizontal_bar_chart</td><td>labelField, valueField</td><td>Rankings, long labels, > 10 items</td></tr>
+<tr><td>donut_chart</td><td>labelField, valueField</td><td>Part-to-whole, ≤ 6 values</td></tr>
+<tr><td>line_chart</td><td>xField, valueField</td><td>Continuous time trend</td></tr>
+<tr><td>area_chart</td><td>xField, valueField</td><td>Cumulative volume over time</td></tr>
+<tr><td>multi_line_chart</td><td>xField, valueField, seriesField</td><td>Compare trends across categories</td></tr>
+<tr><td>grouped_bar_chart</td><td>labelField, valueField, seriesField</td><td>Side-by-side category comparison</td></tr>
+<tr><td>stacked_bar_chart</td><td>labelField, valueField, seriesField</td><td>Composition across categories</td></tr>
+<tr><td>scatter_plot</td><td>xField, yField</td><td>Correlation between 2 numerics</td></tr>
+<tr><td>funnel_chart</td><td>labelField, valueField</td><td>Pipeline stages (Planning → Completed)</td></tr>
+<tr><td>radar_chart</td><td>labelField</td><td>Multiple metrics for 1–5 entities</td></tr>
+<tr><td>heatmap</td><td>xField, yField, valueField</td><td>Cross-tabulation density</td></tr>
+<tr><td>table</td><td>–</td><td>Multi-column raw data (LLM-hidden, renderer fallback)</td></tr>
+<tr><td>custom</td><td>chartOptions</td><td>Any ECharts feature the LLM wants</td></tr>
+</table>
+
+<h4>Validation Flow</h4>
+<p>After the LLM returns a plan, TypeScript validates it before rendering:</p>
+<div class="flow-step"><div class="fn">1</div><div class="fb"><strong>Field name check</strong> — reject any widget where <code>labelField</code>/<code>valueField</code>/<code>xField</code> don't exist in the real data</div></div>
+<div class="flow-step"><div class="fn">2</div><div class="fb"><strong>Numeric check</strong> — <code>valueField</code> must be a number column (unless <code>agg: "count"</code>)</div></div>
+<div class="flow-step"><div class="fn">3</div><div class="fb"><strong>Auto-detect valueField</strong> — if LLM forgot to set it, scan data for first numeric column</div></div>
+<div class="flow-step"><div class="fn">4</div><div class="fb"><strong>Render</strong> — call the TypeScript renderer for the chart type → produce ECharts option</div></div>
+<div class="flow-step"><div class="fn">5</div><div class="fb"><strong>deepMerge</strong> — merge <code>chartOptions</code> override on top of the rendered base</div></div>
+
+<h2>4.4 Writer Skill — Inquiry &amp; Report</h2>
+<p>File: <code>ai/writer.ts</code> · Prompt: <code>skills/inquiry/SKILL.md</code> + <code>skills/report/SKILL.md</code></p>
+<table>
+<tr><th>Function</th><th>Output</th><th>Max Tokens</th><th>Max Input Rows</th><th>Language</th></tr>
+<tr><td><code>runInquirySkill()</code></td><td>1–3 sentences, lead with key number</td><td>400</td><td>10 rows</td><td>Auto-detects Arabic / French / English</td></tr>
+<tr><td><code>runReportSkill()</code></td><td>1–5 sections: Overview → Findings → Breakdown → Trends → Recommendations</td><td>900</td><td>All rows (char-capped at 8K)</td><td>Auto-detects Arabic / French / English</td></tr>
+</table>
+
+<h2>4.5 Memory Skill — Background Extraction</h2>
+<p>File: <code>ai/memory-skill.ts</code> · Prompt: <code>skills/memory/SKILL.md</code></p>
+<p>Runs <strong>after every AI response</strong> as a fire-and-forget background task. Extracts 0–3 structured facts per conversation turn.</p>
+<pre><code>// Extracted memory format
+{
+  type: "preference",   // goal | insight | preference | context | decision
+  content: "User always focuses on health sector projects",
+  tags: ["health", "sector"],
+  importance: 4         // 1–5 scale
+}</code></pre>
+<p>Uses <strong>llama-3.1-8b-instant</strong> (not 70B) because this is a background JSON extraction task — no intelligence required. Saving ~700 tokens/request from the 6,000 TPM free tier budget.</p>
+
+<h2>4.6 Embeddings — Local WASM (No API)</h2>
+<p>File: <code>ai/embeddings.ts</code></p>
+<table>
+<tr><th>Property</th><th>Value</th></tr>
+<tr><td>Model</td><td>Xenova/all-MiniLM-L6-v2</td></tr>
+<tr><td>Output</td><td>384-dimensional L2-normalized vector</td></tr>
+<tr><td>Runtime</td><td>Local WASM via @xenova/transformers — no API key, no quota</td></tr>
+<tr><td>Cache</td><td>.model-cache/ (~25 MB, downloaded once)</td></tr>
+<tr><td>Similarity</td><td>Dot product of normalized vectors = cosine similarity</td></tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════════ CH5 MEMORY ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">5</div><div><div class="ch-title">Memory System</div><div class="ch-desc">Two-layer memory: short-term session + long-term cross-session</div></div></div>
+
+<div class="card-grid">
+<div class="card"><div class="ci">⚡</div><div class="ct">Layer 1 — Session Memory (LibSQL)</div><div class="cd">Last 6 conversation turns. Fast local SQLite. Enables follow-up questions ("show me just the top 3"). Scoped to one browser session.</div></div>
+<div class="card"><div class="ci">🧠</div><div class="ct">Layer 2 — Long-Term Memory (MongoDB)</div><div class="cd">Structured facts extracted after every response. Persists across sessions. Retrieved by semantic similarity. Makes the AI remember user preferences and goals.</div></div>
+</div>
+
+<h2>5.1 Session Memory — LibSQL</h2>
+<p>File: <code>session/memory.ts</code> · Powered by Mastra Memory with LibSQL storage</p>
+<table>
+<tr><th>Function</th><th>Description</th></tr>
+<tr><td><code>ensureThread(id, title, intent)</code></td><td>Create a new session thread or verify an existing one</td></tr>
+<tr><td><code>sessionExists(id)</code></td><td>Check if a session ID is valid in LibSQL before reusing it</td></tr>
+<tr><td><code>getMemoryContext(id)</code></td><td>Load last 6 messages as <code>CoreMessage[]</code> for LLM context</td></tr>
+<tr><td><code>saveConversationTurn({...})</code></td><td>Fire-and-forget: write user prompt + assistant result to LibSQL</td></tr>
+<tr><td><code>listSessions()</code></td><td>List all sessions (used by History sidebar)</td></tr>
+<tr><td><code>getSessionDetail(id)</code></td><td>Full session with all messages</td></tr>
+<tr><td><code>deleteSession(id)</code></td><td>Remove session and messages</td></tr>
+</table>
+
+<h2>5.2 Long-Term Memory — MongoDB</h2>
+<p>Files: <code>memory/memory.service.ts</code> · <code>memory/memory.repository.ts</code></p>
+<pre><code>// After every response (background):
+memory.extractAndSave(userId, sessionId, prompt, summary, apiKey)
+  → 8B LLM extracts 0–3 facts from the conversation
+  → embed each fact to 384-dim vector
+  → upsert to MongoDB memory_items collection
+
+// Before every request (inline):
+memory.getRelevantContext(userId, prompt)
+  → embed prompt → cosine similarity search in MongoDB
+  → returns top-3 most similar memories as formatted text
+  → injected into planner context as "prior session knowledge"</code></pre>
+
+<h2>5.3 Memory Flow Diagram</h2>
+<div class="arch">
+  <div><strong>User Prompt</strong> → <span class="ab b">Embed (384-dim WASM)</span> → <span class="ab g">Cosine Search MongoDB</span></div>
+  <div>→ Top-3 Memories → <span class="ab d">Inject into Planner Context</span></div>
+  <div style="margin-top:10px"><strong>AI Response</strong> → <span class="ab gr">8B LLM (background)</span> → Extract 0–3 facts</div>
+  <div>→ Embed each fact → <span class="ab o">Upsert to MongoDB memory_items</span></div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════ CH6 DATABASE ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">6</div><div><div class="ch-title">Database Schema</div><div class="ch-desc">Every MongoDB collection and LibSQL table</div></div></div>
+
+<h2>6.1 MongoDB — Database: <code>mind_platform</code></h2>
+
+<h3>prompt_cache <span class="badge bk">TTL 7 days</span></h3>
+<pre><code>{
+  key:       "a3f2b1c9d4e5f6a7",   // SHA-256(intent:prompt).slice(0,24)
+  prompt:    "top 5 projects by budget",
+  intent:    "dashboard",
+  result:    { plan: {...}, rows: [...] },
+  hitCount:  5,
+  lastHitAt: ISODate,
+  createdAt: ISODate              // TTL index — auto-deleted after 7 days
+}</code></pre>
+
+<h3>results_history</h3>
+<pre><code>{
+  prompt:     "top 5 projects by budget",
+  intent:     "dashboard",
+  collection: "projects",
+  pipeline:   [...],        // Full MongoDB aggregation pipeline
+  rows:       [...],        // All result rows
+  rowCount:   5,
+  durationMs: 1240,
+  createdAt:  ISODate
+}</code></pre>
+
+<h3>memory_items <span class="badge bp">Long-term memory</span></h3>
+<pre><code>{
+  userId:    "uuid",
+  sessionId: "uuid",
+  type:      "preference",  // goal|insight|preference|context|decision
+  content:   "User always focuses on health sector",
+  tags:      ["health", "sector"],
+  importance: 4,            // 1–5
+  embedding: [0.12, -0.45, ...],  // 384-dim vector for cosine search
+  createdAt: ISODate
+}</code></pre>
+
+<h3>saved_results</h3>
+<pre><code>{
+  userId:    "uuid",
+  title:     "Health Projects Dashboard",
+  prompt:    "top 5 health projects by budget",
+  intent:    "dashboard",
+  result:    { type: "dashboard", dashboardSpec: {...}, durationMs: 1200 },
+  createdAt: ISODate
+}</code></pre>
+
+<h3>user_api_keys</h3>
+<pre><code>{ userId: "uuid", apiKey: "gsk_...", createdAt: ISODate }</code></pre>
+
+<h3>sources <span class="badge bk">Loaded to RAM on boot</span></h3>
+<pre><code>{
+  name:         "municipalities",
+  collection:   "municipalities",
+  description:  "...",
+  fields:       [{ name: "budget", type: "number", role: "measure" }, ...],
+  suggestedCharts: [{ chartType: "bar_chart", labelField: "name", valueField: "budget" }]
+}</code></pre>
+
+<h2>6.2 LibSQL Tables (SQLite at <code>nest-app/data/memory.db</code>)</h2>
+<table>
+<tr><th>Table</th><th>Key Columns</th><th>Description</th></tr>
+<tr><td>mastra_threads</td><td>id, title, resourceId, metadata, createdAt</td><td>One row per conversation session</td></tr>
+<tr><td>mastra_messages</td><td>id, threadId, role, content, createdAt</td><td>One row per user or assistant turn. Role = 'user' | 'assistant'</td></tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════════ CH7 FRONTEND ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">7</div><div><div class="ch-title">Angular Frontend</div><div class="ch-desc">Component architecture, state management, and chart rendering</div></div></div>
+
+<h2>7.1 File Map</h2>
+<table>
+<tr><th>File</th><th>Purpose</th></tr>
+<tr><td>app.component.ts</td><td>Root component — all UI logic, query execution, session management, keyboard shortcuts</td></tr>
+<tr><td>app.component.html</td><td>Template — header tabs, sidebar, chat messages, prompt input, modals</td></tr>
+<tr><td>app.component.css</td><td>All component styles (Tailwind CSS + custom)</td></tr>
+<tr><td>analytics-state.service.ts</td><td>Singleton reactive store — BehaviorSubject-based, all UI state lives here</td></tr>
+<tr><td>analytics-api.service.ts</td><td>HTTP client — all REST calls, error normalization, status 0 handling</td></tr>
+<tr><td>chart-render.service.ts</td><td>ECharts lifecycle: init widget, dispose, resize on window resize</td></tr>
+<tr><td>app.types.ts</td><td>All shared TypeScript interfaces (WidgetSpec, DashboardSpec, MessageResult…)</td></tr>
+</table>
+
+<h2>7.2 UI Sections</h2>
+<table>
+<tr><th>Section</th><th>Description</th></tr>
+<tr><td>Header tabs</td><td>Dashboard / Report / Inquiry mode selector. Active mode controls how the backend routes the query</td></tr>
+<tr><td>Sidebar</td><td>3 tabs: History (past sessions) · Saved (bookmarked results) · Memory (long-term facts)</td></tr>
+<tr><td>Chat area</td><td>Conversation messages. Each assistant message contains ECharts widgets, report sections, or text</td></tr>
+<tr><td>Prompt input</td><td>Textarea with character counter (1000 max), example prompt chips, Send button</td></tr>
+<tr><td>API Key modal</td><td>Shown when server returns 401. User enters Groq API key stored per-userId in MongoDB</td></tr>
+<tr><td>Report format modal</td><td>Choose: Report only / Chart only / Both (for report intent)</td></tr>
+</table>
+
+<h2>7.3 How Charts Render</h2>
+<pre><code>// 1. HTTP response arrives with DashboardSpec
+{ layout: "analytical", widgets: [{ id: "w1", type: "bar_chart", option: {...} }] }
+
+// 2. Angular state service stores the message
+this.st.patch({ messages: [...messages, assistantMessage] });
+
+// 3. ngAfterViewChecked finds new [data-widget-id] elements
+@ViewChildren('chartHost') chartHosts: QueryList&lt;ElementRef&gt;;
+
+// 4. ChartRenderService initializes ECharts
+chart-render.service.ts → echarts.init(el) → chart.setOption(widget.option)
+
+// 5. Window resize → all instances resized automatically</code></pre>
+
+<h2>7.4 Widget Display Logic</h2>
+<p>The Angular component determines how to display each widget by calling <code>widgetDisplayKind(widget)</code>:</p>
+<table>
+<tr><th>Check (in order)</th><th>Result</th><th>Rendered As</th></tr>
+<tr><td><code>widget.option</code> is an object</td><td>'chart'</td><td>ECharts canvas via ChartRenderService</td></tr>
+<tr><td><code>widget.value</code> is a number</td><td>'kpi'</td><td>Large number with title and insight text</td></tr>
+<tr><td><code>widget.type === 'kpi_card'</code></td><td>'kpi'</td><td>Same as above</td></tr>
+<tr><td><code>widget.columns</code> or <code>widget.rows</code> is array</td><td>'table'</td><td>HTML table</td></tr>
+<tr><td><code>widget.type === 'table'</code></td><td>'table'</td><td>HTML table</td></tr>
+<tr><td>None of the above</td><td>'unknown'</td><td>Hidden</td></tr>
+</table>
+
+<h2>7.5 Error Handling in Frontend</h2>
+<table>
+<tr><th>HTTP Status</th><th>What It Means</th><th>What User Sees</th></tr>
+<tr><td>0</td><td>Server unreachable (network error or server down)</td><td>"Cannot reach the server. Please refresh the page and try again."</td></tr>
+<tr><td>401</td><td>No API key / invalid key</td><td>API Key modal opens automatically</td></tr>
+<tr><td>429</td><td>Groq rate limit hit</td><td>"Groq API quota reached. Try again in Xm Ys."</td></tr>
+<tr><td>400</td><td>Bad request (no data sources, prompt too long)</td><td>Error message from server displayed inline</td></tr>
+<tr><td>500</td><td>Server error</td><td>Raw error message from server</td></tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════════ CH8 LIFECYCLE ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">8</div><div><div class="ch-title">Full Request Lifecycle</div><div class="ch-desc">End-to-end trace for: "show top 5 municipalities by budget" on Dashboard tab</div></div></div>
+
+<div class="flow-step"><div class="fn">1</div><div class="fb"><strong>Angular</strong> — User types prompt, clicks Send → <code>POST /api/analytics</code> with header <code>x-user-id: uuid</code></div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">2</div><div class="fb"><strong>AnalyticsController</strong> — Validates DTO, passes to <code>AnalyticsService.run()</code></div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">3</div><div class="fb"><strong>API Key</strong> — MongoDB per-user key → env global key → 401 if neither found</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">4</div><div class="fb"><strong>Session</strong> — <code>ensureThread()</code> creates/reuses LibSQL session · <code>getMemoryContext()</code> loads last 6 messages</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">5</div><div class="fb"><strong>Long-Term Memory</strong> — embed prompt (WASM, 384-dim) → cosine search MongoDB → top-3 memories injected as context</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">6</div><div class="fb"><strong>Cache Check</strong> — <code>SHA256("dashboard:top 5 municipalities...").slice(0,24)</code> → MongoDB lookup. <strong>HIT → return immediately (0 LLM calls)</strong></div></div>
+<div class="fa">↓ (cache MISS — continue)</div>
+<div class="flow-step"><div class="fn">7</div><div class="fb"><strong>🤖 LLM #1 — Planner (70B, 600 tokens max)</strong> → MongoDB aggregation pipeline JSON + strategy + chartHint</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">8</div><div class="fb"><strong>Safety Check</strong> — Reject $function/$merge/$out. Execute aggregation on MongoDB (30s timeout)</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">9</div><div class="fb"><strong>🤖 LLM #2 — Chart (70B, 1000 tokens max)</strong> → chart type + field mapping + optional chartOptions</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">10</div><div class="fb"><strong>TypeScript Renderer</strong> — Validate fields → <code>renderBar(plan, rows)</code> → ECharts option → deepMerge chartOptions</div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">11</div><div class="fb"><strong>HTTP Response</strong> → <code>{ intent:"dashboard", chart: DashboardSpec, sessionId, messageId }</code></div></div>
+<div class="fa">↓</div>
+<div class="flow-step"><div class="fn">12</div><div class="fb"><strong>Angular</strong> → State update → <code>ngAfterViewChecked</code> → <code>echarts.setOption(widget.option)</code> → Charts render in DOM</div></div>
+<div class="fa">↓ (fire-and-forget after response sent)</div>
+<div class="flow-step"><div class="fn">13</div><div class="fb"><strong>Background</strong> — Save turn to LibSQL · 8B LLM extracts memories → upsert to MongoDB · Write to history + cache</div></div>
+
+<h2>8.1 LLM Calls Per Intent (Summary)</h2>
+<table>
+<tr><th>Scenario</th><th>LLM Calls</th><th>Models Used</th><th>Est. Tokens</th></tr>
+<tr><td>Dashboard — cache HIT</td><td><strong>0</strong></td><td>–</td><td>0</td></tr>
+<tr><td>Dashboard — cache MISS</td><td><strong>2</strong></td><td>planner (70B) + chart (70B)</td><td>~2,600</td></tr>
+<tr><td>Report (no chart)</td><td><strong>2</strong></td><td>planner + writer (70B)</td><td>~2,800</td></tr>
+<tr><td>Report + chart</td><td><strong>3</strong></td><td>planner + writer + chart (all 70B)</td><td>~3,600</td></tr>
+<tr><td>Inquiry</td><td><strong>2</strong></td><td>planner + writer (70B)</td><td>~1,800</td></tr>
+<tr><td>Memory extraction (bg)</td><td>+1 always</td><td>memory (8B)</td><td>~700 (separate limit)</td></tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════════ CH9 TOKENS ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">9</div><div><div class="ch-title">Token Budget &amp; Rate Limits</div><div class="ch-desc">How tokens are allocated across LLM calls on the free tier</div></div></div>
+
+<h2>9.1 Groq Free Tier Limits</h2>
+<table>
+<tr><th>Model</th><th>TPM (tokens/min)</th><th>RPM (requests/min)</th><th>TPD (tokens/day)</th></tr>
+<tr><td>llama-3.3-70b-versatile</td><td>6,000</td><td>30</td><td>1,000,000</td></tr>
+<tr><td>llama-3.1-8b-instant</td><td>6,000</td><td>30</td><td>1,000,000</td></tr>
+</table>
+<p>Both 70B and 8B share the same 6,000 TPM limit. They are counted <strong>independently</strong> — memory (8B) does not eat into the 70B budget.</p>
+
+<h2>9.2 Per-Request Token Budget (Dashboard, cache MISS)</h2>
+<div class="tbar"><span class="tlabel">Planner input</span><div class="ttrack"><div class="tfill" style="width:20%"></div></div><span class="tcount">~600 tok</span></div>
+<div class="tbar"><span class="tlabel">Planner output</span><div class="ttrack"><div class="tfill" style="width:10%"></div></div><span class="tcount">≤600 tok</span></div>
+<div class="tbar"><span class="tlabel">Chart input</span><div class="ttrack"><div class="tfill" style="width:18%"></div></div><span class="tcount">~500 tok</span></div>
+<div class="tbar"><span class="tlabel">Chart output</span><div class="ttrack"><div class="tfill" style="width:17%"></div></div><span class="tcount">≤1000 tok</span></div>
+<div class="tbar"><span class="tlabel">Total 70B</span><div class="ttrack"><div class="tfill" style="width:43%;background:#10b981"></div></div><span class="tcount">~2,600 tok</span></div>
+<p>Leaves ~3,400 tokens of buffer per minute. With caching, most repeat queries cost 0 tokens.</p>
+
+<h2>9.3 Why Memory Uses 8B Not 70B</h2>
+<div class="note note-warn"><div class="note-icon">⚠️</div><div><strong>Critical configuration decision:</strong> Memory extraction fires after EVERY response. If it used the 70B model, it would add ~700 tokens to the 70B budget per request: 2,600 + 700 = 3,300 total. Under load (multiple users), this hits the 6,000 TPM limit very quickly. The 8B model does the same JSON extraction job at the same cost but against a completely separate TPM pool.</div></div>
+
+<h2>9.4 Cache Impact</h2>
+<p>The prompt cache (MongoDB, 7-day TTL) is the most effective optimization. When a cache hit occurs:</p>
+<ul>
+  <li>0 calls to the planner LLM</li>
+  <li>0 calls to MongoDB aggregation</li>
+  <li>0 chart LLM calls (full dashboard cache)</li>
+  <li>Response in &lt; 50ms instead of &lt; 3 seconds</li>
+</ul>
+<p>Cache is bypassed only for multi-turn conversations (context-dependent queries cannot be cached).</p>
+</div>
+
+<!-- ═══════════════════════════════════════ CH10 DESIGN ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">10</div><div><div class="ch-title">Key Design Decisions</div><div class="ch-desc">Every major technical decision with the reasoning behind it</div></div></div>
+
+<table>
+<tr><th>Decision</th><th>What Was Chosen</th><th>Why</th></tr>
+<tr><td>LLM temperature</td><td>0 on all calls</td><td>Same prompt → same MongoDB pipeline every time. Reproducible, cacheable, debuggable.</td></tr>
+<tr><td>Chart skill architecture</td><td>Hybrid: LLM picks fields → TypeScript renders ECharts</td><td>Full LLM ECharts output (Approach B) costs ~3× more tokens and risks invalid configs. Deterministic only (Approach A) is inflexible. Hybrid gives quality + efficiency + customization via chartOptions.</td></tr>
+<tr><td>Schema in planner prompt</td><td>Full field list injected per source</td><td>LLM can only reference field names that actually exist. Prevents hallucinated field names in MongoDB pipelines.</td></tr>
+<tr><td>Cache bypass on multi-turn</td><td>Skip cache when context.length > 0</td><td>"Show me the top 3 instead" depends on the previous response. Caching would return the cached top 5.</td></tr>
+<tr><td>Fire-and-forget writes</td><td>Cache, history, memory all async</td><td>Never block the HTTP response. User gets their answer in &lt;3s regardless of write speed.</td></tr>
+<tr><td>Two database types</td><td>LibSQL for sessions + MongoDB for everything else</td><td>LibSQL: fast local SQLite, perfect for ordered conversation turns. MongoDB: persistent, queryable, supports vector search for embeddings.</td></tr>
+<tr><td>Local WASM embeddings</td><td>@xenova/transformers (no API)</td><td>Memory retrieval works with zero API quota. 384-dim vectors cost ~0 to generate locally.</td></tr>
+<tr><td>Memory model = 8B</td><td>llama-3.1-8b-instant for memory role</td><td>Background JSON extraction doesn't need reasoning quality. Saves ~700 tokens/request from the 70B 6,000 TPM budget.</td></tr>
+<tr><td>No silent fallbacks</td><td>All LLM errors throw and surface to user</td><td>Silent .catch() fallbacks were returning empty widgets with "Chart planning failed." message — confusing users with no actionable information.</td></tr>
+<tr><td>Dashboard → inquiry fallback</td><td>Conversational questions on Dashboard tab route to inquiry</td><td>Users ask "what did we find last time?" in the Dashboard tab. Instead of throwing "no chart path", the system answers from memory context as text.</td></tr>
+<tr><td>Pipeline safety guards</td><td>Reject $function, $merge, $out, $where, $eval</td><td>LLM-generated pipelines could otherwise modify data or execute arbitrary JavaScript in MongoDB.</td></tr>
+<tr><td>RequestIdMiddleware</td><td>AsyncLocalStorage request ID on every log line</td><td>Without it, logs from parallel requests are interleaved and impossible to trace. 8-char ID makes grep trivial.</td></tr>
+<tr><td>Per-user API keys</td><td>MongoDB storage per userId</td><td>Multiple users can bring their own Groq key. Global key is the fallback. Invalid per-user key auto-deletes and retries with global key.</td></tr>
+<tr><td>Zod schema for LLM output</td><td>generateObject() with strict schemas</td><td>LLM output that doesn't match the schema triggers an automatic retry rather than a runtime crash downstream.</td></tr>
+<tr><td>maxRetries: 1</td><td>On all LLM calls</td><td>Vercel AI SDK handles 429 retry with exponential backoff automatically. One retry covers transient errors without implementing manual retry logic.</td></tr>
+</table>
+
+<h2>10.1 Chart Skill Evolution — The 3 Approaches</h2>
+<table>
+<tr><th>Approach</th><th>How It Works</th><th>Tokens / Request</th><th>Flexibility</th><th>Reliability</th><th>Decision</th></tr>
+<tr><td><strong>A — Deterministic</strong></td><td>LLM picks field names only → TS renders ECharts</td><td>~80 tokens</td><td>Low (pre-coded types only)</td><td>High (TS always valid)</td><td>Too rigid</td></tr>
+<tr><td><strong>B — Full Dynamic</strong></td><td>LLM embeds actual values → outputs full ECharts JSON</td><td>~1,500 tokens</td><td>Maximum</td><td>Medium (LLM can hallucinate broken JSON)</td><td>Too expensive on free tier</td></tr>
+<tr><td><strong style="color:#6366f1">C — Hybrid ✓</strong></td><td>LLM picks fields + optional chartOptions override → TS renders + deepMerge</td><td>~120 tokens</td><td>High (standard + custom escape hatch)</td><td>High (base always valid + override merged safely)</td><td><strong>Chosen</strong></td></tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════════ CH11 ERRORS ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">11</div><div><div class="ch-title">Known Errors &amp; Fixes</div><div class="ch-desc">Every bug encountered and how it was resolved</div></div></div>
+
+<table>
+<tr><th>Error</th><th>Root Cause</th><th>Fix Applied</th></tr>
+<tr><td>"Planner did not produce a chart execution path"</td><td>User asked conversational question on Dashboard tab. Planner returned <code>needsData: false, skills: []</code> but dashboard path required chart skill.</td><td>Added fallback: when <code>!plan.skills.includes('chart')</code>, route to <code>executeInquiry()</code> instead of throwing.</td></tr>
+<tr><td>"Http failure response for /api/analytics: 0 undefined"</td><td>HTTP status 0 = browser could not reach server at all (connection refused). Server was restarting. Angular's error handler showed raw technical message.</td><td>Added <code>if (error.status === 0)</code> check in analytics-api.service.ts returning friendly message: "Cannot reach the server."</td></tr>
+<tr><td>"Chart planning failed." (silent)</td><td>Two causes: (1) Zod schema had <code>.max(3)</code> on widgets array — LLM returned 4 → validation fail → old <code>.catch()</code> returned empty widgets. (2) Rate limit error caught silently.</td><td>Removed <code>.max(MAX_WIDGETS)</code> from Zod schema (slice after). Removed all silent <code>.catch()</code> fallbacks on runChart calls.</td></tr>
+<tr><td>"Groq API quota reached. Try again in 19m21s"</td><td>All 4 LLM roles were set to 70B. Memory extraction (after every response) added ~700 tokens to 70B budget → ~5,200 tokens/request → immediately hit 6,000 TPM.</td><td>Reverted memory role to 8B (<code>llama-3.1-8b-instant</code>). 8B has its own separate 6,000 TPM pool. 70B budget restored to ~2,600/request.</td></tr>
+<tr><td>Stale server logs after restart</td><td>PowerShell log redirect was reading old log file buffer after restart. Logs showed old model names.</td><td>Verified actual compiled output in <code>dist/ai/model.js</code> directly. Confirmed via <code>GET /health</code> returning 200.</td></tr>
+<tr><td>Chart widget always empty after removing .max()</td><td>Field validation was still dropping widgets because labelField/valueField names didn't match actual data keys (case mismatch or underscore differences).</td><td>The auto-detect valueField logic in <code>toWidgetPlan()</code> scans data for the first numeric column if LLM forgot to set one.</td></tr>
+</table>
+
+<h2>11.1 Debugging Checklist</h2>
+<table>
+<tr><th>Symptom</th><th>First Check</th><th>Command / Location</th></tr>
+<tr><td>Server not responding</td><td>Is the server running?</td><td><code>GET http://localhost:3000/health</code> → should return <code>{"ok":true}</code></td></tr>
+<tr><td>No charts appearing</td><td>Server logs for chart:llm entries</td><td>Look for <code>[chart:llm]</code> log lines — check "rejected" vs "accepted" widgets</td></tr>
+<tr><td>Rate limit errors</td><td>Which model is over quota?</td><td>70B and 8B have separate limits. Check which role is hitting 429</td></tr>
+<tr><td>Wrong data in chart</td><td>Check the pipeline in history</td><td><code>GET /api/history/results</code> → inspect <code>pipeline</code> and <code>rows</code> fields</td></tr>
+<tr><td>Memory not persisting</td><td>Check memory_items collection</td><td>MongoDB → mind_platform → memory_items → query by userId</td></tr>
+<tr><td>Cache not working</td><td>Check if context.length > 0</td><td>Cache is bypassed on multi-turn. Single-turn same prompt should always hit</td></tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════════ CH12 CONFIG ═══ -->
+<div class="ch">
+<div class="ch-head"><div class="ch-num">12</div><div><div class="ch-title">Complete Configuration Reference</div><div class="ch-desc">Every environment variable the system reads</div></div></div>
+
+<table>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+<tr><td>MONGODB_URI</td><td>–</td><td>MongoDB connection string. Required.</td></tr>
+<tr><td>MONGODB_DB</td><td>mind_platform</td><td>Database name</td></tr>
+<tr><td>GROQ_API_KEY</td><td>–</td><td>Global Groq key. Falls back if per-user key missing</td></tr>
+<tr><td>GROQ_SUPERVISOR_MODEL</td><td>llama-3.3-70b-versatile</td><td>Model for planner LLM call</td></tr>
+<tr><td>GROQ_CHART_MODEL</td><td>llama-3.3-70b-versatile</td><td>Model for chart skill LLM call</td></tr>
+<tr><td>GROQ_WRITER_MODEL</td><td>llama-3.3-70b-versatile</td><td>Model for inquiry + report LLM calls</td></tr>
+<tr><td>GROQ_MEMORY_MODEL</td><td>llama-3.1-8b-instant</td><td>Model for background memory extraction</td></tr>
+<tr><td>PLANNER_MAX_TOKENS</td><td>600</td><td>Max response tokens for planner</td></tr>
+<tr><td>CHART_MAX_TOKENS</td><td>1000</td><td>Max response tokens for chart skill</td></tr>
+<tr><td>INQUIRY_MAX_TOKENS</td><td>400</td><td>Max response tokens for inquiry writer</td></tr>
+<tr><td>REPORT_MAX_TOKENS</td><td>900</td><td>Max response tokens for report writer</td></tr>
+<tr><td>CHART_MAX_WIDGETS</td><td>3</td><td>Max widgets per dashboard</td></tr>
+<tr><td>CHART_PROFILE_ROWS</td><td>10</td><td>Rows used to profile column types for chart prompt</td></tr>
+<tr><td>CHART_SAMPLE_ROWS</td><td>8</td><td>Sample rows sent to LLM for insight generation</td></tr>
+<tr><td>INQUIRY_MAX_ROWS</td><td>10</td><td>Max data rows sent to inquiry writer</td></tr>
+<tr><td>WRITER_MAX_CHARS</td><td>8000</td><td>Max chars of data sent to report writer</td></tr>
+<tr><td>SUPERVISOR_TIMEOUT_MS</td><td>30000</td><td>Abort timeout for planner LLM call</td></tr>
+<tr><td>CHART_TIMEOUT_MS</td><td>30000</td><td>Abort timeout for chart LLM call (= 8s actual via freshSignal)</td></tr>
+<tr><td>WRITER_TIMEOUT_MS</td><td>30000</td><td>Abort timeout for writer LLM calls</td></tr>
+<tr><td>MONGODB_PIPELINE_TIMEOUT_MS</td><td>30000</td><td>MongoDB aggregation maxTimeMS</td></tr>
+<tr><td>LIBSQL_URL</td><td>file:./data/memory.db</td><td>LibSQL database path (SQLite file)</td></tr>
+<tr><td>PORT</td><td>3001</td><td>HTTP server port</td></tr>
+<tr><td>NODE_ENV</td><td>development</td><td>development / production</td></tr>
+<tr><td>ALLOWED_ORIGINS</td><td>(all)</td><td>Comma-separated CORS origins. Empty = allow all</td></tr>
+</table>
+
+<hr>
+<div style="text-align:center;padding:32px;color:#9ca3af;font-size:11px">
+  MindAI Complete Guide · June 2026 · chaditroudi<br>
+  <strong>Print to PDF:</strong> Open in Chrome → Ctrl+P → Destination: Save as PDF → Print
+</div>
+</div>
+
+</body>
+</html>
