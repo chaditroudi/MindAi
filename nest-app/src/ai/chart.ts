@@ -26,18 +26,17 @@ interface SkillConfig {
   types:        ChartDefinition[];
 }
 
-const configServic= readJsonSection<SkillConfig>(skillFile('chart', 'SKILL.md'), 'Chart Config');
-export const CHART_DEFINITIONS: readonly ChartDefinition[] = cfg.types;
-const CHART_AGGREGATIONS     = cfg.aggregations as [string, ...string[]];
+const configService= readJsonSection<SkillConfig>(skillFile('chart', 'SKILL.md'), 'Chart Config');
+export const CHART_DEFINITIONS: readonly ChartDefinition[] = configService.types;
+const CHART_AGGREGATIONS     = configService.aggregations as [string, ...string[]];
 const LLM_CHART_AGGREGATIONS = [...CHART_AGGREGATIONS, 'none'] as [string, ...string[]];
-const DASHBOARD_LAYOUTS      = cfg.layouts as [string, ...string[]];
-const CHART_BY_TYPE          = Object.fromEntries(cfg.types.map(d => [d.type, d])) as Record<string, ChartDefinition>;
+const DASHBOARD_LAYOUTS      = configService.layouts as [string, ...string[]];
+const CHART_BY_TYPE          = Object.fromEntries(configService.types.map(d => [d.type, d])) as Record<string, ChartDefinition>;
 
 function getLlmChartTypes(): [string, ...string[]] {
-  return cfg.types.filter(d => !d.llmHidden).map(d => d.type) as [string, ...string[]];
+  return configService.types.filter(d => !d.llmHidden).map(d => d.type) as [string, ...string[]];
 }
 
-// ── Schemas ──────────────────────────────────────────────────────────────────
 
 const chartOptionsSchema = z.record(z.unknown()).optional();
 
@@ -54,7 +53,6 @@ const widgetSchema = z.object({
   agg:          z.enum(LLM_CHART_AGGREGATIONS).optional(),
   sortDesc:     z.boolean().optional(),
   topN:         z.number().int().positive().optional(),
-  // Escape hatch: partial ECharts option merged on top of the rendered base
   chartOptions: chartOptionsSchema,
 });
 
