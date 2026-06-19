@@ -30,12 +30,11 @@ import {
 // Constants & Schemas
 // ============================================================================
 
-const promptSchema = z  .string()
+const promptSchema = z.string()
   .min(1, 'Prompt is required')
   .max(1000, 'Prompt must be 1000 characters or fewer');
 
-const RESOLVED_TYPES = ['dashboard', 'report', 'inquiry'] as const;
-type ResolvedType = (typeof RESOLVED_TYPES)[number];
+type ResolvedType = 'dashboard' | 'report' | 'inquiry';
 
 const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
 const MAX_AGENT_STEPS = 2;
@@ -97,7 +96,8 @@ function extractRetryDelay(err: unknown): string | null {
 function buildRateLimitMessage(err: unknown, withKeyHint: boolean): string {
   const retryIn = extractRetryDelay(err);
   const suffix = withKeyHint ? ' or use a different API key.' : '.';
-  if (retryIn) return `Groq API quota reached. Try again in ${retryIn}${suffix}`;  return withKeyHint
+  if (retryIn) return `Groq API quota reached. Try again in ${retryIn}${suffix}`;
+  return withKeyHint
     ? 'Groq API quota reached. Please try again later or use a different API key.'
     : 'Groq API quota reached. Please try again later.';
 }
