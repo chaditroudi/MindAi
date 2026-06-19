@@ -1,3 +1,5 @@
+import { AgentRole } from "src/ai/model";
+
 export const ROLE_ENV_KEYS: Record<AgentRole, string> = {
   supervisor: 'GROQ_SUPERVISOR_MODEL',
   chart:      'GROQ_CHART_MODEL',
