@@ -330,19 +330,17 @@ export class AnalyticsService {
         userId,
         storedKey,
         globalKey: globalKey!,
-        onInvalid: () =>
-          Object.assign(
-            new UnauthorizedException('Global Groq API key is also invalid. Contact the administrator.'),
-            { code: ERROR_CODES.INVALID_API_KEY },
+        onInvalid: () => { throw Object.assign(
+          new UnauthorizedException('Global Groq API key is also invalid. Contact the administrator.'),
+          { code: ERROR_CODES.INVALID_API_KEY },
+        ); },
+        onRateLimit: (retryErr) => { throw Object.assign(
+          new HttpException(
+            { error: buildRateLimitMessage(retryErr, false) },
+            HttpStatus.TOO_MANY_REQUESTS,
           ),
-        onRateLimit: (retryErr) =>
-          Object.assign(
-            new HttpException(
-              { error: buildRateLimitMessage(retryErr, false) },
-              HttpStatus.TOO_MANY_REQUESTS,
-            ),
-            { code: ERROR_CODES.LLM_RATE_LIMIT },
-          ),
+          { code: ERROR_CODES.LLM_RATE_LIMIT },
+        ); },
       });
     }
 
@@ -363,19 +361,17 @@ export class AnalyticsService {
         userId,
         storedKey,
         globalKey: globalKey!,
-        onInvalid: () =>
-          Object.assign(
-            new UnauthorizedException('Global Groq API key is invalid. Contact the administrator.'),
-            { code: ERROR_CODES.INVALID_API_KEY },
+        onInvalid: () => { throw Object.assign(
+          new UnauthorizedException('Global Groq API key is invalid. Contact the administrator.'),
+          { code: ERROR_CODES.INVALID_API_KEY },
+        ); },
+        onRateLimit: (retryErr) => { throw Object.assign(
+          new HttpException(
+            { error: buildRateLimitMessage(retryErr ?? err, true) },
+            HttpStatus.TOO_MANY_REQUESTS,
           ),
-        onRateLimit: (retryErr) =>
-          Object.assign(
-            new HttpException(
-              { error: buildRateLimitMessage(retryErr ?? err, true) },
-              HttpStatus.TOO_MANY_REQUESTS,
-            ),
-            { code: ERROR_CODES.LLM_RATE_LIMIT },
-          ),
+          { code: ERROR_CODES.LLM_RATE_LIMIT },
+        ); },
         onOther: (retryErr) => {
           throw retryErr;
         },
