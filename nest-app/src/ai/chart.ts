@@ -391,7 +391,7 @@ const widgetSchema = z.object({
 const dashboardSchema = z.object({
   layout:  z.enum(DASHBOARD_LAYOUTS),
   summary: z.string(),
-  widgets: z.array(widgetSchema).min(1).max(MAX_WIDGETS),
+  widgets: z.array(widgetSchema).min(1),
 });
 
 type LlmWidget    = z.infer<typeof widgetSchema>;
@@ -483,9 +483,7 @@ export async function runChart(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log('chart', `generateObject failed: ${msg}`);
-    // Rethrow rate-limit errors — the caller handles them as real errors
-    if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('429')) throw err;
-    return { layout: 'analytical', title: prompt, summary: 'Chart planning failed.', widgets: [] };
+    throw err;
   }
 
   const valid:   WidgetPlan[] = [];
