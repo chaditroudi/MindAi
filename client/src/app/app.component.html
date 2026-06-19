@@ -592,7 +592,7 @@
       </div>
       <h2 class="key-modal-title">Enter your Groq API key</h2>
       @if (s.keyRejected) {
-        <p class="key-modal-error">That key was rejected by Groq — it may be invalid or expired. Please enter a new one.</p>
+        <p class="key-modal-error">{{ s.keyErrorText || 'That key was rejected — it may be invalid or expired. Please enter a new one.' }}</p>
       }
       <p class="key-modal-desc">
         Get a free key at
