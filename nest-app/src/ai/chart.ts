@@ -88,7 +88,6 @@ interface WidgetPlan {
 
 type Renderer = (plan: WidgetPlan, data: DataRow[], id: string) => unknown;
 
-// ── Utility helpers ───────────────────────────────────────────────────────────
 
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
 const str = (v: unknown): string => (v == null ? '' : String(v));
