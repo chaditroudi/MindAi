@@ -102,6 +102,16 @@ function buildFallbackInquiry(rows: Record<string, unknown>[]): { summary: strin
   return { summary: parts.join(' ') };
 }
 
+function buildFallbackDashboard(prompt: string, rows: Record<string, unknown>[]): DashboardSpec {
+  const inquiry = buildFallbackInquiry(rows);
+  return {
+    layout: 'operational',
+    title: prompt,
+    summary: inquiry.summary,
+    widgets: [],
+  };
+}
+
 function buildFallbackReport(rows: Record<string, unknown>[]): ReportResult {
   const nums = numericFields(rows);
   const cats = categoricalFields(rows, nums);
@@ -286,8 +296,8 @@ export class PipelineService {
       chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey);
     } catch (err) {
       if (isProviderRateLimitError(err)) {
-        this.logger.warn('chart AI rate-limited — falling back to deterministic inquiry summary');
-        return buildFallbackInquiry(rows);
+        this.logger.warn('chart AI rate-limited — falling back to empty dashboard summary');
+        return buildFallbackDashboard(prompt, rows);
       }
       throw err;
     }
