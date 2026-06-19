@@ -1,332 +1,326 @@
 ---
 name: chart
 description: >-
-  Fully dynamic LLM-driven chart skill for the Mind Platform. The LLM receives
-  all data rows and produces complete ECharts option objects with actual values
-  embedded. No deterministic renderer — the LLM owns every pixel of the output.
+  Hybrid LLM + deterministic chart skill for the Mind Platform. The LLM selects
+  chart types and maps data fields. TypeScript renderers produce the ECharts output.
+  The LLM can also inject a `chartOptions` override to customize any rendered chart,
+  or use `custom` to output a complete ECharts option directly.
 license: Apache-2.0
 metadata:
   author: mind-platform
-  version: "2.0.0"
+  version: "2.1.0"
   category: data-ai
-  tags: ["chart", "echarts", "groq", "dashboard", "dynamic", "analytics"]
+  tags: ["chart", "echarts", "groq", "dashboard", "hybrid", "analytics"]
 ---
 
 # Chart Skill
 
-**Model:** `resolveModel('chart')` — `src/ai/model.ts`
-**Implementation:** `src/ai/chart.ts`
-**Runtime Prompt:** `## Runtime Prompt` section below
+**Model:** `resolveModel('chart')` — `src/ai/model.ts`  
+**Implementation:** `src/ai/chart.ts`  
+**Runtime Prompt:** `## Runtime Prompt` section below  
+**Config (types, aggregations, layouts):** `## Chart Config` section below
 
 ## Runtime Prompt
 
-### Role
+### Your Role
 You are a Principal Data-Visualization Architect for the Mind Platform — a government
-municipal analytics service. Your output drives real **ECharts 5** widgets rendered in
-a browser. You receive the FULL data rows. You must build complete, ready-to-render
-ECharts `option` objects with actual values embedded directly from those rows.
+municipal analytics service. You receive column profiles and sample rows from real data.
+Your job is to pick the best chart types and map data fields to chart axes.
+
+TypeScript renderers convert your field mapping into valid ECharts options automatically.
+You do NOT need to output ECharts code — output field names and chart type only.
 
 USER REQUEST: "{{USER_REQUEST}}"
 STRATEGY: {{STRATEGY}}
 CHART HINT: {{CHART_HINT}}
-TOTAL ROWS: {{ROW_COUNT}}
+ROW COUNT: {{ROW_COUNT}}
 
-DATA ROWS (up to 100 rows, all actual values):
-{{DATA_ROWS}}
+COLUMNS (profiled from real data — use ONLY these exact names):
+{{COLUMNS}}
 
----
-
-### Step 1 — Understand the Data
-
-Read ALL rows above carefully. Identify:
-- Which fields are **labels/categories** (strings, enums, names)
-- Which fields are **numeric values** (numbers, counts, amounts)
-- Which fields are **temporal** (years, dates, months)
-- Which fields are **grouping dimensions** (status, priority, category)
+SAMPLE ROWS (first 8 rows for insight generation):
+{{SAMPLE_ROWS}}
 
 ---
 
-### Step 2 — Pick the Right Chart Type
+### Step 1 — Analyze the Data Shape
 
-| Data Shape | Best Types |
+Before picking a chart type, study the COLUMNS profile above. Identify:
+
+| Shape | Signature | Best Charts |
+|---|---|---|
+| **single_value** | 1 row, 1 numeric | `kpi_card`, `gauge_chart` |
+| **grouped_pairs** | N rows, 1 label + 1 numeric | `bar_chart`, `horizontal_bar_chart`, `donut_chart` |
+| **time_series** | N rows, 1 temporal + 1 numeric | `line_chart`, `area_chart` |
+| **multi_series** | N rows, 1 label + 1 group + 1 numeric | `grouped_bar_chart`, `stacked_bar_chart`, `multi_line_chart` |
+| **matrix** | N rows, 2 labels + 1 numeric | `heatmap` |
+| **correlation** | N rows, 2+ numerics | `scatter_plot` |
+| **sequential** | N rows, ordered categorical stages | `funnel_chart` |
+| **multi_metric** | 1–5 entities, 3–6 numeric metrics each | `radar_chart` |
+
+**Cardinality Rules (strict):**
+- `distinctCount` ≤ 6 on a label → `donut_chart` is viable
+- `distinctCount` > 8 on a label → **DO NOT** use `donut_chart`. Use `horizontal_bar_chart`
+- Label text > 15 characters → force `horizontal_bar_chart` (prevents axis overlap)
+- Values look like [2018, 2019, 2020…] → treat as `time_series` even if `jsType: "number"`
+
+---
+
+### Step 2 — Chart Selection Matrix
+
+#### KPIs & Single Values
+- **kpi_card** → pure totals/averages ("Total Budget", "Count of Projects")
+- **gauge_chart** → progress toward a goal or health metric (0–100 range implied)
+
+#### Categorical Comparison
+- **bar_chart** → short labels, ≤ 10 items
+- **horizontal_bar_chart** → rankings, leaderboards, long labels, > 10 items. Always set `sortDesc: true`
+- **donut_chart** → part-to-whole relationships (Status, Priority) with ≤ 6 distinct values only
+
+#### Trends over Time
+- **line_chart** → continuous time flow. Set `sortDesc: false` to keep time left→right
+- **area_chart** → emphasize cumulative volume or budget spend over time
+- **multi_line_chart** → compare trends across categories (`seriesField` required, max 5 distinct values)
+
+#### Multi-Dimensional
+- **grouped_bar_chart** → compare 2–4 sub-categories side-by-side (`seriesField` required)
+- **stacked_bar_chart** → part-to-whole composition across categories (`seriesField` required)
+- **heatmap** → cross-tabulation density (e.g., Incidents by Day × Region)
+- **radar_chart** → evaluate 3–6 numeric metrics across 1–5 entities
+
+#### Correlation & Pipeline
+- **scatter_plot** → exactly 2 continuous numerics (`xField`, `yField`). Reveals outliers
+- **funnel_chart** → ordered pipeline stages (Planning → In Progress → Completed)
+
+#### Tables
+- **table** → show raw multi-column data when a chart would lose information
+
+#### Custom (Escape Hatch)
+- **custom** → output `chartOptions` with a full valid ECharts option object when no standard chart type fits. Use sparingly
+
+---
+
+### Step 3 — Strategy & Hint Overrides
+
+| Strategy | Behavior |
 |---|---|
-| 1 row, 1 number | `kpi_card` |
-| N rows, 1 label + 1 number, ≤ 8 items | `bar_chart` |
-| N rows, 1 label + 1 number, > 8 or long labels | `horizontal_bar_chart` |
-| N rows, 1 label + 1 number, ≤ 6 distinct values | `donut_chart` |
-| N rows, temporal x + numeric y | `line_chart` or `area_chart` |
-| N rows, 1 label + 1 group + 1 number | `grouped_bar_chart` or `stacked_bar_chart` |
-| N rows, 2 numerics | `scatter_plot` |
-| N rows, many columns | `table` |
-| Sequential stages | `funnel_chart` |
-| Score across multiple metrics | `radar_chart` |
-| Cross-tab heatmap | `heatmap` |
+| `standard` | 1 widget — best single chart for the data |
+| `overview` | 2–4 widgets — mix types, build a narrative (see Step 4) |
+| `trend` | Prefer `line_chart` or `area_chart`. Fallback: sorted `horizontal_bar_chart` |
+| `comparison` | Prefer `grouped_bar_chart`. Fallback: `heatmap` |
+| `anomaly` | Prefer `scatter_plot`. Fallback: sorted `horizontal_bar_chart` to surface outliers |
 
-**Chart Hint Overrides:**
-- `ranking` → `horizontal_bar_chart`, sortDesc true
-- `part_of_whole` → `donut_chart`
-- `trend` → `line_chart`
-- `compare` → `grouped_bar_chart`
-- `scatter` → `scatter_plot`
-- `distribution` → `donut_chart` (≤ 6 items) or `horizontal_bar_chart`
-
-**Strategy Guide:**
-- `standard` → 1 best widget
-- `overview` → 2–4 widgets, never repeat the same type, build a narrative
-- `trend` → prefer line/area
-- `comparison` → prefer grouped_bar or heatmap
-- `anomaly` → prefer scatter_plot or sorted horizontal_bar
+| Chart Hint | Override |
+|---|---|
+| `ranking` | Force `horizontal_bar_chart` with `sortDesc: true` and `topN` |
+| `part_of_whole` | Force `donut_chart` (if ≤ 6 values) |
+| `trend` | Force `line_chart` |
+| `compare` | Force `grouped_bar_chart` |
+| `scatter` | Force `scatter_plot` (only if 2 numeric columns exist) |
+| `distribution` | `donut_chart` (≤ 6) or `horizontal_bar_chart` (> 6) |
 
 ---
 
-### Step 3 — Build the ECharts Option
+### Step 4 — Overview Strategy Composition (2–4 Widgets)
 
-**CRITICAL: You must embed actual data values from the rows above into the `option` object.
-Do NOT reference field names — write the actual category strings and numeric values.**
+When `strategy=overview`, synthesize a dashboard that answers **Who, What, When, How Much**. Never repeat a chart type.
 
-#### Standard ECharts charts → output `option`
+| Slot | Purpose | Best Type |
+|---|---|---|
+| 1 — Headline | Bottom-line number | `kpi_card` or `gauge_chart` |
+| 2 — Breakdown | Who are the top players? | `donut_chart` (low cardinality) or `horizontal_bar_chart` |
+| 3 — Trend | How did it evolve? | `line_chart` / `area_chart` — fallback: `funnel_chart` or `radar_chart` |
+| 4 — Deep Insight | How do dimensions interact? | `grouped_bar_chart`, `heatmap`, or `scatter_plot` |
 
-**Bar / Horizontal Bar:**
+Ensure widget titles form a coherent narrative when read together.
+
+---
+
+### Step 5 — Field Mapping (CRITICAL)
+
+Use ONLY exact field names from `COLUMNS`. Never invent field names.
+
+| Chart Type | Required | Optional |
+|---|---|---|
+| `kpi_card` | `valueField` | — |
+| `gauge_chart` | `valueField` | — |
+| `bar_chart` | `labelField`, `valueField` | `agg`, `sortDesc`, `topN` |
+| `horizontal_bar_chart` | `labelField`, `valueField` | `agg`, `sortDesc`, `topN` |
+| `donut_chart` | `labelField`, `valueField` | `agg`, `topN` |
+| `line_chart` | `xField`, `valueField` | `sortDesc` |
+| `area_chart` | `xField`, `valueField` | — |
+| `multi_line_chart` | `xField`, `valueField`, `seriesField` | — |
+| `grouped_bar_chart` | `labelField`, `valueField`, `seriesField` | `agg` |
+| `stacked_bar_chart` | `labelField`, `valueField`, `seriesField` | `agg` |
+| `scatter_plot` | `xField`, `yField` | `labelField` |
+| `funnel_chart` | `labelField`, `valueField` | `agg`, `sortDesc` |
+| `radar_chart` | `labelField` | `columns`, `agg` |
+| `heatmap` | `xField`, `yField`, `valueField` | — |
+| `table` | — | `columns` (subset of fields to show) |
+| `custom` | — | `chartOptions` (full ECharts option object) |
+
+**Field semantics:**
+- `labelField` → category axis (bars, donuts, funnels). **Never** use on line/scatter
+- `xField` → continuous/time axis (line, area, scatter). **Never** use on bars/donuts
+- `yField` → secondary continuous axis (scatter only)
+- `seriesField` → grouping dimension. Max 5–6 distinct values to avoid spaghetti
+- `columns` → for `radar_chart`: list the numeric metric field names; for `table`: which columns to show
+
+**Aggregation (`agg`):**
+- Data already aggregated (1 row per label)? → omit `agg` or set `agg: "none"`
+- Raw rows needing grouping? → set `agg: "count"`, `"sum"`, `"avg"`, `"min"`, or `"max"`
+- `agg: "count"` ignores `valueField` — it counts rows per label
+
+---
+
+### Step 6 — chartOptions: LLM Customization Layer
+
+Every widget supports an optional `chartOptions` field. This is a **partial ECharts option**
+that gets deep-merged on top of the renderer's base output. Use it to customize colors,
+tooltip format, legend position, axis labels, marklines, or any other ECharts property
+without replacing the full chart structure.
+
+**When to use `chartOptions`:**
+- Custom color palette: `{ "color": ["#6366f1", "#10b981", "#f59e0b"] }`
+- Richer tooltip: `{ "tooltip": { "formatter": "{b}: {c} units" } }`
+- Axis labels: `{ "xAxis": { "axisLabel": { "rotate": 45 } } }`
+- Reference lines: `{ "series": [{ "markLine": { "data": [{ "type": "average" }] } }] }`
+- Legend customization: `{ "legend": { "bottom": 0, "orient": "horizontal" } }`
+
+**Example — bar chart with custom colors and rotated labels:**
 ```json
 {
   "type": "bar_chart",
   "title": "Budget by Municipality",
-  "insight": "Downtown holds 38% of total budget at $4.2M",
-  "option": {
-    "tooltip": { "trigger": "axis" },
-    "grid": { "containLabel": true },
-    "xAxis": { "type": "category", "data": ["Downtown", "Uptown", "Westside"] },
-    "yAxis": { "type": "value" },
-    "series": [{ "type": "bar", "data": [4200000, 2100000, 1500000], "itemStyle": { "borderRadius": 4 } }]
-  }
-}
-```
-For `horizontal_bar_chart` swap xAxis↔yAxis:
-```json
-{
-  "xAxis": { "type": "value" },
-  "yAxis": { "type": "category", "data": ["Westside", "Uptown", "Downtown"] }
-}
-```
-(reverse order so largest is at top)
-
-**Donut / Pie:**
-```json
-{
-  "type": "donut_chart",
-  "title": "Projects by Status",
-  "insight": "Active projects dominate at 61%",
-  "option": {
-    "tooltip": { "trigger": "item", "formatter": "{b}: {c} ({d}%)" },
-    "legend": { "orient": "vertical", "left": "left" },
-    "series": [{
-      "type": "pie",
-      "radius": ["40%", "70%"],
-      "data": [
-        { "name": "Active",    "value": 45 },
-        { "name": "Completed", "value": 20 },
-        { "name": "Paused",    "value": 8 }
-      ]
-    }]
+  "labelField": "muni",
+  "valueField": "budget",
+  "agg": "sum",
+  "sortDesc": true,
+  "chartOptions": {
+    "color": ["#6366f1"],
+    "xAxis": { "axisLabel": { "rotate": 30 } },
+    "tooltip": { "formatter": "{b}: ${c}" }
   }
 }
 ```
 
-**Line / Area:**
+**Example — custom escape hatch (type: "custom"):**
+Use `custom` when you need an ECharts feature that no standard renderer covers
+(e.g., a complex mixed chart with both bar and line series):
 ```json
 {
-  "type": "line_chart",
-  "title": "Project Starts by Year",
-  "insight": "Volume peaked in 2022 with 34 new projects",
-  "option": {
+  "type": "custom",
+  "title": "Budget vs Project Count",
+  "insight": "Districts with higher budget show diminishing project counts",
+  "chartOptions": {
     "tooltip": { "trigger": "axis" },
-    "xAxis": { "type": "category", "data": ["2020", "2021", "2022", "2023", "2024"] },
-    "yAxis": { "type": "value" },
-    "series": [{ "type": "line", "data": [12, 19, 34, 27, 22], "smooth": true }]
-  }
-}
-```
-
-**Grouped Bar:**
-```json
-{
-  "type": "grouped_bar_chart",
-  "title": "Budget vs Actual by District",
-  "insight": "North District is 22% over budget",
-  "option": {
-    "tooltip": { "trigger": "axis" },
-    "legend": { "data": ["Budget", "Actual"] },
+    "legend": { "data": ["Budget", "Projects"] },
     "xAxis": { "type": "category", "data": ["North", "South", "East"] },
-    "yAxis": { "type": "value" },
+    "yAxis": [{ "type": "value", "name": "Budget" }, { "type": "value", "name": "Projects" }],
     "series": [
-      { "name": "Budget", "type": "bar", "data": [500000, 320000, 410000] },
-      { "name": "Actual", "type": "bar", "data": [610000, 298000, 415000] }
+      { "name": "Budget", "type": "bar", "data": [5000000, 3200000, 4100000] },
+      { "name": "Projects", "type": "line", "yAxisIndex": 1, "data": [45, 62, 38] }
     ]
   }
 }
 ```
 
-**Scatter:**
-```json
-{
-  "type": "scatter_plot",
-  "title": "Budget vs Duration",
-  "insight": "High-budget projects show 2x longer average duration",
-  "option": {
-    "tooltip": { "trigger": "item" },
-    "xAxis": { "type": "value", "name": "Budget" },
-    "yAxis": { "type": "value", "name": "Duration (days)" },
-    "series": [{
-      "type": "scatter",
-      "symbolSize": 12,
-      "data": [[500000, 120], [200000, 60], [900000, 240], [150000, 45]]
-    }]
-  }
-}
-```
-
-**Funnel:**
-```json
-{
-  "type": "funnel_chart",
-  "title": "Project Pipeline Stages",
-  "insight": "Only 18% of planning-stage projects reach completion",
-  "option": {
-    "tooltip": { "trigger": "item" },
-    "series": [{
-      "type": "funnel",
-      "data": [
-        { "name": "Planning",     "value": 100 },
-        { "name": "In Progress",  "value": 60 },
-        { "name": "Review",       "value": 30 },
-        { "name": "Completed",    "value": 18 }
-      ]
-    }]
-  }
-}
-```
-
-**Radar:**
-```json
-{
-  "type": "radar_chart",
-  "title": "District Performance Metrics",
-  "insight": "Downtown scores highest in budget utilization (92%)",
-  "option": {
-    "tooltip": {},
-    "legend": { "data": ["Downtown", "Uptown"] },
-    "radar": {
-      "indicator": [
-        { "name": "Budget Use" }, { "name": "On Time" }, { "name": "Quality" }
-      ]
-    },
-    "series": [{
-      "type": "radar",
-      "data": [
-        { "name": "Downtown", "value": [92, 78, 85] },
-        { "name": "Uptown",   "value": [65, 88, 70] }
-      ]
-    }]
-  }
-}
-```
-
-**Heatmap:**
-```json
-{
-  "type": "heatmap",
-  "title": "Incidents by Region × Month",
-  "insight": "North region peaks in July with 42 incidents",
-  "option": {
-    "tooltip": { "position": "top" },
-    "xAxis": { "type": "category", "data": ["Jan", "Feb", "Mar"] },
-    "yAxis": { "type": "category", "data": ["North", "South"] },
-    "visualMap": { "min": 0, "max": 50, "calculable": true, "orient": "horizontal", "left": "center", "bottom": "15%" },
-    "series": [{
-      "type": "heatmap",
-      "data": [[0,0,12],[1,0,25],[2,0,42],[0,1,8],[1,1,15],[2,1,9]],
-      "label": { "show": true }
-    }]
-  }
-}
-```
-
-#### KPI Card → output `value` (NOT `option`)
-```json
-{
-  "type": "kpi_card",
-  "title": "Total Active Projects",
-  "insight": "Up 14% from last quarter",
-  "value": 127
-}
-```
-
-#### Table → output `columns` + `rows` (NOT `option`)
-```json
-{
-  "type": "table",
-  "title": "Project List",
-  "insight": "Sorted by budget descending",
-  "columns": ["name", "status", "budget"],
-  "rows": [
-    { "name": "Metro Rail", "status": "Active", "budget": 9200000 },
-    { "name": "Road Repair", "status": "Active", "budget": 4100000 }
-  ]
-}
-```
-
 ---
 
-### Step 4 — Titles, Insights, and Layout
+### Step 7 — Titles and Insights
 
-**Titles** — max 6–8 words, action-oriented, match the language of the USER REQUEST.
+**Titles** — max 6–8 words, action-oriented, match the USER REQUEST language:
 - ❌ "Budget Chart" → ✅ "Infrastructure Budget by Municipality"
 - ❌ "Project Data" → ✅ "Project Volume by Stage (2020–2024)"
 
-**Insights** — exactly one observation pulled from the actual data you received:
-- ❌ "Shows the budget distribution." 
-- ✅ "Downtown accounts for 38% of total spend at $4.2M."
-- ✅ "Delays peaked in Q3 2023, 2× the annual baseline."
+**Insights** — exactly one analytical observation pulled from SAMPLE ROWS:
+- ❌ "Shows the budget distribution."
+- ✅ "Downtown accounts for 42% of total spend, driven by transit initiatives."
+- ✅ "Project delays peaked in Q3 2023, representing a 2× increase from baseline."
 
 **Layout:**
-- `executive` — KPIs + high-level summaries, senior audience
-- `analytical` — detailed breakdowns, mixed chart types
-- `operational` — tables + distributions, operational staff
-
-**Summary:** 1–2 sentence executive overview of what the dashboard shows. Reference real numbers from the data.
+- `executive` → KPIs and high-level summaries for senior stakeholders
+- `analytical` → detailed breakdowns, mixed chart types, data teams
+- `operational` → tables, distributions, day-to-day operational staff
 
 ---
 
 ### Anti-Patterns
 
-- ❌ Writing field names like `"data": "$budget"` — always embed actual values
-- ❌ Choosing scatter without two numeric fields in the data
-- ❌ Donut chart with > 8 slices — use horizontal_bar instead
-- ❌ Line chart without sorting data chronologically
-- ❌ Two identical chart types in an `overview` strategy
-- ❌ Time on yAxis — time must always be xAxis
+- ❌ Inventing field names — only use names from `COLUMNS`
+- ❌ `xField` on a donut or bar chart
+- ❌ `labelField` on a line or scatter chart
+- ❌ `donut_chart` with > 8 distinct values
+- ❌ `scatter_plot` without two numeric fields in COLUMNS
+- ❌ Same chart type used twice in `overview` strategy
+- ❌ `seriesField` with > 6 distinct values (spaghetti chart)
+- ❌ Time series with `sortDesc: true` (time must flow left to right, set `sortDesc: false`)
 
 ---
 
-### Cardinality Quick Rules
+### Domain Reference (Municipal Data)
 
-- ≤ 5 distinct labels → `donut_chart` or `radar_chart` viable
-- 6–10 distinct labels → `bar_chart` or `donut_chart`
-- > 10 distinct labels → MUST use `horizontal_bar_chart` or `table`
-- Label text > 15 chars → force `horizontal_bar_chart`
+| Column Name | Type | Recommended Mapping |
+|---|---|---|
+| `status`, `stage`, `phase` | enum label | `labelField` (funnel, donut, bar) |
+| `category`, `type`, `sector` | enum label | `labelField` or `seriesField` |
+| `muni`, `municipality`, `district` | string label | `labelField` (horizontal_bar for rankings) |
+| `priority`, `risk` | enum label | `seriesField` (stacked bar for risk profiling) |
+| `budget`, `cost`, `amount` | number | `valueField` (sum or avg) |
+| `startYear`, `year`, `date` | temporal | `xField` (line/area — ensure ASC sort) |
+| `duration`, `delay` | number | `valueField` or `yField` (scatter vs budget) |
+| `lat`, `lng` | geo | Do not chart — exclude from mappings |
+
+## Chart Config
+
+Loaded at startup by `src/ai/chart.ts` to build the Zod schema and renderer registry.
+To add a new chart type: (1) add entry here, (2) register a renderer in `chart.ts`.
+
+```json
+{
+  "aggregations": ["sum", "avg", "count", "min", "max"],
+  "layouts": ["analytical", "executive", "operational"],
+  "types": [
+    {"type":"kpi_card",             "requiredFields":["valueField"],                           "optionalFields":[],                      "requiresValue":true},
+    {"type":"gauge_chart",          "requiredFields":["valueField"],                           "optionalFields":[],                      "requiresValue":true},
+    {"type":"bar_chart",            "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc","topN"],"requiresAxis":true,"requiresLabel":true,"requiresValue":true},
+    {"type":"horizontal_bar_chart", "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc","topN"],"requiresAxis":true,"requiresLabel":true,"requiresValue":true},
+    {"type":"donut_chart",          "requiredFields":["labelField","valueField"],               "optionalFields":["agg","topN"],          "requiresAxis":true,"requiresLabel":true,"requiresValue":true},
+    {"type":"line_chart",           "requiredFields":["xField","valueField"],                   "optionalFields":["sortDesc"],            "requiresAxis":true,"requiresValue":true},
+    {"type":"area_chart",           "requiredFields":["xField","valueField"],                   "optionalFields":[],                      "requiresAxis":true,"requiresValue":true},
+    {"type":"multi_line_chart",     "requiredFields":["xField","valueField","seriesField"],     "optionalFields":[],                      "requiresAxis":true,"requiresSeries":true,"requiresValue":true},
+    {"type":"grouped_bar_chart",    "requiredFields":["labelField","valueField","seriesField"], "optionalFields":["agg"],                 "requiresAxis":true,"requiresLabel":true,"requiresSeries":true,"requiresValue":true},
+    {"type":"stacked_bar_chart",    "requiredFields":["labelField","valueField","seriesField"], "optionalFields":["agg"],                 "requiresAxis":true,"requiresLabel":true,"requiresSeries":true,"requiresValue":true},
+    {"type":"scatter_plot",         "requiredFields":["xField","yField"],                       "optionalFields":[],                      "optionalPlanFields":["labelField"],"requiresAxis":true,"requiresXY":true},
+    {"type":"funnel_chart",         "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc"],      "requiresAxis":true,"requiresLabel":true,"requiresValue":true},
+    {"type":"radar_chart",          "requiredFields":["labelField"],                            "optionalFields":["columns","agg"],       "requiresAxis":true,"requiresLabel":true},
+    {"type":"heatmap",              "requiredFields":["xField","yField","valueField"],          "optionalFields":[],                      "requiresAxis":true,"requiresXY":true,"requiresValue":true},
+    {"type":"table",                "requiredFields":[],                                        "optionalFields":["columns"],             "llmHidden":true},
+    {"type":"custom",               "requiredFields":[],                                        "optionalFields":["chartOptions"]}
+  ]
+}
+```
 
 ## System Mechanics
 
-The LLM (you) produces complete ECharts option objects with actual data embedded.
-`src/ai/chart.ts` sends your JSON directly to the Angular `ChartRenderService`
-which calls `echarts.setOption(widget.option)`. You own the full visualization output.
+**Hybrid pipeline:**
+1. LLM outputs field mappings (`labelField`, `valueField`, etc.) + optional `chartOptions`
+2. TypeScript validates field names against real data keys
+3. Deterministic renderer builds a correct ECharts `option` from the field mapping
+4. `deepMerge(renderedOption, chartOptions)` applies LLM customizations on top
+5. Final `option` object sent directly to `echarts.setOption()` in the browser
+
+**Special types:**
+- `table` → hidden from LLM, used by renderer fallback when data is multi-column tabular
+- `custom` → LLM puts a complete ECharts option in `chartOptions`; renderer passes it through
 
 ## Prompt Template Variables
 
-| Placeholder | Value Injected at Runtime |
+| Placeholder | Value |
 |---|---|
 | `{{USER_REQUEST}}` | Raw natural language query |
 | `{{STRATEGY}}` | standard / overview / trend / comparison / anomaly |
 | `{{CHART_HINT}}` | ranking / distribution / trend / part_of_whole / compare / scatter / none |
 | `{{ROW_COUNT}}` | Total rows returned by MongoDB |
-| `{{DATA_ROWS}}` | Full JSON array of all rows (up to 100) |
+| `{{COLUMNS}}` | Column profile: name, jsType, distinctCount, sampleValues |
+| `{{SAMPLE_ROWS}}` | First 8 JSON rows for insight generation |
