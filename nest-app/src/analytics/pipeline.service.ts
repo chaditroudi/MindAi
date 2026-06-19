@@ -62,7 +62,7 @@ export class PipelineService {
     apiKey?: string,
   ): Promise<AggregationResult> {
     const sources = getSources();
-    const t0      = Date.now();
+    const dateNow      = Date.now();
 
     if (!context.length) {
       const cached = await this.cache.getCached<AggregationResult>(intent, prompt);
@@ -81,7 +81,7 @@ export class PipelineService {
     if (!resolved) return { plan, rows: [] };
 
     const rows       = await this.runAggregation(resolved.collection, plan.pipeline!);
-    const durationMs = Date.now() - t0;
+    const durationMs = Date.now() - dateNow;
     this.logger.log(`result | collection: ${resolved.collection} | rows: ${rows.length}`);
 
     this.flush(intent, prompt, plan, resolved.collection, rows, durationMs);
