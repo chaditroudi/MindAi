@@ -26,128 +26,6 @@ export interface ReportResult {
 const FORBIDDEN_STAGES = new Set(['$function', '$merge', '$out', '$where', '$eval']);
 const DASHBOARD_FULL_INTENT = 'dashboard:full';
 
-function isProviderRateLimitError(err: unknown): boolean {
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  const code = (err as { statusCode?: number; status?: number }).statusCode
-    ?? (err as { status?: number }).status;
-
-  if (code === 429) return true;
-
-  return (
-    msg.includes('429') ||
-    msg.includes('rate limit') ||
-    msg.includes('too many requests') ||
-    msg.includes('tokens per day') ||
-    msg.includes('tpm') ||
-    msg.includes('rpm') ||
-    msg.includes('service tier') ||
-    msg.includes('quota')
-  );
-}
-
-function numericFields(rows: Record<string, unknown>[]): string[] {
-  const keys = Object.keys(rows[0] ?? {});
-  return keys.filter(key =>
-    rows.slice(0, 20).some(row => row[key] != null) &&
-    rows.slice(0, 20).every(row => row[key] == null || typeof row[key] === 'number'),
-  );
-}
-
-function categoricalFields(rows: Record<string, unknown>[], nums: string[]): string[] {
-  return Object.keys(rows[0] ?? {}).filter(key => !nums.includes(key));
-}
-
-function formatNumber(value: number): string {
-  return Number.isInteger(value)
-    ? value.toLocaleString()
-    : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-
-function summarizeTopCategories(rows: Record<string, unknown>[], field: string, limit = 3): string {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    const label = row[field] == null ? '' : String(row[field]).trim();
-    if (!label) continue;
-    counts.set(label, (counts.get(label) ?? 0) + 1);
-  }
-
-  const top = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit);
-
-  if (!top.length) return '';
-
-  return top
-    .map(([label, count]) => `${label} (${formatNumber(count)})`)
-    .join(', ');
-}
-
-function buildFallbackInquiry(rows: Record<string, unknown>[]): { summary: string } {
-  const nums = numericFields(rows);
-  const cats = categoricalFields(rows, nums);
-  const parts: string[] = [`${formatNumber(rows.length)} record(s) matched the request.`];
-
-  if (cats.length) {
-    const top = summarizeTopCategories(rows, cats[0]);
-    if (top) parts.push(`Top ${cats[0]} values: ${top}.`);
-  }
-
-  if (nums.length) {
-    const field = nums[0];
-    const total = rows.reduce((sum, row) => sum + (typeof row[field] === 'number' ? row[field] : 0), 0);
-    parts.push(`Total ${field}: ${formatNumber(total)}.`);
-  }
-
-  parts.push('This concise answer was generated without the AI writer because the provider is temporarily rate-limited.');
-  return { summary: parts.join(' ') };
-}
-
-function buildFallbackDashboard(prompt: string, rows: Record<string, unknown>[]): DashboardSpec {
-  const inquiry = buildFallbackInquiry(rows);
-  return {
-    layout: 'operational',
-    title: prompt,
-    summary: inquiry.summary,
-    widgets: [],
-  };
-}
-
-function buildFallbackReport(rows: Record<string, unknown>[]): ReportResult {
-  const nums = numericFields(rows);
-  const cats = categoricalFields(rows, nums);
-
-  const overview = `${formatNumber(rows.length)} record(s) matched the request. This fallback report was generated because the AI writer is temporarily rate-limited.`;
-
-  const findings: string[] = [];
-  if (cats.length) {
-    const top = summarizeTopCategories(rows, cats[0]);
-    if (top) findings.push(`Top ${cats[0]} values are ${top}.`);
-  }
-  if (nums.length) {
-    const field = nums[0];
-    const total = rows.reduce((sum, row) => sum + (typeof row[field] === 'number' ? row[field] : 0), 0);
-    const average = total / rows.length;
-    findings.push(`Across all returned rows, total ${field} is ${formatNumber(total)} and the average is ${formatNumber(average)}.`);
-  }
-  if (nums.length > 1) {
-    const field = nums[1];
-    const max = Math.max(...rows.map(row => typeof row[field] === 'number' ? row[field] : Number.NEGATIVE_INFINITY));
-    if (Number.isFinite(max)) findings.push(`The highest observed ${field} is ${formatNumber(max)}.`);
-  }
-
-  const breakdown = cats.length
-    ? `The returned dataset can be grouped most clearly by ${cats[0]}. ${summarizeTopCategories(rows, cats[0], 5) || 'No non-empty category values were found.'}`
-    : `The returned dataset is primarily numeric, with fields such as ${nums.slice(0, 4).join(', ') || 'none detected'}.`;
-
-  return {
-    reportSections: [
-      { heading: 'Overview', body: overview },
-      { heading: 'Key Findings', body: findings.join(' ') || 'No stable categorical or numeric patterns could be derived from the returned rows.' },
-      { heading: 'Breakdown', body: breakdown },
-    ],
-  };
-}
-
 @Injectable()
 export class PipelineService {
   private readonly logger = new Logger(PipelineService.name);
@@ -291,16 +169,7 @@ export class PipelineService {
       s => s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
     );
 
-    let chart: DashboardSpec;
-    try {
-      chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey);
-    } catch (err) {
-      if (isProviderRateLimitError(err)) {
-        this.logger.warn('chart AI rate-limited — falling back to empty dashboard summary');
-        return buildFallbackDashboard(prompt, rows);
-      }
-      throw err;
-    }
+    const chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey);
 
     if (chart.widgets.length) {
       // Persist to chart_results (fire-and-forget)
@@ -338,35 +207,14 @@ export class PipelineService {
         s => s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
       );
       const [reportResult, chartResult] = await Promise.all([
-        runReportSkill({ rows, prompt, withChart: true, apiKey })
-          .catch(err => {
-            if (isProviderRateLimitError(err)) {
-              this.logger.warn('writer AI rate-limited — returning deterministic fallback report');
-              return buildFallbackReport(rows);
-            }
-            throw err;
-          }),
-        runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
-          .catch(err => {
-            if (isProviderRateLimitError(err)) {
-              this.logger.warn('chart AI rate-limited during report generation — omitting chart');
-              return { layout: 'analytical' as const, title: prompt, summary: '', widgets: [] };
-            }
-            throw err;
-          }),
+        runReportSkill({ rows, prompt, withChart: true, apiKey }),
+        runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey),
       ]);
       this.logger.log(`report done (with chart) | sections: ${reportResult.reportSections.length}`);
       return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
     }
 
-    const result = await runReportSkill({ rows, prompt, apiKey })
-      .catch(err => {
-        if (isProviderRateLimitError(err)) {
-          this.logger.warn('writer AI rate-limited — returning deterministic fallback report');
-          return buildFallbackReport(rows);
-        }
-        throw err;
-      });
+    const result = await runReportSkill({ rows, prompt, apiKey });
     this.logger.log(`report done | sections: ${result.reportSections.length}`);
     return result;
   }
@@ -386,14 +234,7 @@ export class PipelineService {
     }
 
     this.logger.log(`inquiry | rows: ${rows.length}`);
-    const result = await runInquirySkill({ rows, prompt, apiKey })
-      .catch(err => {
-        if (isProviderRateLimitError(err)) {
-          this.logger.warn('writer AI rate-limited — returning deterministic fallback inquiry');
-          return buildFallbackInquiry(rows);
-        }
-        throw err;
-      });
+    const result = await runInquirySkill({ rows, prompt, apiKey });
     this.logger.log('inquiry done');
     return result;
   }
