@@ -369,7 +369,7 @@ function renderWidget(plan: WidgetPlan, rows: DataRow[], keys: Set<string>, id: 
 }
 
 const MAX_WIDGETS    = Number(process.env['CHART_MAX_WIDGETS'] ?? 3);
-const MAX_TOKENS     = Number(process.env['CHART_MAX_TOKENS']  ?? 500);
+const MAX_TOKENS     = Number(process.env['CHART_MAX_TOKENS']  ?? 1000);
 const LLM_CHART_TYPES = getLlmChartTypes();
 
 const widgetSchema = z.object({

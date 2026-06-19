@@ -34,8 +34,7 @@ export async function executeReport(
     );
     const [reportResult, chartResult] = await Promise.all([
       runReportSkill({ rows, prompt, withChart: true, apiKey }),
-      runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
-        .catch(() => ({ layout: 'analytical' as const, title: prompt, summary: '', widgets: [] })),
+      runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey),
     ]);
     log('report', `done (with chart) | sections: ${reportResult.reportSections.length}`);
     return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };

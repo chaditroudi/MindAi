@@ -33,8 +33,7 @@ export async function executeDashboard(
   const source = getSources().find(s =>
     s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
   );
-  const chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
-    .catch((): DashboardSpec => ({ layout: 'analytical', title: prompt, summary: 'Chart could not be generated.', widgets: [] }));
+  const chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey);
 
   if (chart.widgets.length && context.length === 0) {
     setCached(FULL_CACHE_INTENT, prompt, chart).catch(() => undefined);
