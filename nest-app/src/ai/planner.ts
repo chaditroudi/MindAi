@@ -9,6 +9,9 @@ import type { DataSource, TaskPlan, IntentKind } from '../types';
 
 const MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
 
+// The planner asks the LLM for a typed "task plan" that the rest of the
+// pipeline can execute. The schema changes slightly by intent so dashboards
+// can require chart metadata while reports can request charts optionally.
 function buildPlanSchema(intent: IntentKind) {
   const base = z.object({
     needsData: z.boolean(),
@@ -53,6 +56,8 @@ export async function runSupervisorPlan({
   const start = Date.now();
   log('planner', `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length} | prompt: "${prompt}"`);
 
+  // We force a JSON-shaped response so downstream code can treat the model as
+  // a planner that emits structured instructions instead of free-form text.
   const { object } = await generateObject({
     model:       resolveModel('supervisor', apiKey),
     abortSignal: freshSignal('supervisor'),
@@ -75,6 +80,8 @@ export async function runSupervisorPlan({
   return finalizeTaskPlan({ plan: object as TaskPlan, intent, availableSources: sources });
 }
 
+// The LLM may return a fuzzy source identifier, so we map it back to the
+// canonical source name from the configured data sources before execution.
 function finalizeTaskPlan({
   plan,
   intent,
@@ -99,6 +106,8 @@ function finalizeTaskPlan({
   };
 }
 
+// Skills are the execution capabilities the next stage should activate based
+// on the plan's data needs and the user-facing intent.
 function deriveExecutionSkills(
   plan:   Pick<TaskPlan, 'needsData' | 'wantChart'>,
   intent: IntentKind,
