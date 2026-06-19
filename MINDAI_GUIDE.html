@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindAI — Developer Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --primary: #6366f1;
+    --primary-light: #e0e7ff;
+    --accent: #0ea5e9;
+    --green: #10b981;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --bg-code: #f3f4f6;
+    --bg-section: #f8fafc;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text);
+    background: #fff;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  /* ── Cover Page ─────────────────────────────────────── */
+  .cover {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 70%, #6366f1 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 40px;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .cover-logo {
+    width: 80px; height: 80px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; margin-bottom: 32px;
+    border: 1px solid rgba(255,255,255,0.2);
+    position: relative;
+  }
+  .cover h1 {
+    font-size: 52px; font-weight: 700; color: #fff;
+    letter-spacing: -1.5px; margin-bottom: 12px; position: relative;
+  }
+  .cover .subtitle {
+    font-size: 20px; color: rgba(255,255,255,0.7);
+    font-weight: 300; margin-bottom: 48px; position: relative;
+  }
+  .cover-badges {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    justify-content: center; position: relative;
+  }
+  .cover-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.9);
+    padding: 6px 16px; border-radius: 100px;
+    font-size: 12px; font-weight: 500;
+  }
+  .cover-meta {
+    position: absolute; bottom: 40px;
+    color: rgba(255,255,255,0.4); font-size: 11px;
+    position: relative; margin-top: 60px;
+  }
+
+  /* ── Layout ──────────────────────────────────────────── */
+  .page { max-width: 900px; margin: 0 auto; padding: 0 48px; }
+
+  /* ── TOC ─────────────────────────────────────────────── */
+  .toc {
+    padding: 60px 48px;
+    max-width: 900px; margin: 0 auto;
+    page-break-after: always;
+  }
+  .toc h2 { font-size: 28px; font-weight: 700; margin-bottom: 32px; color: var(--text); }
+  .toc-section { margin-bottom: 6px; }
+  .toc-item { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; }
+  .toc-num { color: var(--primary); font-weight: 600; font-size: 12px; width: 24px; flex-shrink: 0; }
+  .toc-title { color: var(--text); font-weight: 500; flex: 1; }
+  .toc-dots { flex: 1; border-bottom: 1px dotted var(--border); margin: 0 8px; }
+  .toc-page { color: var(--muted); font-size: 11px; }
+  .toc-sub { padding-left: 24px; }
+  .toc-sub .toc-num { color: var(--muted); font-weight: 400; }
+  .toc-sub .toc-title { font-weight: 400; font-size: 12px; }
+
+  /* ── Chapters ────────────────────────────────────────── */
+  .chapter {
+    padding: 56px 48px 40px;
+    max-width: 900px; margin: 0 auto;
+    page-break-before: always;
+  }
+  .chapter-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 40px; padding-bottom: 24px;
+    border-bottom: 2px solid var(--primary-light);
+  }
+  .chapter-num {
+    background: var(--primary); color: #fff;
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; flex-shrink: 0;
+  }
+  .chapter-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .chapter-desc { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  h2 { font-size: 18px; font-weight: 600; margin: 36px 0 14px; color: var(--text); }
+  h3 { font-size: 14px; font-weight: 600; margin: 24px 0 10px; color: var(--text); }
+  h4 { font-size: 13px; font-weight: 600; margin: 18px 0 8px; color: var(--primary); }
+  p { margin-bottom: 12px; }
+
+  /* ── Code ────────────────────────────────────────────── */
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    background: var(--bg-code); padding: 1px 5px;
+    border-radius: 4px; font-size: 11.5px; color: #b91c1c;
+  }
+  pre {
+    background: #1e1b4b; border-radius: 10px;
+    padding: 18px 20px; overflow-x: auto;
+    margin: 14px 0; border: 1px solid #312e81;
+  }
+  pre code {
+    background: none; color: #c4b5fd; font-size: 11px;
+    padding: 0; line-height: 1.7;
+  }
+  .code-comment { color: #6b7280; }
+  .code-key { color: #93c5fd; }
+  .code-str { color: #86efac; }
+  .code-num { color: #fca5a5; }
+  .code-kw { color: #f0abfc; }
+  .code-fn { color: #fde68a; }
+
+  /* ── Tables ──────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 12px; }
+  th {
+    background: var(--primary); color: #fff;
+    padding: 9px 12px; text-align: left; font-weight: 600;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--bg-section); }
+  tr:hover td { background: var(--primary-light); }
+
+  /* ── Callouts ────────────────────────────────────────── */
+  .callout {
+    border-radius: 8px; padding: 14px 16px;
+    margin: 14px 0; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .callout-info { background: #eff6ff; border-left: 4px solid #3b82f6; }
+  .callout-warn { background: #fffbeb; border-left: 4px solid #f59e0b; }
+  .callout-tip  { background: #f0fdf4; border-left: 4px solid #10b981; }
+  .callout-icon { font-size: 16px; flex-shrink: 0; line-height: 1.5; }
+  .callout-body { font-size: 12px; }
+  .callout-body strong { display: block; margin-bottom: 3px; }
+
+  /* ── Badges ──────────────────────────────────────────── */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 100px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-blue   { background: #dbeafe; color: #1e40af; }
+  .badge-green  { background: #dcfce7; color: #166534; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; }
+  .badge-orange { background: #ffedd5; color: #9a3412; }
+  .badge-gray   { background: #f3f4f6; color: #4b5563; }
+  .badge-red    { background: #fee2e2; color: #991b1b; }
+
+  /* ── Flow Steps ──────────────────────────────────────── */
+  .flow { margin: 18px 0; }
+  .flow-step {
+    display: flex; gap: 16px; margin-bottom: 8px;
+    align-items: flex-start;
+  }
+  .flow-num {
+    background: var(--primary); color: #fff;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .flow-arrow {
+    color: var(--muted); font-size: 11px;
+    text-align: center; margin: 2px 0 2px 28px;
+  }
+  .flow-body { font-size: 12px; }
+  .flow-body strong { color: var(--primary); }
+
+  /* ── File Path ───────────────────────────────────────── */
+  .filepath {
+    background: #f8fafc; border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #374151; display: inline-block; margin-bottom: 8px;
+  }
+
+  /* ── Cards ───────────────────────────────────────────── */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+  .card {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card-icon { font-size: 20px; margin-bottom: 8px; }
+  .card-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .card-desc { font-size: 11.5px; color: var(--muted); }
+
+  /* ── Architecture Diagram ────────────────────────────── */
+  .arch {
+    background: #f8fafc; border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin: 18px 0;
+    text-align: center; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; line-height: 2.2; color: #374151;
+  }
+  .arch-box {
+    display: inline-block; background: var(--primary);
+    color: white; padding: 6px 16px; border-radius: 6px;
+    font-weight: 600; margin: 2px;
+  }
+  .arch-box.green  { background: var(--green); }
+  .arch-box.orange { background: var(--orange); }
+  .arch-box.blue   { background: var(--accent); }
+  .arch-box.gray   { background: #6b7280; }
+  .arch-box.dark   { background: #1e1b4b; }
+  .arch-arrow { color: var(--muted); font-size: 16px; margin: 0 6px; }
+
+  ul, ol { padding-left: 20px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; font-size: 12.5px; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+  /* ── Token Budget ────────────────────────────────────── */
+  .token-bar {
+    display: flex; align-items: center; gap: 10px; margin: 6px 0;
+  }
+  .token-label { width: 100px; font-size: 11px; color: var(--muted); text-align: right; }
+  .token-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .token-fill  { height: 100%; border-radius: 4px; background: var(--primary); }
+  .token-count { font-size: 11px; color: var(--text); font-weight: 600; width: 60px; }
+
+  /* ── Print ───────────────────────────────────────────── */
+  @media print {
+    body { font-size: 11px; }
+    .cover { min-height: 100vh; }
+    .chapter { page-break-before: always; }
+    pre { break-inside: avoid; }
+    table { break-inside: avoid; }
+    .callout { break-inside: avoid; }
+    h2 { break-after: avoid; }
+    h3 { break-after: avoid; }
+    @page { margin: 15mm 15mm; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     COVER PAGE
+══════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">🧠</div>
+  <h1>MindAI</h1>
+  <div class="subtitle">Developer Guide &amp; Architecture Reference</div>
+  <div class="cover-badges">
+    <span class="cover-badge">NestJS 11</span>
+    <span class="cover-badge">Angular 21</span>
+    <span class="cover-badge">MongoDB</span>
+    <span class="cover-badge">Groq AI</span>
+    <span class="cover-badge">Vercel AI SDK</span>
+    <span class="cover-badge">Mastra 1.41</span>
+    <span class="cover-badge">ECharts 5</span>
+  </div>
+  <div class="cover-meta">Version 2.0 · June 2026 · chaditroudi</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+══════════════════════════════════════════════════════════ -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">1</span><span class="toc-title">Project Overview &amp; Stack</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">1.1</span><span class="toc-title">Directory Structure</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">1.2</span><span class="toc-title">Technology Stack</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">1.3</span><span class="toc-title">System Architecture Diagram</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">2</span><span class="toc-title">Quick Start &amp; Boot</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">2.1</span><span class="toc-title">Prerequisites</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">2.2</span><span class="toc-title">Environment Variables</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">2.3</span><span class="toc-title">Build &amp; Run</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">2.4</span><span class="toc-title">Server Startup Sequence</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">3</span><span class="toc-title">NestJS Backend</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">3.1</span><span class="toc-title">Module Map</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">3.2</span><span class="toc-title">HTTP Routes Reference</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">3.3</span><span class="toc-title">Analytics Service (Core Orchestrator)</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">3.4</span><span class="toc-title">Pipeline Service</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">4</span><span class="toc-title">AI Layer</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">4.1</span><span class="toc-title">Model Configuration</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">4.2</span><span class="toc-title">Planner (Supervisor LLM)</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">4.3</span><span class="toc-title">Chart Skill (Deterministic)</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">4.4</span><span class="toc-title">Writer Skill (Inquiry &amp; Report)</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">4.5</span><span class="toc-title">Memory Skill (Background)</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">4.6</span><span class="toc-title">Embeddings (Local WASM)</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">5</span><span class="toc-title">Memory System</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">5.1</span><span class="toc-title">Session Memory (LibSQL)</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">5.2</span><span class="toc-title">Long-Term Memory (MongoDB)</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">5.3</span><span class="toc-title">Memory Flow Diagram</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">6</span><span class="toc-title">Database Schema</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">6.1</span><span class="toc-title">MongoDB Collections</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">6.2</span><span class="toc-title">LibSQL Tables</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">7</span><span class="toc-title">Angular Frontend</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">7.1</span><span class="toc-title">Component Architecture</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">7.2</span><span class="toc-title">State Management</span><span class="toc-dots"></span></div>
+    <div class="toc-item toc-sub"><span class="toc-num">7.3</span><span class="toc-title">API Service Reference</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">8</span><span class="toc-title">Full Request Lifecycle</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">9</span><span class="toc-title">Skills Reference</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">10</span><span class="toc-title">Token Budget &amp; Rate Limits</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">11</span><span class="toc-title">Cache System</span><span class="toc-dots"></span></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-item"><span class="toc-num">12</span><span class="toc-title">Key Design Decisions</span><span class="toc-dots"></span></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 1 — OVERVIEW
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">1</div>
+    <div>
+      <div class="chapter-title">Project Overview &amp; Stack</div>
+      <div class="chapter-desc">What MindAI is, how it's structured, and what it's built with</div>
+    </div>
+  </div>
+
+  <p>MindAI is an AI-powered analytics platform that accepts <strong>natural language prompts</strong> and returns <strong>interactive dashboards, structured reports, or factual answers</strong> backed by real data from MongoDB. Users can ask questions like "show me the top 5 municipalities by budget" and get a fully rendered ECharts visualization with insights.</p>
+
+  <h2>1.1 Directory Structure</h2>
+  <pre><code>MindAi-main/
+├── nest-app/          <span class="code-comment">← NestJS backend (Node.js API server)</span>
+│   ├── src/           <span class="code-comment">← TypeScript source</span>
+│   │   ├── ai/        <span class="code-comment">← LLM calls: planner, chart, writer, embeddings</span>
+│   │   ├── analytics/ <span class="code-comment">← Main orchestrator + pipeline service</span>
+│   │   ├── cache/     <span class="code-comment">← Prompt cache (MongoDB TTL)</span>
+│   │   ├── common/    <span class="code-comment">← Guards, filters, logger, middleware</span>
+│   │   ├── config/    <span class="code-comment">← Configuration module</span>
+│   │   ├── database/  <span class="code-comment">← MongoDB connection module</span>
+│   │   ├── features/  <span class="code-comment">← dashboard.ts, report.ts, inquiry.ts (Mastra path)</span>
+│   │   ├── history/   <span class="code-comment">← Pipeline run history</span>
+│   │   ├── memory/    <span class="code-comment">← Long-term memory (MongoDB)</span>
+│   │   ├── prompts/   <span class="code-comment">← System prompt builders</span>
+│   │   ├── session/   <span class="code-comment">← LibSQL session memory + Mastra agent</span>
+│   │   ├── sources/   <span class="code-comment">← Data source registry</span>
+│   │   ├── types/     <span class="code-comment">← Shared TypeScript interfaces</span>
+│   │   └── user-keys/ <span class="code-comment">← Per-user Groq API keys</span>
+│   ├── dist/          <span class="code-comment">← Compiled output (run this)</span>
+│   └── .env           <span class="code-comment">← Environment variables</span>
+│
+├── client/            <span class="code-comment">← Angular 21 frontend</span>
+│   ├── src/app/       <span class="code-comment">← Component, services, types</span>
+│   └── dist/mind-ui/  <span class="code-comment">← Built Angular (served by NestJS)</span>
+│
+├── skills/            <span class="code-comment">← LLM skill definitions (SKILL.md files)</span>
+│   ├── aggregation/   <span class="code-comment">← MongoDB pipeline planning</span>
+│   ├── analytics/     <span class="code-comment">← Intent routing</span>
+│   ├── chart/         <span class="code-comment">← Chart type selection</span>
+│   ├── inquiry/       <span class="code-comment">← Factual answer writing</span>
+│   ├── memory/        <span class="code-comment">← Memory extraction</span>
+│   └── report/        <span class="code-comment">← Report writing</span>
+│
+├── data/              <span class="code-comment">← memory.db (LibSQL/SQLite)</span>
+└── scripts/           <span class="code-comment">← seed-data.ts, dump-memory.ts</span></code></pre>
+
+  <h2>1.2 Technology Stack</h2>
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th></tr>
+    <tr><td>Runtime</td><td>Node.js</td><td>22.x</td><td>JavaScript runtime</td></tr>
+    <tr><td>Backend</td><td>NestJS</td><td>11</td><td>API framework with DI</td></tr>
+    <tr><td>Frontend</td><td>Angular</td><td>21</td><td>SPA web application</td></tr>
+    <tr><td>Primary DB</td><td>MongoDB</td><td>7+</td><td>Domain data + cache + history</td></tr>
+    <tr><td>Session DB</td><td>LibSQL (SQLite)</td><td>–</td><td>Conversation sessions</td></tr>
+    <tr><td>LLM Provider</td><td>Groq</td><td>–</td><td>Fast Llama 3.3 70B inference</td></tr>
+    <tr><td>AI SDK</td><td>Vercel AI SDK</td><td>4.x</td><td>Structured LLM output (Zod)</td></tr>
+    <tr><td>Agent Framework</td><td>Mastra</td><td>1.41</td><td>Multi-step AI agents</td></tr>
+    <tr><td>Embeddings</td><td>Xenova/transformers</td><td>2.17</td><td>Local 384-dim vectors (no API)</td></tr>
+    <tr><td>Visualization</td><td>ECharts</td><td>5.5</td><td>Interactive charts</td></tr>
+    <tr><td>Validation</td><td>Zod + class-validator</td><td>–</td><td>Schema enforcement</td></tr>
+    <tr><td>Language</td><td>TypeScript</td><td>5.x</td><td>Full-stack type safety</td></tr>
+  </table>
+
+  <h2>1.3 System Architecture Diagram</h2>
+  <div class="arch">
+    <div><span class="arch-box blue">Browser (Angular 21)</span></div>
+    <div>↕ HTTP (fetch + RxJS)</div>
+    <div><span class="arch-box dark">NestJS API — port 3000</span></div>
+    <div>↕</div>
+    <div>
+      <span class="arch-box">Analytics Service</span>
+      <span class="arch-arrow">→</span>
+      <span class="arch-box">Pipeline Service</span>
+      <span class="arch-arrow">→</span>
+      <span class="arch-box green">Planner LLM</span>
+    </div>
+    <div>↓</div>
+    <div>
+      <span class="arch-box orange">MongoDB Aggregation</span>
+      <span class="arch-arrow">→</span>
+      <span class="arch-box green">Chart (Deterministic)</span>
+      <span class="arch-arrow">or</span>
+      <span class="arch-box green">Writer LLM</span>
+    </div>
+    <div>↕ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↕</div>
+    <div>
+      <span class="arch-box gray">LibSQL (sessions)</span>
+      <span class="arch-arrow">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+      <span class="arch-box gray">MongoDB (memory/cache)</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 2 — QUICK START
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">2</div>
+    <div>
+      <div class="chapter-title">Quick Start &amp; Boot</div>
+      <div class="chapter-desc">How to install, configure, and run MindAI from scratch</div>
+    </div>
+  </div>
+
+  <h2>2.1 Prerequisites</h2>
+  <table>
+    <tr><th>Requirement</th><th>Version</th><th>Notes</th></tr>
+    <tr><td>Node.js</td><td>20.9+</td><td>v22 recommended</td></tr>
+    <tr><td>MongoDB</td><td>4.4+</td><td>Running locally or Atlas</td></tr>
+    <tr><td>Groq Account</td><td>–</td><td>Free tier: 6,000 TPM · 14,400 RPD</td></tr>
+    <tr><td>npm</td><td>9+</td><td>Comes with Node.js</td></tr>
+  </table>
+
+  <h2>2.2 Environment Variables (<code>nest-app/.env</code>)</h2>
+  <pre><code><span class="code-comment"># ── MongoDB ───────────────────────────────────────</span>
+<span class="code-key">MONGODB_URI</span>=<span class="code-str">mongodb://127.0.0.1:27017/mind_platform</span>
+<span class="code-key">MONGODB_DB</span>=<span class="code-str">mind_platform</span>
+
+<span class="code-comment"># ── Groq LLM ──────────────────────────────────────</span>
+<span class="code-key">GROQ_API_KEY</span>=<span class="code-str">gsk_...</span>          <span class="code-comment"># Global key (fallback)</span>
+<span class="code-key">GROQ_SUPERVISOR_MODEL</span>=<span class="code-str">llama-3.3-70b-versatile</span>
+<span class="code-key">GROQ_CHART_MODEL</span>=<span class="code-str">llama-3.3-70b-versatile</span>
+<span class="code-key">GROQ_WRITER_MODEL</span>=<span class="code-str">llama-3.3-70b-versatile</span>
+<span class="code-key">GROQ_MEMORY_MODEL</span>=<span class="code-str">llama-3.1-8b-instant</span>  <span class="code-comment"># 8B for bg tasks</span>
+
+<span class="code-comment"># ── Timeouts (ms) ─────────────────────────────────</span>
+<span class="code-key">SUPERVISOR_TIMEOUT_MS</span>=<span class="code-num">30000</span>
+<span class="code-key">CHART_TIMEOUT_MS</span>=<span class="code-num">30000</span>
+<span class="code-key">WRITER_TIMEOUT_MS</span>=<span class="code-num">30000</span>
+
+<span class="code-comment"># ── Server ────────────────────────────────────────</span>
+<span class="code-key">PORT</span>=<span class="code-num">3000</span>
+<span class="code-key">NODE_ENV</span>=<span class="code-str">development</span></code></pre>
+
+  <h2>2.3 Build &amp; Run</h2>
+  <pre><code><span class="code-comment"># 1. Install backend dependencies</span>
+<span class="code-fn">cd</span> nest-app
+<span class="code-fn">npm</span> install
+
+<span class="code-comment"># 2. Build backend</span>
+<span class="code-fn">npm</span> run build        <span class="code-comment"># → compiles to dist/</span>
+
+<span class="code-comment"># 3. Install &amp; build Angular frontend</span>
+<span class="code-fn">cd</span> ../client
+<span class="code-fn">npm</span> install
+<span class="code-fn">npm</span> run build        <span class="code-comment"># → compiles to dist/mind-ui/browser/</span>
+
+<span class="code-comment"># 4. Start server (serves both API + Angular static files)</span>
+<span class="code-fn">cd</span> ../nest-app
+<span class="code-fn">node</span> dist/main.js    <span class="code-comment"># Open http://localhost:3000</span></code></pre>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">💡</span>
+    <div class="callout-body">
+      <strong>Development mode</strong>
+      The Angular build output at <code>client/dist/mind-ui/browser/</code> is automatically detected by NestJS's <code>ServeStaticModule</code>. If the folder exists, NestJS serves it at the root URL. You don't need a separate Angular dev server in production mode.
+    </div>
+  </div>
+
+  <h2>2.4 Server Startup Sequence</h2>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-num">1</div><div class="flow-body"><strong>NestFactory.create(AppModule)</strong> — Bootstrap all modules, apply middleware</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">2</div><div class="flow-body"><strong>DatabaseModule</strong> — Connect to MongoDB, verify connection</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">3</div><div class="flow-body"><strong>SourcesService</strong> — Load data source definitions from MongoDB into memory cache</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">4</div><div class="flow-body"><strong>ServeStaticModule</strong> — Detect Angular build, register static file serving</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">5</div><div class="flow-body"><strong>Listen on PORT</strong> — HTTP server ready</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">6</div><div class="flow-body"><strong>warmupEmbeddings()</strong> — Background load of <code>all-MiniLM-L6-v2</code> WASM model (~25MB, one-time)</div></div>
+  </div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      <strong>First-run delay</strong>
+      On the very first server start, the embedding model downloads ~25MB in the background. This takes 5–15 seconds. Requests still work during this time — memory retrieval degrades gracefully to keyword scoring if the model isn't ready yet.
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 3 — NESTJS BACKEND
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">3</div>
+    <div>
+      <div class="chapter-title">NestJS Backend</div>
+      <div class="chapter-desc">Modules, controllers, services, and request routing</div>
+    </div>
+  </div>
+
+  <h2>3.1 Module Map</h2>
+  <table>
+    <tr><th>Module</th><th>File</th><th>Responsibility</th></tr>
+    <tr><td><code>AppModule</code></td><td>app.module.ts</td><td>Root — imports all modules, global middleware &amp; guards</td></tr>
+    <tr><td><code>DatabaseModule</code></td><td>database/</td><td>Mongoose connection, retry logic</td></tr>
+    <tr><td><code>SourcesModule</code></td><td>sources/</td><td>Data source registry + in-memory cache</td></tr>
+    <tr><td><code>AnalyticsModule</code></td><td>analytics/</td><td>Main orchestrator — analytics.service + pipeline.service</td></tr>
+    <tr><td><code>CacheModule</code></td><td>cache/</td><td>MongoDB prompt cache with TTL</td></tr>
+    <tr><td><code>HistoryModule</code></td><td>history/</td><td>Pipeline run audit log + session listing</td></tr>
+    <tr><td><code>MemoryModule</code></td><td>memory/</td><td>Long-term memory: extraction + retrieval</td></tr>
+    <tr><td><code>SavedResultsModule</code></td><td>saved-results/</td><td>User-saved dashboards/reports</td></tr>
+    <tr><td><code>UserKeysModule</code></td><td>user-keys/</td><td>Per-user Groq API key storage</td></tr>
+  </table>
+
+  <h2>3.2 HTTP Routes Reference</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/health</td><td>MongoDB status + source count</td></tr>
+    <tr><td><span class="badge badge-blue">POST</span></td><td>/api/analytics</td><td><strong>Main query endpoint</strong> — prompt → response</td></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/api/provider</td><td>Returns provider name + hasGlobalKey</td></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/api/meta</td><td>Available modes + auto-generated prompt examples</td></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/api/sources</td><td>List registered datasets</td></tr>
+    <tr><td><span class="badge badge-blue">POST</span></td><td>/api/sources</td><td>Register/update a dataset</td></tr>
+    <tr><td><span class="badge badge-red">DELETE</span></td><td>/api/sources/:col</td><td>Remove a dataset</td></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/api/history/results</td><td>List pipeline runs (paginated)</td></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/api/history/sessions</td><td>List conversation sessions</td></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/api/history/sessions/:id</td><td>Full session with messages</td></tr>
+    <tr><td><span class="badge badge-red">DELETE</span></td><td>/api/history/sessions/:id</td><td>Delete session</td></tr>
+    <tr><td><span class="badge badge-blue">POST</span></td><td>/api/key</td><td>Save per-user API key</td></tr>
+    <tr><td><span class="badge badge-red">DELETE</span></td><td>/api/key/:userId</td><td>Remove per-user API key</td></tr>
+    <tr><td><span class="badge badge-blue">POST</span></td><td>/api/saved</td><td>Save a result</td></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/api/saved</td><td>List saved results for user</td></tr>
+    <tr><td><span class="badge badge-red">DELETE</span></td><td>/api/saved/:id</td><td>Delete saved result</td></tr>
+    <tr><td><span class="badge badge-green">GET</span></td><td>/api/memory</td><td>List long-term memories for user</td></tr>
+    <tr><td><span class="badge badge-red">DELETE</span></td><td>/api/memory</td><td>Clear all memories for user</td></tr>
+  </table>
+
+  <h2>3.3 Analytics Service — Core Orchestrator</h2>
+  <div class="filepath">nest-app/src/analytics/analytics.service.ts</div>
+  <p>The <code>AnalyticsService.run()</code> method is the central entry point for every user query. It orchestrates:</p>
+
+  <div class="flow">
+    <div class="flow-step"><div class="flow-num">1</div><div class="flow-body"><strong>API Key Resolution</strong> — per-user key → global env key → 401 if neither</div></div>
+    <div class="flow-step"><div class="flow-num">2</div><div class="flow-body"><strong>Session Management</strong> — create/reuse LibSQL thread, load last 6 messages</div></div>
+    <div class="flow-step"><div class="flow-num">3</div><div class="flow-body"><strong>Long-Term Memory</strong> — embed prompt → cosine search → inject top-3 memories as context</div></div>
+    <div class="flow-step"><div class="flow-num">4</div><div class="flow-body"><strong>Intent Routing</strong> → dashboard / report / inquiry / free-text (Mastra agent)</div></div>
+    <div class="flow-step"><div class="flow-num">5</div><div class="flow-body"><strong>Error Handling</strong> — invalid key auto-retry with global, rate limit → 429 + retry-after</div></div>
+    <div class="flow-step"><div class="flow-num">6</div><div class="flow-body"><strong>Save Session Turn</strong> — fire-and-forget write to LibSQL</div></div>
+    <div class="flow-step"><div class="flow-num">7</div><div class="flow-body"><strong>Extract Memories</strong> — fire-and-forget extraction via 8B model → save to MongoDB</div></div>
+  </div>
+
+  <h2>3.4 Pipeline Service</h2>
+  <div class="filepath">nest-app/src/analytics/pipeline.service.ts</div>
+  <table>
+    <tr><th>Method</th><th>Description</th><th>LLM Calls</th></tr>
+    <tr><td><code>aggregate()</code></td><td>Run supervisor plan → execute MongoDB pipeline</td><td>1 (supervisor)</td></tr>
+    <tr><td><code>executeDashboard()</code></td><td>aggregate → runChart (deterministic) → cache</td><td>1</td></tr>
+    <tr><td><code>executeReport()</code></td><td>aggregate → runReportSkill + runChart (parallel)</td><td>2</td></tr>
+    <tr><td><code>executeInquiry()</code></td><td>aggregate → runInquirySkill</td><td>2</td></tr>
+  </table>
+
+  <div class="callout callout-warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body">
+      <strong>Pipeline Safety Guards</strong>
+      All LLM-generated MongoDB pipelines are validated before execution. These operators are <strong>always rejected</strong>: <code>$function</code>, <code>$merge</code>, <code>$out</code>, <code>$where</code>, <code>$eval</code>. A <code>$limit: 500</code> guard is also enforced to prevent unbounded queries.
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 4 — AI LAYER
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">4</div>
+    <div>
+      <div class="chapter-title">AI Layer</div>
+      <div class="chapter-desc">LLM configuration, planner, chart rendering, writer, and embeddings</div>
+    </div>
+  </div>
+
+  <h2>4.1 Model Configuration</h2>
+  <div class="filepath">nest-app/src/ai/model.ts</div>
+  <table>
+    <tr><th>Role</th><th>Env Variable</th><th>Default Model</th><th>Used For</th></tr>
+    <tr><td><code>supervisor</code></td><td>GROQ_SUPERVISOR_MODEL</td><td>llama-3.3-70b-versatile</td><td>Planning MongoDB pipelines</td></tr>
+    <tr><td><code>chart</code></td><td>GROQ_CHART_MODEL</td><td>llama-3.3-70b-versatile</td><td>Chart widget planning</td></tr>
+    <tr><td><code>writer</code></td><td>GROQ_WRITER_MODEL</td><td>llama-3.3-70b-versatile</td><td>Inquiry answers &amp; reports</td></tr>
+    <tr><td><code>memory</code></td><td>GROQ_MEMORY_MODEL</td><td>llama-3.1-8b-instant</td><td>Background memory extraction</td></tr>
+  </table>
+
+  <p>All LLM calls use <strong>temperature: 0</strong> (deterministic outputs) and <strong>maxRetries: 1</strong> (Groq SDK auto-retries 429 with exponential backoff).</p>
+
+  <h2>4.2 Planner — Supervisor LLM Call</h2>
+  <div class="filepath">nest-app/src/ai/planner.ts</div>
+  <p>The planner converts a natural language prompt into a structured MongoDB aggregation pipeline using <code>generateObject()</code> from Vercel AI SDK with a Zod schema.</p>
+
+  <pre><code><span class="code-comment">// Input</span>
+{ prompt: <span class="code-str">"top 5 municipalities by budget"</span>, intent: <span class="code-str">"dashboard"</span> }
+
+<span class="code-comment">// LLM Output (validated by Zod)</span>
+{
+  <span class="code-key">needsData</span>: <span class="code-kw">true</span>,
+  <span class="code-key">query</span>: { <span class="code-key">sourceName</span>: <span class="code-str">"municipalities"</span> },
+  <span class="code-key">pipeline</span>: [
+    { <span class="code-str">"$group"</span>: { <span class="code-str">"_id"</span>: <span class="code-str">"$name"</span>, <span class="code-str">"total"</span>: { <span class="code-str">"$sum"</span>: <span class="code-str">"$budget"</span> } } },
+    { <span class="code-str">"$sort"</span>: { <span class="code-str">"total"</span>: <span class="code-num">-1</span> } },
+    { <span class="code-str">"$limit"</span>: <span class="code-num">5</span> }
+  ],
+  <span class="code-key">strategy</span>: <span class="code-str">"standard"</span>,
+  <span class="code-key">chartHint</span>: <span class="code-str">"ranking"</span>
+}</code></pre>
+
+  <table>
+    <tr><th>Parameter</th><th>Value</th></tr>
+    <tr><td>Model</td><td>llama-3.3-70b-versatile (supervisor role)</td></tr>
+    <tr><td>Temperature</td><td>0 (fully deterministic)</td></tr>
+    <tr><td>Max Tokens</td><td>600</td></tr>
+    <tr><td>Max Retries</td><td>1</td></tr>
+    <tr><td>Timeout</td><td>SUPERVISOR_TIMEOUT_MS (30s)</td></tr>
+  </table>
+
+  <h2>4.3 Chart Skill — 100% Deterministic Code</h2>
+  <div class="filepath">nest-app/src/ai/chart.ts</div>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">⭐</span>
+    <div class="callout-body">
+      <strong>Key Design: No LLM for Dashboard Charts</strong>
+      The chart skill is entirely deterministic TypeScript code. Given data rows + a chart hint, it analyzes the data shape, picks the right chart type, assigns fields, and generates a complete ECharts configuration — no LLM call required.
+    </div>
+  </div>
+
+  <p>The chart pipeline runs in 5 deterministic steps:</p>
+
+  <div class="flow">
+    <div class="flow-step"><div class="flow-num">1</div><div class="flow-body"><strong>analyzeDataShape(rows)</strong> — Detect: grouped_pairs, time_series, scatter_capable, multi_field</div></div>
+    <div class="flow-step"><div class="flow-num">2</div><div class="flow-body"><strong>reconcileChartHint(hint, shape)</strong> — Downgrade invalid hints (e.g. scatter without XY data → distribution)</div></div>
+    <div class="flow-step"><div class="flow-num">3</div><div class="flow-body"><strong>determineChartType(shape, hint, rowCount)</strong> — Pick: bar, line, donut, scatter, kpi, table</div></div>
+    <div class="flow-step"><div class="flow-num">4</div><div class="flow-body"><strong>assignFields(shape, type)</strong> + <strong>computeInsight(rows)</strong> — Map data columns to chart axes</div></div>
+    <div class="flow-step"><div class="flow-num">5</div><div class="flow-body"><strong>renderWidget(plan, rows)</strong> — Generate complete ECharts <code>option</code> object</div></div>
+  </div>
+
+  <h4>Chart Type Selection Matrix</h4>
+  <table>
+    <tr><th>Data Shape</th><th>Chart Hint</th><th>Row Count</th><th>Chart Type</th></tr>
+    <tr><td>time_series</td><td>compare</td><td>any</td><td>bar_chart</td></tr>
+    <tr><td>time_series</td><td>any</td><td>any</td><td>line_chart</td></tr>
+    <tr><td>grouped_pairs</td><td>ranking / compare</td><td>≤8</td><td>bar_chart</td></tr>
+    <tr><td>grouped_pairs</td><td>ranking / compare</td><td>&gt;8</td><td>horizontal_bar_chart</td></tr>
+    <tr><td>grouped_pairs</td><td>part_of_whole</td><td>any</td><td>donut_chart</td></tr>
+    <tr><td>grouped_pairs</td><td>distribution</td><td>≤12</td><td>donut_chart</td></tr>
+    <tr><td>grouped_pairs</td><td>distribution</td><td>&gt;12</td><td>horizontal_bar_chart</td></tr>
+    <tr><td>scatter_capable</td><td>scatter</td><td>any</td><td>scatter_plot</td></tr>
+    <tr><td>any</td><td>any (default)</td><td>≤10</td><td>donut_chart</td></tr>
+    <tr><td>any</td><td>any (default)</td><td>&gt;10</td><td>horizontal_bar_chart</td></tr>
+  </table>
+
+  <h2>4.4 Writer Skill — Inquiry &amp; Report</h2>
+  <div class="filepath">nest-app/src/ai/writer.ts</div>
+  <table>
+    <tr><th>Function</th><th>Output</th><th>Max Tokens</th><th>Max Rows</th></tr>
+    <tr><td><code>runInquirySkill()</code></td><td>1–3 sentence factual answer</td><td>400</td><td>10 rows</td></tr>
+    <tr><td><code>runReportSkill()</code></td><td>1–5 section structured report</td><td>900</td><td>all rows (char-capped 8K)</td></tr>
+  </table>
+
+  <p>Both functions use <strong>language auto-detection</strong>: the LLM detects whether the input is in Arabic or English and responds in the same language.</p>
+
+  <h2>4.5 Memory Skill — Background Extraction</h2>
+  <div class="filepath">nest-app/src/ai/memory-skill.ts</div>
+  <p>Runs <strong>after every AI response</strong> (fire-and-forget). Extracts 0–3 structured memories per conversation turn using the 8B model.</p>
+
+  <pre><code><span class="code-comment">// Extracted memory structure</span>
+{
+  <span class="code-key">type</span>: <span class="code-str">"preference"</span>,  <span class="code-comment">// goal|insight|preference|context|decision</span>
+  <span class="code-key">content</span>: <span class="code-str">"User focuses on health sector projects"</span>,
+  <span class="code-key">tags</span>: [<span class="code-str">"health"</span>, <span class="code-str">"sector"</span>],
+  <span class="code-key">importance</span>: <span class="code-num">4</span>   <span class="code-comment">// 1-5 scale</span>
+}</code></pre>
+
+  <h2>4.6 Embeddings — Local WASM</h2>
+  <div class="filepath">nest-app/src/ai/embeddings.ts</div>
+  <table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Model</td><td>Xenova/all-MiniLM-L6-v2</td></tr>
+    <tr><td>Dimensions</td><td>384-dim L2-normalized vector</td></tr>
+    <tr><td>Runtime</td><td>Local WASM via @xenova/transformers (no API key)</td></tr>
+    <tr><td>Cache</td><td>.model-cache/ directory (~25MB)</td></tr>
+    <tr><td>Similarity</td><td>Cosine similarity (dot product of normalized vectors)</td></tr>
+    <tr><td>Import</td><td>Dynamic <code>await import()</code> (ESM-only package)</td></tr>
+  </table>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 5 — MEMORY SYSTEM
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">5</div>
+    <div>
+      <div class="chapter-title">Memory System</div>
+      <div class="chapter-desc">Two-layer memory: short-term session (LibSQL) + long-term cross-session (MongoDB)</div>
+    </div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <div class="card-title">Session Memory (LibSQL)</div>
+      <div class="card-desc">Stores the last 6 conversation turns. Fast local SQLite. Scoped to a single browser session. Gives the AI context for follow-up questions.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🧠</div>
+      <div class="card-title">Long-Term Memory (MongoDB)</div>
+      <div class="card-desc">Extracts structured insights after every response. Persists across sessions. Retrieved via embedding similarity. Makes the AI remember your preferences and goals.</div>
+    </div>
+  </div>
+
+  <h2>5.1 Session Memory (LibSQL)</h2>
+  <div class="filepath">nest-app/src/session/memory.ts</div>
+  <p>Powered by <strong>Mastra Memory</strong> with LibSQL storage. Stores conversation as Mastra messages, retrieves last 6 turns for supervisor context.</p>
+
+  <pre><code><span class="code-comment">// Configuration</span>
+<span class="code-kw">export const</span> memory = <span class="code-kw">new</span> <span class="code-fn">Memory</span>({
+  storage: libsql,
+  options: { lastMessages: <span class="code-num">6</span> }   <span class="code-comment">// 6 most recent turns</span>
+});
+
+<span class="code-comment">// Key functions</span>
+<span class="code-fn">ensureThread</span>(threadId, title, intent)       <span class="code-comment">// Create/update session</span>
+<span class="code-fn">getMemoryContext</span>(threadId): CoreMessage[]   <span class="code-comment">// Load context for LLM</span>
+<span class="code-fn">saveConversationTurn</span>({ threadId, prompt, assistant }) <span class="code-comment">// Fire-and-forget</span>
+<span class="code-fn">listSessions</span>()                              <span class="code-comment">// List all sessions</span>
+<span class="code-fn">getSessionDetail</span>(threadId)                  <span class="code-comment">// Full session + messages</span>
+<span class="code-fn">deleteSession</span>(threadId)                     <span class="code-comment">// Remove session</span></code></pre>
+
+  <h2>5.2 Long-Term Memory (MongoDB)</h2>
+  <div class="filepath">nest-app/src/memory/memory.service.ts</div>
+  <div class="filepath">nest-app/src/memory/memory.repository.ts</div>
+
+  <pre><code><span class="code-comment">// After every AI response:</span>
+<span class="code-fn">extractAndSave</span>(userId, sessionId, prompt, summary, apiKey)
+  → 8B LLM extracts 0–3 memory items
+  → generates 384-dim embedding per item
+  → upserts to MongoDB (deduplication by content fingerprint)
+
+<span class="code-comment">// Before every AI request:</span>
+<span class="code-fn">getRelevantContext</span>(userId, prompt)
+  → embed prompt → cosine similarity search
+  → returns top 3 memories as formatted text</code></pre>
+
+  <h2>5.3 Memory Flow</h2>
+  <div class="arch">
+    <div><strong>User Prompt</strong> <span class="arch-arrow">→</span> <span class="arch-box green">Embed Prompt (384-dim)</span></div>
+    <div>↓</div>
+    <div><span class="arch-box blue">Cosine Search MongoDB</span> <span class="arch-arrow">→</span> Top-3 Memories</div>
+    <div>↓</div>
+    <div><span class="arch-box dark">Inject into Supervisor Context</span></div>
+    <div>↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+    <div><strong>AI Response</strong> <span class="arch-arrow">→</span> <span class="arch-box gray">8B LLM Extract (bg)</span> <span class="arch-arrow">→</span> <span class="arch-box orange">Save to MongoDB</span></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 6 — DATABASE SCHEMA
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">6</div>
+    <div>
+      <div class="chapter-title">Database Schema</div>
+      <div class="chapter-desc">All MongoDB collections and LibSQL tables</div>
+    </div>
+  </div>
+
+  <h2>6.1 MongoDB Collections</h2>
+
+  <h3>prompt_cache <span class="badge badge-gray">TTL 7 days</span></h3>
+  <pre><code>{
+  <span class="code-key">key</span>:       <span class="code-str">"a3f2b1c9d4e5f6a7"</span>,     <span class="code-comment">// SHA-256(intent:prompt)[:24]</span>
+  <span class="code-key">prompt</span>:    <span class="code-str">"show projects by status"</span>,
+  <span class="code-key">intent</span>:    <span class="code-str">"dashboard"</span>,
+  <span class="code-key">result</span>:    { plan: {...}, rows: [...] },
+  <span class="code-key">hitCount</span>:  <span class="code-num">5</span>,
+  <span class="code-key">lastHitAt</span>: ISODate,
+  <span class="code-key">createdAt</span>: ISODate   <span class="code-comment">// TTL index on this field</span>
+}</code></pre>
+
+  <h3>results_history</h3>
+  <pre><code>{
+  <span class="code-key">prompt</span>:     <span class="code-str">"top 5 projects by budget"</span>,
+  <span class="code-key">intent</span>:     <span class="code-str">"dashboard"</span>,
+  <span class="code-key">collection</span>: <span class="code-str">"projects"</span>,
+  <span class="code-key">pipeline</span>:   [...],      <span class="code-comment">// Full MongoDB aggregation</span>
+  <span class="code-key">rows</span>:       [...],      <span class="code-comment">// All result rows</span>
+  <span class="code-key">rowCount</span>:   <span class="code-num">5</span>,
+  <span class="code-key">durationMs</span>: <span class="code-num">1240</span>,
+  <span class="code-key">createdAt</span>:  ISODate
+}</code></pre>
+
+  <h3>memory_items <span class="badge badge-purple">Long-term memory</span></h3>
+  <pre><code>{
+  <span class="code-key">userId</span>:    <span class="code-str">"uuid"</span>,
+  <span class="code-key">sessionId</span>: <span class="code-str">"uuid"</span>,
+  <span class="code-key">type</span>:      <span class="code-str">"preference"</span>,     <span class="code-comment">// goal|insight|preference|context|decision</span>
+  <span class="code-key">content</span>:   <span class="code-str">"User prefers health sector"</span>,
+  <span class="code-key">tags</span>:      [<span class="code-str">"health"</span>, <span class="code-str">"sector"</span>],
+  <span class="code-key">importance</span>: <span class="code-num">4</span>,               <span class="code-comment">// 1-5 scale</span>
+  <span class="code-key">embedding</span>: [<span class="code-num">0.123</span>, <span class="code-num">-0.456</span>, ...],  <span class="code-comment">// 384-dim vector</span>
+  <span class="code-key">createdAt</span>: ISODate
+}</code></pre>
+
+  <h3>saved_results</h3>
+  <pre><code>{
+  <span class="code-key">userId</span>:  <span class="code-str">"uuid"</span>,
+  <span class="code-key">title</span>:   <span class="code-str">"Top Projects Dashboard"</span>,
+  <span class="code-key">prompt</span>:  <span class="code-str">"top 5 projects by budget"</span>,
+  <span class="code-key">intent</span>:  <span class="code-str">"dashboard"</span>,
+  <span class="code-key">result</span>:  { type: <span class="code-str">"dashboard"</span>, dashboardSpec: {...}, durationMs: <span class="code-num">1200</span> },
+  <span class="code-key">createdAt</span>: ISODate
+}</code></pre>
+
+  <h3>user_api_keys</h3>
+  <pre><code>{
+  <span class="code-key">userId</span>:    <span class="code-str">"uuid"</span>,
+  <span class="code-key">apiKey</span>:    <span class="code-str">"gsk_..."</span>,
+  <span class="code-key">createdAt</span>: ISODate
+}</code></pre>
+
+  <h2>6.2 LibSQL Tables</h2>
+  <p>Managed by Mastra. Located at <code>nest-app/data/memory.db</code>.</p>
+
+  <table>
+    <tr><th>Table</th><th>Key Columns</th><th>Description</th></tr>
+    <tr><td>mastra_threads</td><td>id, title, resourceId, metadata</td><td>One row per conversation session</td></tr>
+    <tr><td>mastra_messages</td><td>id, threadId, role, content, createdAt</td><td>One row per user/assistant turn</td></tr>
+  </table>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 7 — ANGULAR FRONTEND
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">7</div>
+    <div>
+      <div class="chapter-title">Angular Frontend</div>
+      <div class="chapter-desc">Component architecture, state management, and API integration</div>
+    </div>
+  </div>
+
+  <h2>7.1 Component Architecture</h2>
+  <div class="filepath">client/src/app/app.component.ts</div>
+  <p>MindAI uses a <strong>single root component</strong> (standalone, no NgModules) with all logic in <code>AppComponent</code> and reactive state in <code>AnalyticsStateService</code>.</p>
+
+  <table>
+    <tr><th>File</th><th>Purpose</th></tr>
+    <tr><td>app.component.ts</td><td>Root component — all UI logic, query execution, session management</td></tr>
+    <tr><td>app.component.html</td><td>Template — header, sidebar, chat area, modals</td></tr>
+    <tr><td>app.component.css</td><td>Styles — Tailwind CSS + custom component styles</td></tr>
+    <tr><td>analytics-state.service.ts</td><td>Singleton state — BehaviorSubject-based reactive store</td></tr>
+    <tr><td>analytics-api.service.ts</td><td>HTTP client — all REST API calls</td></tr>
+    <tr><td>chart-render.service.ts</td><td>ECharts initialization and disposal</td></tr>
+    <tr><td>app.types.ts</td><td>All TypeScript interfaces</td></tr>
+  </table>
+
+  <h3>Key UI Sections (app.component.html)</h3>
+  <table>
+    <tr><th>Section</th><th>Description</th></tr>
+    <tr><td>Header</td><td>Logo, mode tabs (Dashboard / Report / Inquiry), new session</td></tr>
+    <tr><td>Sidebar</td><td>Tabs: History (sessions) · Saved results · Memory items</td></tr>
+    <tr><td>Chat Area</td><td>Conversation messages with ECharts widgets / report sections / text answers</td></tr>
+    <tr><td>Prompt Input</td><td>Textarea with character counter, send button, example chips</td></tr>
+    <tr><td>API Key Modal</td><td>Shown when Groq key is needed or invalid</td></tr>
+    <tr><td>Report Format Modal</td><td>Choose: Report only / Chart only / Both</td></tr>
+  </table>
+
+  <h2>7.2 State Management</h2>
+  <div class="filepath">client/src/app/analytics-state.service.ts</div>
+  <pre><code><span class="code-kw">interface</span> AppState {
+  phase:    <span class="code-str">'idle'</span> | <span class="code-str">'loading'</span> | <span class="code-str">'done'</span> | <span class="code-str">'error'</span>;
+  intent:   <span class="code-str">'dashboard'</span> | <span class="code-str">'report'</span> | <span class="code-str">'inquiry'</span>;
+  messages: ConversationMessage[];
+  sessions: SessionSummary[];
+  memories: MemoryItem[];
+  sidebarTab: <span class="code-str">'history'</span> | <span class="code-str">'saved'</span> | <span class="code-str">'memory'</span>;
+  userId:   <span class="code-kw">string</span>;
+  hasKey:   <span class="code-kw">boolean</span>;
+  <span class="code-comment">// ... more fields</span>
+}</code></pre>
+
+  <h2>7.3 API Service Reference</h2>
+  <div class="filepath">client/src/app/analytics-api.service.ts</div>
+
+  <table>
+    <tr><th>Method</th><th>HTTP</th><th>Endpoint</th></tr>
+    <tr><td><code>runAnalytics(payload, userId)</code></td><td>POST</td><td>/api/analytics</td></tr>
+    <tr><td><code>getMeta()</code></td><td>GET</td><td>/api/meta</td></tr>
+    <tr><td><code>getProvider()</code></td><td>GET</td><td>/api/provider</td></tr>
+    <tr><td><code>listSessions()</code></td><td>GET</td><td>/api/history/sessions</td></tr>
+    <tr><td><code>getSession(id)</code></td><td>GET</td><td>/api/history/sessions/:id</td></tr>
+    <tr><td><code>deleteSession(id)</code></td><td>DELETE</td><td>/api/history/sessions/:id</td></tr>
+    <tr><td><code>saveResult(userId, payload)</code></td><td>POST</td><td>/api/saved</td></tr>
+    <tr><td><code>listSavedResults(userId)</code></td><td>GET</td><td>/api/saved</td></tr>
+    <tr><td><code>deleteSavedResult(userId, id)</code></td><td>DELETE</td><td>/api/saved/:id</td></tr>
+    <tr><td><code>listMemories(userId)</code></td><td>GET</td><td>/api/memory</td></tr>
+    <tr><td><code>clearMemories(userId)</code></td><td>DELETE</td><td>/api/memory</td></tr>
+    <tr><td><code>saveKey(userId, key)</code></td><td>POST</td><td>/api/key</td></tr>
+    <tr><td><code>deleteKey(userId)</code></td><td>DELETE</td><td>/api/key/:userId</td></tr>
+  </table>
+
+  <p>All requests use a 480-second timeout and produce user-friendly errors: status 0 → "Cannot reach server", 401 → trigger API key modal.</p>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 8 — FULL REQUEST LIFECYCLE
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">8</div>
+    <div>
+      <div class="chapter-title">Full Request Lifecycle</div>
+      <div class="chapter-desc">End-to-end trace of a dashboard query: "top 5 municipalities by budget"</div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-step"><div class="flow-num">1</div><div class="flow-body"><strong>Angular</strong> — User types prompt, clicks Send → <code>POST /api/analytics</code> with <code>x-user-id</code> header</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">2</div><div class="flow-body"><strong>AnalyticsController</strong> — Validates DTO, passes to <code>analytics.run()</code></div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">3</div><div class="flow-body"><strong>API Key Resolution</strong> — Fetch user key from MongoDB → fallback to global env key</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">4</div><div class="flow-body"><strong>Session</strong> — <code>ensureThread()</code> creates/reuses LibSQL session · <code>getMemoryContext()</code> loads last 6 messages</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">5</div><div class="flow-body"><strong>Long-Term Memory</strong> — Embed prompt (384-dim) → cosine search → inject top-3 memories as context</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">6</div><div class="flow-body"><strong>Cache Check</strong> — SHA-256 key lookup in MongoDB · HIT → return immediately (0 LLM calls)</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">7</div><div class="flow-body"><strong>🤖 LLM Call #1 — Supervisor Plan</strong> (70B, 600 tokens max) → MongoDB pipeline JSON</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">8</div><div class="flow-body"><strong>Pipeline Safety</strong> — Reject $function/$merge/$out · Execute aggregation on MongoDB (30s timeout)</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">9</div><div class="flow-body"><strong>Chart (Deterministic)</strong> — Analyze shape → pick type → assign fields → render ECharts option (no LLM)</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">10</div><div class="flow-body"><strong>HTTP Response</strong> → <code>{ intent: 'dashboard', chart: DashboardSpec, sessionId, messageId }</code></div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">11</div><div class="flow-body"><strong>Angular</strong> — Push to state, <code>ngAfterViewChecked</code> → <code>charts.initWidget()</code> → ECharts renders in DOM</div></div>
+    <div class="flow-arrow">↓ (fire-and-forget, after response sent)</div>
+    <div class="flow-step"><div class="flow-num">12</div><div class="flow-body"><strong>Background</strong> — Save to LibSQL session · Extract memories (8B) → save to MongoDB</div></div>
+  </div>
+
+  <h3>LLM Calls Per Intent</h3>
+  <table>
+    <tr><th>Scenario</th><th>LLM Calls</th><th>Models</th></tr>
+    <tr><td>Dashboard — cache HIT</td><td><strong>0</strong></td><td>–</td></tr>
+    <tr><td>Dashboard — cache MISS</td><td><strong>1</strong></td><td>supervisor (70B)</td></tr>
+    <tr><td>Report</td><td><strong>2</strong></td><td>supervisor (70B) + writer (70B)</td></tr>
+    <tr><td>Inquiry</td><td><strong>2</strong></td><td>supervisor (70B) + writer (70B)</td></tr>
+    <tr><td>Free-text (no intent)</td><td><strong>3</strong></td><td>router + supervisor + writer</td></tr>
+    <tr><td>Memory extraction (bg)</td><td>+1 always</td><td>memory (8B) — separate limit</td></tr>
+  </table>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 9 — SKILLS REFERENCE
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">9</div>
+    <div>
+      <div class="chapter-title">Skills Reference</div>
+      <div class="chapter-desc">SKILL.md files — the LLM instruction layer</div>
+    </div>
+  </div>
+
+  <p>Each skill is a markdown file in <code>skills/</code>. Skills are loaded at server startup via <code>readMarkdownSection()</code> and injected as system prompts for LLM calls.</p>
+
+  <table>
+    <tr><th>Skill</th><th>File</th><th>Used By</th><th>Purpose</th></tr>
+    <tr><td>aggregation</td><td>skills/aggregation/SKILL.md</td><td>Planner</td><td>MongoDB pipeline templates, schema injection, forbidden operators</td></tr>
+    <tr><td>analytics</td><td>skills/analytics/SKILL.md</td><td>Mastra Agent</td><td>Intent routing rules (Arabic/English/French trigger signals)</td></tr>
+    <tr><td>chart</td><td>skills/chart/SKILL.md</td><td>Chart skill</td><td>Chart type selection matrix, field mapping rules, cardinality limits</td></tr>
+    <tr><td>inquiry</td><td>skills/inquiry/SKILL.md</td><td>Writer inquiry</td><td>Factual answer format: 1–3 sentences, lead with key number</td></tr>
+    <tr><td>report</td><td>skills/report/SKILL.md</td><td>Writer report</td><td>5-section structure: Overview → Findings → Breakdown → Trends → Recommendations</td></tr>
+    <tr><td>memory</td><td>skills/memory/SKILL.md</td><td>Memory skill</td><td>Memory types, extraction rules, importance scoring</td></tr>
+    <tr><td>suggestions</td><td>skills/suggestions/SKILL.md</td><td>Meta endpoint</td><td>Generate example prompts from data sources</td></tr>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      <strong>How Skills Are Loaded</strong>
+      <code>readMarkdownSection(filePath, 'Runtime Prompt')</code> reads the section between <code>## Runtime Prompt</code> and the next <code>##</code> header. This keeps LLM instructions in editable markdown files, not hard-coded strings.
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 10 — TOKEN BUDGET
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">10</div>
+    <div>
+      <div class="chapter-title">Token Budget &amp; Rate Limits</div>
+      <div class="chapter-desc">How tokens are allocated and how rate limits are managed</div>
+    </div>
+  </div>
+
+  <h2>Per-Request Token Budget (Dashboard)</h2>
+  <div class="token-bar">
+    <span class="token-label">Planner</span>
+    <div class="token-track"><div class="token-fill" style="width:30%"></div></div>
+    <span class="token-count">600 max</span>
+  </div>
+  <div class="token-bar">
+    <span class="token-label">Chart</span>
+    <div class="token-track"><div class="token-fill" style="width:50%"></div></div>
+    <span class="token-count">1000 max</span>
+  </div>
+  <div class="token-bar">
+    <span class="token-label">Prompt tokens</span>
+    <div class="token-track"><div class="token-fill" style="width:40%; background: #0ea5e9"></div></div>
+    <span class="token-count">~1000 est.</span>
+  </div>
+  <div class="token-bar">
+    <span class="token-label">Total 70B</span>
+    <div class="token-track"><div class="token-fill" style="width:43%; background: #10b981"></div></div>
+    <span class="token-count">~2600 /6000</span>
+  </div>
+
+  <h3>Groq Free Tier Limits</h3>
+  <table>
+    <tr><th>Model</th><th>TPM</th><th>RPM</th><th>TPD</th></tr>
+    <tr><td>llama-3.3-70b-versatile</td><td>6,000</td><td>30</td><td>1,000,000</td></tr>
+    <tr><td>llama-3.1-8b-instant</td><td>6,000</td><td>30</td><td>1,000,000</td></tr>
+  </table>
+
+  <div class="callout callout-warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body">
+      <strong>Why memory uses 8B model</strong>
+      Memory extraction runs after every response, adding ~700 tokens to the 70B budget per request. Using 8B for this background task keeps the 70B budget at ~2,600 tokens/request — well within the 6,000 TPM limit with room for retries.
+    </div>
+  </div>
+
+  <h2>Rate Limit Handling</h2>
+  <ul>
+    <li><code>maxRetries: 1</code> on all LLM calls — Vercel AI SDK automatically retries 429s with exponential backoff</li>
+    <li>Rate limit errors propagate to the Angular UI with the full error message including retry-after duration</li>
+    <li>No silent fallbacks — all chart/writer errors throw and surface to the user</li>
+    <li>Cache-first: identical prompts never hit the LLM twice (7-day TTL)</li>
+  </ul>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 11 — CACHE SYSTEM
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">11</div>
+    <div>
+      <div class="chapter-title">Cache System</div>
+      <div class="chapter-desc">Two-level caching to minimize LLM calls</div>
+    </div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">🗄️</div>
+      <div class="card-title">Aggregation Cache</div>
+      <div class="card-desc">Caches <code>{ plan, rows }</code> for any intent. Hit = 0 LLM calls for supervisor + MongoDB query skipped.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Dashboard Full Cache</div>
+      <div class="card-desc">Caches the complete <code>DashboardSpec</code>. Hit = 0 LLM calls + 0 MongoDB queries. Instant response.</div>
+    </div>
+  </div>
+
+  <h2>Cache Key Generation</h2>
+  <pre><code>key = SHA-256(intent + ":" + normalize(prompt)).slice(0, 24)
+
+normalize(prompt) = prompt.trim().toLowerCase().replace(/\s+/g, ' ')</code></pre>
+
+  <h2>Cache Bypass Rules</h2>
+  <table>
+    <tr><th>Condition</th><th>Bypass?</th><th>Reason</th></tr>
+    <tr><td>context.length > 0 (multi-turn)</td><td>✅ Always bypass</td><td>Context-dependent answers must not be cached</td></tr>
+    <tr><td>Single-turn, same prompt</td><td>❌ Use cache</td><td>Safe to serve cached result</td></tr>
+    <tr><td>Different userId, same prompt</td><td>❌ Use cache</td><td>Prompt cache is userId-independent</td></tr>
+  </table>
+
+  <h2>Storage</h2>
+  <ul>
+    <li>Collection: <code>prompt_cache</code> in MongoDB</li>
+    <li>TTL: 7 days (MongoDB TTL index on <code>createdAt</code>)</li>
+    <li>Hit tracking: increments <code>hitCount</code> + updates <code>lastHitAt</code> on every cache hit</li>
+    <li>Write: fire-and-forget (never blocks HTTP response)</li>
+  </ul>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CHAPTER 12 — DESIGN DECISIONS
+══════════════════════════════════════════════════════════ -->
+<div class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-num">12</div>
+    <div>
+      <div class="chapter-title">Key Design Decisions</div>
+      <div class="chapter-desc">Why the system is built the way it is</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Decision</th><th>Why</th></tr>
+    <tr><td>Temperature: 0 on all LLM calls</td><td>Reproducible pipelines — same prompt always gives same MongoDB query</td></tr>
+    <tr><td>Dashboard chart = deterministic code (no LLM)</td><td>Eliminates a full LLM call per dashboard. No hallucinated field names. Instant rendering.</td></tr>
+    <tr><td>Schema injected into system prompt</td><td>LLM can only reference field names that actually exist in the data source</td></tr>
+    <tr><td>Cache bypassed on multi-turn</td><td>Follow-up questions depend on conversation context, not just the prompt text</td></tr>
+    <tr><td>Fire-and-forget writes (history, cache, memory)</td><td>Never block the HTTP response. User gets their answer immediately.</td></tr>
+    <tr><td>LibSQL for sessions, MongoDB for long-term</td><td>LibSQL: fast local SQLite for active conversations. MongoDB: persistent, queryable, indexed.</td></tr>
+    <tr><td>Local WASM embeddings (no API)</td><td>Memory retrieval works without any API quota. 384-dim vectors stored in MongoDB alongside documents.</td></tr>
+    <tr><td>Memory model = 8B (not 70B)</td><td>Background JSON extraction task. Doesn't need reasoning quality. Saves ~700 tokens/request from 70B budget.</td></tr>
+    <tr><td>maxRetries: 1 on LLM calls</td><td>Groq SDK automatically backs off on 429. One retry handles transient errors without manual logic.</td></tr>
+    <tr><td>No silent fallbacks on chart errors</td><td>Silent fallbacks produced "Chart planning failed" UI with no actionable feedback. Now errors propagate clearly.</td></tr>
+    <tr><td>Pipeline safety guards ($function, $merge, etc.)</td><td>Prevent LLM from generating queries that modify data or execute arbitrary code in MongoDB</td></tr>
+    <tr><td>RequestIdMiddleware (AsyncLocalStorage)</td><td>Every log line for a single request shares the same 8-char ID — easy to trace requests in logs</td></tr>
+    <tr><td>Per-user API keys in MongoDB</td><td>Each user can bring their own Groq key. Falls back to global key if none provided.</td></tr>
+    <tr><td>Zod schema for all LLM output</td><td>Vercel AI SDK enforces schema via generateObject(). Invalid LLM output triggers a retry, not a crash.</td></tr>
+  </table>
+
+  <hr>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">🚀</span>
+    <div class="callout-body">
+      <strong>Summary</strong>
+      MindAI converts natural language to data-driven dashboards using a 3-stage pipeline: (1) Supervisor LLM plans a MongoDB aggregation, (2) MongoDB executes it, (3) deterministic code renders the chart — all in under 3 seconds on cache miss. Memory, caching, and session context make the system progressively smarter with every interaction.
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center; padding: 40px; color: #9ca3af; font-size: 11px; border-top: 1px solid #e5e7eb; margin-top: 40px;">
+  MindAI Developer Guide · Generated June 2026 · <strong>To save as PDF:</strong> Open this file in Chrome → Press Ctrl+P → Choose "Save as PDF"
+</div>
+
+</body>
+</html>
