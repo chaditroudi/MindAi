@@ -205,37 +205,45 @@ STRATEGY — pick ONE:
   anomaly    → two numeric measures, outliers, scatter: "X vs Y", "correlation"
   overview   → "overview", "summary", "full picture", "نظرة عامة", "vue d'ensemble"
 
-chartHint — REQUIRED. Pick EXACTLY ONE:
-  "ranking"       → "top N", "most", "highest", "best", sorted list by a metric
-  "distribution"  → "by status/category/type/region", a count breakdown
-  "part_of_whole" → "share", "percentage", "proportion", "what % of"
-  "trend"         → "over time", "by year/month", "growth"
+chartHint — REQUIRED. A short label describing the visualization intent.
+Use any value that best captures what the user wants. Well-known values:
+  "ranking"       → sorted list by a metric: "top N", "most", "highest", "best"
+  "distribution"  → count breakdown by category: "by status/type/region"
+  "part_of_whole" → share/proportion: "percentage", "what % of"
+  "trend"         → change over time: "by year/month", "growth", "evolution"
   "compare"       → explicit head-to-head: "A vs B", "compare X and Y"
   "scatter"       → two numeric measures: "X vs Y", correlation, outliers
+  "funnel"        → sequential stages with drop-off
+  "heatmap"       → two categorical dimensions + one numeric measure
+  "overview"      → raw multi-field snapshot, no grouping
+  (or any other intent that describes the shape of the answer)
 
-PIPELINE SHAPE per chartHint:
-  scatter         → RAW LIST (NEVER $group); project label-field + TWO numeric fields; $limit 150
-  trend           → TIME SERIES ($group on a temporal bucket via $dateToString); $sort _id ASC
-  ranking         → GROUPED {label, value}; $sort value DESC; $limit N
-  distribution    → GROUPED {label, value}; $sort value DESC
-  part_of_whole   → GROUPED {label, value}; downstream computes %
-  compare         → GROUPED {label, value} filtered to the two compared members
-  overview        → RAW LIST; include all useful fields; $limit 150
+PIPELINE SHAPE — decide based on the intent:
+  Correlation / two numeric measures (scatter, heatmap with 2 numerics)
+    → RAW LIST (NEVER $group); project the relevant fields; $limit 150
+  Change over time (trend, growth, evolution)
+    → TIME SERIES: $group on a temporal bucket via $dateToString; $sort _id ASC
+  Ranked or grouped single metric (ranking, distribution, part_of_whole, compare, funnel)
+    → GROUPED {label, value}; $sort value DESC; apply $limit for rankings
+  Multi-field snapshot (overview, raw list)
+    → RAW LIST; include all useful fields; $limit 150
 
 HARD CONSTRAINTS:
-  • chartHint=scatter → NEVER $group.
-  • chartHint=trend   → ALWAYS $group on a temporal bucket, sorted ascending.
+  • Scatter / two-numeric intent → NEVER $group.
+  • Trend / over-time intent     → ALWAYS $group on a temporal bucket, sorted ascending.
   • Two numeric measures ("X vs Y") → RAW LIST, never group.
   • Output label/value keys must be literally "label" and "value" for grouped charts.
 
 EXAMPLES:
-  "Show distribution of projects by status"   → strategy=standard, chartHint=distribution
-  "Top 10 municipalities by budget"            → strategy=standard, chartHint=ranking
-  "Project count by start year"                → strategy=trend,    chartHint=trend
-  "Compare in_progress vs completed"           → strategy=comparison, chartHint=compare
-  "Budget vs duration"                         → strategy=anomaly,  chartHint=scatter
-  "Give me an overview of all projects"        → strategy=overview, chartHint=distribution
-  "ما هي حصة كل فئة؟" (share per category)      → strategy=standard, chartHint=part_of_whole
+  "Show distribution of projects by status"   → strategy=standard,    chartHint=distribution
+  "Top 10 municipalities by budget"            → strategy=standard,    chartHint=ranking
+  "Project count by start year"                → strategy=trend,       chartHint=trend
+  "Compare in_progress vs completed"           → strategy=comparison,  chartHint=compare
+  "Budget vs duration"                         → strategy=anomaly,     chartHint=scatter
+  "Give me an overview of all projects"        → strategy=overview,    chartHint=overview
+  "ما هي حصة كل فئة؟" (share per category)      → strategy=standard,    chartHint=part_of_whole
+  "Show approval stages drop-off"              → strategy=standard,    chartHint=funnel
+  "Incidents by district and severity"         → strategy=standard,    chartHint=heatmap
 
 ## Runtime Prompt Non-Dashboard
 

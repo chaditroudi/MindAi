@@ -74,7 +74,7 @@ export interface DashboardSpec {
   widgets: WidgetSpec[];
 }
 
-export type ChartHint = 'compare' | 'trend' | 'distribution' | 'part_of_whole' | 'ranking' | 'scatter';
+export type ChartHint = string;
 
 export interface TaskQuery {
   sourceId?:   string;

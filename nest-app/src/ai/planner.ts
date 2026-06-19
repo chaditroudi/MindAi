@@ -22,9 +22,7 @@ function buildPlanSchema(intent: IntentKind) {
   if (intent === 'dashboard') {
     return base.extend({
       strategy:  z.enum(['standard', 'trend', 'comparison', 'anomaly', 'overview']).default('standard'),
-      chartHint: z.enum(['ranking', 'distribution', 'trend', 'part_of_whole', 'compare', 'scatter'])
-                   .catch('distribution')
-                   .default('distribution'),
+      chartHint: z.string().catch('distribution').default('distribution'),
     });
   }
 
@@ -32,7 +30,7 @@ function buildPlanSchema(intent: IntentKind) {
     return base.extend({
       wantChart: z.boolean().default(false),
       strategy:  z.enum(['standard', 'trend', 'comparison', 'anomaly', 'overview']).optional(),
-      chartHint: z.enum(['ranking', 'distribution', 'trend', 'part_of_whole', 'compare', 'scatter']).optional(),
+      chartHint: z.string().optional(),
     });
   }
 
