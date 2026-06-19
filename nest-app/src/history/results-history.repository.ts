@@ -24,7 +24,6 @@ export class ResultsHistoryRepository {
 
   async save(entry: PipelineRunEntry): Promise<string> {
     try {
-      // Cast required: 'collection' field name conflicts with Mongoose's internal Document.collection
       const doc = await this.model.create(entry as unknown as Record<string, unknown>);
       return (doc._id as { toHexString(): string }).toHexString();
     } catch (err) {
