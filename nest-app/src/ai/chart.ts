@@ -6,7 +6,6 @@ import { readJsonSection, skillFile }  from './skill-prompt';
 import { buildChartPrompt }            from '../prompts/chart.prompt';
 import type { DashboardSpec, SkillKind, ChartHint, DataSource } from '../types';
 
-// ── Config (loaded from SKILL.md ## Chart Config) ────────────────────────────
 
 export interface ChartDefinition {
   type:                string;
@@ -27,7 +26,7 @@ interface SkillConfig {
   types:        ChartDefinition[];
 }
 
-const cfg                = readJsonSection<SkillConfig>(skillFile('chart', 'SKILL.md'), 'Chart Config');
+const configServic= readJsonSection<SkillConfig>(skillFile('chart', 'SKILL.md'), 'Chart Config');
 export const CHART_DEFINITIONS: readonly ChartDefinition[] = cfg.types;
 const CHART_AGGREGATIONS     = cfg.aggregations as [string, ...string[]];
 const LLM_CHART_AGGREGATIONS = [...CHART_AGGREGATIONS, 'none'] as [string, ...string[]];
