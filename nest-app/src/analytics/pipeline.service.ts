@@ -169,11 +169,7 @@ export class PipelineService {
       s => s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
     );
 
-    const chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
-      .catch((): DashboardSpec => ({
-        layout: 'analytical', title: prompt,
-        summary: 'Chart could not be generated.', widgets: [],
-      }));
+    const chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey);
 
     if (chart.widgets.length) {
       // Persist to chart_results (fire-and-forget)
