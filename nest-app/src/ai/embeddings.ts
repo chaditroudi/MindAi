@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 import { log } from '../common/logger/app.logger';
 
-// Dynamic import is required — @xenova/transformers is ESM-only and cannot be require()'d
 type XenovaModule = typeof import('@xenova/transformers');
 type EmbeddingPipeline = Awaited<ReturnType<XenovaModule['pipeline']>>;
 
@@ -12,7 +11,6 @@ let _loading: Promise<EmbeddingPipeline> | null = null;
 async function getModule(): Promise<XenovaModule> {
   if (!_module) {
     _module = (await import('@xenova/transformers')) as XenovaModule;
-    // Cache models inside the project so they survive npm install
     _module.env.cacheDir = path.resolve(__dirname, '..', '..', '.model-cache');
   }
   return _module;
