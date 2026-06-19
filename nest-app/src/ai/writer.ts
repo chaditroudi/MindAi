@@ -9,7 +9,7 @@ const INQUIRY_INSTRUCTIONS = readMarkdownSection(skillFile('inquiry', 'SKILL.md'
 const REPORT_INSTRUCTIONS  = readMarkdownSection(skillFile('report',  'SKILL.md'), 'Runtime Prompt');
 
 const INQUIRY_MAX_TOKENS = Number(process.env['INQUIRY_MAX_TOKENS'] ?? 400);
-const REPORT_MAX_TOKENS  = Number(process.env['REPORT_MAX_TOKENS']  ?? 1_200);
+const REPORT_MAX_TOKENS  = Number(process.env['REPORT_MAX_TOKENS']  ?? 900);
 const INQUIRY_MAX_ROWS   = Number(process.env['INQUIRY_MAX_ROWS']   ?? 10);
 const WRITER_MAX_CHARS   = Number(process.env['WRITER_MAX_CHARS']   ?? 8_000);
 

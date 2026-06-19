@@ -7,7 +7,7 @@ import { log, logTrace } from '../common/logger/app.logger';
 import { buildPlannerPrompt } from '../prompts/planner.prompt';
 import type { DataSource, TaskPlan, IntentKind } from '../types';
 
-const MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 900);
+const MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
 
 function buildPlanSchema(intent: IntentKind) {
   const base = z.object({
