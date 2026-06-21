@@ -27,7 +27,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableShutdownHooks();
 
-  const port = process.env['PORT'] ? Number(process.env['PORT']) : 3001;
+  const port = process.env['PORT'] ? Number(process.env['PORT']) : 3000;
   await app.listen(port);
 
   const logger = app.get(AppLogger);
