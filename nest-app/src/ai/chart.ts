@@ -66,14 +66,13 @@ type LlmWidget    = z.infer<typeof widgetSchema>;
 type LlmDashboard = z.infer<typeof dashboardSchema>;
 type DataRow      = Record<string, unknown>;
 type ChartAgg     = typeof CHART_AGGREGATIONS[number];
-type FieldKind    = 'numeric' | 'temporal' | 'categorical' | 'complex';
+type FieldKind    = 'numeric' | 'temporal' | 'categorical';
 
 interface RowProfile {
   all:         string[];
   numeric:     string[];
   temporal:    string[];
   categorical: string[];
-  complex:     string[];
 }
 
 interface WidgetPlan {
@@ -96,43 +95,14 @@ type Renderer = (plan: WidgetPlan, data: DataRow[], id: string) => unknown;
 
 
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
+const str = (v: unknown): string => (v == null ? '' : String(v));
 const GENERIC_LABEL_TOKENS = new Set(['label', 'name', 'title', 'category', 'group', 'segment', 'region', 'type']);
 const GENERIC_VALUE_TOKENS = new Set(['value', 'total', 'amount', 'metric', 'budget', 'count', 'sum', 'score']);
 const GENERIC_TIME_TOKENS  = new Set(['date', 'time', 'month', 'year', 'day', 'week', 'period']);
-const DISPLAY_OBJECT_KEYS  = ['label', 'name', 'title', 'value', 'text', 'region', 'category', 'type', 'code', 'id'];
 
 function normalizeFieldToken(value?: string) {
   return (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function toDisplayLabel(value: unknown, depth = 0): string {
-  if (value == null) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean' || value instanceof Date) return String(value);
-  if (Array.isArray(value)) {
-    if (depth >= 2) return value.map(v => String(v)).join(', ');
-    return value.map(v => toDisplayLabel(v, depth + 1)).filter(Boolean).join(', ');
-  }
-  if (isPlainObject(value)) {
-    for (const key of DISPLAY_OBJECT_KEYS) {
-      const nested = value[key];
-      const label = toDisplayLabel(nested, depth + 1);
-      if (label) return label;
-    }
-    if (depth >= 2) return JSON.stringify(value);
-    const nested = Object.values(value)
-      .map(v => toDisplayLabel(v, depth + 1))
-      .filter(Boolean);
-    return nested[0] ?? JSON.stringify(value);
-  }
-  return String(value);
-}
-
-const str = (v: unknown): string => toDisplayLabel(v);
 
 function isNumericLike(value: unknown) {
   if (typeof value === 'number') return Number.isFinite(value);
@@ -157,7 +127,6 @@ function fieldSamples(rows: DataRow[], field: string) {
 function classifyField(rows: DataRow[], field: string): FieldKind {
   const samples = fieldSamples(rows, field);
   if (!samples.length) return 'categorical';
-  if (samples.some(sample => Array.isArray(sample) || isPlainObject(sample))) return 'complex';
   if (samples.every(isNumericLike))  return 'numeric';
   if (samples.every(isTemporalLike)) return 'temporal';
   return 'categorical';
@@ -168,17 +137,15 @@ function buildRowProfile(keys: Set<string>, rows: DataRow[]): RowProfile {
   const numeric: string[]     = [];
   const temporal: string[]    = [];
   const categorical: string[] = [];
-  const complex: string[]     = [];
 
   for (const field of all) {
     const kind = classifyField(rows, field);
     if (kind === 'numeric') numeric.push(field);
     else if (kind === 'temporal') temporal.push(field);
-    else if (kind === 'categorical') categorical.push(field);
-    else complex.push(field);
+    else categorical.push(field);
   }
 
-  return { all, numeric, temporal, categorical, complex };
+  return { all, numeric, temporal, categorical };
 }
 
 function pickFields(profile: RowProfile, kinds: FieldKind[], exclude: string[] = [], limit = 1) {
