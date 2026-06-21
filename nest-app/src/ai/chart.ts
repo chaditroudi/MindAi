@@ -73,6 +73,7 @@ interface RowProfile {
   numeric:     string[];
   temporal:    string[];
   categorical: string[];
+  complex:     string[];
 }
 
 interface WidgetPlan {
@@ -167,15 +168,17 @@ function buildRowProfile(keys: Set<string>, rows: DataRow[]): RowProfile {
   const numeric: string[]     = [];
   const temporal: string[]    = [];
   const categorical: string[] = [];
+  const complex: string[]     = [];
 
   for (const field of all) {
     const kind = classifyField(rows, field);
     if (kind === 'numeric') numeric.push(field);
     else if (kind === 'temporal') temporal.push(field);
     else if (kind === 'categorical') categorical.push(field);
+    else complex.push(field);
   }
 
-  return { all, numeric, temporal, categorical };
+  return { all, numeric, temporal, categorical, complex };
 }
 
 function pickFields(profile: RowProfile, kinds: FieldKind[], exclude: string[] = [], limit = 1) {
