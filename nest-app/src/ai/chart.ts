@@ -332,7 +332,7 @@ function patchPlanField(plan: WidgetPlan, field: keyof WidgetPlan, value: string
   if (!value) return;
   if (plan[field] !== value) {
     log('chart:fix', `mapped ${String(field)}="${String(plan[field] ?? '-')}" → "${value}" for ${plan.type} "${plan.title}"`);
-    (plan as Record<string, unknown>)[field] = value;
+    (plan as unknown as Record<string, unknown>)[field] = value;
   }
 }
 
