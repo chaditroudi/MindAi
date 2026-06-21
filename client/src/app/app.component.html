@@ -133,6 +133,33 @@
 
       @if (s.sidebarTab === 'memory') {
         <div class="memory-panel">
+
+          <!-- Toggle row -->
+          <div class="memory-toggle-row">
+            <div class="memory-toggle-label">
+              <span class="memory-toggle-icon">🧠</span>
+              <span>Memory extraction</span>
+              <span class="memory-toggle-status" [class.memory-toggle-status--on]="s.memoryExtractionEnabled">
+                {{ s.memoryExtractionEnabled ? 'ON' : 'OFF' }}
+              </span>
+            </div>
+            <button
+              class="memory-toggle-btn"
+              [class.memory-toggle-btn--on]="s.memoryExtractionEnabled"
+              (click)="toggleMemoryExtraction()"
+              [title]="s.memoryExtractionEnabled ? 'Click to disable — stops LLM token usage for memory' : 'Click to enable — extracts memories after each response'"
+            >
+              <span class="memory-toggle-track">
+                <span class="memory-toggle-thumb"></span>
+              </span>
+            </button>
+          </div>
+          @if (!s.memoryExtractionEnabled) {
+            <div class="memory-disabled-notice">
+              Memory extraction is <strong>disabled</strong>. No tokens are used for memory after responses. Existing memories are still shown below.
+            </div>
+          }
+
           <div class="memory-header">
             <span class="memory-header-text">
               {{ s.memories.length }} memory item{{ s.memories.length !== 1 ? 's' : '' }} stored
@@ -147,7 +174,11 @@
           @if (!s.memories.length) {
             <div class="session-empty">
               No memories yet.<br>
-              Memories are extracted automatically after each AI response.
+              @if (s.memoryExtractionEnabled) {
+                Memories are extracted automatically after each AI response.
+              } @else {
+                Enable memory extraction above to start building memories.
+              }
             </div>
           }
 

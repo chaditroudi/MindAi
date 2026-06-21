@@ -97,6 +97,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     void this.loadSessions();
     void this.loadSavedResults();
     void this.loadMemories();
+    void this.loadMemoryConfig();
     void this.checkGlobalKey();
   }
 
@@ -501,6 +502,25 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       await this.api.clearMemories(userId);
       this.st.patch({ memories: [] });
     } catch { /* non-critical */ }
+  }
+
+  async loadMemoryConfig(): Promise<void> {
+    try {
+      const { extractionEnabled } = await this.api.getMemoryConfig();
+      this.st.patch({ memoryExtractionEnabled: extractionEnabled });
+    } catch { /* non-critical — default stays true */ }
+  }
+
+  async toggleMemoryExtraction(): Promise<void> {
+    const next = !this.st.snap.memoryExtractionEnabled;
+    // Optimistically update the UI before the server responds
+    this.st.patch({ memoryExtractionEnabled: next });
+    try {
+      await this.api.setMemoryConfig(next);
+    } catch {
+      // Revert if the server call failed
+      this.st.patch({ memoryExtractionEnabled: !next });
+    }
   }
 
   memoryTypeIcon(type: string): string {
