@@ -120,6 +120,12 @@ export interface ProviderResponse {
   hasGlobalKey:  boolean;
 }
 
+// ─── Memory config ────────────────────────────────────────────────────────────
+
+export interface MemoryConfigResponse {
+  extractionEnabled: boolean;
+}
+
 // ─── API responses ────────────────────────────────────────────────────────────
 
 export interface DashboardResponse {

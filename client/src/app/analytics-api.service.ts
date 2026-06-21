@@ -13,6 +13,7 @@ import type {
   AnalyticsRequest, AnalyticsResponse, ProviderResponse,
   MetaResponse, SessionSummary, SessionDetail,
   SavedResultSummary, SavedResultDetail, MessageResult, ModeKey, MemoryItem,
+  MemoryConfigResponse,
 } from './app.types';
 
 @Injectable({ providedIn: 'root' })
@@ -68,6 +69,14 @@ export class AnalyticsApiService {
   clearMemories(userId: string): Promise<{ ok: boolean; deleted: number }> {
     const headers = new HttpHeaders({ 'X-User-Id': userId });
     return this.req(this.http.delete<{ ok: boolean; deleted: number }>('/api/memory', { headers }));
+  }
+
+  getMemoryConfig(): Promise<MemoryConfigResponse> {
+    return this.req(this.http.get<MemoryConfigResponse>('/api/memory/config'));
+  }
+
+  setMemoryConfig(enabled: boolean): Promise<{ ok: boolean; extractionEnabled: boolean }> {
+    return this.req(this.http.patch<{ ok: boolean; extractionEnabled: boolean }>('/api/memory/config', { extractionEnabled: enabled }));
   }
 
   listSessions(): Promise<SessionSummary[]> {

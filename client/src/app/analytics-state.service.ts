@@ -22,7 +22,8 @@ export interface AppState {
   sessions:      SessionSummary[];
   savedResults:  SavedResultSummary[];
   viewingSaved:  SavedResultDetail | null;
-  memories:      MemoryItem[];
+  memories:               MemoryItem[];
+  memoryExtractionEnabled: boolean;
 
   // Report format suggestion
   pendingSuggestion: boolean;
@@ -52,7 +53,8 @@ const INITIAL: AppState = {
   sessions:      [],
   savedResults:  [],
   viewingSaved:  null,
-  memories:      [],
+  memories:               [],
+  memoryExtractionEnabled: true,
 
   pendingSuggestion: false,
   pendingPrompt:     '',
