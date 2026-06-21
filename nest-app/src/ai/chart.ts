@@ -66,6 +66,14 @@ type LlmWidget    = z.infer<typeof widgetSchema>;
 type LlmDashboard = z.infer<typeof dashboardSchema>;
 type DataRow      = Record<string, unknown>;
 type ChartAgg     = typeof CHART_AGGREGATIONS[number];
+type FieldKind    = 'numeric' | 'temporal' | 'categorical';
+
+interface RowProfile {
+  all:         string[];
+  numeric:     string[];
+  temporal:    string[];
+  categorical: string[];
+}
 
 interface WidgetPlan {
   type:          string;
@@ -88,6 +96,121 @@ type Renderer = (plan: WidgetPlan, data: DataRow[], id: string) => unknown;
 
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
 const str = (v: unknown): string => (v == null ? '' : String(v));
+const GENERIC_LABEL_TOKENS = new Set(['label', 'name', 'title', 'category', 'group', 'segment', 'region', 'type']);
+const GENERIC_VALUE_TOKENS = new Set(['value', 'total', 'amount', 'metric', 'budget', 'count', 'sum', 'score']);
+const GENERIC_TIME_TOKENS  = new Set(['date', 'time', 'month', 'year', 'day', 'week', 'period']);
+
+function normalizeFieldToken(value?: string) {
+  return (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function isNumericLike(value: unknown) {
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'string') {
+    const trimmed = value.trim().replace(/,/g, '');
+    return trimmed.length > 0 && Number.isFinite(Number(trimmed));
+  }
+  return false;
+}
+
+function isTemporalLike(value: unknown) {
+  if (value instanceof Date) return !Number.isNaN(value.getTime());
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && !Number.isNaN(Date.parse(trimmed));
+}
+
+function fieldSamples(rows: DataRow[], field: string) {
+  return rows.map(r => r[field]).filter(v => v != null).slice(0, 20);
+}
+
+function classifyField(rows: DataRow[], field: string): FieldKind {
+  const samples = fieldSamples(rows, field);
+  if (!samples.length) return 'categorical';
+  if (samples.every(isNumericLike))  return 'numeric';
+  if (samples.every(isTemporalLike)) return 'temporal';
+  return 'categorical';
+}
+
+function buildRowProfile(keys: Set<string>, rows: DataRow[]): RowProfile {
+  const all         = [...keys];
+  const numeric: string[]     = [];
+  const temporal: string[]    = [];
+  const categorical: string[] = [];
+
+  for (const field of all) {
+    const kind = classifyField(rows, field);
+    if (kind === 'numeric') numeric.push(field);
+    else if (kind === 'temporal') temporal.push(field);
+    else categorical.push(field);
+  }
+
+  return { all, numeric, temporal, categorical };
+}
+
+function pickFields(profile: RowProfile, kinds: FieldKind[], exclude: string[] = [], limit = 1) {
+  const blocked = new Set(exclude.filter(Boolean));
+  const picked: string[] = [];
+
+  for (const kind of kinds) {
+    const bucket = profile[kind];
+    for (const field of bucket) {
+      if (blocked.has(field)) continue;
+      picked.push(field);
+      blocked.add(field);
+      if (picked.length >= limit) return picked;
+    }
+  }
+
+  return picked;
+}
+
+function scoreFieldCandidate(requested: string, candidate: string) {
+  const wanted    = normalizeFieldToken(requested);
+  const current   = normalizeFieldToken(candidate);
+  const rawWanted = requested.trim().toLowerCase();
+  const rawNow    = candidate.trim().toLowerCase();
+
+  if (!wanted) return 0;
+  if (requested === candidate) return 100;
+  if (rawWanted === rawNow) return 90;
+  if (wanted === current) return 80;
+  if (current.includes(wanted) || wanted.includes(current)) return 55;
+  return 0;
+}
+
+function defaultKindsForToken(token: string): FieldKind[] {
+  if (GENERIC_TIME_TOKENS.has(token))  return ['temporal', 'categorical'];
+  if (GENERIC_VALUE_TOKENS.has(token)) return ['numeric'];
+  if (GENERIC_LABEL_TOKENS.has(token)) return ['categorical', 'temporal'];
+  return [];
+}
+
+function resolveFieldName(
+  requested: string | undefined,
+  profile:   RowProfile,
+  preferred: FieldKind[],
+  exclude:   string[] = [],
+) {
+  const blocked = new Set(exclude.filter(Boolean));
+  const token   = normalizeFieldToken(requested);
+  const scoped  = preferred.length ? pickFields(profile, preferred, exclude, profile.all.length) : profile.all.filter(f => !blocked.has(f));
+  const pool    = scoped.length ? scoped : profile.all.filter(f => !blocked.has(f));
+
+  if (requested && !blocked.has(requested) && profile.all.includes(requested)) return requested;
+
+  if (requested) {
+    const scored = pool
+      .map(field => ({ field, score: scoreFieldCandidate(requested, field) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score);
+    if (scored[0]) return scored[0].field;
+  }
+
+  const genericKinds = token ? defaultKindsForToken(token) : [];
+  const picked = pickFields(profile, genericKinds.length ? genericKinds : preferred, exclude, 1);
+  return picked[0];
+}
 
 function deepMerge(base: Record<string, unknown>, over: Record<string, unknown>): Record<string, unknown> {
   const result = { ...base };
@@ -203,6 +326,152 @@ function compareAxisValue(a: unknown, b: unknown, mode: 'number' | 'date') {
   return mode === 'number'
     ? Number(a) - Number(b)
     : new Date(String(a)).getTime() - new Date(String(b)).getTime();
+}
+
+function patchPlanField(plan: WidgetPlan, field: keyof WidgetPlan, value: string | undefined) {
+  if (!value) return;
+  if (plan[field] !== value) {
+    log('chart:fix', `mapped ${String(field)}="${String(plan[field] ?? '-')}" → "${value}" for ${plan.type} "${plan.title}"`);
+    (plan as Record<string, unknown>)[field] = value;
+  }
+}
+
+function repairColumns(plan: WidgetPlan, profile: RowProfile) {
+  if (plan.type === 'radar_chart') {
+    const valid = (plan.columns ?? []).filter(col => profile.numeric.includes(col));
+    plan.columns = valid.length ? valid : pickFields(profile, ['numeric'], [plan.labelField ?? ''], 6);
+  } else if (plan.type === 'table') {
+    const valid = (plan.columns ?? []).filter(col => profile.all.includes(col));
+    plan.columns = valid.length ? valid : profile.all.slice(0, 6);
+  }
+}
+
+function repairWidgetPlan(raw: LlmWidget, profile: RowProfile, rows: DataRow[]): WidgetPlan {
+  const { agg, ...rest } = normalizeFields(raw);
+  const plan = { ...rest, ...(agg && agg !== 'none' ? { agg: agg as ChartAgg } : {}) } as WidgetPlan;
+
+  switch (plan.type) {
+    case 'line_chart':
+    case 'area_chart':
+      patchPlanField(plan, 'xField', resolveFieldName(plan.xField, profile, ['temporal', 'categorical'], [plan.valueField ?? '', plan.seriesField ?? '']));
+      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'], [plan.xField ?? '', plan.seriesField ?? '']));
+      break;
+    case 'multi_line_chart':
+      patchPlanField(plan, 'xField', resolveFieldName(plan.xField, profile, ['temporal', 'categorical'], [plan.seriesField ?? '', plan.valueField ?? '']));
+      patchPlanField(plan, 'seriesField', resolveFieldName(plan.seriesField, profile, ['categorical'], [plan.xField ?? '', plan.valueField ?? '']));
+      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'], [plan.xField ?? '', plan.seriesField ?? '']));
+      break;
+    case 'scatter_plot': {
+      const numeric = pickFields(profile, ['numeric'], [plan.labelField ?? ''], 2);
+      patchPlanField(plan, 'xField', resolveFieldName(plan.xField, profile, ['numeric'], [plan.yField ?? '', plan.labelField ?? '']) ?? numeric[0]);
+      patchPlanField(plan, 'yField', resolveFieldName(plan.yField, profile, ['numeric'], [plan.xField ?? '', plan.labelField ?? '']) ?? numeric[1]);
+      patchPlanField(plan, 'labelField', resolveFieldName(plan.labelField, profile, ['categorical'], [plan.xField ?? '', plan.yField ?? '']));
+      break;
+    }
+    case 'heatmap':
+      patchPlanField(plan, 'xField', resolveFieldName(plan.xField, profile, ['categorical', 'temporal'], [plan.yField ?? '', plan.valueField ?? '']));
+      patchPlanField(plan, 'yField', resolveFieldName(plan.yField, profile, ['categorical', 'temporal'], [plan.xField ?? '', plan.valueField ?? '']));
+      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'], [plan.xField ?? '', plan.yField ?? '']));
+      break;
+    case 'grouped_bar_chart':
+    case 'stacked_bar_chart':
+      patchPlanField(plan, 'labelField', resolveFieldName(plan.labelField ?? plan.xField, profile, ['categorical', 'temporal'], [plan.seriesField ?? '', plan.valueField ?? '']));
+      patchPlanField(plan, 'seriesField', resolveFieldName(plan.seriesField, profile, ['categorical'], [plan.labelField ?? '', plan.valueField ?? '']));
+      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'], [plan.labelField ?? '', plan.seriesField ?? '']));
+      plan.xField = undefined;
+      break;
+    case 'radar_chart':
+      patchPlanField(plan, 'labelField', resolveFieldName(plan.labelField ?? plan.xField, profile, ['categorical'], []));
+      repairColumns(plan, profile);
+      break;
+    case 'table':
+      repairColumns(plan, profile);
+      break;
+    case 'kpi_card':
+    case 'gauge_chart':
+      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'], []));
+      break;
+    default:
+      patchPlanField(plan, 'labelField', resolveFieldName(plan.labelField ?? plan.xField, profile, ['categorical', 'temporal'], [plan.valueField ?? '']));
+      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'], [plan.labelField ?? '']));
+      plan.xField = undefined;
+      break;
+  }
+
+  if (CHART_BY_TYPE[plan.type]?.requiresValue && plan.agg !== 'count' && !plan.valueField) {
+    patchPlanField(plan, 'valueField', pickFields(profile, ['numeric'], [plan.labelField ?? '', plan.xField ?? '', plan.seriesField ?? '', plan.yField ?? ''], 1)[0]);
+  }
+
+  if (plan.type === 'table') {
+    repairColumns(plan, profile);
+  }
+
+  return plan;
+}
+
+function synthesizeWidgets(
+  profile:   RowProfile,
+  rows:      DataRow[],
+  strategy?: SkillKind,
+  chartHint?: ChartHint,
+): WidgetPlan[] {
+  const hint     = chartHint?.toLowerCase() ?? '';
+  const planMode = strategy?.toLowerCase() ?? '';
+
+  if ((hint === 'scatter' || planMode === 'anomaly') && profile.numeric.length >= 2) {
+    return [{
+      type:      'scatter_plot',
+      title:     'Scatter View',
+      xField:    profile.numeric[0],
+      yField:    profile.numeric[1],
+      labelField: profile.categorical[0],
+    }];
+  }
+
+  if ((hint === 'trend' || planMode === 'trend') && profile.temporal.length && profile.numeric.length) {
+    return [{
+      type:       'line_chart',
+      title:      'Trend',
+      xField:     profile.temporal[0],
+      valueField: profile.numeric[0],
+    }];
+  }
+
+  if ((hint === 'heatmap' || (planMode === 'comparison' && profile.categorical.length >= 2)) && profile.categorical.length >= 2 && profile.numeric.length) {
+    return [{
+      type:       'heatmap',
+      title:      'Cross Breakdown',
+      xField:     profile.categorical[0],
+      yField:     profile.categorical[1],
+      valueField: profile.numeric[0],
+    }];
+  }
+
+  if (profile.categorical.length && profile.numeric.length) {
+    const lowCardinality = uniqueStrings(rows, profile.categorical[0]).length <= 6;
+    const chartType = hint === 'part_of_whole' && lowCardinality ? 'donut_chart' : 'horizontal_bar_chart';
+    return [{
+      type:       chartType,
+      title:      'Breakdown',
+      labelField: profile.categorical[0],
+      valueField: profile.numeric[0],
+      ...(chartType === 'horizontal_bar_chart' ? { sortDesc: true } : {}),
+    }];
+  }
+
+  if (profile.numeric.length) {
+    return [{
+      type:       'kpi_card',
+      title:      'Key Metric',
+      valueField: profile.numeric[0],
+    }];
+  }
+
+  return [{
+    type:    'table',
+    title:   'Data View',
+    columns: profile.all.slice(0, 6),
+  }];
 }
 
 const widget = (plan: WidgetPlan, id: string, option: Record<string, unknown>) =>
@@ -403,53 +672,29 @@ function normalizeFields(w: LlmWidget): LlmWidget {
   return w;
 }
 
-function validateWidget(w: LlmWidget, keys: Set<string>, rows: DataRow[]): { ok: boolean; reasons: string[] } {
-  // custom type bypasses field validation — LLM supplies full ECharts option in chartOptions
-  if (w.type === 'custom') return { ok: true, reasons: [] };
-
+function validateWidget(w: WidgetPlan, profile: RowProfile, rows: DataRow[]): { ok: boolean; reasons: string[] } {
   const reasons: string[] = [];
-  const norm = normalizeFields(w);
   const def  = CHART_BY_TYPE[w.type];
 
+  if (w.type === 'custom') return { ok: true, reasons };
+
   for (const prop of planFieldProps(w.type)) {
-    const name = getFieldValue(norm as WidgetPlan, prop);
-    if (name && !keys.has(name)) reasons.push(`${prop}="${name}" not in data`);
+    const name = getFieldValue(w, prop);
+    if (name && !profile.all.includes(name)) reasons.push(`${prop}="${name}" not in data`);
   }
 
   const isNumeric = (f: string) =>
     rows.slice(0, 20).some(r => r[f] != null) &&
-    rows.slice(0, 20).every(r => r[f] == null || typeof r[f] === 'number');
+    rows.slice(0, 20).every(r => r[f] == null || isNumericLike(r[f]));
 
-  if (norm.valueField && keys.has(norm.valueField) && norm.agg !== 'count' && !isNumeric(norm.valueField))
-    reasons.push(`valueField "${norm.valueField}" is not numeric`);
-  if (def?.requiresAxis && !norm.labelField && !norm.xField)
+  if (w.valueField && profile.all.includes(w.valueField) && w.agg !== 'count' && !isNumeric(w.valueField))
+    reasons.push(`valueField "${w.valueField}" is not numeric-like`);
+  if (def?.requiresAxis && !w.labelField && !w.xField)
     reasons.push('no axis field');
-  if (def?.requiresSeries && !norm.seriesField)
-    reasons.push(`${w.type} requires seriesField`);
-  if (def?.requiresXY && (!norm.xField || !norm.yField))
-    reasons.push(`${w.type} requires xField and yField`);
+  if (def?.requiresSeries && !w.seriesField) reasons.push(`${w.type} requires seriesField`);
+  if (def?.requiresXY && (!w.xField || !w.yField)) reasons.push(`${w.type} requires xField and yField`);
 
   return { ok: reasons.length === 0, reasons };
-}
-
-function toWidgetPlan(w: LlmWidget, keys: Set<string>, rows: DataRow[]): WidgetPlan {
-  const { agg, ...rest } = normalizeFields(w);
-  const def = CHART_BY_TYPE[w.type];
-
-  if (def?.requiresValue && agg !== 'count' && !rest.valueField) {
-    const skip      = new Set([rest.labelField, rest.xField, rest.seriesField].filter(Boolean) as string[]);
-    const detected  = [...keys].find(k =>
-      !skip.has(k) &&
-      rows.slice(0, 5).some(r => r[k] != null) &&
-      rows.slice(0, 5).every(r => r[k] == null || typeof r[k] === 'number'),
-    );
-    if (detected) {
-      rest.valueField = detected;
-      log('chart:fix', `auto-detected valueField="${detected}" for ${w.type} "${w.title}"`);
-    }
-  }
-
-  return { ...rest, ...(agg && agg !== 'none' ? { agg: agg as ChartAgg } : {}) } as unknown as WidgetPlan;
 }
 
 function renderWidget(plan: WidgetPlan, rows: DataRow[], keys: Set<string>, id: string) {
@@ -485,6 +730,7 @@ export async function runChart(
   log('chart', `rows: ${rows.length} | strategy: ${strategy ?? 'standard'} | hint: ${chartHint ?? '-'} | source: ${source?.name ?? '?'}`);
 
   const keys = new Set<string>(rows.flatMap(r => Object.keys(r)));
+  const profile = buildRowProfile(keys, rows);
 
   let plan: LlmDashboard;
   const t0 = Date.now();
@@ -511,9 +757,10 @@ export async function runChart(
   const dropped: string[]     = [];
 
   for (const w of plan.widgets.slice(0, MAX_WIDGETS)) {
-    const check = validateWidget(w, keys, rows);
+    const repaired = repairWidgetPlan(w, profile, rows);
+    const check = validateWidget(repaired, profile, rows);
     if (check.ok) {
-      valid.push(toWidgetPlan(w, keys, rows));
+      valid.push(repaired);
       log('chart:llm', `accepted ${w.type} "${w.title}"`);
     } else {
       dropped.push(`${w.type}: ${check.reasons.join('; ')}`);
@@ -521,9 +768,23 @@ export async function runChart(
     }
   }
 
-  const widgets = valid
+  let widgets = valid
     .map((w, i) => renderWidget(w, rows, keys, `w${i + 1}`))
     .filter((w): w is NonNullable<typeof w> => w !== null);
+
+  if (!widgets.length) {
+    const adaptivePlans = synthesizeWidgets(profile, rows, strategy, chartHint)
+      .slice(0, MAX_WIDGETS)
+      .map(plan => repairWidgetPlan(plan as unknown as LlmWidget, profile, rows));
+
+    widgets = adaptivePlans
+      .map((w, i) => renderWidget(w, rows, keys, `auto${i + 1}`))
+      .filter((w): w is NonNullable<typeof w> => w !== null);
+
+    if (widgets.length) {
+      log('chart:auto', `synthesized ${widgets.length} widget(s) from row profile`);
+    }
+  }
 
   log('chart', `done | widgets: ${widgets.length}${dropped.length ? ` | dropped: ${dropped.length}` : ''} | layout: ${plan.layout}`);
 
