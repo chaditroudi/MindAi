@@ -5,7 +5,6 @@ import { ChartResultsRepository } from '../ai/chart-results.repository';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { PipelineService } from './pipeline.service';
-import { UserKeysModule } from '../user-keys/user-keys.module';
 import { CacheModule } from '../cache/cache.module';
 import { HistoryModule } from '../history/history.module';
 import { MemoryModule } from '../memory/memory.module';
@@ -13,7 +12,6 @@ import { MemoryModule } from '../memory/memory.module';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: ChartResult.name, schema: ChartResultSchema }]),
-    UserKeysModule,
     CacheModule,
     HistoryModule,
     MemoryModule,

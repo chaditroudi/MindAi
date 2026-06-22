@@ -215,16 +215,14 @@ export class AnalyticsService {
     }
   }
 
-  private async resolveApiKeys(userId: string): Promise<{
-    storedKey: string | null;
+  private resolveApiKeys(userKey: string | null): {
     globalKey: string | null;
     primaryKey: string;
-  }> {
-    const storedKey  = (await this.userKeys.get(userId))?.trim() || null;
-    const groqGlobal = this.cfg.get<string>('llm.groqApiKey')?.trim() || null;
+  } {
+    const groqGlobal   = this.cfg.get<string>('llm.groqApiKey')?.trim()   || null;
     const openaiGlobal = this.cfg.get<string>('llm.openaiApiKey')?.trim() || null;
-    const globalKey  = groqGlobal || openaiGlobal || null;
-    const primaryKey = storedKey || globalKey;
+    const globalKey    = groqGlobal || openaiGlobal || null;
+    const primaryKey   = userKey || globalKey;
 
     if (!primaryKey) {
       throw new UnauthorizedException(
@@ -232,7 +230,7 @@ export class AnalyticsService {
       );
     }
 
-    return { storedKey, globalKey, primaryKey };
+    return { globalKey, primaryKey };
   }
 
   private async resolveSession(req: AnalyticsRequest): Promise<{
@@ -392,8 +390,7 @@ export class AnalyticsService {
     onRateLimit: (retryErr: unknown) => never;
     onOther?: (retryErr: unknown) => never;
   }): Promise<{ result: unknown; effectiveApiKey: string }> {
-    this.logger.warn(`Per-user key for user ${opts.userId} rejected — deleting and retrying with global key`);
-    void this.userKeys.delete(opts.userId).catch(() => undefined);
+    this.logger.warn(`Per-user key for user ${opts.userId} rejected — retrying with global key`);
     try {
       const result = await this.executeByIntent(
         opts.intent,
