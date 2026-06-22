@@ -193,9 +193,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
     const { userId } = this.st.snap;
     try {
-      await this.api.saveKey(userId, trimmed);
+      const res = await this.api.saveKey(userId, trimmed);
       localStorage.setItem('mind_has_key', '1');
-      this.st.patch({ hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false });
+      this.st.patch({
+        hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
+        provider: res.provider ?? (trimmed.startsWith('sk-') ? 'openai' : 'groq'),
+      });
     } catch (err) {
       const message = err instanceof Error
         ? err.message
@@ -458,16 +461,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   private async checkGlobalKey(): Promise<void> {
     try {
-      const { hasGlobalKey } = await this.api.getProvider();
+      const { hasGlobalKey, provider } = await this.api.getProvider();
       if (hasGlobalKey) {
-        // Server key available — user never needs to enter a personal key
-        this.st.patch({ hasKey: true, showKeyModal: false });
+        this.st.patch({ hasKey: true, showKeyModal: false, provider });
       } else if (!this.st.snap.hasKey) {
-        // No global key and no saved user key — need to prompt
         this.st.patch({ showKeyModal: true });
       }
     } catch {
-      // Server unreachable — fall back to localStorage state
       if (!this.st.snap.hasKey) {
         this.st.patch({ showKeyModal: true });
       }

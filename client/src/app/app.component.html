@@ -27,7 +27,7 @@
     </nav>
 
     <div class="topbar-right">
-      <span class="status-badge"><span class="status-dot"></span>AI</span>
+      <span class="status-badge"><span class="status-dot"></span>{{ s.provider ? (s.provider | titlecase) : 'AI' }}</span>
       @if (s.hasKey) {
         <button class="key-btn" title="Change API key" (click)="st.patch({ showKeyModal: true })">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
