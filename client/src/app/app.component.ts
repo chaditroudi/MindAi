@@ -90,15 +90,21 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       userId = crypto.randomUUID();
       localStorage.setItem('mind_user_id', userId);
     }
-    const hasKey = localStorage.getItem('mind_has_key') === '1';
-    // Start with modal hidden — checkGlobalKey decides whether to show it
-    this.st.patch({ userId, hasKey, showKeyModal: false });
+
+    const storedKey = localStorage.getItem('mind_api_key');
+    if (storedKey) {
+      const provider = storedKey.startsWith('sk-') ? 'openai' : 'groq';
+      this.st.patch({ userId, hasKey: true, showKeyModal: false, provider });
+    } else {
+      this.st.patch({ userId, showKeyModal: false });
+      void this.checkGlobalKey();
+    }
+
     void this.loadMeta();
     void this.loadSessions();
     void this.loadSavedResults();
     void this.loadMemories();
     void this.loadMemoryConfig();
-    void this.checkGlobalKey();
   }
 
   ngAfterViewChecked(): void {
@@ -191,10 +197,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       return;
     }
 
-    const { userId } = this.st.snap;
     try {
-      const res = await this.api.saveKey(userId, trimmed);
-      localStorage.setItem('mind_has_key', '1');
+      const res = await this.api.verifyKey(trimmed);
+      localStorage.setItem('mind_api_key', trimmed);
       this.st.patch({
         hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
         provider: res.provider ?? (trimmed.startsWith('sk-') ? 'openai' : 'groq'),
@@ -208,12 +213,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   handleInvalidKey(): void {
-    localStorage.removeItem('mind_has_key');
-    // Delete the bad per-user key so subsequent requests fall back to the global key
-    void this.api.deleteKey(this.st.snap.userId).catch(() => {});
+    localStorage.removeItem('mind_api_key');
     void this.api.getProvider().then(({ hasGlobalKey }) => {
       if (hasGlobalKey) {
-        // Global key is available — silently recover, no modal needed
         this.st.patch({ hasKey: true, keyRejected: false, phase: 'idle' });
       } else {
         this.st.patch({ hasKey: false, keyRejected: true, showKeyModal: true, phase: 'idle' });
@@ -223,13 +225,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     });
   }
 
-  async clearApiKey(): Promise<void> {
-    const { userId } = this.st.snap;
-    try {
-      await this.api.deleteKey(userId);
-    } catch { /* best-effort */ }
-    localStorage.removeItem('mind_has_key');
-    this.st.patch({ hasKey: false, showKeyModal: true });
+  clearApiKey(): void {
+    localStorage.removeItem('mind_api_key');
+    this.st.patch({ hasKey: false, showKeyModal: true, provider: '' });
   }
 
   // mode + session controls
@@ -318,12 +316,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       ],
     });
 
+    const apiKey = localStorage.getItem('mind_api_key') ?? undefined;
     try {
       const data = await this.api.runAnalytics({
         prompt:    prompt.trim(),
         intent:    INTENT_MAP[intent],
         sessionId: sessionId,
-      }, userId);
+      }, userId, apiKey);
 
       const durationMs = Date.now() - this.timerStart;
 
@@ -358,11 +357,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.timerStart = Date.now();
     this.st.patch({ phase: 'loading' });
 
+    const apiKey = localStorage.getItem('mind_api_key') ?? undefined;
     try {
       if (choice === 'both') {
         const [dashData, reportData] = await Promise.all([
-          this.api.runAnalytics({ prompt: pendingPrompt, intent: 'dashboard', sessionId }, userId),
-          this.api.runAnalytics({ prompt: pendingPrompt, intent: 'report',    sessionId }, userId),
+          this.api.runAnalytics({ prompt: pendingPrompt, intent: 'dashboard', sessionId }, userId, apiKey),
+          this.api.runAnalytics({ prompt: pendingPrompt, intent: 'report',    sessionId }, userId, apiKey),
         ]);
         const durationMs = Date.now() - this.timerStart;
         const combined: ConversationMessage = {
@@ -382,7 +382,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         });
       } else {
         const apiIntent = choice === 'chart' ? 'dashboard' : 'report';
-        const data      = await this.api.runAnalytics({ prompt: pendingPrompt, intent: apiIntent, sessionId }, userId);
+        const data      = await this.api.runAnalytics({ prompt: pendingPrompt, intent: apiIntent, sessionId }, userId, apiKey);
         const durationMs = Date.now() - this.timerStart;
         this.st.patch({
           phase: 'done', durationMs,
