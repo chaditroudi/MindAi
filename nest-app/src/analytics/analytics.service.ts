@@ -12,7 +12,6 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
 import { getSources } from '../sources/sources-cache';
-import { UserKeysService } from '../user-keys/user-keys.service';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { analyticsAgent } from '../session/agent';
@@ -130,7 +129,6 @@ export class AnalyticsService {
 
   constructor(
     private readonly pipeline: PipelineService,
-    private readonly userKeys: UserKeysService,
     private readonly cfg: ConfigService,
     private readonly memory: MemoryService,
   ) {}
@@ -172,11 +170,11 @@ export class AnalyticsService {
   // Public API
   // --------------------------------------------------------------------------
 
-  async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
+  async run(req: AnalyticsRequest, userKey: string | null = null): Promise<AnalyticsResponse> {
     const prompt = promptSchema.parse(req.prompt);
 
     this.ensureDataSources();
-    const { storedKey, globalKey, primaryKey } = await this.resolveApiKeys(req.userId);
+    const { primaryKey, globalKey } = this.resolveApiKeys(userKey);
     const { sessionId, displayIntent } = await this.resolveSession(req);
 
     const memoryContext = await this.buildMemoryContext(req.userId, sessionId, prompt);
@@ -190,7 +188,7 @@ export class AnalyticsService {
       prompt,
       memoryContext,
       primaryKey,
-      storedKey,
+      userKey,
       globalKey,
       req.userId,
     );
