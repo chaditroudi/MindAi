@@ -180,13 +180,17 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async saveApiKey(key: string): Promise<void> {
     const trimmed = key.trim();
     if (!trimmed) return;
-    if (!trimmed.startsWith('gsk_')) {
+
+    const isGroq   = trimmed.startsWith('gsk_');
+    const isOpenAI = trimmed.startsWith('sk-');
+    if (!isGroq && !isOpenAI) {
       this.st.patch({
         keyRejected: true,
-        keyErrorText: 'Keys must start with "gsk_". Get yours at console.groq.com',
+        keyErrorText: 'Enter a Groq key (starts with "gsk_") or an OpenAI key (starts with "sk-").',
       });
       return;
     }
+
     const { userId } = this.st.snap;
     try {
       await this.api.saveKey(userId, trimmed);

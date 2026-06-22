@@ -321,7 +321,7 @@ export class AnalyticsService {
     if (isInvalidKeyError(err)) {
       if (!canFallback) {
         throw Object.assign(
-          new UnauthorizedException('Invalid Groq API key. Please update it in settings.'),
+          new UnauthorizedException('Invalid API key. Please update it in settings.'),
           { code: ERROR_CODES.INVALID_API_KEY },
         );
       }
@@ -333,7 +333,7 @@ export class AnalyticsService {
         storedKey,
         globalKey: globalKey!,
         onInvalid: () => { throw Object.assign(
-          new UnauthorizedException('Global Groq API key is also invalid. Contact the administrator.'),
+          new UnauthorizedException('Global API key is also invalid. Contact the administrator.'),
           { code: ERROR_CODES.INVALID_API_KEY },
         ); },
         onRateLimit: (retryErr) => { throw Object.assign(
@@ -364,7 +364,7 @@ export class AnalyticsService {
         storedKey,
         globalKey: globalKey!,
         onInvalid: () => { throw Object.assign(
-          new UnauthorizedException('Global Groq API key is invalid. Contact the administrator.'),
+          new UnauthorizedException('Global API key is invalid. Contact the administrator.'),
           { code: ERROR_CODES.INVALID_API_KEY },
         ); },
         onRateLimit: (retryErr) => { throw Object.assign(
