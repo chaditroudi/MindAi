@@ -22,15 +22,15 @@ import type { LanguageModelV1 } from 'ai';
 //   ROLE_ENV_KEYS    → maps role -> which env var overrides its model name
 //   ROLE_DEFAULTS    → maps role -> default model name if no env var is set
 //   TIMEOUT_ENV_KEYS → maps role -> which env var sets its timeout in ms
-import { ROLE_ENV_KEYS, ROLE_DEFAULTS, TIMEOUT_ENV_KEYS } from 'src/constants/Model';
+import { ROLE_ENV_KEYS, ROLE_DEFAULTS, OPENAI_DEFAULTS, TIMEOUT_ENV_KEYS } from 'src/constants/Model';
 
-// ── AGENT ROLES ───────────────────────────────────────────────────────────────
-// The four LLM roles used in the app. Each gets its own model + timeout config.
-//   supervisor → builds the MongoDB aggregation pipeline from the user's prompt
-//   chart      → selects chart types and field mappings from query results
-//   writer     → writes report sections or inquiry summaries
-//   memory     → extracts key facts from completed conversations (uses smaller model)
 export type AgentRole = 'supervisor' | 'writer' | 'chart' | 'memory';
+
+// Detect provider from key prefix: OpenAI keys start "sk-", Groq keys start "gsk_"
+export type AIProvider = 'groq' | 'openai';
+export function detectProvider(apiKey: string): AIProvider {
+  return apiKey.startsWith('sk-') ? 'openai' : 'groq';
+}
 
 
 // ── resolveModel() ────────────────────────────────────────────────────────────
@@ -48,22 +48,26 @@ export type AgentRole = 'supervisor' | 'writer' | 'chart' | 'memory';
 //   2. GROQ_API_KEY env  (global server key)
 //   3. empty string      (will cause Groq to return 401 — handled by AnalyticsService)
 export function resolveModel(role: AgentRole, apiKey?: string): LanguageModelV1 {
-  // Pick the API key: user's key first, fall back to global env key
-  const key = apiKey ?? process.env['GROQ_API_KEY'] ?? '';
+  const key = apiKey
+    ?? process.env['GROQ_API_KEY']
+    ?? process.env['OPENAI_API_KEY']
+    ?? '';
 
-  // Create a Groq client that speaks the OpenAI protocol.
-  // compatibility: 'compatible' → disables some OpenAI-specific features that Groq doesn't support
+  const provider = detectProvider(key);
+  const envName  = process.env[ROLE_ENV_KEYS[role]]?.trim();
+
+  if (provider === 'openai') {
+    const client = createOpenAI({ apiKey: key });
+    return client(envName ?? OPENAI_DEFAULTS[role]);
+  }
+
+  // Groq uses the OpenAI-compatible endpoint with compatibility mode
   const groq = createOpenAI({
-    baseURL:       'https://api.groq.com/openai/v1', // Groq's OpenAI-compatible endpoint
+    baseURL:       'https://api.groq.com/openai/v1',
     apiKey:        key,
     compatibility: 'compatible',
   });
-
-  // Look up the model name: env override takes priority over the hardcoded default
-  const name = process.env[ROLE_ENV_KEYS[role]]?.trim() ?? ROLE_DEFAULTS[role];
-
-  // groq(name) returns a LanguageModelV1 instance ready for generateObject() / generateText()
-  return groq(name);
+  return groq(envName ?? ROLE_DEFAULTS[role]);
 }
 
 // ── freshSignal() ─────────────────────────────────────────────────────────────
