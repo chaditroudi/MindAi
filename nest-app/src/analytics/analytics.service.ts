@@ -96,10 +96,10 @@ function extractRetryDelay(err: unknown): string | null {
 function buildRateLimitMessage(err: unknown, withKeyHint: boolean): string {
   const retryIn = extractRetryDelay(err);
   const suffix = withKeyHint ? ' or use a different API key.' : '.';
-  if (retryIn) return `Groq API quota reached. Try again in ${retryIn}${suffix}`;
+  if (retryIn) return `API quota reached. Try again in ${retryIn}${suffix}`;
   return withKeyHint
-    ? 'Groq API quota reached. Please try again later or use a different API key.'
-    : 'Groq API quota reached. Please try again later.';
+    ? 'API quota reached. Please try again later or use a different API key.'
+    : 'API quota reached. Please try again later.';
 }
 
 // ============================================================================
@@ -222,13 +222,15 @@ export class AnalyticsService {
     globalKey: string | null;
     primaryKey: string;
   }> {
-    const storedKey = (await this.userKeys.get(userId))?.trim() || null;
-    const globalKey = this.cfg.get('llm.groqApiKey')?.trim() || null;
+    const storedKey  = (await this.userKeys.get(userId))?.trim() || null;
+    const groqGlobal = this.cfg.get<string>('llm.groqApiKey')?.trim() || null;
+    const openaiGlobal = this.cfg.get<string>('llm.openaiApiKey')?.trim() || null;
+    const globalKey  = groqGlobal || openaiGlobal || null;
     const primaryKey = storedKey || globalKey;
 
     if (!primaryKey) {
       throw new UnauthorizedException(
-        'No API key found. Please enter your Groq API key in settings.',
+        'No API key configured. Please enter a valid Groq or OpenAI API key in settings.',
       );
     }
 

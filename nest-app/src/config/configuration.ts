@@ -20,7 +20,8 @@ export default () => ({
     pipelineTimeoutMs:        positiveInt(process.env['MONGODB_PIPELINE_TIMEOUT_MS'], 30_000),
   },
   llm: {
-    groqApiKey: process.env['GROQ_API_KEY'],
+    groqApiKey:   process.env['GROQ_API_KEY'],
+    openaiApiKey: process.env['OPENAI_API_KEY'],
     timeouts: {
       supervisor: positiveInt(process.env['SUPERVISOR_TIMEOUT_MS'], 8_000),
       chart:      positiveInt(process.env['CHART_TIMEOUT_MS'], 8_000),

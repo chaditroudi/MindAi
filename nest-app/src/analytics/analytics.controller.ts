@@ -27,8 +27,11 @@ export class AnalyticsController {
 
   @Get('provider')
   getProvider() {
-    const hasGlobalKey = !!(this.cfg.get<string>('llm.groqApiKey')?.trim());
-    return { provider: 'groq', hasGlobalKey };
+    const groqKey   = this.cfg.get<string>('llm.groqApiKey')?.trim();
+    const openaiKey = this.cfg.get<string>('llm.openaiApiKey')?.trim();
+    const hasGlobalKey = !!(groqKey || openaiKey);
+    const provider = openaiKey && !groqKey ? 'openai' : 'groq';
+    return { provider, hasGlobalKey };
   }
 
   @Post('analytics')

@@ -10,11 +10,28 @@ class SaveKeyDto {
   @IsString() @MinLength(1) @MaxLength(300) apiKey!: string;
 }
 
-type GroqKeyStatus = 'valid' | 'invalid' | 'unreachable';
+type Provider  = 'groq' | 'openai';
+type KeyStatus = 'valid' | 'invalid' | 'unreachable';
 
-async function verifyGroqKey(apiKey: string): Promise<GroqKeyStatus> {
+const PROVIDER_VERIFY_URLS: Record<Provider, string> = {
+  groq:   'https://api.groq.com/openai/v1/models',
+  openai: 'https://api.openai.com/v1/models',
+};
+
+const PROVIDER_NAMES: Record<Provider, string> = {
+  groq:   'Groq',
+  openai: 'OpenAI',
+};
+
+function detectProvider(key: string): Provider | null {
+  if (key.startsWith('gsk_')) return 'groq';
+  if (key.startsWith('sk-'))  return 'openai';
+  return null;
+}
+
+async function verifyKey(apiKey: string, provider: Provider): Promise<KeyStatus> {
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/models', {
+    const res = await fetch(PROVIDER_VERIFY_URLS[provider], {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal:  AbortSignal.timeout(8_000),
     });
@@ -42,28 +59,29 @@ export class UserKeysController {
     if (!dto.userId || !dto.apiKey) throw new BadRequestException('userId and apiKey are required');
     const key = dto.apiKey.trim();
 
-    if (!key.startsWith('gsk_')) {
+    const provider = detectProvider(key);
+    if (!provider) {
       throw new BadRequestException(
-        'Invalid Groq API key format. Keys must start with "gsk_". Get yours at console.groq.com',
+        'Unrecognised key format. Use a Groq key (starts with "gsk_") or an OpenAI key (starts with "sk-").',
       );
     }
 
-    const status = await verifyGroqKey(key);
+    const status = await verifyKey(key, provider);
 
     if (status === 'invalid') {
       throw new BadRequestException(
-        'This Groq API key was rejected — it may be incorrect or revoked. Please check it and try again.',
+        `This ${PROVIDER_NAMES[provider]} API key was rejected — it may be incorrect or revoked. Please check it and try again.`,
       );
     }
     if (status === 'unreachable') {
       throw new HttpException(
-        { error: 'Could not reach Groq to verify the key. Please try again in a moment.' },
+        { error: `Could not reach ${PROVIDER_NAMES[provider]} to verify the key. Please try again in a moment.` },
         HttpStatus.BAD_GATEWAY,
       );
     }
 
     await this.service.save(dto.userId, key);
-    return { ok: true };
+    return { ok: true, provider };
   }
 
   @Delete('key/:userId')
