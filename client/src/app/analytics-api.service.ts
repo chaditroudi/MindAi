@@ -28,17 +28,14 @@ export class AnalyticsApiService {
     return this.req(this.http.get<MetaResponse>('/api/meta'));
   }
 
-  saveKey(userId: string, apiKey: string): Promise<{ ok: boolean; provider?: string }> {
-    return this.req(this.http.post<{ ok: boolean; provider?: string }>('/api/key', { userId, apiKey }));
+  verifyKey(apiKey: string): Promise<{ ok: boolean; provider?: string }> {
+    return this.req(this.http.post<{ ok: boolean; provider?: string }>('/api/key', { apiKey }));
   }
 
-  deleteKey(userId: string): Promise<{ ok: boolean }> {
-    return this.req(this.http.delete<{ ok: boolean }>(`/api/key/${userId}`));
-  }
-
-  runAnalytics(payload: AnalyticsRequest, userId: string): Promise<AnalyticsResponse> {
-    const headers = new HttpHeaders({ 'X-User-Id': userId });
-    return this.req(this.http.post<AnalyticsResponse>('/api/analytics', payload, { headers }));
+  runAnalytics(payload: AnalyticsRequest, userId: string, apiKey?: string): Promise<AnalyticsResponse> {
+    const hdrs: Record<string, string> = { 'X-User-Id': userId };
+    if (apiKey) hdrs['X-User-Api-Key'] = apiKey;
+    return this.req(this.http.post<AnalyticsResponse>('/api/analytics', payload, { headers: new HttpHeaders(hdrs) }));
   }
 
   saveResult(userId: string, payload: { title: string; prompt: string; intent: ModeKey; result: MessageResult }): Promise<{ ok: boolean; id: string }> {
