@@ -96,8 +96,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       const provider = storedKey.startsWith('sk-') ? 'openai' : 'groq';
       this.st.patch({ userId, hasKey: true, showKeyModal: false, provider });
     } else {
-      this.st.patch({ userId, showKeyModal: false });
-      void this.checkGlobalKey();
+      this.st.patch({ userId, hasKey: false, showKeyModal: true });
     }
 
     void this.loadMeta();
@@ -214,14 +213,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   handleInvalidKey(): void {
     localStorage.removeItem('mind_api_key');
-    void this.api.getProvider().then(({ hasGlobalKey }) => {
-      if (hasGlobalKey) {
-        this.st.patch({ hasKey: true, keyRejected: false, phase: 'idle' });
-      } else {
-        this.st.patch({ hasKey: false, keyRejected: true, showKeyModal: true, phase: 'idle' });
-      }
-    }).catch(() => {
-      this.st.patch({ hasKey: false, keyRejected: true, showKeyModal: true, phase: 'idle' });
+    this.st.patch({
+      hasKey: false,
+      keyRejected: true,
+      keyErrorText: 'Your API key was rejected or revoked. Please enter a new one.',
+      showKeyModal: true,
+      phase: 'idle',
+      provider: '',
     });
   }
 
@@ -457,21 +455,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       return { ...base, intent: 'report', result: { type: 'report', reportSections: (data as ReportResponse).reportSections ?? [], durationMs } };
     }
     return { ...base, intent: 'inquiry', result: { type: 'inquiry', summary: (data as InquiryResponse).summary ?? '', durationMs } };
-  }
-
-  private async checkGlobalKey(): Promise<void> {
-    try {
-      const { hasGlobalKey, provider } = await this.api.getProvider();
-      if (hasGlobalKey) {
-        this.st.patch({ hasKey: true, showKeyModal: false, provider });
-      } else if (!this.st.snap.hasKey) {
-        this.st.patch({ showKeyModal: true });
-      }
-    } catch {
-      if (!this.st.snap.hasKey) {
-        this.st.patch({ showKeyModal: true });
-      }
-    }
   }
 
   private async loadSessions(): Promise<void> {
