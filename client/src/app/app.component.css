@@ -1021,3 +1021,59 @@
   margin: 0;
   line-height: 1.5;
 }
+
+/* ── Locked state (no API key) ───────────────────────────────────────────── */
+.empty-state--locked .empty-icon--lock {
+  background: #fef3c7;
+  color: #b45309;
+}
+.empty-state--locked h2 {
+  color: #374151;
+}
+.unlock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.55rem 1.2rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.unlock-btn:hover { background: #1d4ed8; }
+
+.composer-shell--locked {
+  opacity: 0.85;
+}
+.composer-lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.composer-lock-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2563eb;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.composer-lock-link:hover { color: #1d4ed8; }
+.composer--locked {
+  opacity: 0.55;
+  pointer-events: none;
+}
