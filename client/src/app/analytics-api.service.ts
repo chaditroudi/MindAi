@@ -28,8 +28,8 @@ export class AnalyticsApiService {
     return this.req(this.http.get<MetaResponse>('/api/meta'));
   }
 
-  saveKey(userId: string, apiKey: string): Promise<{ ok: boolean }> {
-    return this.req(this.http.post<{ ok: boolean }>('/api/key', { userId, apiKey }));
+  saveKey(userId: string, apiKey: string): Promise<{ ok: boolean; provider?: string }> {
+    return this.req(this.http.post<{ ok: boolean; provider?: string }>('/api/key', { userId, apiKey }));
   }
 
   deleteKey(userId: string): Promise<{ ok: boolean }> {

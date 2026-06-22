@@ -33,14 +33,16 @@ async function bootstrap() {
   const logger = app.get(AppLogger);
   logger.log(`NestJS + Mongoose ready on http://localhost:${port}`, 'bootstrap');
 
-  const groqKey = process.env['GROQ_API_KEY'];
-  if (!groqKey?.trim()) { 
-    logger.warn('GROQ_API_KEY is not set — all AI requests will require a per-user key', 'AI');
+  const groqKey   = process.env['GROQ_API_KEY']?.trim();
+  const openaiKey = process.env['OPENAI_API_KEY']?.trim();
+  if (!groqKey && !openaiKey) {
+    logger.warn('No global AI key set (GROQ_API_KEY / OPENAI_API_KEY) — all requests will require a per-user key', 'AI');
   } else {
-    const supervisorModel = process.env['GROQ_SUPERVISOR_MODEL'] ?? 'llama-3.3-70b-versatile';
-    const chartModel      = process.env['GROQ_CHART_MODEL']      ?? 'llama-3.3-70b-versatile';
-    const writerModel     = process.env['GROQ_WRITER_MODEL']      ?? 'llama-3.3-70b-versatile';
-    logger.log(`AI ready | supervisor: ${supervisorModel} | chart: ${chartModel} | writer: ${writerModel}`, 'AI');
+    const provider        = openaiKey && !groqKey ? 'OpenAI' : 'Groq';
+    const supervisorModel = process.env['GROQ_SUPERVISOR_MODEL'] ?? (openaiKey && !groqKey ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile');
+    const chartModel      = process.env['GROQ_CHART_MODEL']      ?? supervisorModel;
+    const writerModel     = process.env['GROQ_WRITER_MODEL']      ?? supervisorModel;
+    logger.log(`AI ready [${provider}] | supervisor: ${supervisorModel} | chart: ${chartModel} | writer: ${writerModel}`, 'AI');
   }
   const memoryPath = process.env['LIBSQL_URL'] ?? 'file:./data/memory.db';
   logger.log(`Session memory: ${memoryPath}`, 'AI');

@@ -88,7 +88,10 @@ export function freshSignal(role: AgentRole): AbortSignal {
 
 // ── modelName() ──────────────────────────────────────────────────────────────
 // Returns just the model name string for the given role (used for logging only).
-// Does NOT create a client — purely informational.
-export function modelName(role: AgentRole): string {
-  return process.env[ROLE_ENV_KEYS[role]]?.trim() ?? ROLE_DEFAULTS[role];
+// Pass the active apiKey so it returns the correct provider's default model.
+export function modelName(role: AgentRole, apiKey?: string): string {
+  const envOverride = process.env[ROLE_ENV_KEYS[role]]?.trim();
+  if (envOverride) return envOverride;
+  const key = apiKey ?? process.env['GROQ_API_KEY'] ?? process.env['OPENAI_API_KEY'] ?? '';
+  return detectProvider(key) === 'openai' ? OPENAI_DEFAULTS[role] : ROLE_DEFAULTS[role];
 }

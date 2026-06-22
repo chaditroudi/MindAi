@@ -35,6 +35,7 @@ export interface AppState {
   keyRejected:   boolean;
   keyErrorText:  string;
   showKeyModal:  boolean;
+  provider:      string;
 }
 
 const INITIAL: AppState = {
@@ -64,6 +65,7 @@ const INITIAL: AppState = {
   keyRejected:   false,
   keyErrorText:  '',
   showKeyModal:  false,
+  provider:      '',
 };
 
 @Injectable({ providedIn: 'root' })
