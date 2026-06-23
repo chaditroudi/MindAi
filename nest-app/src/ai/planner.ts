@@ -76,6 +76,29 @@ function buildSchemaSection(sources: DataSource[]): string {
       ].filter((t): t is string => typeof t === 'string' && t.length > 0);
       lines.push(`    "${field.name}"  (${[...new Set(tags)].join(' | ')})`);
     }
+
+    // Build available joins from explicit source.joins + auto-detected field references
+    const joins: Array<{ from: string; localField: string; foreignField: string; as: string }> = [];
+
+    for (const j of source.joins ?? []) {
+      joins.push(j);
+    }
+    for (const field of source.fields) {
+      const ref = refByField.get(field);
+      if (!ref) continue;
+      if (joins.some(j => j.localField === field.name && j.from === ref.collection)) continue;
+      joins.push({ from: ref.collection, localField: field.name, foreignField: '_id', as: ref.name });
+    }
+
+    if (joins.length) {
+      lines.push('  Available joins (copy $lookup exactly as shown):');
+      for (const j of joins) {
+        lines.push(
+          `    { "$lookup": { "from": "${j.from}", "localField": "${j.localField}", "foreignField": "${j.foreignField}", "as": "${j.as}" } }`,
+          `    → then { "$unwind": "$${j.as}" }  →  access as "${j.as}.fieldName"`,
+        );
+      }
+    }
   }
 
   return lines.join('\n');
