@@ -11,7 +11,7 @@ function requireUserId(raw: string | undefined): string {
 // DTO for PATCH /api/memory/config
 // class-validator ensures the body contains a real boolean, not a string
 class MemoryConfigDto {
-  @IsBoolean()
+  @IsBoolean()  
   extractionEnabled!: boolean;
 }
 

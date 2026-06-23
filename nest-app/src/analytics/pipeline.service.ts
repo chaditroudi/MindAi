@@ -111,11 +111,9 @@ export class PipelineService {
 
       const rows = await this.runAggregation(resolved.collection, plan.pipeline!);
 
-      if (rows.length === 0 && plan.needsData && attempt === 0) {
+      if (rows.length === 0 && plan.needsData && attempt === 0 && this.hasStringMatch(plan.pipeline ?? [])) {
         hint = `The pipeline returned 0 rows: ${JSON.stringify(plan.pipeline)}. ` +
-          `Possible causes: (1) $match filter value doesn't match actual data — check enum values use exact casing from schema, ` +
-          `(2) date range is too narrow or uses wrong field, ` +
-          `(3) referenced documents don't exist. Try broadening or removing $match conditions.`;
+          `The $match filter values may not match actual data — check enum values use exact casing from schema allowed values.`;
         continue;
       }
 
@@ -123,6 +121,14 @@ export class PipelineService {
     }
 
     throw new Error('Pipeline failed after 2 attempts — check your data source schema and field values.');
+  }
+
+  private hasStringMatch(pipeline: Row[]): boolean {
+    return pipeline.some(stage => {
+      const match = stage['$match'] as Record<string, unknown> | undefined;
+      if (!match) return false;
+      return Object.values(match).some(v => typeof v === 'string');
+    });
   }
 
   private resolvePipeline(plan: TaskPlan, sources: DataSource[]): ResolvedPipeline | null {
