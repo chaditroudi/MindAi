@@ -35,7 +35,6 @@ const promptSchema = z.string()
 type ResolvedType = 'dashboard' | 'report' | 'inquiry';
 
 const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
-const MAX_AGENT_STEPS = 2;
 
 const ERROR_CODES = {
   INVALID_API_KEY: 'INVALID_API_KEY',
@@ -147,22 +146,9 @@ export class AnalyticsService {
         return this.pipeline.executeDashboard(prompt, memoryContext, apiKey);
       case 'report':
         return this.pipeline.executeReport(prompt, memoryContext, apiKey);
-      case 'inquiry':
-      case 'general_question':
-        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey);
       default:
-        return this.executeFreeText(prompt);
+        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey);
     }
-  }
-
-  private async executeFreeText(prompt: string): Promise<unknown> {
-    this.logger.log('no intent — routing through analyticsAgent');
-    const agentResponse = await analyticsAgent.generateLegacy(
-      [{ role: 'user', content: prompt }],
-      { maxSteps: MAX_AGENT_STEPS },
-    );
-    const toolResult = agentResponse.toolResults?.[0];
-    return toolResult?.result ?? { summary: agentResponse.text ?? 'No result.' };
   }
 
   // --------------------------------------------------------------------------
