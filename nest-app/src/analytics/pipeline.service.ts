@@ -62,7 +62,7 @@ export class PipelineService {
     apiKey?: string,
   ): Promise<AggregationResult> {
     const sources = getSources();
-    const dateNow      = Date.now();
+    const dateNow = Date.now();
 
     if (!context.length) {
       const cached = await this.cache.getCached<AggregationResult>(intent, prompt);
@@ -72,20 +72,57 @@ export class PipelineService {
       }
     }
 
-    const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey });
-    this.logger.log(
-      `plan | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`,
-    );
-
-    const resolved = this.resolvePipeline(plan, sources);
-    if (!resolved) return { plan, rows: [] };
-
-    const rows       = await this.runAggregation(resolved.collection, plan.pipeline!);
+    const { plan, rows, collection } = await this.runWithRetry(prompt, intent, sources, context, apiKey);
     const durationMs = Date.now() - dateNow;
-    this.logger.log(`result | collection: ${resolved.collection} | rows: ${rows.length}`);
+    this.logger.log(`result | collection: ${collection ?? '—'} | rows: ${rows.length} | ${durationMs}ms`);
 
-    this.flush(intent, prompt, plan, resolved.collection, rows, durationMs);
+    if (collection) this.flush(intent, prompt, plan, collection, rows, durationMs);
     return { plan, rows };
+  }
+
+  private async runWithRetry(
+    prompt:   string,
+    intent:   IntentKind,
+    sources:  DataSource[],
+    context:  CoreMessage[],
+    apiKey?:  string,
+  ): Promise<{ plan: TaskPlan; rows: Row[]; collection?: string }> {
+    let hint: string | undefined;
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, hint });
+      this.logger.log(
+        `plan [${attempt + 1}] | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`,
+      );
+
+      let resolved: ResolvedPipeline | null;
+      try {
+        resolved = this.resolvePipeline(plan, sources);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (attempt === 0) {
+          hint = `Field validation failed: ${msg}. Use only the exact field names listed in the schema — check casing carefully.`;
+          continue;
+        }
+        throw err;
+      }
+
+      if (!resolved) return { plan, rows: [] };
+
+      const rows = await this.runAggregation(resolved.collection, plan.pipeline!);
+
+      if (rows.length === 0 && plan.needsData && attempt === 0) {
+        hint = `The pipeline returned 0 rows: ${JSON.stringify(plan.pipeline)}. ` +
+          `Possible causes: (1) $match filter value doesn't match actual data — check enum values use exact casing from schema, ` +
+          `(2) date range is too narrow or uses wrong field, ` +
+          `(3) referenced documents don't exist. Try broadening or removing $match conditions.`;
+        continue;
+      }
+
+      return { plan, rows, collection: resolved.collection };
+    }
+
+    throw new Error('Pipeline failed after 2 attempts — check your data source schema and field values.');
   }
 
   private resolvePipeline(plan: TaskPlan, sources: DataSource[]): ResolvedPipeline | null {
