@@ -59,6 +59,7 @@ function resolveReference(field: DataSourceField, sources: DataSource[]): DataSo
 
 function buildSchemaSection(sources: DataSource[]): string {
   if (!sources.length) return '\nNo data sources — return needsData=false.';
+
   const lines: string[] = [
     '',
     '══════════════════════════════════════════════════════════',
@@ -67,24 +68,20 @@ function buildSchemaSection(sources: DataSource[]): string {
     '  Never use a name from the user prompt — only names listed below.',
     '══════════════════════════════════════════════════════════',
   ];
+
   for (const source of sources) {
     const refByField = new Map(source.fields.map(f => [f, resolveReference(f, sources)]));
-    const dims     = source.fields.filter(f => f.type === 'string' || f.type === 'enum' || f.type === 'text');
     const metrics  = source.fields.filter(f => f.type === 'number' || f.type === 'integer');
     const temporal = source.fields.filter(f =>
       f.type === 'date' || f.type === 'datetime' || f.role === 'temporal' ||
       ['year', 'month', 'quarter', 'date'].some(t => f.name.toLowerCase().includes(t)),
     );
-    const refFields = source.fields
-      .map(f => ({ field: f, target: refByField.get(f) }))
-      .filter((x): x is { field: DataSourceField; target: DataSource } => x.target !== undefined);
-    const allProj = source.fields
-      .filter(f => f.name !== '_id')
-      .map(f => `"${f.name}":1`)
-      .join(', ');
+    const dims = source.fields.filter(f => f.type === 'string' || f.type === 'enum' || f.type === 'text');
+
     lines.push('', `Collection: "${source.collection}"   →   query.sourceName = "${source.name}"`);
     if (source.description) lines.push(`  ${source.description}`);
-    lines.push('  Fields (use the exact quoted names in every pipeline stage):');
+    lines.push('  Fields:');
+
     for (const field of source.fields) {
       const ref  = refByField.get(field);
       const desc = fieldDesc(field);
@@ -98,51 +95,8 @@ function buildSchemaSection(sources: DataSource[]): string {
       ].filter((t): t is string => typeof t === 'string' && t.length > 0);
       lines.push(`    "${field.name}"  (${[...new Set(tags)].join(' | ')})`);
     }
-    lines.push('', '  Pipeline templates (ready to copy — field names are already correct):');
-    const groupableDim = dims.find(f => !refByField.get(f));
-    if (groupableDim) {
-      const g = groupableDim.name;
-      if (metrics.length) {
-        const m = metrics[0].name;
-        lines.push(
-          `  • Sum "${m}" by "${g}":`,
-          `    [{"$group":{"_id":"$${g}","value":{"$sum":"$${m}"}}},{"$sort":{"value":-1}},{"$project":{"_id":0,"label":"$_id","value":1}}]`,
-          `  • Avg "${m}" by "${g}":`,
-          `    [{"$group":{"_id":"$${g}","value":{"$avg":"$${m}"}}},{"$sort":{"value":-1}},{"$project":{"_id":0,"label":"$_id","value":1}}]`,
-        );
-      }
-      lines.push(
-        `  • Count by "${g}":`,
-        `    [{"$group":{"_id":"$${g}","value":{"$sum":1}}},{"$sort":{"value":-1}},{"$project":{"_id":0,"label":"$_id","value":1}}]`,
-      );
-    }
-    if (temporal.length && metrics.length) {
-      const t = temporal[0].name;
-      const m = metrics[0].name;
-      lines.push(
-        `  • Trend over "${t}":`,
-        `    [{"$group":{"_id":"$${t}","value":{"$sum":"$${m}"}}},{"$sort":{"_id":1}},{"$project":{"_id":0,"year":"$_id","value":1}}]`,
-      );
-    }
-    lines.push(
-      `  • Raw list — overview / scatter:`,
-      `    [{"$sort":{"_id":-1}},{"$limit":150},{"$project":{"_id":0,${allProj}}}]`,
-    );
-    for (const { field, target } of refFields) {
-      const fk    = target.fields.find(f => f.role === 'id' || f.name === 'id')?.name ?? 'id';
-      const label = target.fields.find(f => (f.type === 'string' || f.type === 'text') && f.name !== fk)?.name ?? 'name';
-      const proj  = [
-        ...source.fields.filter(f => f.name !== '_id' && f.name !== field.name).map(f => `"${f.name}":1`),
-        `"${label}":"$_ref.${label}"`,
-      ].join(', ');
-      lines.push(
-        `  • Join "${source.collection}.${field.name}" → "${target.collection}" (resolve to "${label}"):`,
-        `    [{"$lookup":{"from":"${target.collection}","localField":"${field.name}","foreignField":"${fk}","as":"_ref"}},`,
-        `     {"$unwind":{"path":"$_ref","preserveNullAndEmptyArrays":true}},`,
-        `     {"$project":{"_id":0,${proj}}}]`,
-      );
-    }
   }
+
   return lines.join('\n');
 }
 
