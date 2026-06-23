@@ -75,6 +75,11 @@ function buildSchemaSection(sources: DataSource[]): string {
         desc,
       ].filter((t): t is string => typeof t === 'string' && t.length > 0);
       lines.push(`    "${field.name}"  (${[...new Set(tags)].join(' | ')})`);
+      if (field.enumValues?.length) {
+        lines.push(`      allowed values: ${field.enumValues.map(v => `"${v}"`).join(' | ')}`);
+      } else if (field.sampleValues?.length) {
+        lines.push(`      sample values: ${field.sampleValues.slice(0, 5).map(v => JSON.stringify(v)).join(', ')}`);
+      }
     }
 
     // Build available joins from explicit source.joins + auto-detected field references
@@ -108,6 +113,7 @@ function buildPlannerPrompt(intent: IntentKind, sources: DataSource[]): string {
   return interpolateTemplate(AGGREGATION_PROMPT_BASE, {
     '{{DATABASE_SCHEMA}}': buildSchemaSection(sources),
     '{{INTENT_GUIDANCE}}': intent === 'dashboard' ? AGGREGATION_PROMPT_DASH : AGGREGATION_PROMPT_NONDASH,
+    '{{TODAY}}':           new Date().toISOString().slice(0, 10),
   });
 }
 
@@ -152,15 +158,21 @@ export async function runSupervisorPlan({
   sources,
   context = [],
   apiKey,
+  hint,
 }: {
   prompt:   string;
   intent:   IntentKind;
   sources:  DataSource[];
   context?: CoreMessage[];
   apiKey?:  string;
+  hint?:    string;
 }): Promise<TaskPlan> {
   const start = Date.now();
-  log('planner', `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length} | prompt: "${prompt}"`);
+  log('planner', `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length}${hint ? ' | retry' : ''} | prompt: "${prompt}"`);
+
+  const userContent = hint
+    ? `${JSON.stringify({ prompt, intent })}\n\nPREVIOUS ATTEMPT FAILED — ${hint}`
+    : JSON.stringify({ prompt, intent });
 
   const { object } = await generateObject({
     model:       resolveModel('supervisor', apiKey),
@@ -173,7 +185,7 @@ export async function runSupervisorPlan({
     system:      buildPlannerPrompt(intent, sources),
     messages: [
       ...context,
-      { role: 'user', content: JSON.stringify({ prompt, intent }) },
+      { role: 'user', content: userContent },
     ],
   });
 
