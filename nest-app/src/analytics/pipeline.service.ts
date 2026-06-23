@@ -110,7 +110,88 @@ export class PipelineService {
       }
     }
 
+    if (source?.fields?.length) {
+      this.validatePipelineFields(plan.pipeline, source);
+    }
+
     return { pipeline: plan.pipeline, collection };
+  }
+
+  private validatePipelineFields(pipeline: Row[], source: DataSource): void {
+    const known    = new Set(['_id', ...source.fields.map(f => f.name)]);
+    const computed = new Set<string>();
+    const bad:       string[] = [];
+
+    const addBad = (name: string) => {
+      if (name && !known.has(name) && !computed.has(name)) bad.push(name);
+    };
+
+    const walkRefs = (v: unknown): void => {
+      if (typeof v === 'string') {
+        if (v.startsWith('$') && !v.startsWith('$$')) {
+          addBad(v.slice(1).split('.')[0]);
+        }
+      } else if (Array.isArray(v)) {
+        v.forEach(walkRefs);
+      } else if (v && typeof v === 'object') {
+        for (const val of Object.values(v as Record<string, unknown>)) walkRefs(val);
+      }
+    };
+
+    for (const stage of pipeline) {
+      const op      = Object.keys(stage)[0];
+      const content = stage[op] as Record<string, unknown> | undefined;
+      if (!op || !content) continue;
+
+      switch (op) {
+        case '$match':
+        case '$sort':
+          for (const k of Object.keys(content)) {
+            if (!k.startsWith('$')) addBad(k.split('.')[0]);
+          }
+          walkRefs(content);
+          break;
+
+        case '$group':
+          walkRefs(content);
+          for (const k of Object.keys(content)) {
+            if (k !== '_id') computed.add(k);
+          }
+          break;
+
+        case '$addFields':
+        case '$set':
+          walkRefs(content);
+          for (const k of Object.keys(content)) computed.add(k);
+          break;
+
+        case '$project':
+          walkRefs(content);
+          for (const k of Object.keys(content)) {
+            if (k !== '_id') computed.add(k);
+          }
+          break;
+
+        case '$lookup':
+          if (typeof content['localField'] === 'string') {
+            addBad((content['localField'] as string).split('.')[0]);
+          }
+          if (typeof content['as'] === 'string') computed.add(content['as'] as string);
+          break;
+
+        default:
+          walkRefs(content);
+      }
+    }
+
+    const unknown = [...new Set(bad)];
+    if (!unknown.length) return;
+
+    throw new Error(
+      `Pipeline references field(s) not registered for "${source.name}": ` +
+      `${unknown.map(f => `"${f}"`).join(', ')}. ` +
+      `Registered fields: ${[...known].map(f => `"${f}"`).join(', ')}.`,
+    );
   }
 
   private async runAggregation(collection: string, pipeline: unknown[]): Promise<Row[]> {
