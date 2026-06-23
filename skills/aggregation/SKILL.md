@@ -149,10 +149,35 @@ TEXT MATCHING  (make filters forgiving)
 ══════════════════════════════════════════════════════════
 JOINS
 ══════════════════════════════════════════════════════════
-- Use `$lookup` with the foreign key documented in the schema, then `$unwind` the
-  result (with `preserveNullAndEmptyArrays: true` if the relation is optional).
-- Only join when the prompt truly needs the other collection's fields — every join
-  costs performance. Prefer a single-collection answer when possible.
+The schema lists "Available joins" for each collection. Copy the $lookup template
+exactly as shown — do not invent your own from/localField/foreignField values.
+
+WHEN to join:
+  Only when the prompt requires a field from another collection.
+  If the answer fits in one collection, never join — joins cost performance.
+
+HOW to join (strict order):
+  1. query.sourceName = the collection that HAS the foreign key field.
+  2. Put $match BEFORE $lookup to filter early and reduce join work.
+  3. Copy the $lookup template from "Available joins" in the schema.
+  4. Immediately $unwind the joined array:
+       { "$unwind": { "path": "$<as>", "preserveNullAndEmptyArrays": true } }
+     Use preserveNullAndEmptyArrays: true when the FK field is optional.
+  5. Reference joined fields with dot-notation: "$<as>.<fieldName>"
+     Example: after joining clients as "client" → use "$client.country"
+  6. In the final $project, suppress both _id fields:
+       { "$project": { "_id": 0, "<as>._id": 0, ... } }
+
+EXAMPLE — "total budget per client country":
+  query.sourceName = "projects"   ← has the clientId foreign key
+  pipeline:
+    { "$match": { "budget": { "$ne": null } } }
+    { "$lookup": { "from": "clients", "localField": "clientId", "foreignField": "_id", "as": "client" } }
+    { "$unwind": { "path": "$client", "preserveNullAndEmptyArrays": false } }
+    { "$group": { "_id": "$client.country", "totalBudget": { "$sum": "$budget" } } }
+    { "$project": { "_id": 0, "label": "$_id", "value": "$totalBudget" } }
+    { "$sort": { "value": -1 } }
+    { "$limit": 20 }
 
 ══════════════════════════════════════════════════════════
 LIMITS & PERFORMANCE
@@ -191,6 +216,7 @@ SELF-CHECK before emitting (run mentally, every time)
 ☐ Nulls filtered before group/sort.
 ☐ needsData and pipeline agree (both empty or both populated).
 ☐ JSON is valid and is the ONLY thing emitted.
+☐ If $lookup used: copied from "Available joins", $unwind follows immediately, joined fields use dot-notation.
 
 {{INTENT_GUIDANCE}}
 
