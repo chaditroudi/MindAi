@@ -14,7 +14,6 @@ import { z } from 'zod';
 import { getSources } from '../sources/sources-cache';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
-import { analyticsAgent } from '../session/agent';
 import {
   sessionExists,
   ensureThread,
