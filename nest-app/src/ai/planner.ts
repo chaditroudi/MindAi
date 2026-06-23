@@ -29,32 +29,13 @@ import type { DataSource, DataSourceField, TaskPlan, IntentKind } from '../types
 
 // ── Prompt loading ─────────────────────────────────────────────────────────────
 
-const AGGREGATION_SKILL_FILE     = skillFile('aggregation', 'SKILL.md');
-const AGGREGATION_PROMPT_BASE    = readMarkdownSection(AGGREGATION_SKILL_FILE, 'Runtime Prompt');
-const AGGREGATION_PROMPT_DASH    = readMarkdownSection(AGGREGATION_SKILL_FILE, 'Runtime Prompt Dashboard');
-const AGGREGATION_PROMPT_NONDASH = readMarkdownSection(AGGREGATION_SKILL_FILE, 'Runtime Prompt Non-Dashboard');
-const FALLBACK_STRATEGIES        = ['standard', 'trend', 'comparison', 'anomaly', 'overview'];
+const skillPath              = skillFile('aggregation', 'SKILL.md');
+const AGGREGATION_PROMPT_BASE    = readMarkdownSection(skillPath, 'Runtime Prompt');
+const AGGREGATION_PROMPT_DASH    = readMarkdownSection(skillPath, 'Runtime Prompt Dashboard');
+const AGGREGATION_PROMPT_NONDASH = readMarkdownSection(skillPath, 'Runtime Prompt Non-Dashboard');
 
-function uniq(values: string[]): string[] {
-  return [...new Set(values.map(v => v.trim().toLowerCase()).filter(Boolean))];
-}
-
-function extractStrategyValues(section: string): string[] {
-  const lines = section.split('\n');
-  const start = lines.findIndex(line => line.trim().startsWith('STRATEGY'));
-  if (start === -1) return FALLBACK_STRATEGIES;
-  const values: string[] = [];
-  for (let i = start + 1; i < lines.length; i += 1) {
-    const trimmed = lines[i].trim();
-    if (!trimmed) break;
-    const match = /^([a-z][a-z0-9_-]*)\s+→/iu.exec(trimmed);
-    if (match?.[1]) values.push(match[1]);
-  }
-  return uniq(values).length ? uniq(values) : FALLBACK_STRATEGIES;
-}
-
-export const PLANNER_STRATEGIES       = extractStrategyValues(AGGREGATION_PROMPT_DASH);
-export const PLANNER_DEFAULT_STRATEGY = PLANNER_STRATEGIES[0] ?? 'standard';
+export const PLANNER_STRATEGIES       = ['standard', 'trend', 'comparison', 'anomaly', 'overview'] as const;
+export const PLANNER_DEFAULT_STRATEGY = 'standard';
 
 function fieldDesc(f: DataSourceField): string | undefined {
   return f.description ?? (f as unknown as Record<string, unknown>)['desc'] as string | undefined;
