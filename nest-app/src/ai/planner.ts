@@ -1,23 +1,3 @@
-// ── PURPOSE ───────────────────────────────────────────────────────────────────
-// This file is LLM CALL #1 — the "Supervisor".
-// It receives the user's natural-language prompt and translates it into a
-// structured TaskPlan: which MongoDB collection to query, what aggregation
-// pipeline to run, and which downstream skills to activate.
-//
-// Think of it as the "brain" that reads the question and decides what to do.
-// Everything else in the pipeline just executes its instructions.
-//
-// FLOW:
-//   AnalyticsService
-//     -> PipelineService.aggregate()
-//       -> runSupervisorPlan()   ← THIS FILE
-//         -> returns TaskPlan
-//       -> MongoDB aggregation
-//       -> runChart() / runReportSkill() / runInquirySkill()
-//
-// USED BY: analytics/pipeline.service.ts, features/pipeline.ts
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { generateObject } from 'ai';
 import type { CoreMessage } from 'ai';
 import { z } from 'zod';
