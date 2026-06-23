@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { getSources } from '../sources/sources-cache';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
+import { detectIntent } from './intent-detector';
 import {
   sessionExists,
   ensureThread,
@@ -157,19 +158,20 @@ export class AnalyticsService {
 
   async run(req: AnalyticsRequest, userKey: string | null = null): Promise<AnalyticsResponse> {
     const prompt = promptSchema.parse(req.prompt);
+    const intent = req.intent ?? detectIntent(prompt);
 
     this.ensureDataSources();
     const { primaryKey, globalKey } = this.resolveApiKeys(userKey);
-    const { sessionId, displayIntent } = await this.resolveSession(req);
+    const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
 
     const memoryContext = await this.buildMemoryContext(req.userId, sessionId, prompt);
 
     this.logger.log(
-      `prompt: "${prompt}" | intent: ${req.intent ?? 'free-text'} | session: ${sessionId}`,
+      `prompt: "${prompt}" | intent: ${intent}${req.intent ? '' : ' (auto)'} | session: ${sessionId}`,
     );
     const t0 = Date.now();
     const { result, effectiveApiKey } = await this.runWithFallback(
-      req.intent,
+      intent,
       prompt,
       memoryContext,
       primaryKey,
