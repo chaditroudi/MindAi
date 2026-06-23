@@ -12,10 +12,10 @@ const ROLE_ENV_KEYS: Record<AgentRole, string> = {
 };
 
 const ROLE_DEFAULTS: Record<AgentRole, string> = {
-  supervisor: 'llama-3.3-70b-versatile',
-  chart:      'llama-3.3-70b-versatile',
-  writer:     'llama-3.3-70b-versatile',
-  memory:     'llama-3.1-8b-instant',
+  supervisor: 'llama-3.3-70b-versatile',  // complex reasoning — needs 70B
+  chart:      'llama-3.3-70b-versatile',  // field mapping logic — needs 70B
+  writer:     'llama-3.1-8b-instant',     // text formatting only — 8B is enough
+  memory:     'llama-3.1-8b-instant',     // extraction only — 8B is enough
 };
 
 const OPENAI_DEFAULTS: Record<AgentRole, string> = {
@@ -53,6 +53,6 @@ export function resolveModel(role: AgentRole, apiKey?: string): LanguageModelV1 
 }
 
 export function freshSignal(role: AgentRole): AbortSignal {
-  const ms = Number(process.env[TIMEOUT_ENV_KEYS[role]]) || 8_000;
+  const ms = Number(process.env[TIMEOUT_ENV_KEYS[role]]) || 15_000;
   return AbortSignal.timeout(ms);
 }
