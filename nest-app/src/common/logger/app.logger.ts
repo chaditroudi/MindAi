@@ -53,13 +53,6 @@ export function logTrace(tag: string, msg: string, data?: unknown): void {
   emit(tag, `[TRACE] ${msg}`, data);
 }
 
-export function logSep(label: string): void {
-  const line = '─'.repeat(60);
-  console.log(`\n${COLORS.dim}${line}${COLORS.reset}`);
-  console.log(`${COLORS.bold} ${label}${COLORS.reset}`);
-  console.log(`${COLORS.dim}${line}${COLORS.reset}`);
-}
-
 // Injectable NestJS logger — used by NestFactory and modules
 @Injectable()
 export class AppLogger implements LoggerService {
