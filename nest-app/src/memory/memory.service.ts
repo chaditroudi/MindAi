@@ -13,7 +13,7 @@ export class MemoryService {
   // Reads MEMORY_EXTRACTION_ENABLED env var at startup (defaults to true).
   // Can be flipped at runtime via PATCH /api/memory/config without restarting.
   private extractionEnabled: boolean =
-    process.env['MEMORY_EXTRACTION_ENABLED']?.toLowerCase() !== 'false';
+    process.env['MEMORY_EXTRACTION_ENABLED']?.toLowerCase() === 'true';
 
   constructor(private readonly repo: MemoryRepository) {}
 
