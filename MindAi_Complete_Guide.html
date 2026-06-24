@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MindAi — Complete File-by-File Guide</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;line-height:1.7;color:#1a1a2e;background:#fff;padding:30px 50px;max-width:960px;margin:0 auto}
+.cover{text-align:center;padding:70px 0 50px;border-bottom:3px solid #6366f1;margin-bottom:40px}
+.cover h1{font-size:34px;color:#6366f1;letter-spacing:-1px;margin-bottom:8px}
+.cover .sub{font-size:15px;color:#64748b;margin-bottom:20px}
+.badge{display:inline-block;background:#ede9fe;color:#6366f1;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:1px;margin:3px}
+.toc{background:#f8f7ff;border:1.5px solid #e0e7ff;border-radius:10px;padding:24px 28px;margin:0 0 36px}
+.toc h2{color:#6366f1;font-size:16px;margin-bottom:14px}
+.toc ul{list-style:none;column-count:2;column-gap:30px}
+.toc li{margin:4px 0}
+.toc a{color:#4f46e5;text-decoration:none;font-size:12.5px}
+.toc a:hover{text-decoration:underline}
+h2{font-size:20px;color:#6366f1;border-left:4px solid #6366f1;padding-left:12px;margin:44px 0 16px;page-break-after:avoid}
+h3{font-size:14px;color:#374151;font-weight:700;margin:22px 0 6px;text-transform:uppercase;letter-spacing:0.5px}
+h4{font-size:13px;color:#6366f1;font-weight:700;margin:14px 0 4px}
+.fc{border:1.5px solid #e0e7ff;border-radius:8px;margin:16px 0;page-break-inside:avoid;overflow:hidden}
+.fc-hdr{background:#6366f1;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fc-num{background:rgba(255,255,255,.25);border-radius:4px;padding:1px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.fc-name{font-size:15px;font-weight:700}
+.fc-lines{margin-left:auto;font-size:11px;opacity:.8;white-space:nowrap}
+.fc-path{background:#ede9fe;color:#4f46e5;font-size:11px;font-weight:600;padding:4px 16px;border-bottom:1px solid #e0e7ff;font-family:monospace}
+.fc-job{background:#f0f9ff;color:#0369a1;font-size:12px;font-weight:600;padding:5px 16px;border-bottom:1px solid #e0e7ff}
+.fc-body{padding:12px 16px}
+pre{background:#1e1e2e;color:#cdd6f4;padding:12px 16px;border-radius:6px;font-size:11.5px;font-family:'Consolas','Courier New',monospace;line-height:1.6;overflow-x:auto;margin:8px 0;page-break-inside:avoid}
+.cm{color:#6c7086}.kw{color:#cba6f7}.st{color:#a6e3a1}.fn{color:#89b4fa}.nu{color:#fab387}.ar{color:#f38ba8}
+code{background:#ede9fe;color:#4f46e5;padding:1px 5px;border-radius:3px;font-size:11.5px;font-family:'Consolas',monospace}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;page-break-inside:avoid}
+th{background:#6366f1;color:#fff;padding:7px 10px;text-align:left;font-weight:600}
+td{padding:7px 10px;border-bottom:1px solid #e0e7ff}
+tr:nth-child(even) td{background:#f8f7ff}
+.info{background:#eff6ff;border-left:4px solid #3b82f6;padding:9px 14px;border-radius:0 5px 5px 0;margin:10px 0;font-size:12.5px}
+.warn{background:#fefce8;border-left:4px solid #eab308;padding:9px 14px;border-radius:0 5px 5px 0;margin:10px 0;font-size:12.5px}
+.tip{background:#f0fdf4;border-left:4px solid #22c55e;padding:9px 14px;border-radius:0 5px 5px 0;margin:10px 0;font-size:12.5px}
+.flow{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:16px 20px;font-family:'Consolas',monospace;font-size:11.5px;line-height:2;margin:10px 0;page-break-inside:avoid}
+.flow .fs{color:#818cf8;font-weight:700}.flow .ff{color:#34d399}.flow .fl{color:#f59e0b}.flow .fa{color:#f87171}.flow .fn2{color:#94a3b8}
+p{margin:6px 0}
+.section-intro{background:#f8f7ff;border:1px solid #e0e7ff;border-radius:6px;padding:12px 16px;margin:10px 0 20px;font-size:13px}
+@media print{body{padding:15px 25px;font-size:11px}h2{page-break-before:always}.cover{page-break-after:always}pre,.flow,table,.fc{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <h1>MindAi — Complete File-by-File Guide</h1>
+  <p class="sub">Every source file explained — what it does, why it exists, how it connects</p>
+  <span class="badge">nest-app / backend</span>
+  <span class="badge">client / Angular</span>
+  <span class="badge">skills / AI prompts</span>
+  <span class="badge">src / legacy</span>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ul>
+    <li><a href="#arch">Project Architecture</a></li>
+    <li><a href="#startup">1 — Startup Files</a></li>
+    <li><a href="#types">2 — Types &amp; Config</a></li>
+    <li><a href="#common">3 — Common Infrastructure</a></li>
+    <li><a href="#analytics">4 — Analytics Module</a></li>
+    <li><a href="#ai">5 — AI Layer (10 files)</a></li>
+    <li><a href="#chartfiles">6 — Chart Sub-Files (6 files)</a></li>
+    <li><a href="#sources">7 — Sources Module</a></li>
+    <li><a href="#memory">8 — Long-Term Memory Module</a></li>
+    <li><a href="#session">9 — Session / Short-Term Memory</a></li>
+    <li><a href="#cache">10 — Cache Module</a></li>
+    <li><a href="#history">11 — History Module</a></li>
+    <li><a href="#saved">12 — Saved Results Module</a></li>
+    <li><a href="#userkeys">13 — User Keys Module</a></li>
+    <li><a href="#skills">14 — Skills (AI Prompts)</a></li>
+    <li><a href="#client">15 — Angular Frontend</a></li>
+    <li><a href="#fullflow">Full Request Flow</a></li>
+  </ul>
+</div>
+
+<!-- ARCHITECTURE -->
+<h2 id="arch">Project Architecture</h2>
+<div class="section-intro">
+  MindAi is a <strong>two-layer application</strong>: an Angular frontend (<code>client/</code>) that talks to a NestJS backend (<code>nest-app/</code>) which orchestrates LLM calls and MongoDB queries.
+</div>
+<table>
+  <tr><th>Folder</th><th>Technology</th><th>Purpose</th></tr>
+  <tr><td><code>client/</code></td><td>Angular 18</td><td>Browser UI — prompt input, chart display, session history</td></tr>
+  <tr><td><code>nest-app/</code></td><td>NestJS + Mongoose</td><td>Main backend — REST API, LLM calls, MongoDB</td></tr>
+  <tr><td><code>skills/</code></td><td>Markdown files</td><td>AI system prompts loaded at runtime</td></tr>
+  <tr><td><code>src/</code></td><td>Express + Mastra</td><td>Legacy parallel backend (same features, older pattern)</td></tr>
+  <tr><td><code>data/</code></td><td>SQLite (LibSQL)</td><td>Conversation session storage (Mastra Memory)</td></tr>
+</table>
+
+<div class="flow">
+<span class="fs">Browser</span>  →  Angular (client/)
+<br>Angular  →  <span class="ff">POST /api/analytics</span>
+<br><span class="ff">NestJS</span> → AnalyticsController → AnalyticsService
+<br>               → PipelineService → <span class="fl">planner.ts</span>  (LLM #1: MongoDB pipeline)
+<br>               → MongoDB.aggregate(pipeline)
+<br>               → <span class="fl">chart.ts</span>    (LLM #2: widget plan)
+<br>               → <span class="fl">writer.ts</span>   (LLM #2: text response)
+<br>               → Response sent to browser ✅
+<br>               → <span class="fn2">[background]</span> memory-skill.ts (LLM #3: extract memory)
+<br>               → <span class="fn2">[background]</span> embeddings.ts  (local: save vector)
+</div>
+
+<!-- ══════ SECTION 1 — STARTUP ══════ -->
+<h2 id="startup">1 — Startup Files</h2>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">01</span><span class="fc-name">main.ts</span><span class="fc-lines">57 lines</span></div>
+  <div class="fc-path">nest-app/src/main.ts</div>
+  <div class="fc-job">Entry point — boots the NestJS server</div>
+  <div class="fc-body">
+    <p>This file runs first when you type <code>npm run start</code>. It creates the NestJS application and configures it before opening the HTTP port.</p>
+    <h4>What it does step by step</h4>
+    <pre><span class="cm">// 1. Create the app from AppModule</span>
+<span class="kw">const</span> app = <span class="kw">await</span> NestFactory.create(AppModule)
+
+<span class="cm">// 2. Set our custom colored logger</span>
+app.useLogger(app.get(AppLogger))
+
+<span class="cm">// 3. Security headers (helmet) — blocks XSS, clickjacking, etc.</span>
+app.use(helmet({ contentSecurityPolicy: <span class="kw">false</span> }))
+
+<span class="cm">// 4. CORS — which domains can call this API</span>
+app.enableCors({ origin: allowedOrigins })
+
+<span class="cm">// 5. Auto-validate request bodies using class-validator decorators</span>
+app.useGlobalPipes(<span class="kw">new</span> ValidationPipe({ whitelist: <span class="kw">true</span>, transform: <span class="kw">true</span> }))
+
+<span class="cm">// 6. Start listening on PORT (default 3000)</span>
+<span class="kw">await</span> app.listen(port)
+
+<span class="cm">// 7. Start loading the 25MB embedding model in the background</span>
+<span class="fn">warmupEmbeddings</span>()</pre>
+    <div class="info"><strong>warmupEmbeddings():</strong> The local AI model for semantic memory takes 2-3 seconds to load. By calling it here at startup, the first user query doesn't have to wait for it.</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">02</span><span class="fc-name">app.module.ts</span><span class="fc-lines">53 lines</span></div>
+  <div class="fc-path">nest-app/src/app.module.ts</div>
+  <div class="fc-job">Root module — wires all modules together and registers global providers</div>
+  <div class="fc-body">
+    <p>In NestJS every feature lives in a <strong>Module</strong>. <code>AppModule</code> is the root module that imports all others. Think of it as the main electrical panel — every circuit connects here.</p>
+    <pre><span class="kw">@Module</span>({
+  imports: [
+    ConfigModule,      <span class="cm">// environment variables (global)</span>
+    DatabaseModule,    <span class="cm">// MongoDB connection</span>
+    SourcesModule,     <span class="cm">// data source registry</span>
+    HistoryModule,     <span class="cm">// pipeline run history + sessions</span>
+    CacheModule,       <span class="cm">// prompt → result cache</span>
+    SavedResultsModule,<span class="cm">// user-saved dashboards/reports</span>
+    UserKeysModule,    <span class="cm">// API key verification</span>
+    AnalyticsModule,   <span class="cm">// the main AI feature</span>
+    ServeStaticModule, <span class="cm">// serves Angular build (if present)</span>
+  ],
+  providers: [
+    AppLogger,
+    { provide: APP_GUARD,  useClass: ApiKeyGuard },        <span class="cm">// runs on EVERY request</span>
+    { provide: APP_FILTER, useClass: AllExceptionsFilter }, <span class="cm">// catches all errors</span>
+  ],
+})</pre>
+    <div class="info"><strong>ServeStaticModule:</strong> If <code>client/dist/</code> exists, NestJS serves the Angular app directly. No separate web server needed — one process handles both API and UI.</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">03</span><span class="fc-name">app.controller.ts</span><span class="fc-lines">23 lines</span></div>
+  <div class="fc-path">nest-app/src/app.controller.ts</div>
+  <div class="fc-job">GET /health — checks if MongoDB is connected and sources are loaded</div>
+  <div class="fc-body">
+    <pre><span class="cm">// GET /health</span>
+<span class="cm">// Used by deployment platforms (Render, Railway, Docker) to check if the server is ready</span>
+
+<span class="cm">// Response 200 (healthy):</span>
+{ ok: <span class="kw">true</span>,  mongo: <span class="st">"connected"</span>, sources: <span class="nu">3</span> }
+
+<span class="cm">// Response 503 (unhealthy):</span>
+{ ok: <span class="kw">false</span>, mongo: <span class="st">"unavailable"</span> }
+{ ok: <span class="kw">false</span>, mongo: <span class="st">"connected"</span>, sources: <span class="nu">0</span>, detail: <span class="st">"no data sources loaded"</span> }</pre>
+  </div>
+</div>
+
+<!-- ══════ SECTION 2 — TYPES & CONFIG ══════ -->
+<h2 id="types">2 — Types &amp; Config</h2>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">04</span><span class="fc-name">types/index.ts</span><span class="fc-lines">95 lines</span></div>
+  <div class="fc-path">nest-app/src/types/index.ts</div>
+  <div class="fc-job">Central TypeScript types — imported by every module</div>
+  <div class="fc-body">
+    <p>Contains all shared interfaces. Every module imports from here instead of defining its own types.</p>
+    <table>
+      <tr><th>Type</th><th>Used for</th></tr>
+      <tr><td><code>DataSource</code></td><td>A registered MongoDB collection with field metadata</td></tr>
+      <tr><td><code>DataSourceField</code></td><td>One column: name, type, role, enum values</td></tr>
+      <tr><td><code>TaskPlan</code></td><td>Output from the supervisor LLM — pipeline + skills</td></tr>
+      <tr><td><code>DashboardSpec</code></td><td>Final output for dashboard intent — layout + widgets</td></tr>
+      <tr><td><code>WidgetSpec</code></td><td>One chart/table/KPI card in a dashboard</td></tr>
+      <tr><td><code>ReportSection</code></td><td>One section of a report — heading + body</td></tr>
+      <tr><td><code>IntentKind</code></td><td>"general_question" | "report" | "dashboard"</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">05</span><span class="fc-name">config/configuration.ts</span><span class="fc-lines">35 lines</span></div>
+  <div class="fc-path">nest-app/src/config/configuration.ts</div>
+  <div class="fc-job">Typed environment variable factory — all .env values in one place</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Returns a typed config object. NestJS ConfigService reads from this.</span>
+<span class="cm">// Usage: this.cfg.get&lt;string&gt;('mongodb.uri')</span>
+{
+  server:  { port: <span class="nu">3000</span>, apiKey: <span class="st">"..."</span>, allowedOrigins: [...] },
+  mongodb: { uri: <span class="st">"mongodb://..."</span>, db: <span class="st">"mindai"</span>, ... },
+  llm:     { groqApiKey: <span class="st">"..."</span>, openaiApiKey: <span class="st">"..."</span>, timeouts: {...} }
+}</pre>
+    <div class="info">Instead of reading <code>process.env</code> in every file, modules inject <code>ConfigService</code> and call <code>get('path.to.value')</code>. This gives TypeScript type safety and makes testing easier.</div>
+  </div>
+</div>
+
+<!-- ══════ SECTION 3 — COMMON ══════ -->
+<h2 id="common">3 — Common Infrastructure</h2>
+<div class="section-intro">Four cross-cutting concerns applied globally to every HTTP request.</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">06</span><span class="fc-name">app.logger.ts</span><span class="fc-lines">65 lines</span></div>
+  <div class="fc-path">nest-app/src/common/logger/app.logger.ts</div>
+  <div class="fc-job">Colored terminal logger with per-request IDs</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Output looks like:</span>
+[12:34:56.123] [a1b2c3d4] <span class="fn">[analytics]</span> prompt: "show top 5 by budget"
+[12:34:56.456] [a1b2c3d4] <span class="fl">[chart:llm]</span> done in 1234ms | proposed: 2 widget(s)
+
+<span class="cm">// Two ways to log:</span>
+<span class="fn">log</span>(<span class="st">'chart'</span>, <span class="st">'message'</span>)     <span class="cm">// standalone — works in non-injectable files</span>
+<span class="fn">logTrace</span>(<span class="st">'chart'</span>, <span class="st">'msg'</span>, obj) <span class="cm">// only prints when TRACE=1 env var is set</span>
+
+<span class="cm">// Per-request ID via AsyncLocalStorage — all logs for one request</span>
+<span class="cm">// automatically share the same [requestId] prefix. No passing IDs manually.</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">07</span><span class="fc-name">request-id.middleware.ts</span><span class="fc-lines">12 lines</span></div>
+  <div class="fc-path">nest-app/src/common/middleware/request-id.middleware.ts</div>
+  <div class="fc-job">Assigns a UUID to every HTTP request — shared with the logger via AsyncLocalStorage</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Runs BEFORE every route handler, for every path</span>
+requestContext.run({ requestId: randomUUID() }, next)
+<span class="cm">// AsyncLocalStorage makes the requestId available anywhere</span>
+<span class="cm">// in the same async call chain — like a thread-local variable</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">08</span><span class="fc-name">api-key.guard.ts</span><span class="fc-lines">30 lines</span></div>
+  <div class="fc-path">nest-app/src/common/guards/api-key.guard.ts</div>
+  <div class="fc-job">Optional server-level access control — checks x-api-key header if API_KEY env var is set</div>
+  <div class="fc-body">
+    <pre><span class="cm">// If API_KEY env var is not set → guard is disabled (open access)</span>
+<span class="cm">// If API_KEY is set → every request must include:</span>
+<span class="cm">//   Header: x-api-key: &lt;your API_KEY value&gt;</span>
+
+<span class="cm">// Public routes (always allowed):</span>
+<span class="st">'/api/provider'</span>  <span class="cm">// which AI provider is configured</span>
+<span class="st">'/api/meta'</span>      <span class="cm">// example prompts for each mode</span>
+<span class="st">'/health'</span>        <span class="cm">// health check</span>
+<span class="st">'/api/key'</span>       <span class="cm">// key verification (can't require auth to set auth)</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">09</span><span class="fc-name">all-exceptions.filter.ts</span><span class="fc-lines">59 lines</span></div>
+  <div class="fc-path">nest-app/src/common/filters/all-exceptions.filter.ts</div>
+  <div class="fc-job">Global error handler — converts any thrown error into a clean JSON response</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Any unhandled error in the app hits this filter.</span>
+<span class="cm">// It extracts a human-readable message and HTTP status.</span>
+
+<span class="cm">// HTTP exceptions (e.g. BadRequestException) → preserve status</span>
+<span class="cm">// Unknown errors → 500 Internal Server Error</span>
+<span class="cm">// 5xx errors → logged to console with stack trace</span>
+
+<span class="cm">// Response shape:</span>
+{ error: <span class="st">"message here"</span>, code?: <span class="st">"INVALID_API_KEY"</span> }</pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">10</span><span class="fc-name">database.module.ts</span><span class="fc-lines">19 lines</span></div>
+  <div class="fc-path">nest-app/src/database/database.module.ts</div>
+  <div class="fc-job">Creates the Mongoose MongoDB connection using config values</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Uses MongooseModule.forRootAsync → reads URI from ConfigService</span>
+<span class="cm">// (not hardcoded — reads MONGODB_URI env var at runtime)</span>
+<span class="cm">// serverSelectionTimeoutMS: 8000 → fails fast if MongoDB is down</span></pre>
+  </div>
+</div>
+
+<!-- ══════ SECTION 4 — ANALYTICS ══════ -->
+<h2 id="analytics">4 — Analytics Module</h2>
+<div class="section-intro">The main feature module. Handles every user query from HTTP to final response.</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">11</span><span class="fc-name">analytics.controller.ts</span><span class="fc-lines">63 lines</span></div>
+  <div class="fc-path">nest-app/src/analytics/analytics.controller.ts</div>
+  <div class="fc-job">HTTP handlers — validates requests, extracts headers, calls the service</div>
+  <div class="fc-body">
+    <h4>Two endpoints</h4>
+    <table>
+      <tr><th>Method</th><th>Path</th><th>What it does</th></tr>
+      <tr><td>GET</td><td>/api/provider</td><td>Returns which AI provider is configured (groq/openai)</td></tr>
+      <tr><td>POST</td><td>/api/analytics</td><td>Main entry — runs the full AI pipeline for a prompt</td></tr>
+    </table>
+    <h4>Request shape for POST /api/analytics</h4>
+    <pre>{
+  prompt:    <span class="st">"show top 5 municipalities by budget"</span>,  <span class="cm">// required, max 1000 chars</span>
+  intent?:   <span class="st">"dashboard"</span>,                           <span class="cm">// optional override</span>
+  sessionId?: <span class="st">"uuid"</span>                                 <span class="cm">// null = new session</span>
+}
+<span class="cm">Headers:</span>
+  x-user-id:      <span class="st">"user-uuid"</span>     <span class="cm">// required — which user is asking</span>
+  x-user-api-key: <span class="st">"gsk_..."</span>       <span class="cm">// optional — user's own Groq/OpenAI key</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">12</span><span class="fc-name">intent-detector.ts</span><span class="fc-lines">27 lines</span></div>
+  <div class="fc-path">nest-app/src/analytics/intent-detector.ts</div>
+  <div class="fc-job">Regex classifier — auto-detects whether the user wants a dashboard, report, or answer</div>
+  <div class="fc-body">
+    <pre><span class="fn">detectIntent</span>(<span class="st">"show a bar chart of projects by status"</span>)  <span class="ar">→</span> <span class="st">"dashboard"</span>
+<span class="fn">detectIntent</span>(<span class="st">"generate a detailed report on transport"</span>)    <span class="ar">→</span> <span class="st">"report"</span>
+<span class="fn">detectIntent</span>(<span class="st">"how many projects are completed?"</span>)          <span class="ar">→</span> <span class="st">"general_question"</span>
+
+<span class="cm">// Dashboard triggers: chart, graph, visualize, pie, bar, trend, top N, by month...</span>
+<span class="cm">// Report triggers:    write/generate/create report/analysis/summary...</span>
+<span class="cm">// Default:            general_question (direct answer)</span></pre>
+    <div class="info">This runs <em>before</em> any LLM call. It's fast (regex, no API). If the user passes <code>intent</code> in the request body, it overrides this auto-detection.</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">13</span><span class="fc-name">analytics.service.ts</span><span class="fc-lines">511 lines</span></div>
+  <div class="fc-path">nest-app/src/analytics/analytics.service.ts</div>
+  <div class="fc-job">Main orchestrator — runs the full pipeline for one user query</div>
+  <div class="fc-body">
+    <h4>The run() method — 6 steps for every request</h4>
+    <pre><span class="cm">// Step 1: Validate and detect intent</span>
+prompt = promptSchema.parse(req.prompt)
+intent = req.intent ?? <span class="fn">detectIntent</span>(prompt)
+
+<span class="cm">// Step 2: Check data sources exist</span>
+<span class="kw">if</span> (!getSources().length) <span class="kw">throw</span> BadRequestException
+
+<span class="cm">// Step 3: Resolve API key (user key → global key → error)</span>
+primaryKey = userKey || groqGlobalKey || openaiGlobalKey
+
+<span class="cm">// Step 4: Load memory context</span>
+sessionMessages = <span class="kw">await</span> getMemoryContext(sessionId)    <span class="cm">// last 6 exchanges</span>
+longTermContext = <span class="kw">await</span> memory.getRelevantContext(userId, prompt) <span class="cm">// semantic search</span>
+
+<span class="cm">// Step 5: Run the pipeline (dashboard / report / inquiry)</span>
+result = <span class="kw">await</span> pipeline.executeDashboard(prompt, context, apiKey)
+
+<span class="cm">// Step 6: Build response, save session, extract memories (background)</span>
+<span class="kw">return</span> { intent, chart: result, sessionId, messageId }</pre>
+    <h4>API key fallback</h4>
+    <pre><span class="cm">// If user key is invalid/rate-limited AND a global key exists:</span>
+<span class="cm">// → automatically retries with the global key</span>
+<span class="cm">// → logs a warning but returns successfully</span>
+<span class="cm">// If both fail → returns error with code: "INVALID_API_KEY"</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">14</span><span class="fc-name">pipeline.service.ts</span><span class="fc-lines">423 lines</span></div>
+  <div class="fc-path">nest-app/src/analytics/pipeline.service.ts</div>
+  <div class="fc-job">MongoDB execution engine — runs LLM-generated pipelines with retry and validation</div>
+  <div class="fc-body">
+    <h4>Three public methods</h4>
+    <table>
+      <tr><th>Method</th><th>Intent</th><th>Calls</th></tr>
+      <tr><td>executeDashboard()</td><td>dashboard</td><td>aggregate() → runChart()</td></tr>
+      <tr><td>executeReport()</td><td>report</td><td>aggregate() → runReportSkill() → runChart()</td></tr>
+      <tr><td>executeInquiry()</td><td>general_question</td><td>aggregate() → runInquirySkill()</td></tr>
+    </table>
+    <h4>The retry loop inside aggregate()</h4>
+    <pre><span class="kw">for</span> (attempt = <span class="nu">0</span>; attempt &lt; <span class="nu">2</span>; attempt++) {
+  plan = <span class="kw">await</span> <span class="fn">runSupervisorPlan</span>({...hint})  <span class="cm">// LLM generates pipeline</span>
+
+  <span class="kw">try</span> {
+    <span class="fn">validatePipelineFields</span>(plan.pipeline, source) <span class="cm">// check field names</span>
+    rows = <span class="kw">await</span> <span class="fn">runAggregation</span>(collection, pipeline) <span class="cm">// run MongoDB</span>
+  } <span class="kw">catch</span> (err) {
+    hint = <span class="st">`Field validation failed: ${err.message}. Check field names...`</span>
+    <span class="kw">continue</span>  <span class="cm">// retry with hint injected into prompt</span>
+  }
+}</pre>
+    <h4>Security — blocked pipeline stages</h4>
+    <pre><span class="cm">// These MongoDB stages are blocked (could modify or expose data):</span>
+<span class="kw">const</span> FORBIDDEN_STAGES = { <span class="st">'$function'</span>, <span class="st">'$merge'</span>, <span class="st">'$out'</span>, <span class="st">'$where'</span>, <span class="st">'$eval'</span> }
+<span class="cm">// If LLM generates one → throws BadRequestException before running</span></pre>
+    <div class="warn"><strong>Why validate fields?</strong> LLMs hallucinate field names. If we send a pipeline with <code>"$sort": { "budjet": -1 }</code>, MongoDB silently ignores it and returns all records unsorted. Validation catches this and retries with a hint to the LLM.</div>
+  </div>
+</div>
+
+<!-- ══════ SECTION 5 — AI LAYER ══════ -->
+<h2 id="ai">5 — AI Layer</h2>
+<div class="section-intro">10 files in <code>nest-app/src/ai/</code>. These make the 3 LLM calls and handle all AI logic.</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">15</span><span class="fc-name">model.ts</span><span class="fc-lines">59 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/model.ts</div>
+  <div class="fc-job">Decides which LLM to use — provider detection, model selection, timeout signal</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Role</th><th>Model</th><th>Why</th></tr>
+      <tr><td>supervisor</td><td>llama-3.3-70b</td><td>Complex: understand prompt + build MongoDB pipeline</td></tr>
+      <tr><td>chart</td><td>llama-3.3-70b</td><td>Complex: map data columns to chart types</td></tr>
+      <tr><td>writer</td><td>llama-3.1-8b</td><td>Simple: write readable text from data rows</td></tr>
+      <tr><td>memory</td><td>llama-3.1-8b</td><td>Simple: extract 1-3 memory items</td></tr>
+    </table>
+    <pre><span class="fn">detectProvider</span>(apiKey)
+<span class="cm">// "sk-"   prefix → OpenAI  → uses gpt-4o-mini</span>
+<span class="cm">// "gsk_"  prefix → Groq    → uses llama models</span>
+<span class="cm">// other   prefix → Groq    → uses llama models</span>
+
+<span class="fn">freshSignal</span>(<span class="st">'writer'</span>)
+<span class="cm">// AbortSignal.timeout(15_000) — kills request if LLM hangs</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">16</span><span class="fc-name">skill-prompt.ts</span><span class="fc-lines">130 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/skill-prompt.ts</div>
+  <div class="fc-job">Utility — reads AI instructions from Markdown files in skills/</div>
+  <div class="fc-body">
+    <pre><span class="fn">skillFile</span>(<span class="st">'chart'</span>, <span class="st">'SKILL.md'</span>)
+<span class="ar">→</span> <span class="st">"/project/skills/chart/SKILL.md"</span>
+
+<span class="fn">readMarkdownSection</span>(filePath, <span class="st">'Runtime Prompt'</span>)
+<span class="ar">→</span> text under the <span class="st">## Runtime Prompt</span> heading
+
+<span class="fn">readJsonSection</span>(filePath, <span class="st">'Chart Config'</span>)
+<span class="ar">→</span> parses the ```json block inside that section
+
+<span class="fn">interpolateTemplate</span>(<span class="st">"Hello {{NAME}}"</span>, { <span class="st">"{{NAME}}"</span>: <span class="st">"Alice"</span> })
+<span class="ar">→</span> <span class="st">"Hello Alice"</span>   <span class="cm">// used to inject DB schema into prompt at runtime</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">17</span><span class="fc-name">planner.ts</span><span class="fc-lines">234 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/planner.ts</div>
+  <div class="fc-job">LLM Call #1 (supervisor) — converts user prompt into a MongoDB aggregation pipeline</div>
+  <div class="fc-body">
+    <h4>Input → Output</h4>
+    <pre><span class="cm">// Input:</span>
+{ prompt: <span class="st">"top 5 municipalities by budget"</span>, intent: <span class="st">"dashboard"</span>, sources: [...] }
+
+<span class="cm">// The LLM receives a rich context including ALL collection schemas:</span>
+<span class="st">Collection: "projects"
+  "title"     (string | dimension)
+  "budget"    (number | measure)
+  "municipality" (enum | "Doha" | "Al-Rayyan" | ...)</span>
+
+<span class="cm">// Output (forced JSON via Zod schema):</span>
+{
+  needsData:  <span class="kw">true</span>,
+  query:      { sourceName: <span class="st">"projects"</span> },
+  pipeline:   [{ <span class="st">"$sort"</span>: { budget: <span class="ar">-1</span> } }, { <span class="st">"$limit"</span>: <span class="nu">5</span> }],
+  skills:     [<span class="st">"aggregation"</span>, <span class="st">"chart"</span>],
+  strategy:   <span class="st">"overview"</span>,
+  chartHint:  <span class="st">"ranking"</span>
+}</pre>
+    <div class="info"><strong>skills</strong> tells PipelineService what to do next: <code>["aggregation","chart"]</code> = run pipeline + build charts. <code>["aggregation","report"]</code> = run pipeline + write text report.</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">18</span><span class="fc-name">writer.ts</span><span class="fc-lines">76 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/writer.ts</div>
+  <div class="fc-job">LLM Call #2 (text) — converts data rows into human-readable text or report sections</div>
+  <div class="fc-body">
+    <pre><span class="cm">// For inquiry (direct question):</span>
+<span class="fn">runInquirySkill</span>({ prompt, rows })
+<span class="ar">→</span> { summary: <span class="st">"There are 22 completed projects."</span> }
+
+<span class="cm">// For report (structured analysis):</span>
+<span class="fn">runReportSkill</span>({ prompt, rows, withChart: <span class="kw">true</span> })
+<span class="ar">→</span> { reportSections: [
+    { heading: <span class="st">"Overview"</span>,      body: <span class="st">"Transport accounts for..."</span> },
+    { heading: <span class="st">"Key Findings"</span>,   body: <span class="st">"North region leads..."</span> }
+  ]}</pre>
+    <div class="tip">Uses <code>generateObject()</code> with Zod schema — the LLM MUST return structured JSON, not free text. This makes the response predictable for the frontend to render.</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">19</span><span class="fc-name">memory-skill.ts</span><span class="fc-lines">55 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/memory-skill.ts</div>
+  <div class="fc-job">LLM Call #3 (background) — extracts structured memories from a conversation turn</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Runs AFTER the user's response is sent. User never waits for this.</span>
+<span class="fn">extractMemories</span>(prompt, responseSummary)
+<span class="ar">→</span> [
+    { type: <span class="st">"context"</span>,   content: <span class="st">"User is focused on Qatar"</span>, importance: <span class="nu">4</span>, tags: [<span class="st">"qatar"</span>] },
+    { type: <span class="st">"insight"</span>,   content: <span class="st">"22 projects in 6 municipalities"</span>, importance: <span class="nu">3</span> },
+  ]
+
+<span class="cm">// If LLM fails → returns [] and logs (never throws)</span>
+<span class="cm">// Max 3 memories per turn, max 400 tokens output</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">20</span><span class="fc-name">embeddings.ts</span><span class="fc-lines">60 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/embeddings.ts</div>
+  <div class="fc-job">Local AI model — converts text to 384-number vectors for semantic search</div>
+  <div class="fc-body">
+    <pre><span class="fn">generateEmbedding</span>(<span class="st">"Qatar roads"</span>)
+<span class="ar">→</span> [<span class="nu">0.23</span>, <span class="ar">-0.87</span>, <span class="nu">0.45</span>, ... <span class="cm">384 numbers</span>]
+
+<span class="fn">cosineSimilarity</span>(vectorA, vectorB)
+<span class="ar">→</span> <span class="nu">0.91</span>  <span class="cm">// 1.0 = identical meaning, 0 = unrelated</span>
+
+<span class="cm">// Model: all-MiniLM-L6-v2 (25MB, runs in WASM locally)</span>
+<span class="cm">// Loaded once at startup via warmupEmbeddings()</span>
+<span class="cm">// Singleton pattern: if two requests race to load the model,</span>
+<span class="cm">// the second one waits for the first — never double-loads</span></pre>
+    <div class="info"><strong>Why local model?</strong> No API key needed, no latency, no cost per call. The 25MB model runs on CPU in Node.js via WebAssembly.</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">21</span><span class="fc-name">chart-results.repository.ts</span></div>
+  <div class="fc-path">nest-app/src/ai/chart-results.repository.ts</div>
+  <div class="fc-job">Saves generated dashboards to MongoDB for future retrieval</div>
+  <div class="fc-body">
+    <pre><span class="fn">save</span>({ prompt, sourceName, dashboard: DashboardSpec })
+<span class="cm">// Stores the full dashboard JSON to the chart_results collection</span>
+<span class="cm">// Used by pipeline.service.ts after every successful dashboard generation</span></pre>
+  </div>
+</div>
+
+<!-- ══════ SECTION 6 — CHART SUB-FILES ══════ -->
+<h2 id="chartfiles">6 — Chart Sub-Files</h2>
+<div class="section-intro">The original 792-line chart.ts was split into 7 focused files to improve readability. Reading order: config → types → profile → aggregation → renderers → repair → chart.ts</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">C1</span><span class="fc-name">chart-config.ts</span><span class="fc-lines">60 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/chart-config.ts</div>
+  <div class="fc-job">Loads chart type definitions from SKILL.md and builds Zod validation schemas</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Reads skills/chart/SKILL.md once at startup</span>
+CHART_DEFINITIONS  <span class="cm">// full list of chart types with required field specs</span>
+CHART_BY_TYPE      <span class="cm">// fast lookup: "bar_chart" → ChartDefinition</span>
+
+widgetSchema   <span class="cm">// Zod: forces LLM to return valid widget JSON</span>
+dashboardSchema <span class="cm">// Zod: forces LLM to return valid dashboard JSON</span></pre>
+    <div class="tip">Adding a new chart type = add it to SKILL.md JSON → Zod schema auto-updates, no code change needed.</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">C2</span><span class="fc-name">chart-types.ts</span><span class="fc-lines">27 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/chart-types.ts</div>
+  <div class="fc-job">Pure TypeScript types — no logic, no imports — prevents circular dependencies</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Type</th><th>Description</th></tr>
+      <tr><td><code>DataRow</code></td><td>One MongoDB result row: <code>{ title: "X", budget: 1000 }</code></td></tr>
+      <tr><td><code>FieldKind</code></td><td>"numeric" | "temporal" | "categorical"</td></tr>
+      <tr><td><code>RowProfile</code></td><td>Which columns are which kind</td></tr>
+      <tr><td><code>WidgetPlan</code></td><td>Repaired/validated LLM widget output</td></tr>
+      <tr><td><code>Renderer</code></td><td>Function type: (plan, data, id) → ECharts option</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">C3</span><span class="fc-name">chart-profile.ts</span><span class="fc-lines">117 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/chart-profile.ts</div>
+  <div class="fc-job">Scans data rows and classifies each column — then fuzzy-matches LLM field names to real names</div>
+  <div class="fc-body">
+    <pre><span class="fn">buildRowProfile</span>(keys, rows)
+<span class="cm">// Looks at up to 20 values per column:</span>
+<span class="ar">→</span> { numeric: [<span class="st">"budget"</span>], temporal: [<span class="st">"date"</span>], categorical: [<span class="st">"title"</span>] }
+
+<span class="fn">resolveFieldName</span>(<span class="st">"municipality_name"</span>, profile, [<span class="st">"categorical"</span>])
+<span class="cm">// Fuzzy score: "municipalityName" → 80 (normalized tokens match)</span>
+<span class="ar">→</span> <span class="st">"municipalityName"</span>  <span class="cm">// ← fixes the hallucinated underscore name</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">C4</span><span class="fc-name">chart-aggregation.ts</span><span class="fc-lines">103 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/chart-aggregation.ts</div>
+  <div class="fc-job">In-memory data grouping — GROUP BY, SUM/AVG/COUNT, sort, top-N</div>
+  <div class="fc-body">
+    <pre><span class="fn">aggregateByLabel</span>(rows, <span class="st">'region'</span>, <span class="st">'sum'</span>, <span class="st">'budget'</span>)
+<span class="cm">// GROUP BY region, SUM(budget)</span>
+<span class="ar">→</span> [{ label: <span class="st">"North"</span>, value: <span class="nu">45000000</span> }, ...]
+
+<span class="fn">buildCategoricalSeries</span>(plan, rows)
+<span class="cm">// Aggregates if plan.agg is set, then sorts, then slices to topN</span>
+<span class="cm">// Used by bar, donut, funnel renderers</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">C5</span><span class="fc-name">chart-renderers.ts</span><span class="fc-lines">219 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/chart-renderers.ts</div>
+  <div class="fc-job">One function per chart type — builds ECharts option JSON</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Key</th><th>Function</th><th>Charts</th></tr>
+      <tr><td>bar_chart</td><td>renderBar</td><td>bar, horizontal bar</td></tr>
+      <tr><td>grouped_bar_chart</td><td>renderMultiBar</td><td>grouped, stacked</td></tr>
+      <tr><td>line_chart</td><td>renderLine</td><td>line, area</td></tr>
+      <tr><td>multi_line_chart</td><td>renderMultiLine</td><td>multi-series line</td></tr>
+      <tr><td>donut_chart</td><td>renderDonut</td><td>donut/pie</td></tr>
+      <tr><td>scatter_plot</td><td>renderScatter</td><td>scatter</td></tr>
+      <tr><td>kpi_card</td><td>renderKpi</td><td>single number card</td></tr>
+      <tr><td>heatmap</td><td>renderHeatmap</td><td>matrix heatmap</td></tr>
+      <tr><td>table</td><td>renderTable</td><td>data table</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">C6</span><span class="fc-name">chart-repair.ts</span><span class="fc-lines">135 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/chart-repair.ts</div>
+  <div class="fc-job">Fixes LLM mistakes before rendering — field names, missing fields, type mismatches</div>
+  <div class="fc-body">
+    <pre><span class="fn">repairWidgetPlan</span>(raw, profile, rows)
+<span class="cm">// For each chart type, resolves field names against real data columns</span>
+<span class="cm">// e.g. "municipality_name" → "municipalityName" (fuzzy match)</span>
+<span class="cm">// Logs every fix made: [chart:fix] mapped labelField=...</span>
+
+<span class="fn">validateWidget</span>(repaired, profile, rows)
+<span class="cm">// Returns { ok: true } or { ok: false, reasons: [...] }</span>
+<span class="cm">// Bad widgets are silently dropped (logged). Others render normally.</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">C7</span><span class="fc-name">chart.ts</span><span class="fc-lines">99 lines</span></div>
+  <div class="fc-path">nest-app/src/ai/chart.ts</div>
+  <div class="fc-job">LLM Call #2 (chart) orchestration — calls all 6 chart sub-files in order</div>
+  <div class="fc-body">
+    <pre><span class="cm">// runChart() — 5 steps:</span>
+<span class="nu">1</span>. Guard: <span class="kw">if</span> (!rows.length) <span class="kw">return</span> empty dashboard
+<span class="nu">2</span>. <span class="fn">buildRowProfile</span>(keys, rows)        <span class="cm">// classify all columns</span>
+<span class="nu">3</span>. generateObject(dashboardSchema)    <span class="cm">// ask LLM which charts to build</span>
+<span class="nu">4</span>. <span class="kw">for</span> each widget: repair → validate → accept or drop
+<span class="nu">5</span>. <span class="kw">for</span> each accepted: RENDERERS[plan.type](plan, data, id)
+<span class="ar">→</span> { layout, title, summary, widgets: [...ECharts JSON...] }</pre>
+  </div>
+</div>
+
+<!-- ══════ SECTION 7 — SOURCES ══════ -->
+<h2 id="sources">7 — Sources Module</h2>
+<div class="section-intro">Manages which MongoDB collections are registered and available to the AI.</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">22</span><span class="fc-name">sources-cache.ts</span><span class="fc-lines">11 lines</span></div>
+  <div class="fc-path">nest-app/src/sources/sources-cache.ts</div>
+  <div class="fc-job">In-memory module-level cache — holds all registered DataSource objects</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Simple module-level variable. Sources are loaded from MongoDB once at</span>
+<span class="cm">// startup and after every register/remove. The planner and pipeline</span>
+<span class="cm">// read from this cache synchronously — zero DB latency per request.</span>
+<span class="kw">let</span> cache: DataSource[] = []
+<span class="fn">getSources</span>()          <span class="cm">// read</span>
+<span class="fn">setSourcesCache</span>(list) <span class="cm">// write (only SourcesService calls this)</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">23</span><span class="fc-name">sources.service.ts</span><span class="fc-lines">84 lines</span></div>
+  <div class="fc-path">nest-app/src/sources/sources.service.ts</div>
+  <div class="fc-job">Manages source registration — loads from MongoDB on startup, exposes CRUD</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Method</th><th>What it does</th></tr>
+      <tr><td>onModuleInit()</td><td>Loads all sources from MongoDB into memory on server start</td></tr>
+      <tr><td>register(source)</td><td>Upserts source to MongoDB, refreshes cache</td></tr>
+      <tr><td>remove(collection)</td><td>Deletes source from MongoDB, refreshes cache</td></tr>
+      <tr><td>getMeta()</td><td>Returns example prompts for each mode/source combo</td></tr>
+    </table>
+    <h4>Source schema stored in MongoDB</h4>
+    <pre>{
+  name:       <span class="st">"Qatar Projects"</span>,
+  collection: <span class="st">"projects"</span>,
+  fields: [
+    { name: <span class="st">"title"</span>,  type: <span class="st">"string"</span>,  role: <span class="st">"dimension"</span> },
+    { name: <span class="st">"budget"</span>, type: <span class="st">"number"</span>,  role: <span class="st">"measure"</span>   },
+    { name: <span class="st">"status"</span>, type: <span class="st">"enum"</span>,    enumValues: [<span class="st">"active"</span>, <span class="st">"done"</span>] }
+  ]
+}</pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">24</span><span class="fc-name">sources.controller.ts</span></div>
+  <div class="fc-path">nest-app/src/sources/sources.controller.ts</div>
+  <div class="fc-job">REST API for sources — GET/POST/DELETE</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Endpoint</th><th>Action</th></tr>
+      <tr><td>GET /api/meta</td><td>Returns example prompts per mode (public)</td></tr>
+      <tr><td>GET /api/sources</td><td>Lists all registered data sources</td></tr>
+      <tr><td>POST /api/sources</td><td>Register a new data source (from seed script)</td></tr>
+      <tr><td>DELETE /api/sources/:collection</td><td>Remove a source by collection name</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SECTION 8 — LONG-TERM MEMORY ══════ -->
+<h2 id="memory">8 — Long-Term Memory Module</h2>
+<div class="section-intro">Stores and retrieves per-user insights across sessions using vector embeddings.</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">25</span><span class="fc-name">memory.schema.ts</span><span class="fc-lines">20 lines</span></div>
+  <div class="fc-path">nest-app/src/memory/memory.schema.ts</div>
+  <div class="fc-job">MongoDB schema for memory_items collection</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Field</th><th>Type</th><th>Purpose</th></tr>
+      <tr><td>userId</td><td>string</td><td>Which user owns this memory</td></tr>
+      <tr><td>type</td><td>enum</td><td>goal | insight | preference | context | decision</td></tr>
+      <tr><td>content</td><td>string</td><td>The memory text</td></tr>
+      <tr><td>tags</td><td>string[]</td><td>Keywords for fallback search</td></tr>
+      <tr><td>importance</td><td>1-5</td><td>Priority weight for retrieval</td></tr>
+      <tr><td>embedding</td><td>number[384]</td><td>Vector for semantic search</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">26</span><span class="fc-name">memory.repository.ts</span><span class="fc-lines">121 lines</span></div>
+  <div class="fc-path">nest-app/src/memory/memory.repository.ts</div>
+  <div class="fc-job">MongoDB operations for memory — upsert with deduplication, semantic retrieval</div>
+  <div class="fc-body">
+    <h4>upsert() — save with deduplication</h4>
+    <pre><span class="cm">// Generates a 384-dim embedding for the memory content</span>
+<span class="cm">// Checks if a similar memory already exists (first 60 chars match)</span>
+<span class="cm">// If exists → update. If new → create.</span>
+<span class="cm">// This prevents storing duplicate memories across multiple turns.</span></pre>
+    <h4>findRelevant() — semantic search</h4>
+    <pre><span class="cm">// 1. Load up to 100 memories for this user</span>
+<span class="cm">// 2. Convert the current prompt to a vector</span>
+<span class="cm">// 3. Score each memory: cosineSimilarity(promptVector, memoryVector)</span>
+<span class="cm">// 4. Return top-3 most semantically similar memories</span>
+<span class="cm">// Fallback (if model not ready): keyword overlap + importance score</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">27</span><span class="fc-name">memory.service.ts</span><span class="fc-lines">88 lines</span></div>
+  <div class="fc-path">nest-app/src/memory/memory.service.ts</div>
+  <div class="fc-job">Business logic for memory — toggle extraction on/off, retrieve context, save new memories</div>
+  <div class="fc-body">
+    <pre><span class="cm">// MEMORY_EXTRACTION_ENABLED env var (default false)</span>
+<span class="cm">// → Can be flipped live via PATCH /api/memory/config</span>
+<span class="cm">// → When disabled: zero LLM calls for memory, saves tokens</span>
+
+<span class="fn">getRelevantContext</span>(userId, prompt)
+<span class="cm">// Returns a formatted string like:</span>
+<span class="st">"[CONTEXT] User is focused on Qatar
+[INSIGHT] 22 projects in 6 municipalities"</span>
+<span class="cm">// Injected into the supervisor's prompt before each query</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">28</span><span class="fc-name">memory.controller.ts</span><span class="fc-lines">68 lines</span></div>
+  <div class="fc-path">nest-app/src/memory/memory.controller.ts</div>
+  <div class="fc-job">REST API for memory management</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Endpoint</th><th>Action</th></tr>
+      <tr><td>GET /api/memory/config</td><td>Returns { extractionEnabled: true/false }</td></tr>
+      <tr><td>PATCH /api/memory/config</td><td>Toggle memory extraction on/off at runtime</td></tr>
+      <tr><td>GET /api/memory</td><td>List all memories for x-user-id</td></tr>
+      <tr><td>DELETE /api/memory</td><td>Clear all memories for x-user-id</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SECTION 9 — SESSION ══════ -->
+<h2 id="session">9 — Session / Short-Term Memory</h2>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">29</span><span class="fc-name">session/memory.ts</span><span class="fc-lines">367 lines</span></div>
+  <div class="fc-path">nest-app/src/session/memory.ts</div>
+  <div class="fc-job">Conversation session storage using Mastra Memory + LibSQL (SQLite)</div>
+  <div class="fc-body">
+    <p>This file manages <strong>short-term memory</strong> — the conversation history within and across sessions. It uses Mastra's Memory abstraction backed by a local SQLite file (<code>data/memory.db</code>).</p>
+    <h4>Key functions</h4>
+    <table>
+      <tr><th>Function</th><th>What it does</th></tr>
+      <tr><td>ensureThread()</td><td>Creates or updates a conversation session (thread)</td></tr>
+      <tr><td>getMemoryContext()</td><td>Returns last 6 messages as CoreMessage[] for the LLM</td></tr>
+      <tr><td>saveConversationTurn()</td><td>Saves user message + assistant response to SQLite</td></tr>
+      <tr><td>listSessions()</td><td>Returns all session summaries (used by sidebar)</td></tr>
+      <tr><td>getSessionDetail()</td><td>Returns full message history for one session</td></tr>
+      <tr><td>deleteSession()</td><td>Deletes a session and all its messages</td></tr>
+    </table>
+    <div class="info"><strong>Why LibSQL/SQLite?</strong> Sessions need to survive server restarts. MongoDB stores structured analytics results; SQLite (via Mastra) stores the conversation thread metadata and message history.</div>
+  </div>
+</div>
+
+<!-- ══════ SECTION 10 — CACHE ══════ -->
+<h2 id="cache">10 — Cache Module</h2>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">30</span><span class="fc-name">cache.service.ts</span><span class="fc-lines">72 lines</span></div>
+  <div class="fc-path">nest-app/src/cache/cache.service.ts</div>
+  <div class="fc-job">SHA-256 keyed prompt cache in MongoDB — avoids re-running LLM calls for identical prompts</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Cache key = SHA-256 of "intent:normalized_prompt"</span>
+<span class="cm">// e.g. "dashboard:show top 5 by budget" → "a1b2c3..."</span>
+
+<span class="fn">getCached</span>(<span class="st">'dashboard'</span>, <span class="st">'show top 5 by budget'</span>)
+<span class="cm">// If found: returns the stored DashboardSpec, increments hitCount</span>
+<span class="cm">// If not: returns null → pipeline runs normally</span>
+
+<span class="fn">setCached</span>(<span class="st">'dashboard'</span>, <span class="st">'show top 5 by budget'</span>, result)
+<span class="cm">// Stores the result. TTL = 7 days (auto-deleted by MongoDB TTL index)</span></pre>
+    <div class="tip"><strong>Impact:</strong> If a user asks the same question twice, the second response comes back in ~50ms instead of ~5s. No LLM calls, no MongoDB aggregation.</div>
+    <div class="warn"><strong>Cache is bypassed when:</strong> memory context is non-empty (i.e., there are previous messages in the session — responses might differ based on context).</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">31</span><span class="fc-name">prompt-cache.schema.ts</span></div>
+  <div class="fc-path">nest-app/src/cache/schemas/prompt-cache.schema.ts</div>
+  <div class="fc-job">MongoDB schema for prompt_cache collection — with 7-day TTL index</div>
+  <div class="fc-body">
+    <pre>{ key, prompt, intent, result, hitCount, lastHitAt, createdAt }
+<span class="cm">// createdAt has expires: 7*24*3600 → MongoDB auto-deletes after 7 days</span></pre>
+  </div>
+</div>
+
+<!-- ══════ SECTION 11 — HISTORY ══════ -->
+<h2 id="history">11 — History Module</h2>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">32</span><span class="fc-name">history.controller.ts</span></div>
+  <div class="fc-path">nest-app/src/history/history.controller.ts</div>
+  <div class="fc-job">REST API for pipeline run history and conversation sessions</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Endpoint</th><th>Returns</th></tr>
+      <tr><td>GET /api/history/results</td><td>Paginated list of pipeline runs (prompt, rows, timing)</td></tr>
+      <tr><td>GET /api/history/results/:id</td><td>One pipeline run with full data</td></tr>
+      <tr><td>GET /api/history/sessions</td><td>All conversation sessions (sidebar)</td></tr>
+      <tr><td>GET /api/history/sessions/:id</td><td>Full message history for one session</td></tr>
+      <tr><td>DELETE /api/history/sessions/:id</td><td>Delete a session</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">33</span><span class="fc-name">results-history.repository.ts</span></div>
+  <div class="fc-path">nest-app/src/history/results-history.repository.ts</div>
+  <div class="fc-job">Saves every pipeline run (prompt, pipeline, rows, duration) to pipeline_runs MongoDB collection</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Saved after every aggregation in pipeline.service.ts</span>
+{ prompt, intent, collection, pipeline, rows, rowCount, durationMs }
+<span class="cm">// Useful for debugging: you can replay any pipeline exactly</span></pre>
+  </div>
+</div>
+
+<!-- ══════ SECTION 12 — SAVED RESULTS ══════ -->
+<h2 id="saved">12 — Saved Results Module</h2>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">34</span><span class="fc-name">saved-results module (4 files)</span></div>
+  <div class="fc-path">nest-app/src/saved-results/</div>
+  <div class="fc-job">Allows users to bookmark dashboards/reports for later viewing</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>File</th><th>Role</th></tr>
+      <tr><td>saved-results.controller.ts</td><td>POST/GET/DELETE /api/saved (requires x-user-id)</td></tr>
+      <tr><td>saved-results.service.ts</td><td>Thin wrapper over the repository</td></tr>
+      <tr><td>saved-results.repository.ts</td><td>MongoDB CRUD for saved_results collection</td></tr>
+      <tr><td>saved-result.schema.ts</td><td>{ userId, title, prompt, intent, result, createdAt }</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SECTION 13 — USER KEYS ══════ -->
+<h2 id="userkeys">13 — User Keys Module</h2>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">35</span><span class="fc-name">user-keys.controller.ts</span><span class="fc-lines">109 lines</span></div>
+  <div class="fc-path">nest-app/src/user-keys/user-keys.controller.ts</div>
+  <div class="fc-job">POST /api/key — verifies an API key by pinging the provider</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Auto-detects provider from key prefix:</span>
+<span class="st">"gsk_..."</span>  <span class="ar">→</span> Groq    → pings https://api.groq.com/openai/v1/models
+<span class="st">"sk-ant-"</span>  <span class="ar">→</span> Anthropic
+<span class="st">"sk-..."</span>   <span class="ar">→</span> OpenAI
+
+<span class="cm">// Response:</span>
+HTTP <span class="nu">200</span>: { ok: <span class="kw">true</span>,  provider: <span class="st">"groq"</span> }   <span class="cm">// key is valid</span>
+HTTP <span class="nu">400</span>: { error: <span class="st">"This Groq API key was rejected"</span> }  <span class="cm">// invalid key</span>
+HTTP <span class="nu">502</span>: { error: <span class="st">"Could not reach Groq..."</span> }       <span class="cm">// provider down</span></pre>
+  </div>
+</div>
+
+<!-- ══════ SECTION 14 — SKILLS ══════ -->
+<h2 id="skills">14 — Skills (AI Prompt Files)</h2>
+<div class="section-intro">Each file in <code>skills/</code> is a Markdown document loaded at server startup. It contains the AI's instructions for one specific task.</div>
+
+<table>
+  <tr><th>File</th><th>Used by</th><th>Contains</th></tr>
+  <tr><td><code>skills/aggregation/SKILL.md</code></td><td>planner.ts</td><td>Instructions for generating MongoDB aggregation pipelines. Rules about operators, field references, allowed stages.</td></tr>
+  <tr><td><code>skills/chart/SKILL.md</code></td><td>chart-config.ts</td><td>JSON block with all chart type definitions. Each type specifies required fields and boolean flags (requiresAxis, requiresValue...). Also the system prompt for the chart LLM call.</td></tr>
+  <tr><td><code>skills/inquiry/SKILL.md</code></td><td>writer.ts</td><td>Instructions for answering direct questions concisely from data rows.</td></tr>
+  <tr><td><code>skills/report/SKILL.md</code></td><td>writer.ts</td><td>Instructions for writing structured multi-section analytical reports.</td></tr>
+  <tr><td><code>skills/memory/SKILL.md</code></td><td>memory-skill.ts</td><td>Instructions for extracting goal/insight/preference/context/decision memories from a conversation turn.</td></tr>
+  <tr><td><code>skills/analytics/SKILL.md</code></td><td>planner.ts</td><td>High-level rules for the supervisor: intent detection, source selection, when needsData = false.</td></tr>
+  <tr><td><code>skills/writer/SKILL.md</code></td><td>writer.ts</td><td>General writing style guidelines shared by all text outputs.</td></tr>
+  <tr><td><code>skills/suggestions/SKILL.md</code></td><td>(future)</td><td>Prompt suggestions feature.</td></tr>
+</table>
+
+<!-- ══════ SECTION 15 — CLIENT ══════ -->
+<h2 id="client">15 — Angular Frontend (client/)</h2>
+<div class="section-intro">Single-page app built with Angular 18 standalone components + Tailwind CSS.</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">36</span><span class="fc-name">app.types.ts</span><span class="fc-lines">153 lines</span></div>
+  <div class="fc-path">client/src/app/app.types.ts</div>
+  <div class="fc-job">All TypeScript interfaces for the frontend — mirrors the backend response shapes</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Type</th><th>Purpose</th></tr>
+      <tr><td>AnalyticsRequest</td><td>What we send to POST /api/analytics</td></tr>
+      <tr><td>DashboardResponse</td><td>Response when intent = "dashboard"</td></tr>
+      <tr><td>ReportResponse</td><td>Response when intent = "report"</td></tr>
+      <tr><td>InquiryResponse</td><td>Response when intent = "inquiry"</td></tr>
+      <tr><td>ConversationMessage</td><td>One message in the chat history (user or assistant)</td></tr>
+      <tr><td>MessageResult</td><td>What the assistant returned: type + data</td></tr>
+      <tr><td>WidgetSpec</td><td>One chart/table/KPI — includes ECharts option</td></tr>
+      <tr><td>SessionSummary</td><td>One row in the sessions sidebar</td></tr>
+      <tr><td>MemoryItem</td><td>One long-term memory item displayed in the memory tab</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">37</span><span class="fc-name">analytics-state.service.ts</span><span class="fc-lines">97 lines</span></div>
+  <div class="fc-path">client/src/app/analytics-state.service.ts</div>
+  <div class="fc-job">Global app state — single BehaviorSubject holding all UI state</div>
+  <div class="fc-body">
+    <pre><span class="cm">// AppState = everything the UI needs:</span>
+{
+  phase:      <span class="st">'idle'</span> | <span class="st">'loading'</span> | <span class="st">'done'</span> | <span class="st">'error'</span>,
+  intent:     <span class="st">'dashboard'</span> | <span class="st">'report'</span> | <span class="st">'inquiry'</span>,
+  prompt:     string,          <span class="cm">// what's in the input box</span>
+  messages:   ConversationMessage[],  <span class="cm">// the full chat history</span>
+  sessions:   SessionSummary[],       <span class="cm">// sidebar sessions list</span>
+  memories:   MemoryItem[],           <span class="cm">// memory tab items</span>
+  hasKey:     boolean,         <span class="cm">// is an API key stored?</span>
+  ...
+}
+
+<span class="cm">// Components read via: this.st.snap (synchronous) or this.st.state$ (reactive)</span>
+<span class="cm">// Update via: this.st.patch({ phase: 'loading' })</span></pre>
+    <div class="info">Angular uses RxJS BehaviorSubject. The template subscribes with <code>| async</code> — when state changes, only the affected DOM nodes re-render.</div>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">38</span><span class="fc-name">analytics-api.service.ts</span><span class="fc-lines">117 lines</span></div>
+  <div class="fc-path">client/src/app/analytics-api.service.ts</div>
+  <div class="fc-job">HTTP client — wraps all API calls with error handling and a 480s timeout</div>
+  <div class="fc-body">
+    <table>
+      <tr><th>Method</th><th>API call</th></tr>
+      <tr><td>runAnalytics()</td><td>POST /api/analytics (main call)</td></tr>
+      <tr><td>verifyKey()</td><td>POST /api/key (check API key)</td></tr>
+      <tr><td>getMeta()</td><td>GET /api/meta (example prompts)</td></tr>
+      <tr><td>listSessions()</td><td>GET /api/history/sessions</td></tr>
+      <tr><td>getSession()</td><td>GET /api/history/sessions/:id</td></tr>
+      <tr><td>listMemories()</td><td>GET /api/memory</td></tr>
+      <tr><td>saveResult()</td><td>POST /api/saved</td></tr>
+    </table>
+    <p>All methods return <code>Promise&lt;T&gt;</code> via <code>firstValueFrom()</code>. HTTP errors are converted to typed <code>ApiError</code> with a <code>code</code> field — the component checks <code>err.code === 'INVALID_API_KEY'</code> to show the key modal.</p>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">39</span><span class="fc-name">app.component.ts</span><span class="fc-lines">567 lines</span></div>
+  <div class="fc-path">client/src/app/app.component.ts</div>
+  <div class="fc-job">Root Angular component — all UI interactions and rendering logic</div>
+  <div class="fc-body">
+    <h4>On startup (ngOnInit)</h4>
+    <pre><span class="cm">// Generate or restore userId from localStorage</span>
+<span class="cm">// Restore API key from localStorage</span>
+<span class="cm">// Load: meta prompts, session history, saved results, memories</span></pre>
+    <h4>Main run() method — what happens when you press Enter</h4>
+    <pre><span class="nu">1</span>. Validate: no empty prompt, not loading, has API key
+<span class="nu">2</span>. Special case: if intent = "report", show format choice (report/chart/both)
+<span class="nu">3</span>. Add user message optimistically to the chat (immediate UI update)
+<span class="nu">4</span>. Call <span class="fn">api.runAnalytics</span>({ prompt, intent, sessionId })
+<span class="nu">5</span>. On success: add assistant message, reload sessions
+<span class="nu">6</span>. On INVALID_API_KEY error: clear key, show key modal</pre>
+    <h4>Chart initialization (ngAfterViewChecked)</h4>
+    <pre><span class="cm">// After every Angular change detection cycle:</span>
+<span class="cm">// Find DOM elements with [data-widget-id] that haven't been initialized</span>
+<span class="cm">// Initialize ECharts on each one via ChartRenderService</span>
+<span class="cm">// Track initialized widgets in initedWidgets Set to avoid re-init</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">40</span><span class="fc-name">chart-render.service.ts</span><span class="fc-lines">39 lines</span></div>
+  <div class="fc-path">client/src/app/chart-render.service.ts</div>
+  <div class="fc-job">Initializes and manages ECharts instances in the browser</div>
+  <div class="fc-body">
+    <pre><span class="fn">initWidget</span>(domElement, widget)
+<span class="cm">// Calls echarts.init(el), then chart.setOption(widget.option)</span>
+<span class="cm">// Stores the instance in a Map by widget.id</span>
+
+<span class="fn">disposeAll</span>()
+<span class="cm">// Called on new session or component destroy</span>
+<span class="cm">// Clears all ECharts instances to prevent memory leaks</span>
+
+<span class="cm">// Window resize handler → resizes all active charts</span></pre>
+  </div>
+</div>
+
+<div class="fc">
+  <div class="fc-hdr"><span class="fc-num">41</span><span class="fc-name">markdown.pipe.ts</span></div>
+  <div class="fc-path">client/src/app/markdown.pipe.ts</div>
+  <div class="fc-job">Angular pipe — converts Markdown text from LLM responses to rendered HTML</div>
+  <div class="fc-body">
+    <pre><span class="cm">// Used in the template for report bodies and inquiry summaries:</span>
+&lt;div [innerHTML]="message.result.summary | markdown"&gt;&lt;/div&gt;
+<span class="cm">// Converts **bold**, ## headings, - lists, etc. from LLM text to HTML</span></pre>
+  </div>
+</div>
+
+<!-- ══════ FULL REQUEST FLOW ══════ -->
+<h2 id="fullflow">Full Request Flow (File-by-File)</h2>
+
+<div class="flow">
+<span class="fn2">── USER TYPES A PROMPT ──────────────────────────────────────────</span>
+<br><span class="ff">app.component.ts</span>      run()  →  api.runAnalytics()
+<br>
+<br><span class="fn2">── HTTP REQUEST ARRIVES AT NESTJS ────────────────────────────────</span>
+<br><span class="ff">request-id.middleware</span> assigns requestId (UUID) to this request
+<br><span class="ff">api-key.guard</span>         checks x-api-key if API_KEY env var is set
+<br><span class="ff">analytics.controller</span>  validates DTO, extracts userId and userKey headers
+<br>
+<br><span class="fn2">── ANALYTICS SERVICE ─────────────────────────────────────────────</span>
+<br><span class="ff">intent-detector</span>        classifies prompt: dashboard / report / inquiry
+<br><span class="ff">analytics.service</span>     resolves API key (user → global → error)
+<br><span class="ff">session/memory</span>         getMemoryContext() → last 6 conversation messages
+<br><span class="ff">memory.service</span>         getRelevantContext() → top-3 semantic memories
+<br>
+<br><span class="fn2">── PIPELINE SERVICE ──────────────────────────────────────────────</span>
+<br><span class="ff">cache.service</span>          getCached()  ←  cache HIT? return immediately ✅
+<br>
+<br><span class="fn2">── LLM CALL #1 ───────────────────────────────────────────────────</span>
+<br><span class="ff">planner.ts</span>   <span class="fl">──llama-3.3-70b──▶</span>  MongoDB pipeline JSON
+<br><span class="ff">skill-prompt</span>  (skills/aggregation/SKILL.md loaded at startup)
+<br><span class="ff">model.ts</span>      (resolves model + 15s timeout signal)
+<br>
+<br><span class="fn2">── MONGODB AGGREGATION ───────────────────────────────────────────</span>
+<br><span class="ff">pipeline.service</span>  validatePipelineFields()  ← checks field names
+<br><span class="ff">pipeline.service</span>  runAggregation()          ← executes pipeline
+<br>                   IF error → hint injected → retry LLM call #1 (once)
+<br>
+<br><span class="fn2">── DASHBOARD BRANCH ──────────────────────────────────────────────</span>
+<br><span class="fn2">── LLM CALL #2 ───────────────────────────────────────────────────</span>
+<br><span class="ff">chart.ts</span>      <span class="fl">──llama-3.3-70b──▶</span>  widget plan JSON
+<br><span class="ff">chart-repair</span>  fixes hallucinated field names (fuzzy match)
+<br><span class="ff">chart-profile</span> classified column kinds for this data
+<br><span class="ff">chart-renderers</span> builds ECharts option JSON for each widget
+<br>
+<br><span class="fn2">── RESPONSE ──────────────────────────────────────────────────────</span>
+<br><span class="ff">cache.service</span>          setCached() saves result for 7 days
+<br><span class="ff">results-history</span>        saves pipeline run to MongoDB
+<br><span class="ff">chart-results.repo</span>     saves dashboard to MongoDB
+<br>                   JSON response → browser ✅
+<br>
+<br><span class="fn2">── BACKGROUND (user already has their answer) ────────────────────</span>
+<br><span class="fn2">── LLM CALL #3 ───────────────────────────────────────────────────</span>
+<br><span class="ff">memory-skill.ts</span>  <span class="fl">──llama-3.1-8b──▶</span>  up to 3 memory items
+<br><span class="ff">embeddings.ts</span>    local WASM model → 384-dim vectors
+<br><span class="ff">memory.repository</span>  upsert to memory_items MongoDB collection
+<br><span class="ff">session/memory</span>    saveConversationTurn() → SQLite (LibSQL)
+<br>
+<br><span class="fn2">── BROWSER RENDERS ───────────────────────────────────────────────</span>
+<br><span class="ff">analytics-state</span>   patch({ messages: [...], phase: 'done' })
+<br><span class="ff">app.component</span>    ngAfterViewChecked() → finds chart DOM elements
+<br><span class="ff">chart-render</span>      echarts.init(el) + chart.setOption(widget.option)
+</div>
+
+<br><br>
+<div style="border-top:2px solid #e0e7ff;padding-top:16px;text-align:center;color:#94a3b8;font-size:11px;">
+  MindAi — Complete File-by-File Guide &nbsp;·&nbsp; 41 files across backend, frontend, and skills &nbsp;·&nbsp; 2026
+</div>
+
+</body>
+</html>
