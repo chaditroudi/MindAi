@@ -329,10 +329,26 @@ export class PipelineService {
 
     if (plan.skills.includes('chart') && rows.length >= 2) {
       const source = this.resolveSource(plan.query.sourceName);
+      const chartFallback = { layout: 'operational' as const, title: prompt, summary: '', widgets: [] };
+
+      // Fast path: parallel
       const [reportSettled, chartSettled] = await Promise.allSettled([
         runReportSkill({ rows, prompt, withChart: true, apiKey }),
         runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey),
       ]);
+
+      // If report hit a rate limit, wait then retry both sequentially
+      if (reportSettled.status === 'rejected' && this.isRateLimit(reportSettled.reason)) {
+        const delayMs = this.retryDelayMs(reportSettled.reason);
+        this.logger.warn(`rate limit on parallel run — waiting ${delayMs}ms then retrying sequentially`);
+        await new Promise(r => setTimeout(r, delayMs));
+
+        const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey });
+        this.logger.log(`report done (retry) | sections: ${reportResult.reportSections.length}`);
+        const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
+          .catch(() => chartFallback);
+        return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+      }
 
       if (reportSettled.status === 'rejected') throw reportSettled.reason;
 
