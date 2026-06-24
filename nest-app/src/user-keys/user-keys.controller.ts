@@ -1,9 +1,21 @@
 import {
-  Controller, Post, Body, BadRequestException, HttpException, HttpStatus,
+  Controller, Post, Body, BadRequestException,
+  HttpException, HttpStatus, InternalServerErrorException,
 } from '@nestjs/common';
-import { IsOptional, IsString, IsUrl, MinLength, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
 
-type KeyStatus = 'valid' | 'invalid' | 'unreachable';
+class VerifyKeyDto {
+  @IsString() @MinLength(1) @MaxLength(500)
+  apiKey!: string;
+
+  /** Optional — auto-detected from key prefix when omitted. */
+  @IsOptional() @IsString() @MaxLength(100)
+  provider?: string;
+
+  /** Optional — required only for unknown providers. */
+  @IsOptional() @IsString() @MaxLength(500)
+  verifyUrl?: string;
+}
 
 const KNOWN_PROVIDERS: Record<string, string> = {
   groq:      'https://api.groq.com/openai/v1/models',
@@ -15,26 +27,13 @@ const KNOWN_PROVIDERS: Record<string, string> = {
 };
 
 function autoDetect(key: string): { name: string; url: string } | null {
-  if (key.startsWith('gsk_'))    return { name: 'Groq',      url: KNOWN_PROVIDERS['groq'] };
-  if (key.startsWith('sk-ant-')) return { name: 'Anthropic', url: KNOWN_PROVIDERS['anthropic'] };
-  if (key.startsWith('sk-'))     return { name: 'OpenAI',    url: KNOWN_PROVIDERS['openai'] };
+  if (key.startsWith('gsk_'))    return { name: 'Groq',      url: KNOWN_PROVIDERS['groq']! };
+  if (key.startsWith('sk-ant-')) return { name: 'Anthropic', url: KNOWN_PROVIDERS['anthropic']! };
+  if (key.startsWith('sk-'))     return { name: 'OpenAI',    url: KNOWN_PROVIDERS['openai']! };
   return null;
 }
 
-class VerifyKeyDto {
-  @IsString() @MinLength(1) @MaxLength(500)
-  apiKey!: string;
-
-  /** Optional — auto-detected from key prefix (gsk_ = Groq, sk- = OpenAI, etc.). */
-  @IsOptional() @IsString() @MinLength(1) @MaxLength(100)
-  provider?: string;
-
-  /** Required only when provider is unknown and not in the built-in list. */
-  @IsOptional() @IsUrl() @MaxLength(500)
-  verifyUrl?: string;
-}
-
-async function pingKey(apiKey: string, url: string): Promise<KeyStatus> {
+async function pingKey(apiKey: string, url: string): Promise<'valid' | 'invalid' | 'unreachable'> {
   try {
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${apiKey}` },
@@ -52,50 +51,57 @@ async function pingKey(apiKey: string, url: string): Promise<KeyStatus> {
 export class UserKeysController {
   @Post('key')
   async verify(@Body() dto: VerifyKeyDto) {
-    const key = dto.apiKey.trim();
+    try {
+      const key = dto.apiKey.trim();
 
-    // Resolve provider name + verify URL
-    let name: string;
-    let url:  string;
+      let name: string;
+      let url: string;
 
-    if (dto.verifyUrl) {
-      name = dto.provider?.trim() || 'Custom';
-      url  = dto.verifyUrl.trim();
-    } else {
-      const detected = autoDetect(key);
-      if (detected) {
-        name = dto.provider?.trim() || detected.name;
-        url  = detected.url;
-      } else if (dto.provider) {
-        const known = KNOWN_PROVIDERS[dto.provider.toLowerCase()];
-        if (!known) {
+      if (dto.verifyUrl?.trim()) {
+        url  = dto.verifyUrl.trim();
+        name = dto.provider?.trim() || 'Custom';
+      } else {
+        const detected = autoDetect(key);
+        if (detected) {
+          name = dto.provider?.trim() || detected.name;
+          url  = detected.url;
+        } else if (dto.provider?.trim()) {
+          const providerKey = dto.provider.trim().toLowerCase();
+          const known = KNOWN_PROVIDERS[providerKey];
+          if (!known) {
+            throw new BadRequestException(
+              `Unknown provider "${dto.provider}". Pass a "verifyUrl" or use a Groq key (gsk_…) or OpenAI key (sk-…).`,
+            );
+          }
+          name = dto.provider.trim();
+          url  = known;
+        } else {
           throw new BadRequestException(
-            `Unknown provider "${dto.provider}". Pass a "verifyUrl" or use a key starting with gsk_ (Groq) or sk- (OpenAI).`,
+            'Cannot detect provider from this key. Use a Groq key (gsk_…) or OpenAI key (sk-…).',
           );
         }
-        name = dto.provider;
-        url  = known;
-      } else {
+      }
+
+      const status = await pingKey(key, url);
+
+      if (status === 'invalid') {
         throw new BadRequestException(
-          'Cannot detect provider from this key format. Use a Groq key (gsk_…) or OpenAI key (sk-…), or pass "provider" + "verifyUrl".',
+          `This ${name} API key was rejected — it may be incorrect or revoked.`,
         );
       }
-    }
+      if (status === 'unreachable') {
+        throw new HttpException(
+          { error: `Could not reach ${name} to verify the key. Please try again in a moment.` },
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
 
-    const status = await pingKey(key, url);
-
-    if (status === 'invalid') {
-      throw new BadRequestException(
-        `This ${name} API key was rejected — it may be incorrect or revoked. Please check it and try again.`,
+      return { ok: true, provider: name.toLowerCase() };
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error verifying key',
       );
     }
-    if (status === 'unreachable') {
-      throw new HttpException(
-        { error: `Could not reach ${name} to verify the key. Please try again in a moment.` },
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
-
-    return { ok: true, provider: name.toLowerCase() };
   }
 }
