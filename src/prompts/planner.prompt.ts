@@ -43,8 +43,6 @@ function buildSchemaSection(sources: DataSource[]): string {
   ];
 
   for (const source of sources) {
-    // Pre-compute once — resolveReference iterates all sources per field, so calling
-    // it multiple times per field per source would be O(fields² × sources).
     const refByField = new Map(source.fields.map(f => [f, resolveReference(f, sources)]));
 
     const dims     = source.fields.filter(f => f.type === 'string' || f.type === 'enum' || f.type === 'text');
