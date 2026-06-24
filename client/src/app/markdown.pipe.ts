@@ -1,6 +1,11 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
+// Renders the three markdown patterns defined in skills/report/SKILL.md:
+//   **bold**  →  <strong>
+//   - item    →  <ul><li>   (Key Findings and Recommendations sections)
+//   prose     →  <p>        (Overview, Breakdown, Trends sections)
+
 @Pipe({ name: 'md', standalone: true })
 export class MarkdownPipe implements PipeTransform {
   constructor(private san: DomSanitizer) {}
@@ -17,19 +22,20 @@ export class MarkdownPipe implements PipeTransform {
 
     const flushPara = () => {
       if (!paraLines.length) return;
-      out.push(`<p>${this.inline(paraLines.join(' '))}</p>`);
+      out.push(`<p>${this.bold(paraLines.join(' '))}</p>`);
       paraLines = [];
     };
 
     for (const raw of lines) {
       const line = raw.trimEnd();
-      const isList = /^[-•]\s/.test(line.trimStart());
+      // Only `- ` prefix per the skill spec
+      const isBullet = /^- /.test(line.trimStart());
 
-      if (isList) {
+      if (isBullet) {
         flushPara();
         if (!inList) { out.push('<ul>'); inList = true; }
-        const item = line.trimStart().replace(/^[-•]\s/, '');
-        out.push(`<li>${this.inline(item)}</li>`);
+        const item = line.trimStart().slice(2); // strip "- "
+        out.push(`<li>${this.bold(item)}</li>`);
       } else if (!line.trim()) {
         if (inList) { out.push('</ul>'); inList = false; }
         flushPara();
@@ -44,7 +50,8 @@ export class MarkdownPipe implements PipeTransform {
     return out.join('');
   }
 
-  private inline(text: string): string {
+  // Converts **text** → <strong>text</strong>
+  private bold(text: string): string {
     return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   }
 }
