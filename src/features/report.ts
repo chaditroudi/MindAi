@@ -32,12 +32,11 @@ export async function executeReport(
     const source = getSources().find(s =>
       s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
     );
-    const [reportResult, chartResult] = await Promise.all([
-      runReportSkill({ rows, prompt, withChart: true, apiKey }),
-      runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
-        .catch(() => ({ layout: 'analytical' as const, title: prompt, summary: '', widgets: [] })),
-    ]);
-    log('report', `done (with chart) | sections: ${reportResult.reportSections.length}`);
+    const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey });
+    log('report', `report done | sections: ${reportResult.reportSections.length} | generating chart…`);
+    const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
+      .catch(() => ({ layout: 'analytical' as const, title: prompt, summary: '', widgets: [] }));
+    log('report', `done (with chart)`);
     return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
   }
 
