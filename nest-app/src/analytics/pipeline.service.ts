@@ -381,6 +381,7 @@ export class PipelineService {
       // If report hit a rate limit, wait then retry both sequentially
       if (reportSettled.status === 'rejected' && this.isRateLimit(reportSettled.reason)) {
         const delayMs = this.retryDelayMs(reportSettled.reason);
+        if (delayMs > 60_000) throw reportSettled.reason; // quota exhausted — surface immediately
         this.logger.warn(`rate limit on parallel run — waiting ${delayMs}ms then retrying sequentially`);
         await new Promise(r => setTimeout(r, delayMs));
 

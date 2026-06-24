@@ -64,8 +64,9 @@ export async function executeReport(
     } catch (err) {
       if (!isRateLimitError(err)) throw err;
 
-      // Rate limit fallback: wait then run sequentially
+      // Rate limit fallback: only wait if the suggested delay is short enough
       const delayMs = extractRetryDelayMs(err);
+      if (delayMs > 60_000) throw err; // quota exhausted — surface the error immediately
       log('report', `rate limit on parallel run — waiting ${delayMs}ms then retrying sequentially`);
       await sleep(delayMs);
 
