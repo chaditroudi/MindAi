@@ -12,8 +12,6 @@ import { HistoryService } from '../history/history.service';
 import { ChartResultsRepository } from '../ai/chart-results.repository';
 import type { IntentKind, DataSource, TaskPlan, DashboardSpec, ReportSection } from '../types';
 
-// ── Shared types ──────────────────────────────────────────────────────────────
-
 function patchConvert(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(patchConvert);
   if (value !== null && typeof value === 'object') {
@@ -33,11 +31,6 @@ function patchConvert(value: unknown): unknown {
 
 type Row              = Record<string, unknown>;
 type ResolvedPipeline = { pipeline: Row[]; collection: string };
-
-export interface ReportSection {
-  heading: string;
-  body:    string;
-}
 
 export interface AggregationResult {
   plan: TaskPlan;
