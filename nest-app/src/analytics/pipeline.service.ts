@@ -329,11 +329,22 @@ export class PipelineService {
 
     if (plan.skills.includes('chart') && rows.length >= 2) {
       const source = this.resolveSource(plan.query.sourceName);
-      const [reportResult, chartResult] = await Promise.all([
+      const [reportSettled, chartSettled] = await Promise.allSettled([
         runReportSkill({ rows, prompt, withChart: true, apiKey }),
         runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey),
       ]);
+
+      if (reportSettled.status === 'rejected') throw reportSettled.reason;
+
+      const reportResult = reportSettled.value;
       this.logger.log(`report done (with chart) | sections: ${reportResult.reportSections.length}`);
+
+      if (chartSettled.status === 'rejected') {
+        this.logger.warn(`chart generation failed (non-fatal): ${chartSettled.reason}`);
+        return reportResult;
+      }
+
+      const chartResult = chartSettled.value;
       return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
     }
 
