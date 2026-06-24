@@ -518,12 +518,12 @@
 .report-card { padding: 0.9rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: #fafafa; }
 .report-card h4 { margin: 0 0 0.4rem; font-size: 0.9rem; font-weight: 600; color: #111827; }
 .report-card p  { margin: 0; color: #4b5563; font-size: 0.86rem; line-height: 1.8; }
-.report-card div p { margin: 0 0 0.45rem; color: #4b5563; font-size: 0.86rem; line-height: 1.8; }
-.report-card div p:last-child { margin-bottom: 0; }
-.report-card div ul { margin: 0; padding-left: 1.1rem; list-style: disc; }
-.report-card div li { color: #4b5563; font-size: 0.86rem; line-height: 1.8; margin-bottom: 0.15rem; }
-.report-card div li:last-child { margin-bottom: 0; }
-.report-card strong { font-weight: 600; color: #111827; }
+.report-card ::ng-deep p { margin: 0 0 0.45rem; color: #4b5563; font-size: 0.86rem; line-height: 1.8; }
+.report-card ::ng-deep p:last-child { margin-bottom: 0; }
+.report-card ::ng-deep ul { margin: 0; padding-left: 1.1rem; list-style: disc; }
+.report-card ::ng-deep li { color: #4b5563; font-size: 0.86rem; line-height: 1.8; margin-bottom: 0.15rem; }
+.report-card ::ng-deep li:last-child { margin-bottom: 0; }
+.report-card ::ng-deep strong { font-weight: 600; color: #111827; }
 
 /* ── Answer card ───────────────────────────────────────────────────────────── */
 .answer-card { padding: 1rem 1.1rem; border: 1px solid #a7f3d0; border-radius: 0.5rem; background: #f0fdf4; }
