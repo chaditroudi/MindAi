@@ -126,7 +126,17 @@ export class PipelineService {
 
       if (!resolved) return { plan, rows: [] };
 
-      const rows = await this.runAggregation(resolved.collection, patchConvert(plan.pipeline!) as Row[]);
+      let rows: Row[];
+      try {
+        rows = await this.runAggregation(resolved.collection, patchConvert(plan.pipeline!) as Row[]);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (attempt === 0 && msg.includes('Unsupported conversion')) {
+          hint = `MongoDB aggregation error: "${msg}". When converting integer/string fields to dates, always use $convert with onError: null and onNull: null, e.g. { $convert: { input: "$field", to: "date", onError: null, onNull: null } }.`;
+          continue;
+        }
+        throw err;
+      }
 
       if (rows.length === 0 && plan.needsData && attempt === 0 && this.hasStringMatch(plan.pipeline ?? [])) {
         hint = `The pipeline returned 0 rows: ${JSON.stringify(plan.pipeline)}. ` +
