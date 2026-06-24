@@ -82,7 +82,7 @@ When the user message contains "CONTEXT: A visualization chart will be displayed
 
 **2. Key Findings** (always required)
 - 3–5 bullet points, each with a specific number from the data
-- Format: "• [Metric]: [Value] ([context if relevant])"
+- Format: `- **[Metric]**: [Value] ([context if relevant])`
 - Most important finding first
 
 **3. Breakdown** (always required)
@@ -103,6 +103,9 @@ When the user message contains "CONTEXT: A visualization chart will be displayed
 
 ### Report Rules
 - Each section body must be prose paragraphs (not bullet points, except Key Findings)
+- Use `**bold**` to highlight key numbers, totals, and critical metrics inline (e.g. `**1,247 projects**`, `**68%**`)
+- Key Findings body must be a markdown bullet list using `- ` prefix (one item per line)
+- All other sections: prose paragraphs only, no bullet lists
 - Professional, formal tone — appropriate for a government report
 - Headings: concise (2–4 words), title case
 - Numbers: use locale-appropriate formatting (1,247 not 1247; 25% not 0.25)
