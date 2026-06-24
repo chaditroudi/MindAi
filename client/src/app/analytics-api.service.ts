@@ -28,8 +28,9 @@ export class AnalyticsApiService {
     return this.req(this.http.get<MetaResponse>('/api/meta'));
   }
 
-  verifyKey(apiKey: string): Promise<{ ok: boolean; provider?: string }> {
-    return this.req(this.http.post<{ ok: boolean; provider?: string }>('/api/key', { apiKey }));
+  verifyKey(apiKey: string, userId: string): Promise<{ ok: boolean; provider?: string }> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.post<{ ok: boolean; provider?: string }>('/api/key', { apiKey }, { headers }));
   }
 
   runAnalytics(payload: AnalyticsRequest, userId: string, apiKey?: string): Promise<AnalyticsResponse> {

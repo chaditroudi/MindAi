@@ -197,7 +197,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
 
     try {
-      const res = await this.api.verifyKey(trimmed);
+      const res = await this.api.verifyKey(trimmed, this.st.snap.userId);
       localStorage.setItem('mind_api_key', trimmed);
       this.st.patch({
         hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
