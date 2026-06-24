@@ -15,6 +15,7 @@ import { map, startWith, switchMap, takeUntil } from 'rxjs/operators';
 import { AnalyticsApiService, ApiError } from './analytics-api.service';
 import { AnalyticsStateService } from './analytics-state.service';
 import { ChartRenderService } from './chart-render.service';
+import { MarkdownPipe } from './markdown.pipe';
 import type {
   ModeKey, PromptExample, WidgetSpec,
   AnalyticsResponse, DashboardResponse, InquiryResponse, ReportResponse,
@@ -56,7 +57,7 @@ type WidgetDisplayKind = 'chart' | 'kpi' | 'table' | 'unknown';
 @Component({
   selector:    'app-root',
   standalone:  true,
-  imports:     [CommonModule, FormsModule],
+  imports:     [CommonModule, FormsModule, MarkdownPipe],
   templateUrl: './app.component.html',
   styleUrls:   ['./app.component.css'],
 })

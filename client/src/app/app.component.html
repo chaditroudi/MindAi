@@ -337,7 +337,7 @@
                     @for (sec of msg.result.reportSections; track sec.heading) {
                       <article class="report-card">
                         <h4>{{ sec.heading }}</h4>
-                        <p>{{ sec.body }}</p>
+                        <div [innerHTML]="sec.body | md"></div>
                       </article>
                     }
                   </div>
