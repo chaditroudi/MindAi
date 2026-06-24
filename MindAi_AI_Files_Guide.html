@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MindAi — AI Files Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #fff;
+      padding: 40px 60px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ── Cover ── */
+    .cover {
+      text-align: center;
+      padding: 80px 0 60px;
+      border-bottom: 3px solid #6366f1;
+      margin-bottom: 50px;
+    }
+    .cover h1 {
+      font-size: 36px;
+      color: #6366f1;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+    .cover .subtitle {
+      font-size: 17px;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+    .cover .badge {
+      display: inline-block;
+      background: #ede9fe;
+      color: #6366f1;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    /* ── Headings ── */
+    h2 {
+      font-size: 22px;
+      color: #6366f1;
+      border-left: 4px solid #6366f1;
+      padding-left: 12px;
+      margin: 44px 0 16px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 15px;
+      color: #374151;
+      font-weight: 700;
+      margin: 24px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    h4 {
+      font-size: 13.5px;
+      color: #6366f1;
+      font-weight: 700;
+      margin: 16px 0 6px;
+    }
+
+    /* ── File card ── */
+    .file-card {
+      border: 1.5px solid #e0e7ff;
+      border-radius: 10px;
+      margin: 28px 0;
+      page-break-inside: avoid;
+      overflow: hidden;
+    }
+    .file-card-header {
+      background: #6366f1;
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .file-num {
+      background: rgba(255,255,255,0.25);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .file-name {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .file-lines {
+      margin-left: auto;
+      font-size: 11px;
+      opacity: 0.85;
+    }
+    .file-job {
+      background: #ede9fe;
+      color: #4f46e5;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 20px;
+      border-bottom: 1px solid #e0e7ff;
+    }
+    .file-body {
+      padding: 16px 20px;
+    }
+
+    /* ── Code blocks ── */
+    pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+    .c-comment  { color: #6c7086; }
+    .c-keyword  { color: #cba6f7; }
+    .c-string   { color: #a6e3a1; }
+    .c-fn       { color: #89b4fa; }
+    .c-num      { color: #fab387; }
+    .c-arrow    { color: #f38ba8; }
+
+    /* ── Inline code ── */
+    code {
+      background: #ede9fe;
+      color: #4f46e5;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'Consolas', monospace;
+    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 13px;
+      page-break-inside: avoid;
+    }
+    th {
+      background: #6366f1;
+      color: #fff;
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e0e7ff;
+    }
+    tr:nth-child(even) td { background: #f8f7ff; }
+
+    /* ── Flow diagram ── */
+    .flow {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 20px 24px;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 2;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+    .flow .step   { color: #818cf8; font-weight: 700; }
+    .flow .file   { color: #34d399; }
+    .flow .llm    { color: #f59e0b; }
+    .flow .arrow  { color: #f87171; }
+    .flow .note   { color: #94a3b8; }
+
+    /* ── Info box ── */
+    .info {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 10px 16px;
+      border-radius: 0 6px 6px 0;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    .warn {
+      background: #fefce8;
+      border-left: 4px solid #eab308;
+      padding: 10px 16px;
+      border-radius: 0 6px 6px 0;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+
+    p { margin: 8px 0; }
+
+    /* ── Print ── */
+    @media print {
+      body { padding: 20px 30px; font-size: 12px; }
+      h2   { page-break-before: always; }
+      .cover { page-break-after: always; }
+      pre, .flow, table, .file-card { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════ COVER -->
+<div class="cover">
+  <h1>MindAi — AI Files Guide</h1>
+  <p class="subtitle">NestJS + AI Pipeline · File-by-File Explanation</p>
+  <span class="badge">nest-app / src / ai /</span>
+</div>
+
+<!-- ══════════════════════════════════════════════ OVERVIEW -->
+<h2>How the AI Layer Fits Into NestJS</h2>
+<p>NestJS is the <strong>skeleton</strong> of the app — it handles HTTP, dependency injection, caching, and sessions. The files inside <code>src/ai/</code> are the <strong>brain</strong> — they make LLM calls and process data.</p>
+
+<table>
+  <tr><th>NestJS handles</th><th>AI files handle</th></tr>
+  <tr><td>HTTP routing</td><td>Understanding the user's question</td></tr>
+  <tr><td>Dependency injection</td><td>Building the MongoDB query</td></tr>
+  <tr><td>Error handling</td><td>Choosing chart types</td></tr>
+  <tr><td>Caching responses</td><td>Writing report text</td></tr>
+  <tr><td>Session storage</td><td>Extracting memories</td></tr>
+</table>
+
+<h3>The 6 AI Files at a Glance</h3>
+<table>
+  <tr><th>File</th><th>LLM Call</th><th>Model</th><th>Job</th></tr>
+  <tr><td><code>model.ts</code></td><td>none</td><td>—</td><td>Which model to use per role</td></tr>
+  <tr><td><code>skill-prompt.ts</code></td><td>none</td><td>—</td><td>Load AI instructions from .md files</td></tr>
+  <tr><td><code>planner.ts</code></td><td>#1</td><td>llama-3.3-70b</td><td>Prompt → MongoDB pipeline</td></tr>
+  <tr><td><code>writer.ts</code></td><td>#2</td><td>llama-3.1-8b</td><td>Data rows → human text</td></tr>
+  <tr><td><code>chart.ts</code></td><td>#2</td><td>llama-3.3-70b</td><td>Data rows → chart JSON</td></tr>
+  <tr><td><code>memory-skill.ts</code></td><td>#3</td><td>llama-3.1-8b</td><td>Response → memory items</td></tr>
+  <tr><td><code>embeddings.ts</code></td><td>none</td><td>local WASM</td><td>Text → vector numbers</td></tr>
+</table>
+
+<!-- ══════════════════════════════════════════════ FILE 1 -->
+<h2>File 1 — model.ts</h2>
+
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">01</span>
+    <span class="file-name">model.ts</span>
+    <span class="file-lines">59 lines</span>
+  </div>
+  <div class="file-job">JOB: Decide which AI model to call for each role</div>
+  <div class="file-body">
+
+    <p>Every AI file needs to know: <em>which LLM do I call?</em> Instead of each file hardcoding a model name, they all call <code>resolveModel(role)</code> from this file.</p>
+
+    <h4>The 4 roles and their models</h4>
+    <pre><span class="c-comment">// Heavy thinking → big model (70B parameters)</span>
+<span class="c-fn">resolveModel</span>(<span class="c-string">'supervisor'</span>) <span class="c-arrow">→</span> llama-3.3-70b-versatile
+<span class="c-fn">resolveModel</span>(<span class="c-string">'chart'</span>)      <span class="c-arrow">→</span> llama-3.3-70b-versatile
+
+<span class="c-comment">// Simple text → small model (8B parameters, faster &amp; cheaper)</span>
+<span class="c-fn">resolveModel</span>(<span class="c-string">'writer'</span>)     <span class="c-arrow">→</span> llama-3.1-8b-instant
+<span class="c-fn">resolveModel</span>(<span class="c-string">'memory'</span>)     <span class="c-arrow">→</span> llama-3.1-8b-instant</pre>
+
+    <h4>Provider detection</h4>
+    <pre><span class="c-fn">detectProvider</span>(apiKey)
+<span class="c-comment">// apiKey starts with "sk-"  →  OpenAI  →  uses gpt-4o-mini</span>
+<span class="c-comment">// apiKey starts with other  →  Groq    →  uses llama models</span></pre>
+
+    <h4>Timeout protection</h4>
+    <pre><span class="c-fn">freshSignal</span>(<span class="c-string">'writer'</span>)
+<span class="c-comment">// Creates a 15-second timer</span>
+<span class="c-comment">// If the LLM takes longer → request is automatically cancelled</span>
+<span class="c-comment">// Prevents the app from hanging forever on a slow API</span></pre>
+
+    <div class="info">
+      <strong>Why it matters:</strong> One place to change the model for the entire app. If you want to switch from llama to GPT-4, you change one line here — not 6 different files.
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ FILE 2 -->
+<h2>File 2 — skill-prompt.ts</h2>
+
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">02</span>
+    <span class="file-name">skill-prompt.ts</span>
+    <span class="file-lines">130 lines</span>
+  </div>
+  <div class="file-job">JOB: Read AI instructions from Markdown files in the skills/ folder</div>
+  <div class="file-body">
+
+    <p>AI instructions (system prompts) are stored as <code>.md</code> files in <code>skills/</code> — not inside TypeScript strings. This file provides the tools to read them.</p>
+
+    <h4>Function 1 — skillFile()</h4>
+    <pre><span class="c-fn">skillFile</span>(<span class="c-string">'chart'</span>, <span class="c-string">'SKILL.md'</span>)
+<span class="c-arrow">→</span> <span class="c-string">"/project-root/skills/chart/SKILL.md"</span>
+
+<span class="c-fn">skillFile</span>(<span class="c-string">'inquiry'</span>, <span class="c-string">'SKILL.md'</span>)
+<span class="c-arrow">→</span> <span class="c-string">"/project-root/skills/inquiry/SKILL.md"</span></pre>
+
+    <h4>Function 2 — readMarkdownSection()</h4>
+    <pre><span class="c-comment">// Given a SKILL.md with this structure:</span>
+<span class="c-comment">// ## Runtime Prompt</span>
+<span class="c-comment">// You are a helpful analyst...</span>
+<span class="c-comment">// ## Chart Config</span>
+<span class="c-comment">// ```json { ... } ```</span>
+
+<span class="c-fn">readMarkdownSection</span>(filePath, <span class="c-string">'Runtime Prompt'</span>)
+<span class="c-arrow">→</span> <span class="c-string">"You are a helpful analyst..."</span>
+
+<span class="c-comment">// Reads everything under ## Runtime Prompt</span>
+<span class="c-comment">// Stops when it hits the next ## heading</span></pre>
+
+    <h4>Function 3 — readJsonSection()</h4>
+    <pre><span class="c-fn">readJsonSection</span>(filePath, <span class="c-string">'Chart Config'</span>)
+<span class="c-comment">// Finds the ```json block inside that section</span>
+<span class="c-comment">// Parses it → returns JavaScript object</span>
+<span class="c-comment">// Used to load chart type definitions at startup</span></pre>
+
+    <h4>Function 4 — interpolateTemplate()</h4>
+    <pre><span class="c-fn">interpolateTemplate</span>(<span class="c-string">"Hello {{USER_NAME}}"</span>, { <span class="c-string">"{{USER_NAME}}"</span>: <span class="c-string">"Alice"</span> })
+<span class="c-arrow">→</span> <span class="c-string">"Hello Alice"</span>
+
+<span class="c-comment">// Used in planner.ts to inject the database schema into the prompt</span>
+<span class="c-comment">// at runtime (every request has different data sources)</span></pre>
+
+    <div class="info">
+      <strong>Why Markdown files?</strong> Prompts are hundreds of lines long. Editing them inside TypeScript string literals is painful — no syntax highlighting, no formatting. Markdown files are readable, editable without touching code, and can be versioned separately.
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ FILE 3 -->
+<h2>File 3 — planner.ts</h2>
+
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">03</span>
+    <span class="file-name">planner.ts</span>
+    <span class="file-lines">234 lines</span>
+  </div>
+  <div class="file-job">JOB: LLM Call #1 — Turn user question into a MongoDB aggregation pipeline</div>
+  <div class="file-body">
+
+    <p>This is the <strong>supervisor</strong> — the most critical AI call. It reads the user's question and the database schema, then produces a MongoDB pipeline JSON.</p>
+
+    <h4>Stage 1 — Build the schema description for the LLM</h4>
+    <pre><span class="c-fn">buildSchemaSection</span>(sources)
+
+<span class="c-comment">// Output example (sent to the LLM as context):</span>
+<span class="c-string">Collection: "projects"  →  query.sourceName = "projects"
+  Fields:
+    "title"    (string | dimension)
+    "budget"   (number | measure)
+    "status"   (enum | "completed" | "in_progress" | "planning")
+    "category" (enum | "transport" | "health" | "education")</span></pre>
+
+    <h4>Stage 2 — Call the LLM</h4>
+    <pre><span class="c-fn">generateObject</span>({
+  model:    <span class="c-fn">resolveModel</span>(<span class="c-string">'supervisor'</span>),  <span class="c-comment">// llama-3.3-70b</span>
+  system:   buildPlannerPrompt(...),       <span class="c-comment">// schema + rules</span>
+  messages: [{ role: <span class="c-string">'user'</span>, content: <span class="c-string">'{"prompt":"top 5 by budget","intent":"dashboard"}'</span> }],
+  schema:   buildPlanSchema(intent),       <span class="c-comment">// forces structured JSON output</span>
+})
+
+<span class="c-comment">// LLM returns:</span>
+{
+  needsData: <span class="c-keyword">true</span>,
+  query: { sourceName: <span class="c-string">"projects"</span> },
+  pipeline: [
+    { <span class="c-string">"$sort"</span>:  { budget: <span class="c-num">-1</span> } },
+    { <span class="c-string">"$limit"</span>: <span class="c-num">5</span> }
+  ],
+  strategy:  <span class="c-string">"overview"</span>,
+  chartHint: <span class="c-string">"ranking"</span>
+}</pre>
+
+    <h4>Stage 3 — Derive which skills to run next</h4>
+    <pre><span class="c-fn">deriveExecutionSkills</span>(plan, intent)
+
+intent = <span class="c-string">'dashboard'</span>  <span class="c-arrow">→</span>  [<span class="c-string">'aggregation'</span>, <span class="c-string">'chart'</span>]
+intent = <span class="c-string">'report'</span>     <span class="c-arrow">→</span>  [<span class="c-string">'aggregation'</span>, <span class="c-string">'report'</span>]
+intent = <span class="c-string">'inquiry'</span>    <span class="c-arrow">→</span>  [<span class="c-string">'aggregation'</span>, <span class="c-string">'inquiry'</span>]
+
+<span class="c-comment">// This list tells pipeline.service.ts what to do with the data</span></pre>
+
+    <div class="warn">
+      <strong>Important:</strong> The LLM does NOT query MongoDB directly. It only writes the pipeline as a JSON array. NestJS (pipeline.service.ts) executes it. This keeps the database safe — no direct LLM access.
+    </div>
+
+    <h4>Retry logic (in pipeline.service.ts)</h4>
+    <pre><span class="c-comment">// If MongoDB rejects the pipeline (wrong field name, bad syntax):</span>
+hint = <span class="c-string">"Field validation failed: unknown field 'budjet'. Check casing."</span>
+
+<span class="c-comment">// planner.ts is called again with the hint injected into the prompt</span>
+<span class="c-comment">// LLM corrects itself → up to 2 attempts total</span></pre>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ FILE 4 -->
+<h2>File 4 — writer.ts</h2>
+
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">04</span>
+    <span class="file-name">writer.ts</span>
+    <span class="file-lines">76 lines</span>
+  </div>
+  <div class="file-job">JOB: LLM Call #2 for text — Turn data rows into human-readable text</div>
+  <div class="file-body">
+
+    <p>Used for <strong>inquiry</strong> (direct questions) and <strong>report</strong> (full analysis). The LLM receives actual data rows and writes text from them.</p>
+
+    <h4>Function 1 — runInquirySkill()</h4>
+    <pre><span class="c-fn">runInquirySkill</span>({ prompt: <span class="c-string">"how many projects are completed?"</span>, rows: [...] })
+
+<span class="c-comment">// Sends up to 10 rows to the LLM with the question</span>
+<span class="c-comment">// Zod schema forces one-field output:</span>
+
+<span class="c-keyword">const</span> summarySchema = z.object({
+  summary: z.string()    <span class="c-comment">// only one field allowed</span>
+})
+
+<span class="c-comment">// LLM returns:</span>
+{ summary: <span class="c-string">"There are 22 completed projects across 6 municipalities."</span> }</pre>
+
+    <h4>Function 2 — runReportSkill()</h4>
+    <pre><span class="c-fn">runReportSkill</span>({ prompt: <span class="c-string">"analyze transport projects"</span>, rows: [...] })
+
+<span class="c-comment">// Zod schema forces structured sections:</span>
+<span class="c-keyword">const</span> reportSectionsSchema = z.object({
+  reportSections: z.array(z.object({
+    heading: z.string(),
+    body:    z.string()
+  })).min(<span class="c-num">1</span>).max(<span class="c-num">5</span>)    <span class="c-comment">// 1 to 5 sections</span>
+})
+
+<span class="c-comment">// LLM returns:</span>
+{
+  reportSections: [
+    { heading: <span class="c-string">"Overview"</span>,      body: <span class="c-string">"Transport accounts for 34% of..."</span> },
+    { heading: <span class="c-string">"Key Findings"</span>,   body: <span class="c-string">"North region leads with..."</span> },
+    { heading: <span class="c-string">"Recommendations"</span>, body: <span class="c-string">"Consider reallocating budget..."</span> }
+  ]
+}</pre>
+
+    <div class="info">
+      <strong>Why generateObject() instead of generateText()?</strong> <code>generateText()</code> returns a free string — the frontend can't parse it reliably. <code>generateObject()</code> forces the LLM to return structured JSON that matches the Zod schema. The frontend always gets a predictable shape.
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ FILE 5 -->
+<h2>File 5 — memory-skill.ts</h2>
+
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">05</span>
+    <span class="file-name">memory-skill.ts</span>
+    <span class="file-lines">55 lines</span>
+  </div>
+  <div class="file-job">JOB: LLM Call #3 (background) — Extract what to remember from a conversation turn</div>
+  <div class="file-body">
+
+    <p>Runs <strong>after</strong> the response is already sent to the user. The user never waits for this. It extracts up to 3 structured memory items from each exchange.</p>
+
+    <h4>How it works</h4>
+    <pre><span class="c-fn">extractMemories</span>(
+  prompt:          <span class="c-string">"show me Qatar infrastructure"</span>,
+  responseSummary: <span class="c-string">"Dashboard: Qatar Projects — 22 projects in 6 municipalities"</span>
+)
+
+<span class="c-comment">// LLM extracts up to 3 memories:</span>
+{
+  memories: [
+    {
+      type:       <span class="c-string">"context"</span>,
+      content:    <span class="c-string">"User is focused on Qatar infrastructure"</span>,
+      tags:       [<span class="c-string">"qatar"</span>, <span class="c-string">"infrastructure"</span>],
+      importance: <span class="c-num">4</span>
+    },
+    {
+      type:       <span class="c-string">"insight"</span>,
+      content:    <span class="c-string">"22 active projects across 6 municipalities in Qatar"</span>,
+      tags:       [<span class="c-string">"qatar"</span>, <span class="c-string">"count"</span>],
+      importance: <span class="c-num">3</span>
+    }
+  ]
+}</pre>
+
+    <h4>The 5 memory types</h4>
+    <table>
+      <tr><th>Type</th><th>Meaning</th><th>Example</th></tr>
+      <tr><td><code>goal</code></td><td>What the user is trying to build</td><td>"Building a Qatar dashboard"</td></tr>
+      <tr><td><code>insight</code></td><td>A data finding</td><td>"22 projects in North region"</td></tr>
+      <tr><td><code>preference</code></td><td>How the user likes things</td><td>"Prefers bar charts"</td></tr>
+      <tr><td><code>context</code></td><td>Background about the session</td><td>"Focused on transport"</td></tr>
+      <tr><td><code>decision</code></td><td>A choice the user made</td><td>"Excluded cancelled projects"</td></tr>
+    </table>
+
+    <h4>Non-fatal design</h4>
+    <pre><span class="c-keyword">try</span> {
+  <span class="c-comment">// call LLM, extract memories</span>
+} <span class="c-keyword">catch</span> (err) {
+  <span class="c-fn">log</span>(<span class="c-string">'memory-skill'</span>, <span class="c-string">`extraction failed (non-fatal): ${err}`</span>)
+  <span class="c-keyword">return</span> []   <span class="c-comment">// never throws — memory failure never breaks the main flow</span>
+}</pre>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ FILE 6 -->
+<h2>File 6 — embeddings.ts</h2>
+
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">06</span>
+    <span class="file-name">embeddings.ts</span>
+    <span class="file-lines">60 lines</span>
+  </div>
+  <div class="file-job">JOB: Convert text to numbers for semantic search — no API key needed</div>
+  <div class="file-body">
+
+    <p>Uses a <strong>local AI model</strong> (all-MiniLM-L6-v2, 25MB) that runs in the browser via WASM. No Groq, no OpenAI — completely offline after the first download.</p>
+
+    <h4>What it produces</h4>
+    <pre><span class="c-fn">generateEmbedding</span>(<span class="c-string">"Qatar infrastructure budget"</span>)
+<span class="c-arrow">→</span> [<span class="c-num">0.23</span>, <span class="c-num">-0.87</span>, <span class="c-num">0.45</span>, <span class="c-num">0.12</span>, ... <span class="c-comment">384 numbers total</span>]
+
+<span class="c-comment">// Every text becomes a point in 384-dimensional space</span>
+<span class="c-comment">// Similar texts → nearby points → high similarity score</span></pre>
+
+    <h4>Why this matters — semantic search</h4>
+    <pre><span class="c-comment">// User asks: "Qatar roads"</span>
+<span class="c-comment">// Stored memory: "Qatar transport projects"</span>
+
+<span class="c-comment">// Exact text match → would NOT find it (different words)</span>
+<span class="c-comment">// Vector similarity → FINDS it (same meaning)</span>
+
+<span class="c-fn">cosineSimilarity</span>(
+  <span class="c-fn">embed</span>(<span class="c-string">"Qatar roads"</span>),
+  <span class="c-fn">embed</span>(<span class="c-string">"Qatar transport projects"</span>)
+)
+<span class="c-arrow">→</span> <span class="c-num">0.91</span>   <span class="c-comment">// very similar — memory is retrieved ✅</span></pre>
+
+    <h4>Singleton + warmup pattern</h4>
+    <pre><span class="c-comment">// The 25MB model loads only ONCE at server startup</span>
+<span class="c-fn">warmupEmbeddings</span>()   <span class="c-comment">// called from main.ts, runs in background</span>
+
+<span class="c-comment">// Prevents two requests loading the model simultaneously:</span>
+<span class="c-keyword">if</span> (_loading) <span class="c-keyword">return</span> _loading   <span class="c-comment">// already loading → wait for it</span>
+_loading = <span class="c-fn">loadModel</span>()          <span class="c-comment">// first request triggers the load</span></pre>
+
+    <div class="info">
+      <strong>Used by:</strong> <code>memory.repository.ts</code> — when you ask a question, your prompt is converted to a vector and compared against all stored memories. The most similar ones are injected into the supervisor's context, giving the LLM personalised background knowledge.
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ FULL FLOW -->
+<h2>The Complete Request Flow</h2>
+
+<div class="flow">
+<span class="step">User types:</span> <span class="c-string">"show me top 5 municipalities by budget"</span>
+<br>
+│
+│  <span class="note">skill-prompt.ts loads skills/aggregation/SKILL.md instructions</span>
+│  <span class="note">embeddings.ts converts prompt to vector → finds relevant memories</span>
+▼
+<span class="file">planner.ts</span>  <span class="arrow">──── LLM call #1 (llama-3.3-70b) ────▶</span>
+│               pipeline: [ <span class="llm">$sort budget -1, $limit 5</span> ]
+│
+▼
+<span class="file">pipeline.service.ts</span>  <span class="arrow">──── MongoDB runs ────▶</span>
+│                      rows: [ {muni:"Doha", budget:12M}, ... ]
+│
+│
+├──── if intent = dashboard ──────────────────────────────┐
+│     <span class="file">chart.ts</span>  <span class="arrow">── LLM call #2 (llama-3.3-70b) ──▶</span>        │
+│               type: horizontal_bar_chart                │
+│               chart-repair.ts fixes field names         │
+│               chart-renderers.ts builds ECharts JSON    │
+│                                                         │
+├──── if intent = report ─────────────────────────────────┤
+│     <span class="file">writer.ts</span>  <span class="arrow">── LLM call #2 (llama-3.1-8b) ──▶</span>         │
+│               reportSections: [ {heading, body}, ... ]  │
+│                                                         │
+└──── if intent = inquiry ────────────────────────────────┘
+      <span class="file">writer.ts</span>  <span class="arrow">── LLM call #2 (llama-3.1-8b) ──▶</span>
+                summary: "Top municipality is Doha..."
+│
+▼
+<span class="step">Response sent to user ✅</span>
+│
+│  <span class="note">(background — user already has their answer)</span>
+▼
+<span class="file">memory-skill.ts</span>  <span class="arrow">── LLM call #3 (llama-3.1-8b) ──▶</span>
+│                  memories: [ { type: "insight", content: "..." } ]
+▼
+<span class="file">embeddings.ts</span>  <span class="arrow">── local WASM model ──▶</span>
+               vector saved to MongoDB for next session
+</div>
+
+<!-- ══════════════════════════════════════════════ CHART SPLIT -->
+<h2>Bonus — The chart.ts Split (4 Sub-Files)</h2>
+
+<p>The original <code>chart.ts</code> was 792 lines. It was split into 5 focused files:</p>
+
+<table>
+  <tr><th>File</th><th>Responsibility</th><th>Lines</th></tr>
+  <tr><td><code>chart-config.ts</code></td><td>Load chart types from SKILL.md, Zod schemas</td><td>~55</td></tr>
+  <tr><td><code>chart-types.ts</code></td><td>Shared TypeScript interfaces (RowProfile, WidgetPlan)</td><td>~25</td></tr>
+  <tr><td><code>chart-profile.ts</code></td><td>Classify data columns: numeric / text / date</td><td>~100</td></tr>
+  <tr><td><code>chart-aggregation.ts</code></td><td>Group and sum rows (mini SQL engine)</td><td>~95</td></tr>
+  <tr><td><code>chart-renderers.ts</code></td><td>Build ECharts JSON for each chart type</td><td>~190</td></tr>
+  <tr><td><code>chart-repair.ts</code></td><td>Fix LLM hallucinated field names</td><td>~110</td></tr>
+  <tr><td><code>chart.ts</code> (trimmed)</td><td>Orchestration — calls all above in order</td><td>~95</td></tr>
+</table>
+
+<div class="info">
+  <strong>Reading order:</strong> chart-config → chart-types → chart-profile → chart-aggregation → chart-renderers → chart-repair → chart.ts
+</div>
+
+<!-- ══════════════════════════════════════════════ FOOTER -->
+<br><br>
+<div style="border-top:2px solid #e0e7ff; padding-top:20px; text-align:center; color:#94a3b8; font-size:12px;">
+  MindAi — AI Files Guide &nbsp;·&nbsp; nest-app/src/ai/ &nbsp;·&nbsp; Generated 2026
+</div>
+
+</body>
+</html>
