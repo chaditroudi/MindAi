@@ -14,6 +14,23 @@ import type { IntentKind, DataSource, TaskPlan, DashboardSpec } from '../types';
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
+function patchConvert(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(patchConvert);
+  if (value !== null && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    if ('$convert' in obj && obj['$convert'] !== null && typeof obj['$convert'] === 'object') {
+      const conv = { ...(obj['$convert'] as Record<string, unknown>) };
+      if (conv['to'] === 'date' || conv['to'] === 4) {
+        if (!('onError' in conv)) conv['onError'] = null;
+        if (!('onNull' in conv)) conv['onNull'] = null;
+      }
+      return { ...obj, '$convert': conv };
+    }
+    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, patchConvert(v)]));
+  }
+  return value;
+}
+
 type Row              = Record<string, unknown>;
 type ResolvedPipeline = { pipeline: Row[]; collection: string };
 
@@ -109,7 +126,7 @@ export class PipelineService {
 
       if (!resolved) return { plan, rows: [] };
 
-      const rows = await this.runAggregation(resolved.collection, plan.pipeline!);
+      const rows = await this.runAggregation(resolved.collection, patchConvert(plan.pipeline!) as Row[]);
 
       if (rows.length === 0 && plan.needsData && attempt === 0 && this.hasStringMatch(plan.pipeline ?? [])) {
         hint = `The pipeline returned 0 rows: ${JSON.stringify(plan.pipeline)}. ` +
