@@ -332,24 +332,35 @@ export async function listSessions(): Promise<SessionSummary[]> {
 }
 
 export async function getSessionDetail(threadId: string): Promise<SessionDetail | null> {
-  const thread = await memory.getThreadById({ threadId, resourceId: RESOURCE_ID });
-  if (!thread) return null;
+  try {
+    const thread = await memory.getThreadById({ threadId, resourceId: RESOURCE_ID });
+    if (!thread) return null;
 
-  const { messages } = await memory.recall({
-    threadId,
-    resourceId: RESOURCE_ID,
-    perPage: false,
-    orderBy: { field: 'createdAt', direction: 'ASC' },
-  });
+    // Use getContext with a high lastMessages cap to fetch the full stored history.
+    // recall() without a vector store configured can silently return 0 messages;
+    // getContext() is confirmed to work and supports per-call lastMessages override.
+    const { messages } = await memory.getContext({
+      threadId,
+      resourceId: RESOURCE_ID,
+      memoryConfig: { lastMessages: 10_000 },
+    });
 
-  const conversation = messages
-    .map(readConversationMessage)
-    .filter((message): message is ConversationMessage => message !== null);
+    const sorted = [...messages].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
 
-  return {
-    session: buildSessionSummary(thread, conversation),
-    messages: conversation,
-  };
+    const conversation = sorted
+      .map(readConversationMessage)
+      .filter((message): message is ConversationMessage => message !== null);
+
+    return {
+      session: buildSessionSummary(thread, conversation),
+      messages: conversation,
+    };
+  } catch (err) {
+    log('memory', `getSessionDetail failed: ${String(err)}`);
+    return null;
+  }
 }
 
 export async function deleteSession(threadId: string): Promise<boolean> {

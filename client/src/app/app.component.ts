@@ -251,13 +251,20 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       const { messages } = await this.api.getSession(sessionId);
       this.charts.disposeAll();
       this.initedWidgets.clear();
+      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
       this.st.patch({
         sessionId,
         messages: messages as ConversationMessage[],
         phase: 'idle',
         errorText: '',
+        prompt: lastUserMsg?.prompt ?? this.st.snap.prompt,
       });
-    } catch { /* non-critical */ }
+    } catch (err) {
+      this.st.patch({
+        phase: 'error',
+        errorText: err instanceof Error ? err.message : 'Failed to load session history.',
+      });
+    }
   }
 
   async deleteSession(sessionId: string, event: Event): Promise<void> {
