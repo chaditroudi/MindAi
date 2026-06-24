@@ -10,8 +10,8 @@ import { dashboardSchema }       from './chart-config';
 import type { LlmWidget, LlmDashboard } from './chart-config';
 
 import type { DataRow, WidgetPlan } from './chart-types';
-import { buildRowProfile, pickFields } from './chart-profile';
-import { uniqueStrings, prepareRenderRows } from './chart-aggregation';
+import { buildRowProfile } from './chart-profile';
+import { prepareRenderRows } from './chart-aggregation';
 import { RENDERERS, mergeChartOptions } from './chart-renderers';
 import { repairWidgetPlan, validateWidget, planFieldProps, getFieldValue } from './chart-repair';
 
@@ -28,49 +28,6 @@ function renderWidget(plan: WidgetPlan, rows: DataRow[], keys: Set<string>, id: 
   const data   = prepareRenderRows(plan, rows);
   const render = RENDERERS[plan.type];
   return render ? mergeChartOptions(render(plan, data, id), plan.chartOptions) : null;
-}
-
-// ── Adaptive fallback ─────────────────────────────────────────────────────────
-
-function synthesizeWidgets(
-  profile:   ReturnType<typeof buildRowProfile>,
-  rows:      DataRow[],
-  strategy?: SkillKind,
-  chartHint?: ChartHint,
-): WidgetPlan[] {
-  const hint     = chartHint?.toLowerCase() ?? '';
-  const planMode = strategy?.toLowerCase() ?? '';
-
-  if ((hint === 'scatter' || planMode === 'anomaly') && profile.numeric.length >= 2) {
-    return [{ type: 'scatter_plot', title: 'Scatter View', xField: profile.numeric[0], yField: profile.numeric[1], labelField: profile.categorical[0] }];
-  }
-
-  if ((hint === 'trend' || planMode === 'trend') && profile.temporal.length && profile.numeric.length) {
-    return [{ type: 'line_chart', title: 'Trend', xField: profile.temporal[0], valueField: profile.numeric[0] }];
-  }
-
-  if (
-    (hint === 'heatmap' || (planMode === 'comparison' && profile.categorical.length >= 2)) &&
-    profile.categorical.length >= 2 && profile.numeric.length
-  ) {
-    return [{ type: 'heatmap', title: 'Cross Breakdown', xField: profile.categorical[0], yField: profile.categorical[1], valueField: profile.numeric[0] }];
-  }
-
-  if (profile.categorical.length && profile.numeric.length) {
-    const lowCardinality = uniqueStrings(rows, profile.categorical[0]).length <= 6;
-    const chartType = hint === 'part_of_whole' && lowCardinality ? 'donut_chart' : 'horizontal_bar_chart';
-    return [{
-      type: chartType, title: 'Breakdown',
-      labelField: profile.categorical[0], valueField: profile.numeric[0],
-      ...(chartType === 'horizontal_bar_chart' ? { sortDesc: true } : {}),
-    }];
-  }
-
-  if (profile.numeric.length) {
-    return [{ type: 'kpi_card', title: 'Key Metric', valueField: profile.numeric[0] }];
-  }
-
-  return [{ type: 'table', title: 'Data View', columns: profile.all.slice(0, 6) }];
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -134,18 +91,6 @@ export async function runChart(
   let widgets = valid
     .map((w, i) => renderWidget(w, rows as DataRow[], keys, `w${i + 1}`))
     .filter((w): w is NonNullable<typeof w> => w !== null);
-
-  if (!widgets.length) {
-    const fallback = synthesizeWidgets(profile, rows as DataRow[], strategy, chartHint)
-      .slice(0, MAX_WIDGETS)
-      .map(p => repairWidgetPlan(p as unknown as LlmWidget, profile, rows as DataRow[]));
-
-    widgets = fallback
-      .map((w, i) => renderWidget(w, rows as DataRow[], keys, `auto${i + 1}`))
-      .filter((w): w is NonNullable<typeof w> => w !== null);
-
-    if (widgets.length) log('chart:auto', `synthesized ${widgets.length} widget(s) from row profile`);
-  }
 
   log('chart', `done | widgets: ${widgets.length}${dropped.length ? ` | dropped: ${dropped.length}` : ''} | layout: ${plan.layout}`);
 
