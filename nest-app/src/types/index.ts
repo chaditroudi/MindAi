@@ -70,6 +70,11 @@ export interface DashboardSpec {
   widgets: WidgetSpec[];
 }
 
+export interface ReportSection {
+  heading: string;
+  body:    string;
+}
+
 export type ChartHint = string;
 
 export interface TaskQuery {
