@@ -618,23 +618,317 @@ _loading = <span class="c-fn">loadModel</span>()          <span class="c-comment
 </div>
 
 <!-- ══════════════════════════════════════════════ CHART SPLIT -->
-<h2>Bonus — The chart.ts Split (4 Sub-Files)</h2>
+<h2>The chart.ts Split — 7 Focused Files</h2>
 
-<p>The original <code>chart.ts</code> was 792 lines. It was split into 5 focused files:</p>
+<p>The original <code>chart.ts</code> was 792 lines mixing 6 different concerns. It was split into focused files. <strong>Reading order:</strong></p>
 
 <table>
-  <tr><th>File</th><th>Responsibility</th><th>Lines</th></tr>
-  <tr><td><code>chart-config.ts</code></td><td>Load chart types from SKILL.md, Zod schemas</td><td>~55</td></tr>
-  <tr><td><code>chart-types.ts</code></td><td>Shared TypeScript interfaces (RowProfile, WidgetPlan)</td><td>~25</td></tr>
-  <tr><td><code>chart-profile.ts</code></td><td>Classify data columns: numeric / text / date</td><td>~100</td></tr>
-  <tr><td><code>chart-aggregation.ts</code></td><td>Group and sum rows (mini SQL engine)</td><td>~95</td></tr>
-  <tr><td><code>chart-renderers.ts</code></td><td>Build ECharts JSON for each chart type</td><td>~190</td></tr>
-  <tr><td><code>chart-repair.ts</code></td><td>Fix LLM hallucinated field names</td><td>~110</td></tr>
-  <tr><td><code>chart.ts</code> (trimmed)</td><td>Orchestration — calls all above in order</td><td>~95</td></tr>
+  <tr><th>#</th><th>File</th><th>Job</th><th>Lines</th></tr>
+  <tr><td>1</td><td><code>chart-config.ts</code></td><td>Load chart types from SKILL.md, build Zod schemas</td><td>~60</td></tr>
+  <tr><td>2</td><td><code>chart-types.ts</code></td><td>Shared TypeScript types only (no logic)</td><td>~27</td></tr>
+  <tr><td>3</td><td><code>chart-profile.ts</code></td><td>Classify each column: numeric / temporal / categorical</td><td>~117</td></tr>
+  <tr><td>4</td><td><code>chart-aggregation.ts</code></td><td>Group, sum, sort rows before rendering</td><td>~103</td></tr>
+  <tr><td>5</td><td><code>chart-renderers.ts</code></td><td>Build ECharts option JSON for each chart type</td><td>~219</td></tr>
+  <tr><td>6</td><td><code>chart-repair.ts</code></td><td>Fix LLM hallucinated field names, validate widget</td><td>~135</td></tr>
+  <tr><td>7</td><td><code>chart.ts</code></td><td>Orchestration only — calls all 6 files in order</td><td>~99</td></tr>
 </table>
 
-<div class="info">
-  <strong>Reading order:</strong> chart-config → chart-types → chart-profile → chart-aggregation → chart-renderers → chart-repair → chart.ts
+<!-- chart-config -->
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">C1</span>
+    <span class="file-name">chart-config.ts</span>
+    <span class="file-lines">60 lines</span>
+  </div>
+  <div class="file-job">JOB: Load chart definitions from SKILL.md and build Zod validation schemas</div>
+  <div class="file-body">
+    <p>Reads the <code>## Chart Config</code> JSON block from <code>skills/chart/SKILL.md</code> at server startup. Every other chart file imports from here — it is the single source of truth for which chart types exist.</p>
+
+    <h4>What it reads from SKILL.md</h4>
+    <pre>{
+  <span class="c-string">"aggregations"</span>: [<span class="c-string">"sum"</span>, <span class="c-string">"avg"</span>, <span class="c-string">"count"</span>, <span class="c-string">"min"</span>, <span class="c-string">"max"</span>],
+  <span class="c-string">"layouts"</span>:      [<span class="c-string">"operational"</span>, <span class="c-string">"analytical"</span>, <span class="c-string">"executive"</span>],
+  <span class="c-string">"types"</span>: [
+    { <span class="c-string">"type"</span>: <span class="c-string">"bar_chart"</span>,   <span class="c-string">"requiredFields"</span>: [<span class="c-string">"labelField"</span>], <span class="c-string">"requiresAxis"</span>: <span class="c-keyword">true</span> },
+    { <span class="c-string">"type"</span>: <span class="c-string">"kpi_card"</span>,    <span class="c-string">"requiredFields"</span>: [<span class="c-string">"valueField"</span>], <span class="c-string">"requiresValue"</span>: <span class="c-keyword">true</span> },
+    ...
+  ]
+}</pre>
+
+    <h4>What it exports</h4>
+    <pre>CHART_DEFINITIONS  <span class="c-comment">// full list of all ChartDefinition objects</span>
+CHART_BY_TYPE      <span class="c-comment">// map: "bar_chart" → ChartDefinition  (fast lookup)</span>
+CHART_AGGREGATIONS <span class="c-comment">// ["sum","avg","count","min","max"]</span>
+DASHBOARD_LAYOUTS  <span class="c-comment">// ["operational","analytical","executive"]</span>
+
+widgetSchema       <span class="c-comment">// Zod schema — validates ONE widget from LLM</span>
+dashboardSchema    <span class="c-comment">// Zod schema — validates full dashboard response</span>
+LlmWidget          <span class="c-comment">// TypeScript type derived from widgetSchema</span>
+LlmDashboard       <span class="c-comment">// TypeScript type derived from dashboardSchema</span></pre>
+
+    <div class="info">
+      <strong>Key design:</strong> <code>widgetSchema</code> uses <code>z.enum(getLlmChartTypes())</code> — the allowed chart type names come directly from SKILL.md. If you add a chart type to the JSON, the Zod schema automatically accepts it. No code change needed.
+    </div>
+  </div>
+</div>
+
+<!-- chart-types -->
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">C2</span>
+    <span class="file-name">chart-types.ts</span>
+    <span class="file-lines">27 lines</span>
+  </div>
+  <div class="file-job">JOB: Pure TypeScript type definitions — zero logic, zero imports</div>
+  <div class="file-body">
+    <p>Contains only <code>type</code> and <code>interface</code> declarations. Every other chart file imports from here. No circular dependencies possible since it imports nothing.</p>
+
+    <h4>The 4 exports</h4>
+    <pre><span class="c-keyword">type</span> DataRow   = Record&lt;string, unknown&gt;
+<span class="c-comment">// One row of MongoDB data: { title: "Highway", budget: 12000000 }</span>
+
+<span class="c-keyword">type</span> FieldKind = <span class="c-string">'numeric'</span> | <span class="c-string">'temporal'</span> | <span class="c-string">'categorical'</span>
+<span class="c-comment">// What kind of data a column holds</span>
+
+<span class="c-keyword">interface</span> RowProfile {
+  all:         string[]   <span class="c-comment">// every column name in the data</span>
+  numeric:     string[]   <span class="c-comment">// columns with numbers: ["budget", "count"]</span>
+  temporal:    string[]   <span class="c-comment">// columns with dates:   ["date", "month"]</span>
+  categorical: string[]   <span class="c-comment">// columns with text:    ["title", "status"]</span>
+}
+
+<span class="c-keyword">interface</span> WidgetPlan {
+  type:         string         <span class="c-comment">// "bar_chart", "kpi_card", etc.</span>
+  title:        string         <span class="c-comment">// displayed above the chart</span>
+  labelField?:  string         <span class="c-comment">// which column is the X-axis label</span>
+  valueField?:  string         <span class="c-comment">// which column has the numbers</span>
+  xField?:      string         <span class="c-comment">// for scatter, line charts</span>
+  yField?:      string         <span class="c-comment">// for scatter, heatmap</span>
+  seriesField?: string         <span class="c-comment">// for grouped/multi-series charts</span>
+  agg?:         <span class="c-string">'sum'</span>|<span class="c-string">'avg'</span>|<span class="c-string">'count'</span>|<span class="c-string">'min'</span>|<span class="c-string">'max'</span>
+  sortDesc?:    boolean
+  topN?:        number
+}</pre>
+  </div>
+</div>
+
+<!-- chart-profile -->
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">C3</span>
+    <span class="file-name">chart-profile.ts</span>
+    <span class="file-lines">117 lines</span>
+  </div>
+  <div class="file-job">JOB: Look at the data and classify each column — then map LLM field names to real ones</div>
+  <div class="file-body">
+    <p>Two separate responsibilities: (1) scan the rows and build a <code>RowProfile</code>, (2) resolve LLM-hallucinated field names to real column names.</p>
+
+    <h4>Part 1 — buildRowProfile()</h4>
+    <pre><span class="c-comment">// Given rows like: [{ title: "Highway", budget: 12M, date: "2024-01" }, ...]</span>
+
+<span class="c-fn">buildRowProfile</span>(keys, rows)
+<span class="c-arrow">→</span> {
+    all:         [<span class="c-string">"title"</span>, <span class="c-string">"budget"</span>, <span class="c-string">"date"</span>],
+    numeric:     [<span class="c-string">"budget"</span>],
+    temporal:    [<span class="c-string">"date"</span>],
+    categorical: [<span class="c-string">"title"</span>]
+  }
+
+<span class="c-comment">// classifyField() looks at up to 20 sample values per column:</span>
+<span class="c-comment">// all numbers    → "numeric"</span>
+<span class="c-comment">// all parseable as Date → "temporal"</span>
+<span class="c-comment">// anything else  → "categorical"</span></pre>
+
+    <h4>Part 2 — resolveFieldName() (fuzzy matching)</h4>
+    <pre><span class="c-comment">// LLM says: labelField = "municipality_name"</span>
+<span class="c-comment">// Real column is: "municipalityName"</span>
+
+<span class="c-fn">resolveFieldName</span>(<span class="c-string">"municipality_name"</span>, profile, [<span class="c-string">'categorical'</span>])
+
+<span class="c-comment">// Step 1: exact match? No.</span>
+<span class="c-comment">// Step 2: fuzzy score each column:</span>
+<span class="c-comment">//   "municipalityName" → score 80  (normalized tokens match)</span>
+<span class="c-comment">//   "budget"           → score 0</span>
+<span class="c-comment">// Winner → "municipalityName" ✅</span></pre>
+
+    <h4>Scoring rules</h4>
+    <table>
+      <tr><th>Score</th><th>Condition</th></tr>
+      <tr><td>100</td><td>Exact same string</td></tr>
+      <tr><td>90</td><td>Same when lowercased</td></tr>
+      <tr><td>80</td><td>Same when normalized (remove _ / - / spaces)</td></tr>
+      <tr><td>55</td><td>One contains the other</td></tr>
+      <tr><td>0</td><td>No match</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- chart-aggregation -->
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">C4</span>
+    <span class="file-name">chart-aggregation.ts</span>
+    <span class="file-lines">103 lines</span>
+  </div>
+  <div class="file-job">JOB: Group, sum, and sort data rows before a renderer draws them</div>
+  <div class="file-body">
+    <p>Think of it as a mini SQL engine that runs in JavaScript. It handles GROUP BY, ORDER BY, and aggregation (SUM, AVG, COUNT, MIN, MAX) in-memory.</p>
+
+    <h4>Key functions</h4>
+    <pre><span class="c-comment">// Group rows by label and aggregate values</span>
+<span class="c-fn">aggregateByLabel</span>(rows, <span class="c-string">'region'</span>, <span class="c-string">'sum'</span>, <span class="c-string">'budget'</span>)
+<span class="c-comment">// GROUP BY region, SUM(budget)</span>
+<span class="c-arrow">→</span> [{ label: <span class="c-string">"North"</span>, value: <span class="c-num">45000000</span> }, { label: <span class="c-string">"South"</span>, value: <span class="c-num">32000000</span> }]
+
+<span class="c-comment">// Sort + top-N for bar/donut charts</span>
+<span class="c-fn">buildCategoricalSeries</span>(plan, rows)
+<span class="c-comment">// if plan.agg → aggregates first, then sorts, then slices topN</span>
+<span class="c-comment">// if no agg   → uses raw values, still sorts and slices</span>
+
+<span class="c-comment">// Sort line chart X-axis values (dates or numbers)</span>
+<span class="c-fn">sortLineData</span>(rows, <span class="c-string">'date'</span>)
+<span class="c-comment">// detects if field is date strings or numbers, sorts correctly</span>
+<span class="c-comment">// "2024-01" < "2024-03" even though string sort would also work</span></pre>
+  </div>
+</div>
+
+<!-- chart-renderers -->
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">C5</span>
+    <span class="file-name">chart-renderers.ts</span>
+    <span class="file-lines">219 lines</span>
+  </div>
+  <div class="file-job">JOB: Build the ECharts option JSON that the frontend draws</div>
+  <div class="file-body">
+    <p>One render function per chart type. Each takes <code>(plan, data, id)</code> and returns an ECharts configuration object. The <code>RENDERERS</code> map at the bottom dispatches by type name.</p>
+
+    <h4>The RENDERERS dispatch map</h4>
+    <pre><span class="c-keyword">export const</span> RENDERERS: Record&lt;string, Renderer&gt; = {
+  bar_chart:             renderBar,
+  horizontal_bar_chart:  renderBar,           <span class="c-comment">// same function, different axis</span>
+  grouped_bar_chart:     (p,d,i) => renderMultiBar(p,d,i, <span class="c-keyword">false</span>),
+  stacked_bar_chart:     (p,d,i) => renderMultiBar(p,d,i, <span class="c-keyword">true</span>),
+  line_chart:            renderLine,
+  area_chart:            renderLine,           <span class="c-comment">// same function + areaStyle: {}</span>
+  multi_line_chart:      renderMultiLine,
+  donut_chart:           renderDonut,
+  scatter_plot:          renderScatter,
+  kpi_card:              renderKpi,
+  gauge_chart:           renderGauge,
+  funnel_chart:          renderFunnel,
+  radar_chart:           renderRadar,
+  heatmap:               renderHeatmap,
+  table:                 renderTable,
+  custom:                renderCustom,
+}
+
+<span class="c-comment">// Usage in chart.ts:</span>
+<span class="c-keyword">const</span> render = RENDERERS[plan.type]
+render(plan, data, id)
+<span class="c-comment">// → { id, type, title, option: { xAxis, yAxis, series, ... } }</span></pre>
+
+    <h4>What ECharts option looks like (bar chart)</h4>
+    <pre>{
+  id: <span class="c-string">"w1"</span>, type: <span class="c-string">"bar_chart"</span>, title: <span class="c-string">"Budget by Region"</span>,
+  option: {
+    tooltip: { trigger: <span class="c-string">'axis'</span> },
+    xAxis:   { type: <span class="c-string">'category'</span>, data: [<span class="c-string">"North"</span>, <span class="c-string">"South"</span>, <span class="c-string">"East"</span>] },
+    yAxis:   { type: <span class="c-string">'value'</span> },
+    series:  [{ type: <span class="c-string">'bar'</span>, data: [<span class="c-num">45000000</span>, <span class="c-num">32000000</span>, <span class="c-num">28000000</span>] }]
+  }
+}</pre>
+
+    <div class="info">
+      <strong>mergeChartOptions():</strong> The LLM can suggest custom ECharts overrides (e.g., colors, font sizes) via <code>chartOptions</code>. This function deep-merges them over the rendered result — so the renderer stays clean and the LLM has an escape hatch for special styling.
+    </div>
+  </div>
+</div>
+
+<!-- chart-repair -->
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">C6</span>
+    <span class="file-name">chart-repair.ts</span>
+    <span class="file-lines">135 lines</span>
+  </div>
+  <div class="file-job">JOB: Fix LLM mistakes before rendering — field names, field types, missing values</div>
+  <div class="file-body">
+    <p>LLMs hallucinate field names. This file catches those mistakes and either fixes them automatically or rejects the widget with a clear reason.</p>
+
+    <h4>repairWidgetPlan() — the main fixer</h4>
+    <pre><span class="c-comment">// LLM returned: { type: "bar_chart", labelField: "municipality_name", valueField: "total_budget" }</span>
+<span class="c-comment">// Real columns:  ["municipalityName", "budget"]</span>
+
+<span class="c-fn">repairWidgetPlan</span>(raw, profile, rows)
+
+<span class="c-comment">// For bar_chart: resolves labelField and valueField</span>
+<span class="c-comment">// "municipality_name" → resolveFieldName → "municipalityName" (score 80)</span>
+<span class="c-comment">// "total_budget"      → resolveFieldName → "budget"           (score 55)</span>
+
+<span class="c-comment">// Logs every fix made:</span>
+<span class="c-comment">// [chart:fix] mapped labelField="municipality_name" → "municipalityName"</span>
+<span class="c-comment">// [chart:fix] mapped valueField="total_budget"      → "budget"</span>
+
+<span class="c-arrow">→</span> { type: <span class="c-string">"bar_chart"</span>, labelField: <span class="c-string">"municipalityName"</span>, valueField: <span class="c-string">"budget"</span> }</pre>
+
+    <h4>validateWidget() — accept or reject</h4>
+    <pre><span class="c-fn">validateWidget</span>(repairedPlan, profile, rows)
+<span class="c-comment">// Checks after repair:</span>
+<span class="c-comment">// 1. All required fields exist in the real data?</span>
+<span class="c-comment">// 2. valueField contains actually numeric data?</span>
+<span class="c-comment">// 3. Chart type that needs seriesField actually has one?</span>
+
+<span class="c-comment">// If ok: { ok: true, reasons: [] }  → widget goes to renderer</span>
+<span class="c-comment">// If bad: { ok: false, reasons: ["labelField not in data"] }  → widget dropped</span></pre>
+
+    <div class="warn">
+      <strong>Why not just let the renderer fail?</strong> A renderer crash would cause the whole dashboard to fail. Repair + validate gives a clean error per widget — bad widgets are silently dropped, good ones still render.
+    </div>
+  </div>
+</div>
+
+<!-- chart.ts orchestration -->
+<div class="file-card">
+  <div class="file-card-header">
+    <span class="file-num">C7</span>
+    <span class="file-name">chart.ts (trimmed)</span>
+    <span class="file-lines">99 lines</span>
+  </div>
+  <div class="file-job">JOB: Orchestration — calls all 6 chart files in the right order</div>
+  <div class="file-body">
+    <p>This is the only public file. <code>pipeline.service.ts</code> imports only <code>runChart()</code> from here. Internally it connects all 6 sub-files in sequence.</p>
+
+    <h4>runChart() — the 5-step pipeline</h4>
+    <pre><span class="c-keyword">async function</span> <span class="c-fn">runChart</span>(rows, prompt, strategy, chartHint, source, apiKey) {
+
+  <span class="c-comment">// 1. Guard: no rows → return empty dashboard immediately</span>
+  <span class="c-keyword">if</span> (!rows.length) <span class="c-keyword">return</span> { layout: <span class="c-string">'operational'</span>, widgets: [] }
+
+  <span class="c-comment">// 2. Profile the data columns (chart-profile.ts)</span>
+  <span class="c-keyword">const</span> profile = <span class="c-fn">buildRowProfile</span>(keys, rows)
+  <span class="c-comment">// → { numeric: ["budget"], temporal: ["date"], categorical: ["title"] }</span>
+
+  <span class="c-comment">// 3. Ask the LLM which charts to build (LLM call #2)</span>
+  <span class="c-keyword">const</span> { object: plan } = <span class="c-keyword">await</span> <span class="c-fn">generateObject</span>({ schema: dashboardSchema, ... })
+  <span class="c-comment">// → { layout: "analytical", widgets: [{type:"bar_chart", labelField:"title",...}] }</span>
+
+  <span class="c-comment">// 4. Repair + validate each widget (chart-repair.ts)</span>
+  <span class="c-keyword">for</span> (<span class="c-keyword">const</span> w <span class="c-keyword">of</span> plan.widgets) {
+    <span class="c-keyword">const</span> repaired = <span class="c-fn">repairWidgetPlan</span>(w, profile, rows)
+    <span class="c-keyword">const</span> check    = <span class="c-fn">validateWidget</span>(repaired, profile, rows)
+    <span class="c-keyword">if</span> (check.ok) valid.push(repaired)     <span class="c-comment">// accepted</span>
+    <span class="c-keyword">else</span>          dropped.push(w.type)       <span class="c-comment">// rejected, logged</span>
+  }
+
+  <span class="c-comment">// 5. Render each valid widget (chart-renderers.ts + chart-aggregation.ts)</span>
+  <span class="c-keyword">const</span> widgets = valid
+    .map((w, i) => <span class="c-fn">renderWidget</span>(w, rows, keys, `w${i+<span class="c-num">1</span>}`))
+    .filter(w => w !== <span class="c-keyword">null</span>)
+
+  <span class="c-keyword">return</span> { layout: plan.layout, title: prompt, summary: plan.summary, widgets }
+}</pre>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════ FOOTER -->
