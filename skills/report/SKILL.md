@@ -76,21 +76,11 @@ When the user message contains "CONTEXT: A visualization chart will be displayed
 
 ### Body Format Specification
 
-The `body` field of every section is a plain string rendered by a markdown pipe that supports **only these three patterns**:
+Each section `body` is a markdown string. Use only these patterns — no HTML tags, no code blocks:
 
-| Pattern | Syntax | Rendered as |
-|---|---|---|
-| Inline bold | `**text**` | `<strong>text</strong>` |
-| Bullet list item | `- item text` (one per line) | `<ul><li>` |
-| Prose paragraph | plain sentence(s) | `<p>` |
-
-**Rules:**
-- Use `**bold**` around every key number, total, rate, or metric in prose
-- Bullet lists: use `- ` prefix (hyphen + space) — never `•`, `*`, or numbered lists
-- Never mix bullets and prose within the same section body
-- Sections that use bullets: Key Findings, Recommendations
-- Sections that use prose: Overview, Breakdown, Trends
-- Separate multiple prose sentences with a newline between paragraphs if needed
+- Inline bold: wrap key numbers, totals, rates, and metrics in `**double asterisks**`
+- Bullet list line: start the line with `- ` (hyphen space) — only for Key Findings and Recommendations
+- Prose: plain sentences — separate paragraphs with a blank line
 
 ---
 
@@ -98,39 +88,32 @@ The `body` field of every section is a plain string rendered by a markdown pipe 
 
 **1. Overview** — prose body
 - 2–3 sentences: total record count, scope, date range if available
-- Use `**bold**` around every number and key metric
-- Example body: `"The dataset covers **1,247 municipal projects** across **5 regions**. The data spans **2019 to 2023**, representing a complete portfolio view."`
+- Wrap every number and key metric in `**double asterisks**`
+- Example: The dataset covers **1,247 municipal projects** across **5 regions**. The data spans **2019 to 2023**, representing a complete portfolio view.
 
-**2. Key Findings** — bullet list body
-- 3–5 items, each with a specific number from the data
-- Format each line: `- **[Label]**: [Value] ([context])`
-- Most important finding first
-- Example body:
-  ```
-  - **Total Projects**: 1,247 (complete dataset)
-  - **Completion Rate**: 68% (847 of 1,247 projects)
-  - **Top Region**: Northern with **423 projects** (34%)
-  ```
+**2. Key Findings** — bullet list body (one `- ` line per finding)
+- 3–5 items, each with a specific number from the data, most important first
+- Each line format: `- **Label**: value (context)`
+- Example:
+  - `- **Total Projects**: 1,247 (complete dataset)`
+  - `- **Completion Rate**: 68% (847 of 1,247 projects)`
+  - `- **Top Region**: Northern with **423 projects** (34%)`
 
 **3. Breakdown** — prose body
 - Detailed narrative for the primary dimension (status, category, region, type)
 - Minimum 2 sentences per sub-group if groups exist
-- Use `**bold**` around every count, percentage, and rank value
-- Include percentages and relative comparisons
+- Wrap every count, percentage, and rank value in `**double asterisks**`
 
 **4. Trends** — prose body (include only if temporal data is present)
 - Direction (increasing/decreasing/stable) with magnitude
-- Use `**bold**` around peak, trough, and inflection values
+- Wrap peak, trough, and inflection values in `**double asterisks**`
 
 **5. Recommendations** — bullet list body (include only if data clearly supports actionable conclusions)
-- 2–3 concrete, actionable items traceable to a specific finding
-- Format each line: `- [Recommendation text referencing a finding]`
-- No generic advice
-- Example body:
-  ```
-  - Prioritize the **87 stalled projects** in the Southern Region by assigning dedicated oversight.
-  - Reallocate budget from the **3 cancelled infrastructure projects** (MAD 12M) to Phase 2 planning.
-  ```
+- 2–3 concrete, actionable items traceable to a specific finding, no generic advice
+- Each line format: `- Recommendation text referencing a specific finding`
+- Example:
+  - `- Prioritize the **87 stalled projects** in the Southern Region by assigning dedicated oversight.`
+  - `- Reallocate budget from the **3 cancelled projects** (MAD 12M) to Phase 2 planning.`
 
 ---
 
