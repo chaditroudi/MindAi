@@ -112,13 +112,13 @@ Each section `body` is a markdown string. Use only these patterns — no HTML ta
 - Wrap every number and key metric in `**double asterisks**`
 - Example: The dataset covers **1,247 municipal projects** across **5 regions**. The data spans **2019 to 2023**, representing a complete portfolio view.
 
-**2. Key Findings** — bullet list body (one `- ` line per finding)
+**2. Key Findings** — bullet list body (one `• ` line per finding)
 - 3–5 items, each with a specific number from the data, most important first
-- Each line format: `- **Label**: value (context)`
+- Each line format: `• **Label**: value (context)`
 - Example:
-  - `- **Total Projects**: 1,247 (complete dataset)`
-  - `- **Completion Rate**: 68% (847 of 1,247 projects)`
-  - `- **Top Region**: Northern with **423 projects** (34%)`
+  - `• **Total Projects**: 1,247 (complete dataset)`
+  - `• **Completion Rate**: 68% (847 of 1,247 projects)`
+  - `• **Top Region**: Northern with **423 projects** (34%)`
 
 **3. Breakdown** — prose body
 - Detailed narrative for the primary dimension (status, category, region, type)
