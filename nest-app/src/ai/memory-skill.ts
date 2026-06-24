@@ -5,7 +5,8 @@ import { readMarkdownSection, skillFile } from './skill-prompt';
 import { log } from '../common/logger/app.logger';
 import type { MemoryType } from '../memory/memory.schema';
 
-const SKILL_PROMPT = readMarkdownSection(skillFile('memory', 'SKILL.md'), 'Runtime Prompt');
+const SKILL_PROMPT  = readMarkdownSection(skillFile('memory', 'SKILL.md'), 'Runtime Prompt');
+const MAX_TOKENS    = Number(process.env['MEMORY_MAX_TOKENS'] ?? 400);
 
 export interface ExtractedMemory {
   type:       MemoryType;
@@ -34,7 +35,7 @@ export async function extractMemories(
       abortSignal: freshSignal('memory'),
       temperature: 0,
       maxRetries:  0,
-      maxTokens:   400,
+      maxTokens:   MAX_TOKENS,
       schema:      extractionSchema,
       system:      SKILL_PROMPT,
       messages: [{
