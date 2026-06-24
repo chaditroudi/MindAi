@@ -5,7 +5,6 @@ import { IsString, IsUrl, MinLength, MaxLength } from 'class-validator';
 
 type KeyStatus = 'valid' | 'invalid' | 'unreachable';
 
-// Well-known providers the frontend can reference without sending a verifyUrl.
 const KNOWN_PROVIDERS: Record<string, string> = {
   groq:      'https://api.groq.com/openai/v1/models',
   openai:    'https://api.openai.com/v1/models',
