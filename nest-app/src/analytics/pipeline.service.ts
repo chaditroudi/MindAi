@@ -131,9 +131,35 @@ export class PipelineService {
         rows = await this.runAggregation(resolved.collection, patchConvert(plan.pipeline!) as Row[]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (attempt === 0 && msg.includes('Unsupported conversion')) {
-          hint = `MongoDB aggregation error: "${msg}". When converting integer/string fields to dates, always use $convert with onError: null and onNull: null, e.g. { $convert: { input: "$field", to: "date", onError: null, onNull: null } }.`;
-          continue;
+        if (attempt === 0) {
+          const lower = msg.toLowerCase();
+          if (lower.includes('unsupported conversion')) {
+            hint = `MongoDB aggregation error: "${msg}". When converting integer/string fields to dates, always use $convert with onError: null and onNull: null, e.g. { $convert: { input: "$field", to: "date", onError: null, onNull: null } }.`;
+            continue;
+          }
+          if (
+            lower.includes('only supports date') ||
+            lower.includes('arguments to $date') ||
+            (lower.includes('bson type') && lower.includes('date')) ||
+            (lower.includes('convert') && lower.includes('to date'))
+          ) {
+            const src = sources.find(s => s.collection === resolved!.collection || s.name === resolved!.collection);
+            const intTemporalFields = (src?.fields ?? [])
+              .filter(f =>
+                (f.type === 'integer' || f.type === 'number') &&
+                (f.role === 'temporal' || ['year', 'month', 'date', 'day'].some(t => f.name.toLowerCase().includes(t)))
+              )
+              .map(f => `"${f.name}" (stored as ${f.type}, NOT a Date)`)
+              .join(', ');
+            hint = `MongoDB aggregation error: "${msg}". ` +
+              (intTemporalFields
+                ? `The temporal fields ${intTemporalFields} are plain integers, NOT Date objects. `
+                : '') +
+              `Do NOT use date extraction operators ($year, $month, $dayOfMonth, $dateToString, $dateToParts, $toDate, etc.) on integer or number fields. ` +
+              `Instead, reference them directly as numbers: e.g., group by year using "$startYear" as the _id value.`;
+            this.logger.warn(`retrying after MongoDB date-type error: ${msg}`);
+            continue;
+          }
         }
         throw err;
       }

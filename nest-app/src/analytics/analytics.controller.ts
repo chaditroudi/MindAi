@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Body, Headers,
-  UnauthorizedException, HttpException, HttpStatus,
+  UnauthorizedException, HttpException, HttpStatus, Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
@@ -20,6 +20,8 @@ function requireUserId(raw: string | undefined): string {
 
 @Controller('api')
 export class AnalyticsController {
+  private readonly logger = new Logger(AnalyticsController.name);
+
   constructor(
     private readonly analytics: AnalyticsService,
     private readonly cfg: ConfigService,
@@ -53,6 +55,7 @@ export class AnalyticsController {
     } catch (err) {
       if (err instanceof HttpException) throw err;
       const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(msg, err instanceof Error ? err.stack : undefined);
       throw new HttpException({ error: msg }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
