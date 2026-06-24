@@ -309,8 +309,10 @@ export class PipelineService {
 
   private retryDelayMs(err: unknown): number {
     const msg = err instanceof Error ? err.message : String(err);
-    const match = /try again in\s+([\d.]+)s/i.exec(msg);
-    return Math.ceil((match ? parseFloat(match[1]) : 20) * 1_000) + 500;
+    const minsec = /(\d+)m([\d.]+)s/i.exec(msg);
+    if (minsec) return (parseInt(minsec[1]) * 60 + parseFloat(minsec[2])) * 1_000 + 500;
+    const sec = /try again in\s+([\d.]+)s/i.exec(msg);
+    return sec ? Math.ceil(parseFloat(sec[1]) * 1_000) + 500 : 20_000;
   }
 
   // ── Feature executors ───────────────────────────────────────────────────────
@@ -357,6 +359,14 @@ export class PipelineService {
     context: CoreMessage[] = [],
     apiKey?: string,
   ): Promise<ReportResult> {
+    if (!context.length) {
+      const cached = await this.cache.getCached<ReportResult>('report:full', prompt);
+      if (cached) {
+        this.logger.log('full report cache hit — skipping LLM calls');
+        return cached;
+      }
+    }
+
     const { plan, rows } = await this.aggregate(prompt, 'report', context, apiKey);
 
     if (!plan.skills.includes('report')) {
@@ -389,7 +399,9 @@ export class PipelineService {
         this.logger.log(`report done (retry) | sections: ${reportResult.reportSections.length}`);
         const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
           .catch(() => chartFallback);
-        return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+        const retryResult = { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+        if (!context.length) this.cache.setCached('report:full', prompt, retryResult).catch(() => undefined);
+        return retryResult;
       }
 
       if (reportSettled.status === 'rejected') throw reportSettled.reason;
@@ -399,15 +411,19 @@ export class PipelineService {
 
       if (chartSettled.status === 'rejected') {
         this.logger.warn(`chart generation failed (non-fatal): ${chartSettled.reason}`);
+        if (!context.length) this.cache.setCached('report:full', prompt, reportResult).catch(() => undefined);
         return reportResult;
       }
 
       const chartResult = chartSettled.value;
-      return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+      const fullResult = { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+      if (!context.length) this.cache.setCached('report:full', prompt, fullResult).catch(() => undefined);
+      return fullResult;
     }
 
     const result = await runReportSkill({ rows, prompt, apiKey });
     this.logger.log(`report done | sections: ${result.reportSections.length}`);
+    if (!context.length) this.cache.setCached('report:full', prompt, result).catch(() => undefined);
     return result;
   }
 
