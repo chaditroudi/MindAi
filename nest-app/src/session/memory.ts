@@ -5,15 +5,10 @@ import type { MastraDBMessage } from '@mastra/core/agent';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import type { CoreMessage } from 'ai';
-import type { DashboardSpec } from '../types';
+import type { DashboardSpec, ReportSection } from '../types';
 import { log } from '../common/logger/app.logger';
 
 export type SessionIntent = 'dashboard' | 'report' | 'inquiry';
-
-export interface ReportSection {
-  heading: string;
-  body: string;
-}
 
 export interface MessageResult {
   type: 'dashboard' | 'report' | 'inquiry';
