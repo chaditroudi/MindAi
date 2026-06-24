@@ -1,6 +1,6 @@
 import {
   Controller, Post, Body, BadRequestException,
-  HttpException, HttpStatus, InternalServerErrorException,
+  HttpException, HttpStatus,
 } from '@nestjs/common';
 import { IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
 
@@ -99,8 +99,9 @@ export class UserKeysController {
       return { ok: true, provider: name.toLowerCase() };
     } catch (err) {
       if (err instanceof HttpException) throw err;
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error verifying key',
+      throw new HttpException(
+        { error: err instanceof Error ? err.message : 'Unexpected error verifying key' },
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

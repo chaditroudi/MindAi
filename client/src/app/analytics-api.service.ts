@@ -99,7 +99,11 @@ export class AnalyticsApiService {
           if (error instanceof HttpErrorResponse) {
             if (error.status === 0)
               return throwError(() => new Error('Cannot reach the server. Please refresh the page and try again.'));
-            const message = typeof error.error?.error === 'string' ? error.error.error : error.message;
+            const message = typeof error.error?.error === 'string'
+              ? error.error.error
+              : typeof error.error?.message === 'string'
+                ? error.error.message
+                : error.message;
             const code    = typeof error.error?.code  === 'string' ? error.error.code  : undefined;
             return throwError(() => code ? new ApiError(message, code) : new Error(message));
           }
