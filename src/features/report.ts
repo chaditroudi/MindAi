@@ -49,12 +49,33 @@ export async function executeReport(
     const source = getSources().find(s =>
       s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
     );
-    const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey });
-    log('report', `report done | sections: ${reportResult.reportSections.length} | generating chart…`);
-    const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
-      .catch(() => ({ layout: 'analytical' as const, title: prompt, summary: '', widgets: [] }));
-    log('report', `done (with chart)`);
-    return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+
+    const chartFallback = { layout: 'analytical' as const, title: prompt, summary: '', widgets: [] };
+
+    // Fast path: run both in parallel
+    try {
+      const [reportResult, chartResult] = await Promise.all([
+        runReportSkill({ rows, prompt, withChart: true, apiKey }),
+        runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
+          .catch(() => chartFallback),
+      ]);
+      log('report', `done (with chart) | sections: ${reportResult.reportSections.length}`);
+      return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+    } catch (err) {
+      if (!isRateLimitError(err)) throw err;
+
+      // Rate limit fallback: wait then run sequentially
+      const delayMs = extractRetryDelayMs(err);
+      log('report', `rate limit on parallel run — waiting ${delayMs}ms then retrying sequentially`);
+      await sleep(delayMs);
+
+      const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey });
+      log('report', `report done (retry) | sections: ${reportResult.reportSections.length}`);
+      const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
+        .catch(() => chartFallback);
+      log('report', `done (with chart, retry)`);
+      return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+    }
   }
 
   const result = await runReportSkill({ rows, prompt, apiKey });
