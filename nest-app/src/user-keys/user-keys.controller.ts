@@ -1,34 +1,39 @@
 import {
   Controller, Post, Body, BadRequestException, HttpException, HttpStatus,
 } from '@nestjs/common';
-import { IsString, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsUrl, MinLength, MaxLength } from 'class-validator';
 
-class VerifyKeyDto {
-  @IsString() @MinLength(1) @MaxLength(300) apiKey!: string;
-}
-
-type Provider  = 'groq' | 'openai';
 type KeyStatus = 'valid' | 'invalid' | 'unreachable';
 
-const PROVIDER_VERIFY_URLS: Record<Provider, string> = {
-  groq:   'https://api.groq.com/openai/v1/models',
-  openai: 'https://api.openai.com/v1/models',
+// Well-known providers the frontend can reference without sending a verifyUrl.
+const KNOWN_PROVIDERS: Record<string, string> = {
+  groq:      'https://api.groq.com/openai/v1/models',
+  openai:    'https://api.openai.com/v1/models',
+  anthropic: 'https://api.anthropic.com/v1/models',
+  mistral:   'https://api.mistral.ai/v1/models',
+  cohere:    'https://api.cohere.ai/v1/models',
+  together:  'https://api.together.xyz/v1/models',
 };
 
-const PROVIDER_NAMES: Record<Provider, string> = {
-  groq:   'Groq',
-  openai: 'OpenAI',
-};
+class VerifyKeyDto {
+  @IsString() @MinLength(1) @MaxLength(500)
+  apiKey!: string;
 
-function detectProvider(key: string): Provider | null {
-  if (key.startsWith('gsk_')) return 'groq';
-  if (key.startsWith('sk-'))  return 'openai';
-  return null;
+  /** Human-readable label returned in the response (e.g. "Groq", "My Provider"). */
+  @IsString() @MinLength(1) @MaxLength(100)
+  provider!: string;
+
+  /**
+   * URL of the provider's model-list (or any authenticated endpoint).
+   * Optional when `provider` matches a known provider name (case-insensitive).
+   */
+  @IsUrl() @MaxLength(500)
+  verifyUrl?: string;
 }
 
-async function verifyKey(apiKey: string, provider: Provider): Promise<KeyStatus> {
+async function pingKey(apiKey: string, url: string): Promise<KeyStatus> {
   try {
-    const res = await fetch(PROVIDER_VERIFY_URLS[provider], {
+    const res = await fetch(url, {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal:  AbortSignal.timeout(8_000),
     });
@@ -44,29 +49,34 @@ async function verifyKey(apiKey: string, provider: Provider): Promise<KeyStatus>
 export class UserKeysController {
   @Post('key')
   async verify(@Body() dto: VerifyKeyDto) {
-    const key = dto.apiKey.trim();
+    const key  = dto.apiKey.trim();
+    const name = dto.provider.trim();
 
-    const provider = detectProvider(key);
-    if (!provider) {
+    const url =
+      dto.verifyUrl?.trim() ??
+      KNOWN_PROVIDERS[name.toLowerCase()];
+
+    if (!url) {
       throw new BadRequestException(
-        'Unrecognised key format. Use a Groq key (starts with "gsk_") or an OpenAI key (starts with "sk-").',
+        `No verification URL known for provider "${name}". ` +
+        `Pass a "verifyUrl" field pointing to an authenticated endpoint (e.g. a models list).`,
       );
     }
 
-    const status = await verifyKey(key, provider);
+    const status = await pingKey(key, url);
 
     if (status === 'invalid') {
       throw new BadRequestException(
-        `This ${PROVIDER_NAMES[provider]} API key was rejected — it may be incorrect or revoked. Please check it and try again.`,
+        `This ${name} API key was rejected — it may be incorrect or revoked. Please check it and try again.`,
       );
     }
     if (status === 'unreachable') {
       throw new HttpException(
-        { error: `Could not reach ${PROVIDER_NAMES[provider]} to verify the key. Please try again in a moment.` },
+        { error: `Could not reach ${name} to verify the key. Please try again in a moment.` },
         HttpStatus.BAD_GATEWAY,
       );
     }
 
-    return { ok: true, provider };
+    return { ok: true, provider: name };
   }
 }
