@@ -272,6 +272,20 @@ export class PipelineService {
     return getSources().find(s => s.name === sourceName || s.collection === sourceName);
   }
 
+  private isRateLimit(err: unknown): boolean {
+    const status = (err as { status?: number; statusCode?: number }).status
+      ?? (err as { statusCode?: number }).statusCode;
+    if (status === 429) return true;
+    const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+    return msg.includes('429') || msg.includes('rate limit') || msg.includes('quota') || msg.includes('too many requests');
+  }
+
+  private retryDelayMs(err: unknown): number {
+    const msg = err instanceof Error ? err.message : String(err);
+    const match = /try again in\s+([\d.]+)s/i.exec(msg);
+    return Math.ceil((match ? parseFloat(match[1]) : 20) * 1_000) + 500;
+  }
+
   // ── Feature executors ───────────────────────────────────────────────────────
 
   async executeDashboard(
