@@ -14,7 +14,7 @@ metadata:
 
 # Report Skill
 
-**Model:** `resolveModel('writer')` — `src/ai/model.ts`
+  **Model:** `resolveModel('writer')` — `src/ai/model.ts`
 **Implementation:** `src/ai/writer.ts` → `runReportSkill`
 **Runtime Prompt:** `## Runtime Prompt` in this file
 
