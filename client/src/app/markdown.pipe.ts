@@ -1,11 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
-// Renders the three markdown patterns defined in skills/report/SKILL.md:
-//   **bold**  →  <strong>
-//   - item    →  <ul><li>   (Key Findings and Recommendations sections)
-//   prose     →  <p>        (Overview, Breakdown, Trends sections)
-
 @Pipe({ name: 'md', standalone: true })
 export class MarkdownPipe implements PipeTransform {
   constructor(private san: DomSanitizer) {}
@@ -15,7 +10,9 @@ export class MarkdownPipe implements PipeTransform {
   }
 
   private toHtml(text: string): string {
-    const lines = text.split('\n');
+    // Normalize: split inline "• item • item" into separate lines
+    const normalized = text.replace(/([^\n])\s*•\s+/g, '$1\n• ');
+    const lines = normalized.split('\n');
     const out: string[] = [];
     let inList = false;
     let paraLines: string[] = [];
@@ -28,20 +25,21 @@ export class MarkdownPipe implements PipeTransform {
 
     for (const raw of lines) {
       const line = raw.trimEnd();
-      // Only `- ` prefix per the skill spec
-      const isBullet = /^- /.test(line.trimStart());
+      const trimmed = line.trimStart();
+      // Accept both "- " (spec) and "• " (LLM default)
+      const isBullet = /^[-•]\s/.test(trimmed);
 
       if (isBullet) {
         flushPara();
         if (!inList) { out.push('<ul>'); inList = true; }
-        const item = line.trimStart().slice(2); // strip "- "
+        const item = trimmed.replace(/^[-•]\s/, '');
         out.push(`<li>${this.bold(item)}</li>`);
-      } else if (!line.trim()) {
+      } else if (!trimmed) {
         if (inList) { out.push('</ul>'); inList = false; }
         flushPara();
       } else {
         if (inList) { out.push('</ul>'); inList = false; }
-        paraLines.push(line.trim());
+        paraLines.push(trimmed);
       }
     }
 
@@ -50,7 +48,6 @@ export class MarkdownPipe implements PipeTransform {
     return out.join('');
   }
 
-  // Converts **text** → <strong>text</strong>
   private bold(text: string): string {
     return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   }
