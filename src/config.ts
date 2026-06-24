@@ -40,9 +40,9 @@ export const config = {
   llm: {
     groqApiKey: GROQ_API_KEY,
     timeouts: {
-      supervisor: positiveNumber(SUPERVISOR_TIMEOUT_MS, 8_000),
-      chart:      positiveNumber(CHART_TIMEOUT_MS, 8_000),
-      writer:     positiveNumber(WRITER_TIMEOUT_MS, 8_000),
+      supervisor: positiveNumber(SUPERVISOR_TIMEOUT_MS, 15_000),
+      chart:      positiveNumber(CHART_TIMEOUT_MS,      20_000),
+      writer:     positiveNumber(WRITER_TIMEOUT_MS,     45_000),
     },
     models: {
       groqDefault: GROQ_MODEL ?? 'llama-3.3-70b-versatile',
