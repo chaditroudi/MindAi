@@ -10,7 +10,7 @@ import { normalizeToken } from '../sources/source.repository';
 import { CacheService } from '../cache/cache.service';
 import { HistoryService } from '../history/history.service';
 import { ChartResultsRepository } from '../ai/chart-results.repository';
-import type { IntentKind, DataSource, TaskPlan, DashboardSpec } from '../types';
+import type { IntentKind, DataSource, TaskPlan, DashboardSpec, ReportSection } from '../types';
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
