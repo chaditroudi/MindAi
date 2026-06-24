@@ -199,22 +199,20 @@ function renderCustom(plan: WidgetPlan, _data: DataRow[], id: string) {
 }
 
 export const RENDERERS: Record<string, Renderer> = {
-  bar_chart:             (p, d, i) => mergeChartOptions(renderBar(p, d, i), p.chartOptions),
-  horizontal_bar_chart:  (p, d, i) => mergeChartOptions(renderBar(p, d, i), p.chartOptions),
-  grouped_bar_chart:     (p, d, i) => mergeChartOptions(renderMultiBar(p, d, i, false), p.chartOptions),
-  stacked_bar_chart:     (p, d, i) => mergeChartOptions(renderMultiBar(p, d, i, true), p.chartOptions),
-  line_chart:            (p, d, i) => mergeChartOptions(renderLine(p, d, i), p.chartOptions),
-  area_chart:            (p, d, i) => mergeChartOptions(renderLine(p, d, i), p.chartOptions),
-  multi_line_chart:      (p, d, i) => mergeChartOptions(renderMultiLine(p, d, i), p.chartOptions),
-  donut_chart:           (p, d, i) => mergeChartOptions(renderDonut(p, d, i), p.chartOptions),
-  scatter_plot:          (p, d, i) => mergeChartOptions(renderScatter(p, d, i), p.chartOptions),
+  bar_chart:             renderBar,
+  horizontal_bar_chart:  renderBar,
+  grouped_bar_chart:     (p, d, i) => renderMultiBar(p, d, i, false),
+  stacked_bar_chart:     (p, d, i) => renderMultiBar(p, d, i, true),
+  line_chart:            renderLine,
+  area_chart:            renderLine,
+  multi_line_chart:      renderMultiLine,
+  donut_chart:           renderDonut,
+  scatter_plot:          renderScatter,
   kpi_card:              renderKpi,
-  gauge_chart:           (p, d, i) => mergeChartOptions(renderGauge(p, d, i), p.chartOptions),
-  funnel_chart:          (p, d, i) => mergeChartOptions(renderFunnel(p, d, i), p.chartOptions),
-  radar_chart:           (p, d, i) => mergeChartOptions(renderRadar(p, d, i), p.chartOptions),
-  heatmap:               (p, d, i) => mergeChartOptions(renderHeatmap(p, d, i), p.chartOptions),
+  gauge_chart:           renderGauge,
+  funnel_chart:          renderFunnel,
+  radar_chart:           renderRadar,
+  heatmap:               renderHeatmap,
   table:                 renderTable,
-  custom:                (p, d, i) => mergeChartOptions(renderCustom(p, d, i), p.chartOptions),
+  custom:                renderCustom,
 };
-
-export { prepareRenderRows };
