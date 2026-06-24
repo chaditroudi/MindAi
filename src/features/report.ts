@@ -1,10 +1,13 @@
 import type { CoreMessage } from 'ai';
 import { aggregate } from './pipeline.js';
 import { getSources } from '../db/sources-cache.js';
+import { getCached, setCached } from '../db/prompt-cache.js';
 import { log } from '../utils/logger.js';
 import { runReportSkill } from '../ai/writer.js';
 import { runChart } from '../ai/chart.js';
 import type { DashboardSpec } from '../types/index.js';
+
+const CACHE_INTENT = 'report:full';
 
 function isRateLimitError(err: unknown): boolean {
   const status = (err as { status?: number; statusCode?: number }).status
@@ -16,9 +19,11 @@ function isRateLimitError(err: unknown): boolean {
 
 function extractRetryDelayMs(err: unknown): number {
   const msg = err instanceof Error ? err.message : String(err);
-  const match = /try again in\s+([\d.]+)s/i.exec(msg);
-  const seconds = match ? parseFloat(match[1]) : 20;
-  return Math.ceil(seconds * 1_000) + 500; // add 500ms buffer
+  // matches: "17m34.944s" or "17.884s"
+  const minsec = /(\d+)m([\d.]+)s/i.exec(msg);
+  if (minsec) return (parseInt(minsec[1]) * 60 + parseFloat(minsec[2])) * 1_000 + 500;
+  const sec = /try again in\s+([\d.]+)s/i.exec(msg);
+  return sec ? Math.ceil(parseFloat(sec[1]) * 1_000) + 500 : 20_000;
 }
 
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
@@ -33,6 +38,15 @@ export async function executeReport(
   context: CoreMessage[] = [],
   apiKey?: string,
 ): Promise<ReportResult> {
+  // Return cached result for the same prompt — avoids burning API quota on retries
+  if (!context.length) {
+    const cached = await getCached<ReportResult>(CACHE_INTENT, prompt);
+    if (cached) {
+      log('report', `cache hit — skipping LLM calls`);
+      return cached;
+    }
+  }
+
   const { plan, rows } = await aggregate(prompt, 'report', context, apiKey);
 
   if (!plan.skills.includes('report')) {
@@ -45,11 +59,12 @@ export async function executeReport(
 
   log('report', `rows: ${rows.length} | prompt: "${prompt}"`);
 
+  let result: ReportResult;
+
   if (plan.skills.includes('chart') && rows.length >= 2) {
     const source = getSources().find(s =>
       s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
     );
-
     const chartFallback = { layout: 'analytical' as const, title: prompt, summary: '', widgets: [] };
 
     // Fast path: run both in parallel
@@ -60,26 +75,28 @@ export async function executeReport(
           .catch(() => chartFallback),
       ]);
       log('report', `done (with chart) | sections: ${reportResult.reportSections.length}`);
-      return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+      result = { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
     } catch (err) {
       if (!isRateLimitError(err)) throw err;
 
-      // Rate limit fallback: only wait if the suggested delay is short enough
       const delayMs = extractRetryDelayMs(err);
-      if (delayMs > 60_000) throw err; // quota exhausted — surface the error immediately
-      log('report', `rate limit on parallel run — waiting ${delayMs}ms then retrying sequentially`);
+      if (delayMs > 60_000) throw err; // quota exhausted — surface immediately, don't hang
+      log('report', `rate limit — waiting ${delayMs}ms then retrying sequentially`);
       await sleep(delayMs);
 
       const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey });
       log('report', `report done (retry) | sections: ${reportResult.reportSections.length}`);
       const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
         .catch(() => chartFallback);
-      log('report', `done (with chart, retry)`);
-      return { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+      result = { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
     }
+  } else {
+    result = await runReportSkill({ rows, prompt, apiKey });
+    log('report', `done | sections: ${result.reportSections.length}`);
   }
 
-  const result = await runReportSkill({ rows, prompt, apiKey });
-  log('report', `done | sections: ${result.reportSections.length}`);
+  if (!context.length) {
+    setCached(CACHE_INTENT, prompt, result).catch(() => undefined);
+  }
   return result;
 }
