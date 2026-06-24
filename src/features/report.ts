@@ -6,6 +6,23 @@ import { runReportSkill } from '../ai/writer.js';
 import { runChart } from '../ai/chart.js';
 import type { DashboardSpec } from '../types/index.js';
 
+function isRateLimitError(err: unknown): boolean {
+  const status = (err as { status?: number; statusCode?: number }).status
+    ?? (err as { statusCode?: number }).statusCode;
+  if (status === 429) return true;
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return msg.includes('429') || msg.includes('rate limit') || msg.includes('quota') || msg.includes('too many requests');
+}
+
+function extractRetryDelayMs(err: unknown): number {
+  const msg = err instanceof Error ? err.message : String(err);
+  const match = /try again in\s+([\d.]+)s/i.exec(msg);
+  const seconds = match ? parseFloat(match[1]) : 20;
+  return Math.ceil(seconds * 1_000) + 500; // add 500ms buffer
+}
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
 export type ReportResult = {
   reportSections: { heading: string; body: string }[];
   chart?: DashboardSpec;
