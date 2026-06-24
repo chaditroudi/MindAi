@@ -131,10 +131,10 @@ Each section `body` is a markdown string. Use only these patterns — no HTML ta
 
 **5. Recommendations** — bullet list body (include only if data clearly supports actionable conclusions)
 - 2–3 concrete, actionable items traceable to a specific finding, no generic advice
-- Each line format: `- Recommendation text referencing a specific finding`
+- Each line format: `• Recommendation text referencing a specific finding`
 - Example:
-  - `- Prioritize the **87 stalled projects** in the Southern Region by assigning dedicated oversight.`
-  - `- Reallocate budget from the **3 cancelled projects** (MAD 12M) to Phase 2 planning.`
+  - `• Prioritize the **87 stalled projects** in the Southern Region by assigning dedicated oversight.`
+  - `• Reallocate budget from the **3 cancelled projects** (MAD 12M) to Phase 2 planning.`
 
 ---
 
