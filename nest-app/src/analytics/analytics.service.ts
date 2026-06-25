@@ -198,6 +198,7 @@ export class AnalyticsService {
       displayIntent,
       userId: req.userId,
       durationMs: Date.now() - t0,
+      userModel,
     });
   }
 
@@ -503,6 +504,7 @@ export class AnalyticsService {
     userId: string;
     sessionId: string;
     effectiveApiKey: string;
+    userModel?: string;
   }): Promise<void> {
     const summary = this.buildResponseSummary(params.type, params.prompt, params.result);
     if (summary.length <= MIN_SUMMARY_LENGTH_FOR_MEMORY) return;
@@ -513,6 +515,7 @@ export class AnalyticsService {
         params.prompt,
         summary,
         params.effectiveApiKey,
+        params.userModel,
       );
     } catch (err) {
       this.logger.warn(`memory.extractAndSave failed: ${err}`);
