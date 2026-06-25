@@ -16,6 +16,7 @@ import { HistoryModule } from './history/history.module';
 import { CacheModule } from './cache/cache.module';
 import { SavedResultsModule } from './saved-results/saved-results.module';
 import { UserKeysModule } from './user-keys/user-keys.module';
+import { UserSettingsModule } from './user-settings/user-settings.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
 const angularDist = path.join(__dirname, '..', '..', 'client', 'dist', 'mind-ui', 'browser');
@@ -30,6 +31,7 @@ const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
     CacheModule,
     SavedResultsModule,
     UserKeysModule,
+    UserSettingsModule,
     AnalyticsModule,
     ...(angularBuilt
       ? [ServeStaticModule.forRoot({
