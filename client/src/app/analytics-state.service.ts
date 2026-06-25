@@ -67,6 +67,7 @@ const INITIAL: AppState = {
   keyErrorText:  '',
   showKeyModal:  false,
   provider:      '',
+  selectedModel: '',
 };
 
 @Injectable({ providedIn: 'root' })

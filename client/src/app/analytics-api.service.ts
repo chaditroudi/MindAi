@@ -13,7 +13,7 @@ import type {
   AnalyticsRequest, AnalyticsResponse, ProviderResponse,
   MetaResponse, SessionSummary, SessionDetail,
   SavedResultSummary, SavedResultDetail, MessageResult, ModeKey, MemoryItem,
-  MemoryConfigResponse,
+  MemoryConfigResponse, UserSettingsResponse,
 } from './app.types';
 
 @Injectable({ providedIn: 'root' })
@@ -28,15 +28,24 @@ export class AnalyticsApiService {
     return this.req(this.http.get<MetaResponse>('/api/meta'));
   }
 
-  verifyKey(apiKey: string, userId: string): Promise<{ ok: boolean; provider?: string }> {
+  getSettings(userId: string): Promise<UserSettingsResponse> {
     const headers = new HttpHeaders({ 'X-User-Id': userId });
-    return this.req(this.http.post<{ ok: boolean; provider?: string }>('/api/key', { apiKey }, { headers }));
+    return this.req(this.http.get<UserSettingsResponse>('/api/settings', { headers }));
   }
 
-  runAnalytics(payload: AnalyticsRequest, userId: string, apiKey?: string): Promise<AnalyticsResponse> {
-    const hdrs: Record<string, string> = { 'X-User-Id': userId };
-    if (apiKey) hdrs['X-User-Api-Key'] = apiKey;
-    return this.req(this.http.post<AnalyticsResponse>('/api/analytics', payload, { headers: new HttpHeaders(hdrs) }));
+  saveSettings(userId: string, dto: { apiKey: string; provider: string; model: string }): Promise<{ ok: boolean }> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.post<{ ok: boolean }>('/api/settings', dto, { headers }));
+  }
+
+  deleteSettings(userId: string): Promise<{ ok: boolean }> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.delete<{ ok: boolean }>('/api/settings', { headers }));
+  }
+
+  runAnalytics(payload: AnalyticsRequest, userId: string): Promise<AnalyticsResponse> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.post<AnalyticsResponse>('/api/analytics', payload, { headers }));
   }
 
   saveResult(userId: string, payload: { title: string; prompt: string; intent: ModeKey; result: MessageResult }): Promise<{ ok: boolean; id: string }> {
