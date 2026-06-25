@@ -229,6 +229,25 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.st.patch({ hasKey: false, showKeyModal: true, provider: '', selectedModel: '' });
   }
 
+  readonly PROVIDER_MODELS: Record<string, { value: string; label: string }[]> = {
+    groq: [
+      { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B (recommended)' },
+      { value: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B (fast)' },
+      { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
+      { value: 'gemma2-9b-it',            label: 'Gemma 2 9B' },
+    ],
+    openai: [
+      { value: 'gpt-4o',              label: 'GPT-4o (recommended)' },
+      { value: 'gpt-4o-mini',         label: 'GPT-4o Mini (fast)' },
+      { value: 'chatgpt-4o-latest',   label: 'ChatGPT-4o Latest' },
+      { value: 'gpt-4-turbo',         label: 'GPT-4 Turbo' },
+    ],
+  };
+
+  modelsForProvider(provider: string): { value: string; label: string }[] {
+    return this.PROVIDER_MODELS[provider] ?? [];
+  }
+
   // mode + session controls
 
   setIntent(intent: ModeKey): void {
