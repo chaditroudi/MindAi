@@ -68,6 +68,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private readonly api    = inject(AnalyticsApiService);
   private readonly charts = inject(ChartRenderService);
 
+  testStatus: 'idle' | 'testing' | 'ok' | 'error' = 'idle';
+  testError = '';
+
   private readonly destroy$      = new Subject<void>();
   private readonly initedWidgets = new Set<string>();
   private timerStart             = 0;
@@ -227,6 +230,22 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   clearApiKey(): void {
     void this.api.deleteSettings(this.st.snap.userId).catch(() => undefined);
     this.st.patch({ hasKey: false, showKeyModal: true, provider: '', selectedModel: '' });
+    this.testStatus = 'idle';
+    this.testError  = '';
+  }
+
+  async testConnection(key: string, provider: string, model: string): Promise<void> {
+    const trimmed = key.trim();
+    if (!trimmed || !provider || !model) return;
+    this.testStatus = 'testing';
+    this.testError  = '';
+    try {
+      await this.api.validateSettings({ apiKey: trimmed, provider, model });
+      this.testStatus = 'ok';
+    } catch (err) {
+      this.testStatus = 'error';
+      this.testError  = err instanceof Error ? err.message : 'Validation failed. Please try again.';
+    }
   }
 
   readonly PROVIDER_MODELS: Record<string, { value: string; label: string }[]> = {
