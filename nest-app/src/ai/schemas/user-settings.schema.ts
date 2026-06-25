@@ -6,16 +6,16 @@ export type UserSettingsDocument = HydratedDocument<UserSettings>;
 @Schema({ collection: 'user_settings', timestamps: true, versionKey: false })
 export class UserSettings {
   @Prop({ required: true, unique: true, index: true })
-  userId: string;
+  userId!: string;
 
   @Prop({ required: true })
-  apiKey: string;
+  apiKey!: string;
 
   @Prop({ required: true })
-  provider: string;
+  provider!: string;
 
   @Prop({ required: true })
-  model: string;
+  model!: string;
 }
 
 export const UserSettingsSchema = SchemaFactory.createForClass(UserSettings);
