@@ -57,7 +57,7 @@ export async function runChart(
   const t0 = Date.now();
   try {
     const { object } = await generateObject({
-      model:       resolveModel('chart', apiKey),
+      model:       resolveModel('chart', apiKey, userModel),
       abortSignal: freshSignal('chart'),
       temperature: 0,
       maxTokens:   MAX_TOKENS,
