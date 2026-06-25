@@ -66,10 +66,11 @@ export class PipelineService {
   // ── Core aggregation ────────────────────────────────────────────────────────
 
   async aggregate(
-    prompt:  string,
-    intent:  IntentKind,
-    context: CoreMessage[] = [],
-    apiKey?: string,
+    prompt:     string,
+    intent:     IntentKind,
+    context:    CoreMessage[] = [],
+    apiKey?:    string,
+    userModel?: string,
   ): Promise<AggregationResult> {
     const sources = getSources();
     const dateNow = Date.now();
@@ -82,7 +83,7 @@ export class PipelineService {
       }
     }
 
-    const { plan, rows, collection } = await this.runWithRetry(prompt, intent, sources, context, apiKey);
+    const { plan, rows, collection } = await this.runWithRetry(prompt, intent, sources, context, apiKey, userModel);
     const durationMs = Date.now() - dateNow;
     this.logger.log(`result | collection: ${collection ?? '—'} | rows: ${rows.length} | ${durationMs}ms`);
 
@@ -91,16 +92,17 @@ export class PipelineService {
   }
 
   private async runWithRetry(
-    prompt:   string,
-    intent:   IntentKind,
-    sources:  DataSource[],
-    context:  CoreMessage[],
-    apiKey?:  string,
+    prompt:     string,
+    intent:     IntentKind,
+    sources:    DataSource[],
+    context:    CoreMessage[],
+    apiKey?:    string,
+    userModel?: string,
   ): Promise<{ plan: TaskPlan; rows: Row[]; collection?: string }> {
     let hint: string | undefined;
 
     for (let attempt = 0; attempt < 2; attempt++) {
-      const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, hint });
+      const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, userModel, hint });
       this.logger.log(
         `plan [${attempt + 1}] | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`,
       );

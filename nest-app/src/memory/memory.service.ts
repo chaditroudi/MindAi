@@ -56,19 +56,19 @@ export class MemoryService {
   //
   // SKIPPED entirely when extractionEnabled = false — zero tokens consumed.
   async extractAndSave(
-    userId:    string,
-    sessionId: string,
-    prompt:    string,
-    summary:   string,
-    apiKey?:   string,
+    userId:     string,
+    sessionId:  string,
+    prompt:     string,
+    summary:    string,
+    apiKey?:    string,
+    userModel?: string,
   ): Promise<void> {
-    // Guard: if the toggle is off, skip the LLM call completely
     if (!this.extractionEnabled) {
       this.logger.debug('memory extraction skipped (disabled)');
       return;
     }
 
-    const extracted = await extractMemories(prompt, summary, apiKey);
+    const extracted = await extractMemories(prompt, summary, apiKey, userModel);
     if (!extracted.length) return;
 
     await this.repo.upsert(
