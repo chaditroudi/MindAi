@@ -40,10 +40,8 @@ export class AnalyticsController {
   async runAnalytics(
     @Body() dto: AnalyticsDto,
     @Headers('x-user-id') rawUserId: string,
-    @Headers('x-user-api-key') rawApiKey?: string,
   ) {
-    const userId  = requireUserId(rawUserId);
-    const userKey = rawApiKey?.trim() || null;
+    const userId = requireUserId(rawUserId);
 
     try {
       return await this.analytics.run({
@@ -51,7 +49,7 @@ export class AnalyticsController {
         intent:    dto.intent,
         sessionId: dto.sessionId,
         userId,
-      }, userKey);
+      });
     } catch (err) {
       if (err instanceof HttpException) throw err;
       const msg = err instanceof Error ? err.message : String(err);
