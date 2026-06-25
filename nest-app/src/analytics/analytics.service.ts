@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { getSources } from '../sources/sources-cache';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
+import { UserSettingsService } from '../user-settings/user-settings.service';
 import { detectIntent } from './intent-detector';
 import {
   sessionExists,
@@ -127,9 +128,10 @@ export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
 
   constructor(
-    private readonly pipeline: PipelineService,
-    private readonly cfg: ConfigService,
-    private readonly memory: MemoryService,
+    private readonly pipeline:      PipelineService,
+    private readonly cfg:           ConfigService,
+    private readonly memory:        MemoryService,
+    private readonly userSettings:  UserSettingsService,
   ) {}
 
   // --------------------------------------------------------------------------
@@ -141,14 +143,15 @@ export class AnalyticsService {
     prompt: string,
     memoryContext: CoreMessage[],
     apiKey: string,
+    userModel?: string,
   ): Promise<unknown> {
     switch (intent) {
       case 'dashboard':
-        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey);
+        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, userModel);
       case 'report':
-        return this.pipeline.executeReport(prompt, memoryContext, apiKey);
+        return this.pipeline.executeReport(prompt, memoryContext, apiKey, userModel);
       default:
-        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey);
+        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, userModel);
     }
   }
 
