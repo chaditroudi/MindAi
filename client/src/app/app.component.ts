@@ -322,13 +322,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       ],
     });
 
-    const apiKey = localStorage.getItem('mind_api_key') ?? undefined;
     try {
       const data = await this.api.runAnalytics({
         prompt:    prompt.trim(),
         intent:    INTENT_MAP[intent],
         sessionId: sessionId,
-      }, userId, apiKey);
+      }, userId);
 
       const durationMs = Date.now() - this.timerStart;
 
