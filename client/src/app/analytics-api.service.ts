@@ -33,9 +33,13 @@ export class AnalyticsApiService {
     return this.req(this.http.get<UserSettingsResponse>('/api/settings', { headers }));
   }
 
-  saveSettings(userId: string, dto: { apiKey: string; provider: string; model: string }): Promise<{ ok: boolean }> {
+  validateSettings(dto: { apiKey: string; provider: string; model: string }): Promise<{ ok: boolean; provider: string; model: string }> {
+    return this.req(this.http.post<{ ok: boolean; provider: string; model: string }>('/api/settings/validate', dto));
+  }
+
+  saveSettings(userId: string, dto: { apiKey: string; provider: string; model: string }): Promise<{ ok: boolean; provider: string; model: string }> {
     const headers = new HttpHeaders({ 'X-User-Id': userId });
-    return this.req(this.http.post<{ ok: boolean }>('/api/settings', dto, { headers }));
+    return this.req(this.http.post<{ ok: boolean; provider: string; model: string }>('/api/settings', dto, { headers }));
   }
 
   deleteSettings(userId: string): Promise<{ ok: boolean }> {

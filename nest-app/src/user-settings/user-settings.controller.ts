@@ -23,6 +23,11 @@ function requireUserId(raw: string | undefined): string {
 export class UserSettingsController {
   constructor(private readonly service: UserSettingsService) {}
 
+  @Post('validate')
+  async validate(@Body() dto: SaveSettingsDto) {
+    return this.service.validate(dto);
+  }
+
   @Post()
   async save(
     @Body() dto: SaveSettingsDto,
@@ -30,7 +35,7 @@ export class UserSettingsController {
   ) {
     const userId = requireUserId(rawUserId);
     await this.service.save(userId, dto);
-    return { ok: true };
+    return { ok: true, provider: dto.provider, model: dto.model };
   }
 
   @Get()
