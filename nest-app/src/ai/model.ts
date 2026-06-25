@@ -1,28 +1,16 @@
-import { createOpenAI } from '@ai-sdk/openai';
-import type { LanguageModelV1 } from 'ai';
+import { createOpenAI }              from '@ai-sdk/openai';
+import { createAnthropic }           from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI }  from '@ai-sdk/google';
+import type { LanguageModelV1 }      from 'ai';
 
 export type AgentRole  = 'supervisor' | 'writer' | 'chart' | 'memory';
-export type AIProvider = 'groq' | 'openai';
+export type AIProvider = 'groq' | 'openai' | 'anthropic' | 'google';
 
 const ROLE_ENV_KEYS: Record<AgentRole, string> = {
-  supervisor: 'GROQ_SUPERVISOR_MODEL',
-  chart:      'GROQ_CHART_MODEL',
-  writer:     'GROQ_WRITER_MODEL',
-  memory:     'GROQ_MEMORY_MODEL',
-};
-
-const ROLE_DEFAULTS: Record<AgentRole, string> = {
-  supervisor: 'llama-3.3-70b-versatile',  // complex reasoning — needs 70B
-  chart:      'llama-3.3-70b-versatile',  // field mapping logic — needs 70B
-  writer:     'llama-3.1-8b-instant',     // text formatting only — 8B is enough
-  memory:     'llama-3.1-8b-instant',     // extraction only — 8B is enough
-};
-
-const OPENAI_DEFAULTS: Record<AgentRole, string> = {
-  supervisor: 'gpt-4o-mini',
-  chart:      'gpt-4o-mini',
-  writer:     'gpt-4o-mini',
-  memory:     'gpt-4o-mini',
+  supervisor: 'SUPERVISOR_MODEL',
+  chart:      'CHART_MODEL',
+  writer:     'WRITER_MODEL',
+  memory:     'MEMORY_MODEL',
 };
 
 const TIMEOUT_ENV_KEYS: Record<AgentRole, string> = {
@@ -32,24 +20,59 @@ const TIMEOUT_ENV_KEYS: Record<AgentRole, string> = {
   memory:     'WRITER_TIMEOUT_MS',
 };
 
+const PROVIDER_DEFAULTS: Record<AIProvider, Record<AgentRole, string>> = {
+  groq: {
+    supervisor: 'llama-3.3-70b-versatile',
+    chart:      'llama-3.3-70b-versatile',
+    writer:     'llama-3.1-8b-instant',
+    memory:     'llama-3.1-8b-instant',
+  },
+  openai: {
+    supervisor: 'gpt-4o-mini',
+    chart:      'gpt-4o-mini',
+    writer:     'gpt-4o-mini',
+    memory:     'gpt-4o-mini',
+  },
+  anthropic: {
+    supervisor: 'claude-sonnet-4-6',
+    chart:      'claude-sonnet-4-6',
+    writer:     'claude-haiku-4-5-20251001',
+    memory:     'claude-haiku-4-5-20251001',
+  },
+  google: {
+    supervisor: 'gemini-2.0-flash',
+    chart:      'gemini-2.0-flash',
+    writer:     'gemini-2.0-flash',
+    memory:     'gemini-2.0-flash',
+  },
+};
+
 export function detectProvider(apiKey: string): AIProvider {
-  return apiKey.startsWith('sk-') ? 'openai' : 'groq';
+  if (apiKey.startsWith('sk-ant-')) return 'anthropic';
+  if (apiKey.startsWith('AIza'))   return 'google';
+  if (apiKey.startsWith('sk-'))    return 'openai';
+  return 'groq';
 }
 
 export function resolveModel(role: AgentRole, apiKey?: string, userModel?: string): LanguageModelV1 {
   const key      = apiKey ?? process.env['GROQ_API_KEY'] ?? process.env['OPENAI_API_KEY'] ?? '';
   const provider = detectProvider(key);
-  const model    = userModel ?? process.env[ROLE_ENV_KEYS[role]]?.trim();
+  const model    = userModel ?? process.env[ROLE_ENV_KEYS[role]]?.trim() ?? PROVIDER_DEFAULTS[provider][role];
 
-  if (provider === 'openai') {
-    return createOpenAI({ apiKey: key })(model ?? OPENAI_DEFAULTS[role]);
+  switch (provider) {
+    case 'anthropic':
+      return createAnthropic({ apiKey: key })(model);
+    case 'google':
+      return createGoogleGenerativeAI({ apiKey: key })(model);
+    case 'openai':
+      return createOpenAI({ apiKey: key })(model);
+    default:
+      return createOpenAI({
+        baseURL:       'https://api.groq.com/openai/v1',
+        apiKey:        key,
+        compatibility: 'compatible',
+      })(model);
   }
-
-  return createOpenAI({
-    baseURL:       'https://api.groq.com/openai/v1',
-    apiKey:        key,
-    compatibility: 'compatible',
-  })(model ?? ROLE_DEFAULTS[role]);
 }
 
 export function freshSignal(role: AgentRole): AbortSignal {

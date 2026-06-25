@@ -15,6 +15,8 @@
     "lint": "eslint \"src/**/*.ts\" --fix"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/google": "^1.0.0",
     "@ai-sdk/openai": "^1.0.0",
     "@mastra/core": "^1.41.0",
     "@mastra/libsql": "^1.12.1",
