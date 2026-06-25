@@ -92,14 +92,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       localStorage.setItem('mind_user_id', userId);
     }
 
-    const storedKey = localStorage.getItem('mind_api_key');
-    if (storedKey) {
-      const provider = storedKey.startsWith('sk-') ? 'openai' : 'groq';
-      this.st.patch({ userId, hasKey: true, showKeyModal: false, provider });
-    } else {
-      this.st.patch({ userId, hasKey: false, showKeyModal: true });
-    }
-
+    this.st.patch({ userId });
+    void this.loadSettings();
     void this.loadMeta();
     void this.loadSessions();
     void this.loadSavedResults();
@@ -183,37 +177,42 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   // api key management
 
-  async saveApiKey(key: string): Promise<void> {
-    const trimmed = key.trim();
-    if (!trimmed) return;
-
-    const isGroq   = trimmed.startsWith('gsk_');
-    const isOpenAI = trimmed.startsWith('sk-');
-    if (!isGroq && !isOpenAI) {
-      this.st.patch({
-        keyRejected: true,
-        keyErrorText: 'Enter a Groq key (starts with "gsk_") or an OpenAI key (starts with "sk-").',
-      });
-      return;
+  private async loadSettings(): Promise<void> {
+    const { userId } = this.st.snap;
+    try {
+      const res = await this.api.getSettings(userId);
+      if (res.configured) {
+        this.st.patch({
+          hasKey: true, showKeyModal: false,
+          provider: res.provider ?? '',
+          selectedModel: res.model ?? '',
+        });
+      } else {
+        this.st.patch({ hasKey: false, showKeyModal: true });
+      }
+    } catch {
+      this.st.patch({ hasKey: false, showKeyModal: true });
     }
+  }
+
+  async saveApiKey(key: string, provider: string, model: string): Promise<void> {
+    const trimmed = key.trim();
+    if (!trimmed || !provider || !model) return;
 
     try {
-      const res = await this.api.verifyKey(trimmed, this.st.snap.userId);
-      localStorage.setItem('mind_api_key', trimmed);
+      await this.api.saveSettings(this.st.snap.userId, { apiKey: trimmed, provider, model });
       this.st.patch({
         hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
-        provider: res.provider ?? (trimmed.startsWith('sk-') ? 'openai' : 'groq'),
+        provider, selectedModel: model,
       });
     } catch (err) {
-      const message = err instanceof Error
-        ? err.message
-        : 'Failed to verify the API key. Please try again.';
+      const message = err instanceof Error ? err.message : 'Failed to save settings. Please try again.';
       this.st.patch({ keyRejected: true, keyErrorText: message });
     }
   }
 
   handleInvalidKey(): void {
-    localStorage.removeItem('mind_api_key');
+    void this.api.deleteSettings(this.st.snap.userId).catch(() => undefined);
     this.st.patch({
       hasKey: false,
       keyRejected: true,
@@ -221,12 +220,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       showKeyModal: true,
       phase: 'idle',
       provider: '',
+      selectedModel: '',
     });
   }
 
   clearApiKey(): void {
-    localStorage.removeItem('mind_api_key');
-    this.st.patch({ hasKey: false, showKeyModal: true, provider: '' });
+    void this.api.deleteSettings(this.st.snap.userId).catch(() => undefined);
+    this.st.patch({ hasKey: false, showKeyModal: true, provider: '', selectedModel: '' });
   }
 
   // mode + session controls
