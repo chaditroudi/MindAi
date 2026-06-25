@@ -42,6 +42,7 @@ export async function runChart(
   chartHint?: ChartHint,
   source?:    DataSource,
   apiKey?:    string,
+  userModel?: string,
 ): Promise<DashboardSpec> {
   if (!rows.length) {
     return { layout: 'operational', title: 'No data', summary: 'No rows returned for this request.', widgets: [] };

@@ -158,14 +158,16 @@ export async function runSupervisorPlan({
   sources,
   context = [],
   apiKey,
+  userModel,
   hint,
 }: {
-  prompt:   string;
-  intent:   IntentKind;
-  sources:  DataSource[];
-  context?: CoreMessage[];
-  apiKey?:  string;
-  hint?:    string;
+  prompt:     string;
+  intent:     IntentKind;
+  sources:    DataSource[];
+  context?:   CoreMessage[];
+  apiKey?:    string;
+  userModel?: string;
+  hint?:      string;
 }): Promise<TaskPlan> {
   const start = Date.now();
   log('planner', `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length}${hint ? ' | retry' : ''} | prompt: "${prompt}"`);
@@ -175,7 +177,7 @@ export async function runSupervisorPlan({
     : JSON.stringify({ prompt, intent });
 
   const { object } = await generateObject({
-    model:       resolveModel('supervisor', apiKey),
+    model:       resolveModel('supervisor', apiKey, userModel),
     abortSignal: freshSignal('supervisor'),
     schema:      buildPlanSchema(intent),
     mode:        'json',
