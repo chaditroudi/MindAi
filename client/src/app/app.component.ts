@@ -362,12 +362,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.timerStart = Date.now();
     this.st.patch({ phase: 'loading' });
 
-    const apiKey = localStorage.getItem('mind_api_key') ?? undefined;
     try {
       if (choice === 'both') {
         const [dashData, reportData] = await Promise.all([
-          this.api.runAnalytics({ prompt: pendingPrompt, intent: 'dashboard', sessionId }, userId, apiKey),
-          this.api.runAnalytics({ prompt: pendingPrompt, intent: 'report',    sessionId }, userId, apiKey),
+          this.api.runAnalytics({ prompt: pendingPrompt, intent: 'dashboard', sessionId }, userId),
+          this.api.runAnalytics({ prompt: pendingPrompt, intent: 'report',    sessionId }, userId),
         ]);
         const durationMs = Date.now() - this.timerStart;
         const combined: ConversationMessage = {
@@ -387,7 +386,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         });
       } else {
         const apiIntent = choice === 'chart' ? 'dashboard' : 'report';
-        const data      = await this.api.runAnalytics({ prompt: pendingPrompt, intent: apiIntent, sessionId }, userId, apiKey);
+        const data      = await this.api.runAnalytics({ prompt: pendingPrompt, intent: apiIntent, sessionId }, userId);
         const durationMs = Date.now() - this.timerStart;
         this.st.patch({
           phase: 'done', durationMs,
