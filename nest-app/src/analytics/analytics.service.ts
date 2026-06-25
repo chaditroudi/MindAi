@@ -159,12 +159,17 @@ export class AnalyticsService {
   // Public API
   // --------------------------------------------------------------------------
 
-  async run(req: AnalyticsRequest, userKey: string | null = null): Promise<AnalyticsResponse> {
+  async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
     const prompt = promptSchema.parse(req.prompt);
     const intent = req.intent ?? detectIntent(prompt);
 
     this.ensureDataSources();
+
+    const settings   = await this.userSettings.findByUser(req.userId);
+    const userKey    = settings?.apiKey?.trim() || null;
+    const userModel  = settings?.model?.trim()  || undefined;
     const { primaryKey, globalKey } = this.resolveApiKeys(userKey);
+
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
 
     const memoryContext = await this.buildMemoryContext(req.userId, sessionId, prompt);
@@ -181,6 +186,7 @@ export class AnalyticsService {
       userKey,
       globalKey,
       req.userId,
+      userModel,
     );
     this.logger.log(`done in ${Date.now() - t0}ms`);
 
@@ -274,9 +280,10 @@ export class AnalyticsService {
     storedKey: string | null,
     globalKey: string | null,
     userId: string,
+    userModel?: string,
   ): Promise<{ result: unknown; effectiveApiKey: string }> {
     try {
-      const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey);
+      const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey, userModel);
       return { result, effectiveApiKey: primaryKey };
     } catch (err) {
       return this.handleExecutionError(err, {
@@ -449,8 +456,9 @@ export class AnalyticsService {
     displayIntent: SessionIntent;
     userId: string;
     durationMs: number;
+    userModel?: string;
   }): AnalyticsResponse {
-    const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs } = params;
+    const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs, userModel } = params;
     const type = this.resolveType(result);    const messageResult = this.toMessageResult(type, result, durationMs);
     const messageId = randomUUID();
 
@@ -462,7 +470,7 @@ export class AnalyticsService {
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, effectiveApiKey });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, effectiveApiKey, userModel });
 
     if (type === 'dashboard') {
       return { intent: 'dashboard', chart: result, sessionId, messageId };
