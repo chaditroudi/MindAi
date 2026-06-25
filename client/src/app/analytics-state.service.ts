@@ -36,6 +36,7 @@ export interface AppState {
   keyErrorText:  string;
   showKeyModal:  boolean;
   provider:      string;
+  selectedModel: string;
 }
 
 const INITIAL: AppState = {

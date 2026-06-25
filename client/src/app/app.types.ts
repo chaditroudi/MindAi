@@ -120,6 +120,15 @@ export interface ProviderResponse {
   hasGlobalKey:  boolean;
 }
 
+// ─── User Settings ────────────────────────────────────────────────────────────
+
+export interface UserSettingsResponse {
+  configured:  boolean;
+  provider?:   string;
+  model?:      string;
+  keyPreview?: string;
+}
+
 // ─── Memory config ────────────────────────────────────────────────────────────
 
 export interface MemoryConfigResponse {
