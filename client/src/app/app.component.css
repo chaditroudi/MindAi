@@ -854,6 +854,29 @@
   transition: background 0.15s;
 }
 .key-modal-danger:hover { background: #fef2f2; }
+.key-modal-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.key-modal-test-result {
+  font-size: 0.83rem;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+}
+.key-modal-test-result.testing {
+  color: #6b7280;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+.key-modal-test-result.ok {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+.key-modal-test-result.error {
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
 
 .key-modal-error {
   font-size: 0.83rem;
