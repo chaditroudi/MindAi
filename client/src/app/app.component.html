@@ -27,7 +27,7 @@
     </nav>
 
     <div class="topbar-right">
-      <span class="status-badge"><span class="status-dot"></span>{{ s.provider ? (s.provider | titlecase) : 'AI' }}</span>
+      <span class="status-badge"><span class="status-dot"></span>{{ s.provider ? (s.provider | titlecase) : 'AI' }}{{ s.selectedModel ? ' · ' + s.selectedModel : '' }}</span>
       @if (s.hasKey) {
         <button class="key-btn" title="Change API key" (click)="st.patch({ showKeyModal: true })">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -652,26 +652,35 @@
           <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
         </svg>
       </div>
-      <h2 class="key-modal-title">Enter your AI API key</h2>
+      <h2 class="key-modal-title">Connect your AI provider</h2>
       @if (s.keyRejected) {
         <p class="key-modal-error">{{ s.keyErrorText || 'That key was rejected — it may be invalid or expired. Please enter a new one.' }}</p>
       }
-      <p class="key-modal-desc">
-        Paste a <strong>Groq</strong> key (<code>gsk_…</code>) from
-        <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a>
-        or an <strong>OpenAI</strong> key (<code>sk-…</code>) from
-        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a>.
-        The key is verified and saved securely — it is never exposed to the browser.
-      </p>
+
+      <label class="key-modal-label">Provider</label>
+      <select #providerSelect class="key-modal-input" [value]="s.provider || 'groq'">
+        <option value="groq">Groq</option>
+        <option value="openai">OpenAI</option>
+      </select>
+
+      <label class="key-modal-label">Model</label>
+      <select #modelSelect class="key-modal-input" [value]="s.selectedModel || modelsForProvider(providerSelect.value)[0]?.value">
+        @for (m of modelsForProvider(providerSelect.value); track m.value) {
+          <option [value]="m.value">{{ m.label }}</option>
+        }
+      </select>
+
+      <label class="key-modal-label">API Key</label>
       <input #keyInput type="password" class="key-modal-input"
-        placeholder="gsk_… or sk-…"
-        (keydown.enter)="saveApiKey(keyInput.value)" />
+        [placeholder]="providerSelect.value === 'openai' ? 'sk-…' : 'gsk_…'"
+        (keydown.enter)="saveApiKey(keyInput.value, providerSelect.value, modelSelect.value)" />
+
       <div class="key-modal-actions">
         @if (s.hasKey) {
           <button class="key-modal-secondary" (click)="st.patch({ showKeyModal: false })">Cancel</button>
           <button class="key-modal-danger" (click)="clearApiKey()">Remove key</button>
         }
-        <button class="key-modal-primary" (click)="saveApiKey(keyInput.value)">Save & continue</button>
+        <button class="key-modal-primary" (click)="saveApiKey(keyInput.value, providerSelect.value, modelSelect.value)">Save & continue</button>
       </div>
     </div>
   </div>
