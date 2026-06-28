@@ -715,7 +715,35 @@
 
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .sidebar { position: fixed; top: 3rem; left: 0; bottom: 0; z-index: 20; box-shadow: 2px 0 12px rgba(0,0,0,0.08); }
+  .sidebar {
+    position: fixed;
+    top: 3rem;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 20;
+    box-shadow: 4px 0 16px rgba(0,0,0,0.12);
+    transition: transform 220ms ease, opacity 220ms ease;
+    transform: translateX(0);
+  }
+  .sidebar--closed {
+    width: 280px;
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* Backdrop overlay when sidebar is open on mobile */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 3rem 0 0 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 19;
+    backdrop-filter: blur(1px);
+  }
+}
+@media (min-width: 901px) {
+  .sidebar-backdrop { display: none !important; }
 }
 @media (max-width: 720px) {
   .feed-scroll { padding: 0.9rem; }
@@ -890,17 +918,26 @@
 
 /* ── Sidebar tabs ───────────────────────────────────────────────────────────── */
 .sidebar-head { flex-wrap: wrap; gap: 0.4rem; }
-.sidebar-tabs { display: flex; gap: 0.25rem; flex: 1; }
-.sidebar-tab {
+.sidebar-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
   flex: 1;
-  padding: 0.28rem 0.5rem;
+  width: 100%;
+}
+.sidebar-tab {
+  padding: 0.28rem 0.25rem;
   background: none;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  font-size: 0.78rem;
+  font-size: 0.73rem;
   color: #6b7280;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
 .sidebar-tab:hover { background: #f3f4f6; color: #111827; }
@@ -908,9 +945,9 @@
 .sidebar-tab-count {
   background: #2563eb;
   color: #fff;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   border-radius: 10px;
-  padding: 0 0.35rem;
+  padding: 0 0.3rem;
   line-height: 1.4;
 }
 
