@@ -1,7 +1,6 @@
-import { generateObject }           from 'ai';
-import { log, logTrace }             from '../common/logger/app.logger';
-import { resolveModel, freshSignal } from './model';
-import type { TokenUsage } from './token';
+import { log, logTrace }                    from '../common/logger/app.logger';
+import { createSkillAgent, freshSignal }    from './model';
+import type { TokenUsage }                  from './token';
 import { buildChartPrompt }          from '../prompts';
 import type { DashboardSpec, SkillKind, ChartHint, DataSource } from '../types';
 
@@ -66,25 +65,25 @@ export async function runChart(
   const profile = buildRowProfile(keys, rows as DataRow[]);
 
   let plan: LlmDashboard;
-  let llmUsage: TokenUsage = { promptTokens: 0, completionTokens: 0 };
+  let llmUsage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
   const t0 = Date.now();
   try {
-    const { object, usage } = await generateObject({
-      model:       resolveModel('chart', apiKey, userModel, userProvider),
-      abortSignal: freshSignal('chart'),
-      temperature: 0,
-      maxTokens:   maxTokens ?? MAX_TOKENS,
-      maxRetries:  1,
-      schema:      dashboardSchema,
-      messages:    [{ role: 'user', content: buildChartPrompt(rows, prompt, strategy, chartHint, source) }],
-    });
-    plan = object;
-    llmUsage = { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens };
-    log('chart:llm', `done in ${Date.now() - t0}ms | proposed: ${plan.widgets.length} widget(s) | in:${usage.promptTokens} out:${usage.completionTokens}`);
+    const agent  = createSkillAgent('chart', '', apiKey, userModel, userProvider);
+    const result = await agent.generate(
+      [{ role: 'user', content: buildChartPrompt(rows, prompt, strategy, chartHint, source) }],
+      {
+        structuredOutput: { schema: dashboardSchema },
+        modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 1 },
+        abortSignal:      freshSignal('chart'),
+      },
+    );
+    plan     = result.object as LlmDashboard;
+    llmUsage = { inputTokens: result.usage.inputTokens ?? 0, outputTokens: result.usage.outputTokens ?? 0 };
+    log('chart:llm', `done in ${Date.now() - t0}ms | proposed: ${plan.widgets.length} widget(s) | in:${llmUsage.inputTokens} out:${llmUsage.outputTokens}`);
     logTrace('chart:llm', 'widget plan', plan);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    log('chart', `generateObject failed: ${msg}`);
+    log('chart', `agent.generate failed: ${msg}`);
     throw err;
   }
 

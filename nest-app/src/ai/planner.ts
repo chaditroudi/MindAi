@@ -1,8 +1,7 @@
-import { generateObject } from 'ai';
 import type { CoreMessage } from 'ai';
 import type { TokenUsage } from './token';
 import { z } from 'zod';
-import { resolveModel, freshSignal } from './model';
+import { createSkillAgent, freshSignal } from './model';
 import { interpolateTemplate, readMarkdownSection, skillFile } from './skill-prompt';
 import { normalizeToken } from '../sources/sources-cache';
 import { log, logTrace } from '../common/logger/app.logger';
@@ -181,28 +180,28 @@ export async function runSupervisorPlan({
     ? `${JSON.stringify({ prompt, intent })}\n\nPREVIOUS ATTEMPT FAILED — ${hint}`
     : JSON.stringify({ prompt, intent });
 
-  const { object, usage } = await generateObject({
-    model:       resolveModel('supervisor', apiKey, userModel, userProvider),
-    abortSignal: freshSignal('supervisor'),
-    schema:      buildPlanSchema(intent),
-    mode:        'json',
-    temperature: 0,
-    maxRetries:  1,
-    maxTokens:   maxTokens ?? MAX_TOKENS,
-    system:      buildPlannerPrompt(intent, sources),
-    messages: [
-      ...context,
-      { role: 'user', content: userContent },
-    ],
-  });
+  const agent  = createSkillAgent('supervisor', buildPlannerPrompt(intent, sources), apiKey, userModel, userProvider);
+  const result = await agent.generate(
+    [...context, { role: 'user', content: userContent }],
+    {
+      structuredOutput: { schema: buildPlanSchema(intent) },
+      modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 1 },
+      abortSignal:      freshSignal('supervisor'),
+    },
+  );
 
-  const { strategy, chartHint } = object as { strategy?: string; chartHint?: string };
-  log('planner', `done in ${Date.now() - start}ms | strategy: ${strategy ?? '-'} | chartHint: ${chartHint ?? '-'} | stages: ${object.pipeline.length} | in:${usage.promptTokens} out:${usage.completionTokens}`);
+  const object = result.object as TaskPlan & { strategy?: string; chartHint?: string };
+  const usage: TokenUsage = {
+    inputTokens:  result.usage.inputTokens  ?? 0,
+    outputTokens: result.usage.outputTokens ?? 0,
+  };
+
+  log('planner', `done in ${Date.now() - start}ms | strategy: ${object.strategy ?? '-'} | chartHint: ${object.chartHint ?? '-'} | stages: ${object.pipeline?.length ?? 0} | in:${usage.inputTokens} out:${usage.outputTokens}`);
   logTrace('planner', `generated plan`, object);
 
   return {
     plan:  finalizeTaskPlan({ plan: object as TaskPlan, intent, availableSources: sources }),
-    usage: { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens },
+    usage,
   };
 }
 
