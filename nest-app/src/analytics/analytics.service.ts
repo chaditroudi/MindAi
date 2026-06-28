@@ -262,18 +262,36 @@ export class AnalyticsService {
     userId: string,
     sessionId: string,
     prompt: string,
+    inputTokenLimit: number,
   ): Promise<CoreMessage[]> {
     const sessionContext = await getMemoryContext(sessionId);
-    const longTerm = await this.memory.getRelevantContext(userId, prompt);
-    if (!longTerm) return sessionContext;
-    return [
-      {
-        role: 'user',
-        content: `[Long-term memory from previous sessions]\n${longTerm}`,
-      },
-      { role: 'assistant', content: 'Noted. I will use this context.' },
-      ...sessionContext,
-    ];
+    const longTerm       = await this.memory.getRelevantContext(userId, prompt);
+
+    const longTermMessages: CoreMessage[] = longTerm
+      ? [
+          { role: 'user',      content: `[Long-term memory from previous sessions]\n${longTerm}` },
+          { role: 'assistant', content: 'Noted. I will use this context.' },
+        ]
+      : [];
+
+    const messages     = [...longTermMessages, ...sessionContext];
+    const promptTokens = estimateTokens(prompt);
+    let budget         = inputTokenLimit - promptTokens;
+
+    const trimmed: CoreMessage[] = [];
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const content = typeof messages[i].content === 'string' ? messages[i].content as string : '';
+      const cost    = estimateTokens(content);
+      if (budget - cost < 0) break;
+      budget -= cost;
+      trimmed.unshift(messages[i]);
+    }
+
+    if (trimmed.length < messages.length) {
+      this.logger.warn(`input token limit ${inputTokenLimit}: dropped ${messages.length - trimmed.length} context message(s)`);
+    }
+
+    return trimmed;
   }
 
 
