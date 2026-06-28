@@ -20,11 +20,9 @@ export class SavedResult {
   @Prop({ type: MongooseSchema.Types.Mixed, required: true })
   result: unknown;
 
-  // Populated by timestamps: true — declared here so TypeScript sees them on lean() results
   createdAt!: Date;
   updatedAt!: Date;
 }
 
 export const SavedResultSchema = SchemaFactory.createForClass(SavedResult);
-// Compound index: per-user list sorted by creation time
 SavedResultSchema.index({ userId: 1, createdAt: -1 });

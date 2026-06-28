@@ -1,9 +1,10 @@
 import {
   Controller, Get, Post, Delete, Param, Body, Headers,
-  UnauthorizedException, NotFoundException, BadRequestException, HttpCode,
+  NotFoundException, BadRequestException, HttpCode,
 } from '@nestjs/common';
 import { IsString, IsOptional, MaxLength, Allow } from 'class-validator';
 import { SavedResultsService } from './saved-results.service';
+import { requireUserId } from '../common/helpers/user-id';
 
 const INTENT_MAP: Record<string, 'dashboard' | 'report' | 'inquiry'> = {
   dashboard:        'dashboard',
@@ -17,12 +18,6 @@ class SaveDto {
   @IsOptional() @IsString() @MaxLength(1000) prompt?: string;
   @IsString() intent!: string;
   @Allow() result: unknown;
-}
-
-function requireUserId(raw: string | undefined): string {
-  const id = raw?.trim();
-  if (!id) throw new UnauthorizedException('User ID missing. Please reload the app.');
-  return id;
 }
 
 @Controller('api/saved')
