@@ -1106,3 +1106,194 @@
   opacity: 0.55;
   pointer-events: none;
 }
+
+/* ── Config panel ───────────────────────────────────────────────────────────── */
+.config-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.75rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.config-section {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.config-section:last-of-type { border-bottom: none; }
+
+.config-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.config-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0 0 0.6rem;
+}
+.config-section-head .config-section-title { margin-bottom: 0; }
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.6rem;
+}
+.config-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+.config-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font: inherit;
+  font-size: 0.82rem;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: border-color 120ms;
+}
+.config-input:focus { border-color: #6b7280; }
+
+.config-add-btn {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  font: inherit;
+  transition: background 120ms;
+}
+.config-add-btn:hover { background: #f3f4f6; }
+
+.config-agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.config-agent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.4rem;
+  background: #fff;
+  margin-bottom: 0.4rem;
+}
+.config-agent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+.config-agent-provider {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+.config-agent-model {
+  font-size: 0.78rem;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.config-agent-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.config-status-select {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.3rem;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  font: inherit;
+}
+.config-status--active  { border-color: #16a34a; color: #15803d; background: #f0fdf4; }
+.config-status--idle    { border-color: #d1d5db; color: #6b7280; }
+.config-status--disabled { border-color: #f87171; color: #b91c1c; background: #fef2f2; }
+.config-status--expired { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
+
+.config-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.config-remove-btn:hover { background: #fee2e2; color: #dc2626; }
+
+.config-empty {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  text-align: center;
+  padding: 0.75rem 0;
+}
+
+.config-error {
+  font-size: 0.78rem;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.375rem;
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.config-save-btn {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: #374151;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.config-save-btn:hover:not(:disabled) { background: #f3f4f6; }
+.config-save-btn--primary {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+  width: 100%;
+  padding: 0.5rem;
+}
+.config-save-btn--primary:hover:not(:disabled) { background: #1f2937; }
+.config-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
