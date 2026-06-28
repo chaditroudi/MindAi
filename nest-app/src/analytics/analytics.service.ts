@@ -15,7 +15,6 @@ import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
 import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-config.service';
-import { estimateTokens } from '../ai/token';
 import type { ExecuteResult } from './pipeline.service';
 
 interface AccessResult {
@@ -114,6 +113,22 @@ function extractRetryDelay(err: unknown): string | null {
   return match?.[1]?.trim() ?? null;
 }
 
+function isContextLengthError(err: unknown): boolean {
+  const msg = getErrorMessage(err).toLowerCase();
+  return (
+    msg.includes('context_length_exceeded') ||
+    msg.includes('context length') ||
+    msg.includes('maximum context') ||
+    msg.includes('max_tokens') ||
+    msg.includes('too many tokens') ||
+    msg.includes('reduce your prompt') ||
+    msg.includes('tokens per request') ||
+    msg.includes('input is too long') ||
+    msg.includes('prompt is too long') ||
+    getErrorStatus(err) === 413
+  );
+}
+
 // ── Service ────────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -184,30 +199,40 @@ export class AnalyticsService {
     let result: unknown;
     let inputTokens  = 0;
     let outputTokens = 0;
-    try {
-      const executed = await this.executeByIntent(intent, prompt, memoryContext,
-        access.apiKey, access.model, access.provider, access.outputTokenLimit);
-      result       = executed.result;
-      inputTokens  = executed.usage.inputTokens;
-      outputTokens = executed.usage.outputTokens;
-    } catch (err) {
-      if (isInvalidKeyError(err)) {
-        throw Object.assign(
-          new UnauthorizedException('Invalid API key. Please update it in Settings or Agent Config.'),
-          { code: ERROR_CODES.INVALID_API_KEY },
-        );
+    let context      = memoryContext;
+    for (;;) {
+      try {
+        const executed = await this.executeByIntent(intent, prompt, context,
+          access.apiKey, access.model, access.provider, access.outputTokenLimit);
+        result       = executed.result;
+        inputTokens  = executed.usage.inputTokens;
+        outputTokens = executed.usage.outputTokens;
+        break;
+      } catch (err) {
+        if (isContextLengthError(err) && context.length > 0) {
+          const drop = Math.max(1, Math.ceil(context.length / 2));
+          this.logger.warn(`context too long — dropping oldest ${drop} message(s) and retrying`);
+          context = context.slice(drop);
+          continue;
+        }
+        if (isInvalidKeyError(err)) {
+          throw Object.assign(
+            new UnauthorizedException('Invalid API key. Please update it in Settings or Agent Config.'),
+            { code: ERROR_CODES.INVALID_API_KEY },
+          );
+        }
+        if (isProviderRateLimitError(err)) {
+          const retryIn = extractRetryDelay(err);
+          const msg = retryIn
+            ? `API quota reached. Try again in ${retryIn}.`
+            : 'API quota reached. Please try again later.';
+          throw Object.assign(
+            new HttpException({ error: msg }, HttpStatus.TOO_MANY_REQUESTS),
+            { code: ERROR_CODES.LLM_RATE_LIMIT },
+          );
+        }
+        throw err;
       }
-      if (isProviderRateLimitError(err)) {
-        const retryIn = extractRetryDelay(err);
-        const msg = retryIn
-          ? `API quota reached. Try again in ${retryIn}.`
-          : 'API quota reached. Please try again later.';
-        throw Object.assign(
-          new HttpException({ error: msg }, HttpStatus.TOO_MANY_REQUESTS),
-          { code: ERROR_CODES.LLM_RATE_LIMIT },
-        );
-      }
-      throw err;
     }
 
     const durationMs = Date.now() - t0;
