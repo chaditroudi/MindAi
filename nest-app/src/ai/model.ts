@@ -54,9 +54,9 @@ export function detectProvider(apiKey: string): AIProvider {
   return 'groq';
 }
 
-export function resolveModel(role: AgentRole, apiKey?: string, userModel?: string): LanguageModelV1 {
+export function resolveModel(role: AgentRole, apiKey?: string, userModel?: string, userProvider?: string): LanguageModelV1 {
   const key      = apiKey ?? process.env['GROQ_API_KEY'] ?? process.env['OPENAI_API_KEY'] ?? '';
-  const provider = detectProvider(key);
+  const provider = (userProvider as AIProvider | undefined) ?? detectProvider(key);
   const model    = userModel ?? process.env[ROLE_ENV_KEYS[role]]?.trim() ?? PROVIDER_DEFAULTS[provider][role];
 
   switch (provider) {

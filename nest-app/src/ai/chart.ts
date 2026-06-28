@@ -43,13 +43,14 @@ const MAX_WIDGETS = Number(process.env['CHART_MAX_WIDGETS'] ?? 3);
 const MAX_TOKENS  = Number(process.env['CHART_MAX_TOKENS']  ?? 1000);
 
 export async function runChart(
-  rows:       Record<string, unknown>[],
-  prompt:     string,
-  strategy?:  SkillKind,
-  chartHint?: ChartHint,
-  source?:    DataSource,
-  apiKey?:    string,
-  userModel?: string,
+  rows:          Record<string, unknown>[],
+  prompt:        string,
+  strategy?:     SkillKind,
+  chartHint?:    ChartHint,
+  source?:       DataSource,
+  apiKey?:       string,
+  userModel?:    string,
+  userProvider?: string,
 ): Promise<DashboardSpec> {
   if (!rows.length) {
     return { layout: 'operational', title: 'No data', summary: 'No rows returned for this request.', widgets: [] };
