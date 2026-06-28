@@ -822,6 +822,18 @@
         }
       </select>
 
+      <label class="key-modal-label">
+        Input token limit
+        <span class="key-modal-label-hint">— how much context to send per request</span>
+      </label>
+      <select class="key-modal-input"
+        [ngModel]="s.inputTokenLimit || 4000"
+        (ngModelChange)="st.patch({ inputTokenLimit: +$event })">
+        @for (opt of INPUT_TOKEN_OPTIONS; track opt.value) {
+          <option [ngValue]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+
       <label class="key-modal-label">API Key</label>
       <input type="password" class="key-modal-input"
         [placeholder]="(s.provider || 'groq') === 'openai' ? 'sk-…' : (s.provider || 'groq') === 'anthropic' ? 'sk-ant-…' : (s.provider || 'groq') === 'google' ? 'AIza…' : 'gsk_…'"
