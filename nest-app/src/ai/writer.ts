@@ -28,19 +28,20 @@ export type InquirySummary = z.infer<typeof summarySchema>;
 export type ReportSections = z.infer<typeof reportSectionsSchema>;
 
 export interface WriterInput {
-  prompt:     string;
-  rows:       unknown[];
-  withChart?: boolean;
-  apiKey?:    string;
-  userModel?: string;
+  prompt:        string;
+  rows:          unknown[];
+  withChart?:    boolean;
+  apiKey?:       string;
+  userModel?:    string;
+  userProvider?: string;
 }
 
-export async function runInquirySkill({ prompt, rows, apiKey, userModel }: WriterInput): Promise<InquirySummary> {
+export async function runInquirySkill({ prompt, rows, apiKey, userModel, userProvider }: WriterInput): Promise<InquirySummary> {
   const t0 = Date.now();
   log('writer:inquiry', `rows: ${rows.length} | maxRows: ${INQUIRY_MAX_ROWS} | maxTokens: ${INQUIRY_MAX_TOKENS}`);
 
   const { object } = await generateObject({
-    model:       resolveModel('writer', apiKey, userModel),
+    model:       resolveModel('writer', apiKey, userModel, userProvider),
     abortSignal: freshSignal('writer'),
     temperature: 0,
     maxRetries:  1,
@@ -55,12 +56,12 @@ export async function runInquirySkill({ prompt, rows, apiKey, userModel }: Write
   return object;
 }
 
-export async function runReportSkill({ prompt, rows, withChart, apiKey, userModel }: WriterInput): Promise<ReportSections> {
+export async function runReportSkill({ prompt, rows, withChart, apiKey, userModel, userProvider }: WriterInput): Promise<ReportSections> {
   const start = Date.now();
   log('writer:report', `rows: ${rows.length} | maxTokens: ${REPORT_MAX_TOKENS} | withChart: ${withChart ?? false}`);
 
   const { object } = await generateObject({
-    model:       resolveModel('writer', apiKey, userModel),
+    model:       resolveModel('writer', apiKey, userModel, userProvider),
     abortSignal: freshSignal('writer'),
     temperature: 0,
     maxRetries:  1,

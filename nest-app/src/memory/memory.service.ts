@@ -36,19 +36,20 @@ export class MemoryService {
   }
 
   async extractAndSave(
-    userId:     string,
-    sessionId:  string,
-    prompt:     string,
-    summary:    string,
-    apiKey?:    string,
-    userModel?: string,
+    userId:        string,
+    sessionId:     string,
+    prompt:        string,
+    summary:       string,
+    apiKey?:       string,
+    userModel?:    string,
+    userProvider?: string,
   ): Promise<void> {
     if (!this.extractionEnabled) {
       this.logger.debug('memory extraction skipped (disabled)');
       return;
     }
 
-    const extracted = await extractMemories(prompt, summary, apiKey, userModel);
+    const extracted = await extractMemories(prompt, summary, apiKey, userModel, userProvider);
     if (!extracted.length) return;
 
     await this.repo.upsert(

@@ -29,10 +29,11 @@ export async function extractMemories(
   responseSummary: string,
   apiKey?: string,
   userModel?: string,
+  userProvider?: string,
 ): Promise<ExtractedMemory[]> {
   try {
     const { object } = await generateObject({
-      model:       resolveModel('memory', apiKey, userModel),
+      model:       resolveModel('memory', apiKey, userModel, userProvider),
       abortSignal: freshSignal('memory'),
       temperature: 0,
       maxRetries:  1,
