@@ -1,8 +1,26 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { type Document } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { MemoryItem, type MemoryItemDocument, type MemoryType } from './memory.schema';
 import { log } from '../common/logger/app.logger';
+
+export type MemoryType = 'goal' | 'insight' | 'preference' | 'context' | 'decision';
+
+@Schema({ timestamps: true, collection: 'memory_items' })
+export class MemoryItem {
+  @Prop({ required: true, index: true }) userId!: string;
+  @Prop({ required: true }) sessionId!: string;
+  @Prop({ required: true, enum: ['goal', 'insight', 'preference', 'context', 'decision'] }) type!: MemoryType;
+  @Prop({ required: true }) content!: string;
+  @Prop({ type: [String], default: [] }) tags!: string[];
+  @Prop({ min: 1, max: 5, default: 3 }) importance!: number;
+}
+
+export type MemoryItemDocument = MemoryItem & Document;
+export const MemoryItemSchema = SchemaFactory.createForClass(MemoryItem);
+MemoryItemSchema.index({ userId: 1, importance: -1, createdAt: -1 });
+MemoryItemSchema.index({ userId: 1, tags: 1 });
 
 export interface MemoryPayload {
   userId:     string;

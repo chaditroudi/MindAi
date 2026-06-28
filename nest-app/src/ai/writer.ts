@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { resolveModel, freshSignal } from './model';
 import { readMarkdownSection, skillFile } from './skill-prompt';
 import { log, logTrace } from '../common/logger/app.logger';
-import { buildInquiryMessage, buildReportMessage } from '../prompts/writer.prompt';
+import { buildInquiryMessage, buildReportMessage } from '../prompts';
 
 const INQUIRY_INSTRUCTIONS = readMarkdownSection(skillFile('inquiry', 'SKILL.md'), 'Runtime Prompt');
 const REPORT_INSTRUCTIONS  = readMarkdownSection(skillFile('report',  'SKILL.md'), 'Runtime Prompt');

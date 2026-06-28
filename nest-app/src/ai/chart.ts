@@ -1,7 +1,7 @@
 import { generateObject }           from 'ai';
 import { log, logTrace }             from '../common/logger/app.logger';
 import { resolveModel, freshSignal } from './model';
-import { buildChartPrompt }          from '../prompts/chart.prompt';
+import { buildChartPrompt }          from '../prompts';
 import type { DashboardSpec, SkillKind, ChartHint, DataSource } from '../types';
 
 export type { ChartDefinition } from './chart-config';

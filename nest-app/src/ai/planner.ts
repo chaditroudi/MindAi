@@ -3,7 +3,7 @@ import type { CoreMessage } from 'ai';
 import { z } from 'zod';
 import { resolveModel, freshSignal } from './model';
 import { interpolateTemplate, readMarkdownSection, skillFile } from './skill-prompt';
-import { normalizeToken } from '../sources/source.repository';
+import { normalizeToken } from '../sources/sources-cache';
 import { log, logTrace } from '../common/logger/app.logger';
 import type { DataSource, DataSourceField, TaskPlan, IntentKind } from '../types';
 

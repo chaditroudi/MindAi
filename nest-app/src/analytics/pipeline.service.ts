@@ -6,7 +6,7 @@ import { runSupervisorPlan } from '../ai/planner';
 import { runChart } from '../ai/chart';
 import { runReportSkill, runInquirySkill } from '../ai/writer';
 import { getSources } from '../sources/sources-cache';
-import { normalizeToken } from '../sources/source.repository';
+import { normalizeToken } from '../sources/sources-cache';
 import { CacheService } from '../cache/cache.service';
 import { HistoryService } from '../history/history.service';
 import { ChartResultsRepository } from '../ai/chart-results.repository';

@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { MemoryItem, MemoryItemSchema } from './memory.schema';
-import { MemoryRepository } from './memory.repository';
+import { MemoryItem, MemoryItemSchema, MemoryRepository } from './memory.repository';
 import { MemoryService } from './memory.service';
 import { MemoryController } from './memory.controller';
 

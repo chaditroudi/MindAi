@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import configuration from './config/configuration';
-import { DatabaseModule } from './database/database.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -25,7 +25,18 @@ const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
-    DatabaseModule,
+    MongooseModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => {
+        const uri = cfg.get<string>('mongodb.uri');
+        if (!uri) throw new Error('MONGODB_URI environment variable is required');
+        return {
+          uri,
+          dbName:                    cfg.get<string>('mongodb.db'),
+          serverSelectionTimeoutMS:  cfg.get<number>('mongodb.serverSelectionTimeoutMs') ?? 8_000,
+        };
+      },
+    }),
     SourcesModule,
     HistoryModule,
     CacheModule,
