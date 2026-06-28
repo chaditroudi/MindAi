@@ -645,6 +645,17 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     { label: '128,000',         value: 128_000 },
   ];
 
+  readonly OUTPUT_TOKEN_OPTIONS: { label: string; value: number }[] = [
+    { label: '256',             value: 256 },
+    { label: '512',             value: 512 },
+    { label: '1,000',           value: 1_000 },
+    { label: '2,000 (default)', value: 2_000 },
+    { label: '4,000',           value: 4_000 },
+    { label: '8,000',           value: 8_000 },
+    { label: '16,000',          value: 16_000 },
+    { label: '32,000',          value: 32_000 },
+  ];
+
   readonly MEMORY_LIMIT_OPTIONS: { label: string; value: number }[] = [
     { label: '10',           value: 10 },
     { label: '25',           value: 25 },
@@ -654,15 +665,17 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     { label: '500',          value: 500 },
   ];
 
-  agentUsagePct(agent: AgentEntry): number {
-    if (!agent.tokenBudget) return 0;
-    return Math.min(100, Math.round((agent.tokensUsed / agent.tokenBudget) * 100));
+  agentTotalUsed(agent: AgentEntry): number {
+    return (agent.inputTokensUsed ?? 0) + (agent.outputTokensUsed ?? 0);
   }
 
-  agentUsageLabel(agent: AgentEntry): string {
-    if (!agent.tokenBudget) return `${agent.tokensUsed.toLocaleString()} used (unlimited)`;
-    const remaining = Math.max(0, agent.tokenBudget - agent.tokensUsed);
-    return `${agent.tokensUsed.toLocaleString()} / ${agent.tokenBudget.toLocaleString()} · ${remaining.toLocaleString()} left`;
+  agentUsagePct(agent: AgentEntry): number {
+    if (!agent.tokenBudget) return 0;
+    return Math.min(100, Math.round((this.agentTotalUsed(agent) / agent.tokenBudget) * 100));
+  }
+
+  agentCreditsLeft(agent: AgentEntry): number {
+    return Math.max(0, agent.tokenBudget - this.agentTotalUsed(agent));
   }
 
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
