@@ -183,7 +183,7 @@ export class AnalyticsService {
       );
     }
 
-    const { primaryKey, globalKey } = await this.resolveApiKeys(userKey, agentCfg);
+    const { primaryKey, globalKey } = this.resolveApiKeys(userKey, agentCfg);
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
 
@@ -193,7 +193,6 @@ export class AnalyticsService {
       `prompt: "${prompt}" | intent: ${intent}${req.intent ? '' : ' (auto)'} | session: ${sessionId}`,
     );
     const t0 = Date.now();
-    const outputTokenLimit = settings?.outputTokenLimit ?? 800;
 
     const { result, effectiveApiKey } = await this.runWithFallback(
       intent,
