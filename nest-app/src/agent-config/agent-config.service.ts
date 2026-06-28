@@ -6,17 +6,13 @@ import {
 } from './agent-config.repository';
 
 export interface ResolvedConfig {
-  inputTokenLimit:  number;
-  outputTokenLimit: number;
-  memoryLimit:      number;
-  agents:           AgentEntry[];
+  memoryLimit: number;
+  agents:      AgentEntry[];
 }
 
 const DEFAULTS: ResolvedConfig = {
-  inputTokenLimit:  4_000,
-  outputTokenLimit: 800,
-  memoryLimit:      50,
-  agents:           [],
+  memoryLimit: 50,
+  agents:      [],
 };
 
 @Injectable()
@@ -27,10 +23,8 @@ export class AgentConfigService {
     const doc = await this.repo.get();
     if (!doc) return { ...DEFAULTS };
     return {
-      inputTokenLimit:  doc.inputTokenLimit  ?? DEFAULTS.inputTokenLimit,
-      outputTokenLimit: doc.outputTokenLimit ?? DEFAULTS.outputTokenLimit,
-      memoryLimit:      doc.memoryLimit      ?? DEFAULTS.memoryLimit,
-      agents:           doc.agents           ?? [],
+      memoryLimit: doc.memoryLimit ?? DEFAULTS.memoryLimit,
+      agents:      doc.agents      ?? [],
     };
   }
 
@@ -42,17 +36,13 @@ export class AgentConfigService {
   async save(data: AgentConfigPayload): Promise<ResolvedConfig> {
     const doc = await this.repo.save(data);
     return {
-      inputTokenLimit:  doc.inputTokenLimit,
-      outputTokenLimit: doc.outputTokenLimit,
-      memoryLimit:      doc.memoryLimit,
-      agents:           doc.agents,
+      memoryLimit: doc.memoryLimit,
+      agents:      doc.agents,
     };
   }
 
-  async updateAgentStatus(index: number, status: AgentEntry['status']): Promise<void> {
-    const cfg = await this.getConfig();
-    if (index < 0 || index >= cfg.agents.length) return;
-    cfg.agents[index].status = status;
-    await this.repo.save({ agents: cfg.agents });
+  async trackUsage(agentApiKey: string, tokens: number): Promise<void> {
+    if (tokens <= 0) return;
+    await this.repo.incrementTokensUsed(agentApiKey, tokens);
   }
 }

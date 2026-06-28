@@ -16,6 +16,15 @@ export class AgentEntry {
   @Prop({ required: true }) provider!: string;
   @Prop({ required: true }) model!:    string;
   @Prop({ required: true }) apiKey!:   string;
+
+  // How many input tokens this agent accepts per request (based on model context window)
+  @Prop({ min: 1, default: 4_000 }) inputTokenLimit!: number;
+
+  // Total lifetime token budget for this agent (0 = unlimited)
+  @Prop({ min: 0, default: 0 }) tokenBudget!: number;
+
+  // Accumulated tokens used across all requests
+  @Prop({ min: 0, default: 0 }) tokensUsed!: number;
 }
 export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 
@@ -23,9 +32,7 @@ export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 
 @Schema({ collection: 'agent_config', timestamps: true, versionKey: false })
 export class AgentConfig {
-  @Prop({ min: 1, default: 4_000 }) inputTokenLimit!:  number;
-  @Prop({ min: 1, default: 800 })   outputTokenLimit!: number;
-  @Prop({ min: 1, default: 50 })    memoryLimit!:      number;
+  @Prop({ min: 1, default: 50 }) memoryLimit!: number;
 
   @Prop({ type: [AgentEntrySchema], default: [] })
   agents!: AgentEntry[];
@@ -37,10 +44,8 @@ export const AgentConfigSchema  = SchemaFactory.createForClass(AgentConfig);
 // ── Repository ─────────────────────────────────────────────────────────────────
 
 export interface AgentConfigPayload {
-  inputTokenLimit?:  number;
-  outputTokenLimit?: number;
-  memoryLimit?:      number;
-  agents?:           AgentEntry[];
+  memoryLimit?: number;
+  agents?:      Partial<AgentEntry>[];
 }
 
 @Injectable()
@@ -60,5 +65,23 @@ export class AgentConfigRepository {
       { $set: data },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     ).lean() as Promise<AgentConfigDocument>;
+  }
+
+  async incrementTokensUsed(agentApiKey: string, tokens: number): Promise<void> {
+    const doc = await this.model.findOneAndUpdate(
+      { 'agents.apiKey': agentApiKey },
+      { $inc: { 'agents.$.tokensUsed': tokens } },
+      { new: true },
+    ).lean() as AgentConfigDocument | null;
+
+    if (!doc) return;
+
+    const agent = doc.agents.find(a => a.apiKey === agentApiKey);
+    if (agent && agent.tokenBudget > 0 && agent.tokensUsed >= agent.tokenBudget) {
+      await this.model.updateOne(
+        { 'agents.apiKey': agentApiKey },
+        { $set: { 'agents.$.status': 'expired' } },
+      );
+    }
   }
 }
