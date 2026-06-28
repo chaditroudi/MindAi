@@ -17,14 +17,16 @@ export class AgentEntry {
   @Prop({ required: true }) model!:    string;
   @Prop({ required: true }) apiKey!:   string;
 
-  // How many input tokens this agent accepts per request (based on model context window)
-  @Prop({ min: 1, default: 4_000 }) inputTokenLimit!: number;
+  // Per-request limits (like ChatGPT context window + response cap)
+  @Prop({ min: 1, default: 4_000  }) inputTokenLimit!:  number;
+  @Prop({ min: 1, default: 2_000  }) outputTokenLimit!: number;
 
-  // Total lifetime token budget for this agent (0 = unlimited)
+  // Credit balance — total tokens this agent is allowed to consume (0 = unlimited)
   @Prop({ min: 0, default: 0 }) tokenBudget!: number;
 
-  // Accumulated tokens used across all requests
-  @Prop({ min: 0, default: 0 }) tokensUsed!: number;
+  // Accumulated usage tracked after every request
+  @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
+  @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
 }
 export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 
@@ -67,21 +69,35 @@ export class AgentConfigRepository {
     ).lean() as Promise<AgentConfigDocument>;
   }
 
-  async incrementTokensUsed(agentApiKey: string, tokens: number): Promise<void> {
+  async incrementUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
+    // Atomically increment both counters for the matching agent
     const doc = await this.model.findOneAndUpdate(
-      { 'agents.apiKey': agentApiKey },
-      { $inc: { 'agents.$.tokensUsed': tokens } },
-      { new: true },
+      {},
+      {
+        $inc: {
+          'agents.$[agent].inputTokensUsed':  inputTokens,
+          'agents.$[agent].outputTokensUsed': outputTokens,
+        },
+      },
+      {
+        arrayFilters: [{ 'agent.apiKey': agentApiKey }],
+        new: true,
+      },
     ).lean() as AgentConfigDocument | null;
 
     if (!doc) return;
 
+    // Auto-expire the agent if it has exceeded its budget
     const agent = doc.agents.find(a => a.apiKey === agentApiKey);
-    if (agent && agent.tokenBudget > 0 && agent.tokensUsed >= agent.tokenBudget) {
-      await this.model.updateOne(
-        { 'agents.apiKey': agentApiKey },
-        { $set: { 'agents.$.status': 'expired' } },
-      );
+    if (agent && agent.tokenBudget > 0) {
+      const totalUsed = agent.inputTokensUsed + agent.outputTokensUsed;
+      if (totalUsed >= agent.tokenBudget) {
+        await this.model.updateOne(
+          {},
+          { $set: { 'agents.$[agent].status': 'expired' } },
+          { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+        );
+      }
     }
   }
 }

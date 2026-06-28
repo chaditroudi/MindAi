@@ -41,8 +41,8 @@ export class AgentConfigService {
     };
   }
 
-  async trackUsage(agentApiKey: string, tokens: number): Promise<void> {
-    if (tokens <= 0) return;
-    await this.repo.incrementTokensUsed(agentApiKey, tokens);
+  async trackUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
+    if (inputTokens <= 0 && outputTokens <= 0) return;
+    await this.repo.incrementUsage(agentApiKey, inputTokens, outputTokens);
   }
 }
