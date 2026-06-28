@@ -232,18 +232,22 @@ export class AnalyticsService {
     }
   }
 
-  private resolveApiKeys(userKey: string | null): {
-    globalKey: string | null;
-    primaryKey: string;
-  } {
+  private resolveApiKeys(
+    userKey:   string | null,
+    agentCfg?: import('../agent-config/agent-config.service').ResolvedConfig,
+  ): { globalKey: string | null; primaryKey: string } {
     const groqGlobal   = this.cfg.get<string>('llm.groqApiKey')?.trim()   || null;
     const openaiGlobal = this.cfg.get<string>('llm.openaiApiKey')?.trim() || null;
-    const globalKey    = groqGlobal || openaiGlobal || null;
-    const primaryKey   = userKey || globalKey;
+    const envGlobalKey = groqGlobal || openaiGlobal || null;
+
+    // Priority: user key → active agent key → env global key
+    const activeAgentKey = agentCfg?.agents.find(a => a.status === 'active')?.apiKey?.trim() || null;
+    const globalKey      = activeAgentKey || envGlobalKey;
+    const primaryKey     = userKey || globalKey;
 
     if (!primaryKey) {
       throw new UnauthorizedException(
-        'No API key configured. Please enter a valid Groq or OpenAI API key in settings.',
+        'No API key configured. Add one in Settings or configure an active agent.',
       );
     }
 
