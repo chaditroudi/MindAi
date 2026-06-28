@@ -1,6 +1,7 @@
 import { generateObject }           from 'ai';
 import { log, logTrace }             from '../common/logger/app.logger';
 import { resolveModel, freshSignal } from './model';
+import type { TokenUsage } from './token';
 import { buildChartPrompt }          from '../prompts';
 import type { DashboardSpec, SkillKind, ChartHint, DataSource } from '../types';
 
