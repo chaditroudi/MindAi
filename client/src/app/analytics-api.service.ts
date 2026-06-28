@@ -13,7 +13,7 @@ import type {
   AnalyticsRequest, AnalyticsResponse, ProviderResponse,
   MetaResponse, SessionSummary, SessionDetail,
   SavedResultSummary, SavedResultDetail, MessageResult, ModeKey, MemoryItem,
-  MemoryConfigResponse, UserSettingsResponse,
+  MemoryConfigResponse, UserSettingsResponse, AgentConfigResponse, AgentEntry,
 } from './app.types';
 
 @Injectable({ providedIn: 'root' })
@@ -88,6 +88,14 @@ export class AnalyticsApiService {
 
   setMemoryConfig(enabled: boolean): Promise<{ ok: boolean; extractionEnabled: boolean }> {
     return this.req(this.http.patch<{ ok: boolean; extractionEnabled: boolean }>('/api/memory/config', { extractionEnabled: enabled }));
+  }
+
+  getAgentConfig(): Promise<AgentConfigResponse> {
+    return this.req(this.http.get<AgentConfigResponse>('/api/agent-config'));
+  }
+
+  saveAgentConfig(dto: Partial<AgentConfigResponse>): Promise<AgentConfigResponse> {
+    return this.req(this.http.put<AgentConfigResponse>('/api/agent-config', dto));
   }
 
   listSessions(): Promise<SessionSummary[]> {

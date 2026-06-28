@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
-import type { ModeKey, PromptExample, ConversationMessage, SessionSummary, SavedResultSummary, SavedResultDetail, MemoryItem } from './app.types';
+import type { ModeKey, PromptExample, ConversationMessage, SessionSummary, SavedResultSummary, SavedResultDetail, MemoryItem, AgentConfigResponse } from './app.types';
 
 export type Phase = 'idle' | 'loading' | 'done' | 'error';
 
@@ -18,12 +18,13 @@ export interface AppState {
 
   // Sidebar
   sidebarOpen:   boolean;
-  sidebarTab:    'history' | 'saved' | 'memory';
+  sidebarTab:    'history' | 'saved' | 'memory' | 'config';
   sessions:      SessionSummary[];
   savedResults:  SavedResultSummary[];
   viewingSaved:  SavedResultDetail | null;
-  memories:               MemoryItem[];
+  memories:                MemoryItem[];
   memoryExtractionEnabled: boolean;
+  agentConfig:             AgentConfigResponse | null;
 
   // Report format suggestion
   pendingSuggestion: boolean;
