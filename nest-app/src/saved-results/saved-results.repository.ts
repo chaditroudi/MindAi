@@ -1,7 +1,33 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Schema as MongooseSchema, type HydratedDocument } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { SavedResult, type SavedResultDocument } from './schemas/saved-result.schema';
+
+@Schema({ collection: 'saved_results', versionKey: false, timestamps: true })
+export class SavedResult {
+  @Prop({ required: true, index: true, trim: true })
+  userId: string;
+
+  @Prop({ required: true, maxlength: 200, trim: true })
+  title: string;
+
+  @Prop({ required: true, maxlength: 1000 })
+  prompt: string;
+
+  @Prop({ required: true, enum: ['dashboard', 'report', 'inquiry'] })
+  intent: 'dashboard' | 'report' | 'inquiry';
+
+  @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+  result: unknown;
+
+  createdAt!: Date;
+  updatedAt!: Date;
+}
+
+export type SavedResultDocument = HydratedDocument<SavedResult>;
+export const SavedResultSchema = SchemaFactory.createForClass(SavedResult);
+SavedResultSchema.index({ userId: 1, createdAt: -1 });
 
 export interface SavedResultPayload {
   userId: string;

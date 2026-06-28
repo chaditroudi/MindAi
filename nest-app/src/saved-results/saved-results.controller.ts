@@ -3,7 +3,7 @@ import {
   NotFoundException, BadRequestException, HttpCode,
 } from '@nestjs/common';
 import { IsString, IsOptional, MaxLength, Allow } from 'class-validator';
-import { SavedResultsService } from './saved-results.service';
+import { SavedResultsRepository } from './saved-results.repository';
 import { requireUserId } from '../common/helpers/user-id';
 
 const INTENT_MAP: Record<string, 'dashboard' | 'report' | 'inquiry'> = {
@@ -22,7 +22,7 @@ class SaveDto {
 
 @Controller('api/saved')
 export class SavedResultsController {
-  constructor(private readonly service: SavedResultsService) {}
+  constructor(private readonly service: SavedResultsRepository) {}
 
   @Get()
   async list(@Headers('x-user-id') rawUserId: string) {

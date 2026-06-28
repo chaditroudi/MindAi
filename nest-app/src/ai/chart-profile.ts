@@ -1,4 +1,4 @@
-import type { DataRow, FieldKind, RowProfile } from './chart-types';
+import type { DataRow, FieldKind, RowProfile } from '../types';
 
 const GENERIC_LABEL_TOKENS = new Set(['label', 'name', 'title', 'category', 'group', 'segment', 'region', 'type']);
 const GENERIC_VALUE_TOKENS = new Set(['value', 'total', 'amount', 'metric', 'budget', 'count', 'sum', 'score']);

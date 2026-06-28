@@ -1,4 +1,4 @@
-import type { DataRow, WidgetPlan } from './chart-types';
+import type { DataRow, WidgetPlan } from '../types';
 
 export const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
 export const str = (v: unknown): string => (v == null ? '' : String(v));

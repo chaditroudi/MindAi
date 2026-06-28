@@ -1,7 +1,7 @@
 import { log }                               from '../common/logger/app.logger';
 import { CHART_BY_TYPE }                      from './chart-config';
 import type { LlmWidget }                     from './chart-config';
-import type { DataRow, RowProfile, WidgetPlan } from './chart-types';
+import type { DataRow, RowProfile, WidgetPlan } from '../types';
 import { isNumericLike, pickFields, resolveFieldName } from './chart-profile';
 
 type ChartAgg = WidgetPlan['agg'];

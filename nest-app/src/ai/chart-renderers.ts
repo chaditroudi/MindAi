@@ -1,4 +1,4 @@
-import type { DataRow, Renderer, WidgetPlan } from './chart-types';
+import type { DataRow, Renderer, WidgetPlan } from '../types';
 import {
   buildCategoricalSeries, findSeriesPoint, num, prepareRenderRows,
   resolveAxisField, resolveCategoryField, resolveNumericValueField,

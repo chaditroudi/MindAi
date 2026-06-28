@@ -9,7 +9,7 @@ export { CHART_DEFINITIONS }    from './chart-config';
 import { dashboardSchema, CHART_DEFINITIONS } from './chart-config';
 import type { LlmWidget, LlmDashboard }       from './chart-config';
 
-import type { DataRow, WidgetPlan } from './chart-types';
+import type { DataRow, WidgetPlan } from '../types';
 import { buildRowProfile } from './chart-profile';
 import { prepareRenderRows } from './chart-aggregation';
 import { RENDERERS, mergeChartOptions } from './chart-renderers';

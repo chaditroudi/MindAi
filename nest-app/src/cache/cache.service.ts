@@ -1,8 +1,37 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Schema as MongooseSchema, type HydratedDocument } from 'mongoose';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { createHash } from 'node:crypto';
-import { PromptCache, type PromptCacheDocument } from './schemas/prompt-cache.schema';
+
+@Schema({ collection: 'prompt_cache', versionKey: false })
+export class PromptCache {
+  @Prop({ required: true, unique: true, index: true })
+  key: string;
+
+  @Prop({ required: true })
+  prompt: string;
+
+  @Prop({ required: true, index: true })
+  intent: string;
+
+  @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+  result: unknown;
+
+  @Prop({ type: Number, default: 0 })
+  hitCount: number;
+
+  @Prop({ type: Date, default: Date.now })
+  lastHitAt: Date;
+
+  // TTL index: documents expire 7 days after creation
+  @Prop({ type: Date, default: Date.now, expires: 7 * 24 * 3600 })
+  createdAt: Date;
+}
+
+export type PromptCacheDocument = HydratedDocument<PromptCache>;
+export const PromptCacheSchema = SchemaFactory.createForClass(PromptCache);
 
 @Injectable()
 export class CacheService {
@@ -13,14 +42,12 @@ export class CacheService {
     private readonly model: Model<PromptCacheDocument>,
   ) {}
 
-
   cacheKey(intent: string, prompt: string): string {
     return createHash('sha256')
       .update(`${intent}:${prompt.trim().toLowerCase().replace(/\s+/g, ' ')}`)
       .digest('hex')
       .slice(0, 24);
   }
-
 
   async getCached<T>(intent: string, prompt: string): Promise<T | null> {
     const key = this.cacheKey(intent, prompt);
@@ -47,7 +74,6 @@ export class CacheService {
     );
     this.logger.log(`CACHE SAVE | key: ${key} | intent: ${intent}`);
   }
-
 
   async list() {
     const entries = await this.model

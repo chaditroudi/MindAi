@@ -1,7 +1,35 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Schema as MongooseSchema, type HydratedDocument } from 'mongoose';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { PipelineRun, type PipelineRunDocument } from './schemas/pipeline-run.schema';
+
+@Schema({ collection: 'results_history', versionKey: false, timestamps: true, suppressReservedKeysWarning: true })
+export class PipelineRun {
+  @Prop({ required: true, index: true })
+  prompt: string;
+
+  @Prop({ required: true, index: true })
+  intent: string;
+
+  @Prop({ required: true })
+  collection: string;
+
+  @Prop({ type: [MongooseSchema.Types.Mixed], required: true })
+  pipeline: unknown[];
+
+  @Prop({ type: [MongooseSchema.Types.Mixed], default: [] })
+  rows: Record<string, unknown>[];
+
+  @Prop({ required: true })
+  rowCount: number;
+
+  @Prop({ required: true })
+  durationMs: number;
+}
+
+export type PipelineRunDocument = HydratedDocument<PipelineRun>;
+export const PipelineRunSchema = SchemaFactory.createForClass(PipelineRun);
 
 export interface PipelineRunEntry {
   prompt:     string;
