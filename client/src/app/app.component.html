@@ -156,53 +156,8 @@
           <section class="config-section">
             <div class="config-section-head">
               <h4 class="config-section-title">Agents</h4>
-              <button class="config-add-btn" (click)="showAddAgent = !showAddAgent">
-                {{ showAddAgent ? 'Cancel' : '+ Add' }}
-              </button>
+              <button class="config-add-btn" (click)="showAddAgent = true">+ Add</button>
             </div>
-
-            @if (showAddAgent) {
-              <div class="config-agent-form">
-                <select class="config-input" [(ngModel)]="newAgent.provider">
-                  <option value="groq">Groq</option>
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
-                  <option value="google">Google</option>
-                </select>
-                <input class="config-input" type="text" placeholder="Model (e.g. llama-3.3-70b-versatile)"
-                  [(ngModel)]="newAgent.model" />
-                <input class="config-input" type="password" placeholder="API key"
-                  [(ngModel)]="newAgent.apiKey" />
-                <div class="config-field" style="margin:0">
-                  <label class="config-label">Input token limit <span class="config-label-hint">(context sent per request)</span></label>
-                  <select class="config-input" [(ngModel)]="newAgent.inputTokenLimit">
-                    @for (opt of INPUT_TOKEN_OPTIONS; track opt.value) {
-                      <option [ngValue]="opt.value">{{ opt.label }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="config-field" style="margin:0">
-                  <label class="config-label">Output token limit <span class="config-label-hint">(AI response length)</span></label>
-                  <select class="config-input" [(ngModel)]="newAgent.outputTokenLimit">
-                    @for (opt of OUTPUT_TOKEN_OPTIONS; track opt.value) {
-                      <option [ngValue]="opt.value">{{ opt.label }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="config-field" style="margin:0">
-                  <label class="config-label">Credit budget <span class="config-label-hint">(total tokens, 0 = unlimited)</span></label>
-                  <input class="config-input" type="number" min="0" placeholder="e.g. 500000"
-                    [(ngModel)]="newAgent.tokenBudget" />
-                </div>
-                <select class="config-input" [(ngModel)]="newAgent.status">
-                  @for (st of STATUS_OPTIONS; track st) {
-                    <option [value]="st">{{ st }}</option>
-                  }
-                </select>
-                <button class="config-save-btn" (click)="addAgentToList()"
-                  [disabled]="!newAgent.model || !newAgent.apiKey">Add agent</button>
-              </div>
-            }
 
             @if (!agentDraft.length) {
               <div class="config-empty">No agents configured. Add one above.</div>
@@ -859,6 +814,93 @@
           {{ testStatus === 'testing' ? 'Testing…' : 'Test connection' }}
         </button>
         <button class="key-modal-primary" (click)="saveApiKey()">Save & continue</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Add Agent Modal ────────────────────────────────────────────────────── -->
+@if (showAddAgent) {
+  <div class="key-modal-backdrop" (click)="showAddAgent = false">
+    <div class="key-modal agent-modal" (click)="$event.stopPropagation()">
+      <div class="key-modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+      </div>
+      <h2 class="key-modal-title">Add AI agent</h2>
+      <p class="key-modal-desc">This agent's key and credits are shared across all users of this workspace.</p>
+
+      <div class="agent-modal-row">
+        <div class="agent-modal-col">
+          <label class="key-modal-label">Provider</label>
+          <select class="key-modal-input" [(ngModel)]="newAgent.provider">
+            <option value="groq">Groq</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="google">Google Gemini</option>
+          </select>
+        </div>
+        <div class="agent-modal-col">
+          <label class="key-modal-label">Status</label>
+          <select class="key-modal-input" [(ngModel)]="newAgent.status">
+            @for (st of STATUS_OPTIONS; track st) {
+              <option [value]="st">{{ st }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <label class="key-modal-label">Model</label>
+      <input class="key-modal-input" type="text"
+        placeholder="e.g. llama-3.3-70b-versatile"
+        [(ngModel)]="newAgent.model" />
+
+      <label class="key-modal-label">API Key</label>
+      <input class="key-modal-input" type="password"
+        placeholder="gsk_… / sk-… / sk-ant-…"
+        [(ngModel)]="newAgent.apiKey" />
+
+      <div class="agent-modal-row">
+        <div class="agent-modal-col">
+          <label class="key-modal-label">
+            Input limit
+            <span class="key-modal-label-hint">context / request</span>
+          </label>
+          <select class="key-modal-input" [(ngModel)]="newAgent.inputTokenLimit">
+            @for (opt of INPUT_TOKEN_OPTIONS; track opt.value) {
+              <option [ngValue]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="agent-modal-col">
+          <label class="key-modal-label">
+            Output limit
+            <span class="key-modal-label-hint">AI response</span>
+          </label>
+          <select class="key-modal-input" [(ngModel)]="newAgent.outputTokenLimit">
+            @for (opt of OUTPUT_TOKEN_OPTIONS; track opt.value) {
+              <option [ngValue]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <label class="key-modal-label">
+        Credit budget
+        <span class="key-modal-label-hint">total tokens · 0 = unlimited</span>
+      </label>
+      <input class="key-modal-input" type="number" min="0"
+        placeholder="e.g. 500000 or 0 for unlimited"
+        [(ngModel)]="newAgent.tokenBudget" />
+
+      <div class="key-modal-actions">
+        <button class="key-modal-secondary" (click)="showAddAgent = false">Cancel</button>
+        <button class="key-modal-primary"
+          [disabled]="!newAgent.model || !newAgent.apiKey"
+          (click)="addAgentToList()">
+          Add agent
+        </button>
       </div>
     </div>
   </div>
