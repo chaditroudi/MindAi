@@ -207,7 +207,6 @@ export class AnalyticsService {
     });
   }
 
-  // ── Setup helpers ────────────────────────────────────────────────────────────
 
   private ensureDataSources(): void {
     if (!getSources().length) {
