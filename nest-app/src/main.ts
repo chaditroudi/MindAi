@@ -7,7 +7,7 @@ import { AppModule } from './app.module';
 import { AppLogger } from './common/logger/app.logger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule);
 
   app.useLogger(app.get(AppLogger));
 
