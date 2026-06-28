@@ -1,6 +1,5 @@
-import { generateObject } from 'ai';
 import { z } from 'zod';
-import { resolveModel, freshSignal } from './model';
+import { createSkillAgent, freshSignal } from './model';
 import { readMarkdownSection, skillFile } from './skill-prompt';
 import { log, logTrace } from '../common/logger/app.logger';
 import { buildInquiryMessage, buildReportMessage } from '../prompts';
@@ -11,7 +10,6 @@ const REPORT_INSTRUCTIONS  = readMarkdownSection(skillFile('report',  'SKILL.md'
 
 const INQUIRY_MAX_TOKENS = Number(process.env['INQUIRY_MAX_TOKENS'] ?? 400);
 const REPORT_MAX_TOKENS  = Number(process.env['REPORT_MAX_TOKENS']  ?? 1_500);
-const DEFAULT_MAX_TOKENS = 800;
 const INQUIRY_MAX_ROWS   = Number(process.env['INQUIRY_MAX_ROWS']   ?? 10);
 const WRITER_MAX_CHARS   = Number(process.env['WRITER_MAX_CHARS']   ?? 8_000);
 
@@ -43,23 +41,25 @@ export interface WriterInput {
 
 export async function runInquirySkill({ prompt, rows, apiKey, userModel, userProvider, maxTokens }: WriterInput): Promise<WriterResult<InquirySummary>> {
   const limit = maxTokens ?? INQUIRY_MAX_TOKENS;
-  const t0 = Date.now();
+  const t0    = Date.now();
   log('writer:inquiry', `rows: ${rows.length} | maxRows: ${INQUIRY_MAX_ROWS} | maxTokens: ${limit}`);
 
-  const { object, usage } = await generateObject({
-    model:       resolveModel('writer', apiKey, userModel, userProvider),
-    abortSignal: freshSignal('writer'),
-    temperature: 0,
-    maxRetries:  1,
-    schema:      summarySchema,
-    system:      INQUIRY_INSTRUCTIONS,
-    maxTokens:   limit,
-    messages: [{ role: 'user', content: buildInquiryMessage(prompt, rows, INQUIRY_MAX_ROWS, WRITER_MAX_CHARS) }],
-  });
+  const agent  = createSkillAgent('writer', INQUIRY_INSTRUCTIONS, apiKey, userModel, userProvider);
+  const result = await agent.generate(
+    [{ role: 'user', content: buildInquiryMessage(prompt, rows, INQUIRY_MAX_ROWS, WRITER_MAX_CHARS) }],
+    {
+      structuredOutput: { schema: summarySchema },
+      modelSettings:    { maxOutputTokens: limit, temperature: 0, maxRetries: 1 },
+      abortSignal:      freshSignal('writer'),
+    },
+  );
 
-  log('writer:inquiry', `done | ${Date.now() - t0}ms | in:${usage.promptTokens} out:${usage.completionTokens}`);
+  const object = result.object as InquirySummary;
+  const usage: TokenUsage = { inputTokens: result.usage.inputTokens ?? 0, outputTokens: result.usage.outputTokens ?? 0 };
+
+  log('writer:inquiry', `done | ${Date.now() - t0}ms | in:${usage.inputTokens} out:${usage.outputTokens}`);
   logTrace('writer:inquiry', `result`, object);
-  return { result: object, usage: { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens } };
+  return { result: object, usage };
 }
 
 export async function runReportSkill({ prompt, rows, withChart, apiKey, userModel, userProvider, maxTokens }: WriterInput): Promise<WriterResult<ReportSections>> {
@@ -67,18 +67,20 @@ export async function runReportSkill({ prompt, rows, withChart, apiKey, userMode
   const start = Date.now();
   log('writer:report', `rows: ${rows.length} | maxTokens: ${limit} | withChart: ${withChart ?? false}`);
 
-  const { object, usage } = await generateObject({
-    model:       resolveModel('writer', apiKey, userModel, userProvider),
-    abortSignal: freshSignal('writer'),
-    temperature: 0,
-    maxRetries:  1,
-    schema:      reportSectionsSchema,
-    system:      REPORT_INSTRUCTIONS,
-    maxTokens:   limit,
-    messages: [{ role: 'user', content: buildReportMessage(prompt, rows, WRITER_MAX_CHARS, withChart) }],
-  });
+  const agent  = createSkillAgent('writer', REPORT_INSTRUCTIONS, apiKey, userModel, userProvider);
+  const result = await agent.generate(
+    [{ role: 'user', content: buildReportMessage(prompt, rows, WRITER_MAX_CHARS, withChart) }],
+    {
+      structuredOutput: { schema: reportSectionsSchema },
+      modelSettings:    { maxOutputTokens: limit, temperature: 0, maxRetries: 1 },
+      abortSignal:      freshSignal('writer'),
+    },
+  );
 
-  log('writer:report', `done in ${Date.now() - start}ms | sections: ${object.reportSections.length} | in:${usage.promptTokens} out:${usage.completionTokens}`);
+  const object = result.object as ReportSections;
+  const usage: TokenUsage = { inputTokens: result.usage.inputTokens ?? 0, outputTokens: result.usage.outputTokens ?? 0 };
+
+  log('writer:report', `done in ${Date.now() - start}ms | sections: ${object.reportSections.length} | in:${usage.inputTokens} out:${usage.outputTokens}`);
   logTrace('writer:report', `result`, object);
-  return { result: object, usage: { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens } };
+  return { result: object, usage };
 }

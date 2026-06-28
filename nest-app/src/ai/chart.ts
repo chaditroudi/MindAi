@@ -56,7 +56,7 @@ export async function runChart(
   maxTokens?:    number,
 ): Promise<ChartResult> {
   if (!rows.length) {
-    return { result: { layout: 'operational', title: 'No data', summary: 'No rows returned for this request.', widgets: [] }, usage: { promptTokens: 0, completionTokens: 0 } };
+    return { result: { layout: 'operational', title: 'No data', summary: 'No rows returned for this request.', widgets: [] }, usage: { inputTokens: 0, outputTokens: 0 } };
   }
 
   log('chart', `rows: ${rows.length} | strategy: ${strategy ?? 'standard'} | hint: ${chartHint ?? '-'} | source: ${source?.name ?? '?'}`);
@@ -109,4 +109,5 @@ export async function runChart(
   log('chart', `done | widgets: ${widgets.length}${dropped.length ? ` | dropped: ${dropped.length}` : ''} | layout: ${plan.layout}`);
 
   return { result: { layout: plan.layout, title: prompt, summary: plan.summary, widgets } as DashboardSpec, usage: llmUsage };
+
 }

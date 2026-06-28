@@ -1,12 +1,11 @@
-import { generateObject } from 'ai';
 import { z } from 'zod';
-import { resolveModel, freshSignal } from './model';
+import { createSkillAgent, freshSignal } from './model';
 import { readMarkdownSection, skillFile } from './skill-prompt';
 import { log } from '../common/logger/app.logger';
 import type { MemoryType } from '../memory/memory.repository';
 
-const SKILL_PROMPT  = readMarkdownSection(skillFile('memory', 'SKILL.md'), 'Runtime Prompt');
-const MAX_TOKENS    = Number(process.env['MEMORY_MAX_TOKENS'] ?? 400);
+const SKILL_PROMPT = readMarkdownSection(skillFile('memory', 'SKILL.md'), 'Runtime Prompt');
+const MAX_TOKENS   = Number(process.env['MEMORY_MAX_TOKENS'] ?? 400);
 
 export interface ExtractedMemory {
   type:       MemoryType;
@@ -33,24 +32,17 @@ export async function extractMemories(
   maxTokens?: number,
 ): Promise<ExtractedMemory[]> {
   try {
-    const { object } = await generateObject({
-      model:       resolveModel('memory', apiKey, userModel, userProvider),
-      abortSignal: freshSignal('memory'),
-      temperature: 0,
-      maxRetries:  1,
-      maxTokens:   maxTokens ?? MAX_TOKENS,
-      schema:      extractionSchema,
-      system:      SKILL_PROMPT,
-      messages: [{
-        role:    'user',
-        content: JSON.stringify({
-          mode:         'EXTRACT',
-          userPrompt:   prompt,
-          aiResponse:   responseSummary,
-        }),
-      }],
-    });
-    log('memory-skill', `extracted ${object.memories.length} item(s)`);
+    const agent  = createSkillAgent('memory', SKILL_PROMPT, apiKey, userModel, userProvider);
+    const result = await agent.generate(
+      [{ role: 'user', content: JSON.stringify({ mode: 'EXTRACT', userPrompt: prompt, aiResponse: responseSummary }) }],
+      {
+        structuredOutput: { schema: extractionSchema },
+        modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 1 },
+        abortSignal:      freshSignal('memory'),
+      },
+    );
+    const object = result.object as z.infer<typeof extractionSchema>;
+    log('memory-skill', `extracted ${object.memories.length} item(s) | in:${result.usage.inputTokens ?? 0} out:${result.usage.outputTokens ?? 0}`);
     return object.memories as ExtractedMemory[];
   } catch (err) {
     log('memory-skill', `extraction failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
