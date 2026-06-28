@@ -140,18 +140,27 @@
             <h4 class="config-section-title">Token Limits</h4>
             <div class="config-field">
               <label class="config-label">Input token limit</label>
-              <input class="config-input" type="number" min="1" max="128000"
-                [(ngModel)]="tokenDraft.inputTokenLimit" />
+              <select class="config-input" [(ngModel)]="tokenDraft.inputTokenLimit">
+                @for (opt of INPUT_TOKEN_OPTIONS; track opt.value) {
+                  <option [ngValue]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
             </div>
             <div class="config-field">
               <label class="config-label">Output token limit</label>
-              <input class="config-input" type="number" min="1" max="32000"
-                [(ngModel)]="tokenDraft.outputTokenLimit" />
+              <select class="config-input" [(ngModel)]="tokenDraft.outputTokenLimit">
+                @for (opt of OUTPUT_TOKEN_OPTIONS; track opt.value) {
+                  <option [ngValue]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
             </div>
             <div class="config-field">
-              <label class="config-label">Memory limit</label>
-              <input class="config-input" type="number" min="1" max="500"
-                [(ngModel)]="tokenDraft.memoryLimit" />
+              <label class="config-label">Memory limit (items)</label>
+              <select class="config-input" [(ngModel)]="tokenDraft.memoryLimit">
+                @for (opt of MEMORY_LIMIT_OPTIONS; track opt.value) {
+                  <option [ngValue]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
             </div>
           </section>
 

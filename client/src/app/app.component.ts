@@ -632,6 +632,38 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   readonly STATUS_OPTIONS: AgentStatus[] = ['active', 'idle', 'disabled', 'expired'];
 
+  readonly INPUT_TOKEN_OPTIONS: { label: string; value: number }[] = [
+    { label: '1,000',   value: 1_000 },
+    { label: '2,000',   value: 2_000 },
+    { label: '4,000 (default)', value: 4_000 },
+    { label: '8,000',   value: 8_000 },
+    { label: '16,000',  value: 16_000 },
+    { label: '32,000',  value: 32_000 },
+    { label: '64,000',  value: 64_000 },
+    { label: '128,000', value: 128_000 },
+  ];
+
+  readonly OUTPUT_TOKEN_OPTIONS: { label: string; value: number }[] = [
+    { label: '256',             value: 256 },
+    { label: '512',             value: 512 },
+    { label: '800 (default)',   value: 800 },
+    { label: '1,000',           value: 1_000 },
+    { label: '2,000',           value: 2_000 },
+    { label: '4,000',           value: 4_000 },
+    { label: '8,000',           value: 8_000 },
+    { label: '16,000',          value: 16_000 },
+    { label: '32,000',          value: 32_000 },
+  ];
+
+  readonly MEMORY_LIMIT_OPTIONS: { label: string; value: number }[] = [
+    { label: '10',           value: 10 },
+    { label: '25',           value: 25 },
+    { label: '50 (default)', value: 50 },
+    { label: '100',          value: 100 },
+    { label: '200',          value: 200 },
+    { label: '500',          value: 500 },
+  ];
+
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
     const base = { messageId: data.messageId, role: 'assistant' as const, prompt };
 
