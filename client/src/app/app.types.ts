@@ -135,6 +135,24 @@ export interface MemoryConfigResponse {
   extractionEnabled: boolean;
 }
 
+// ─── Agent config ─────────────────────────────────────────────────────────────
+
+export type AgentStatus = 'active' | 'disabled' | 'expired' | 'idle';
+
+export interface AgentEntry {
+  status:   AgentStatus;
+  provider: string;
+  model:    string;
+  apiKey:   string;
+}
+
+export interface AgentConfigResponse {
+  inputTokenLimit:  number;
+  outputTokenLimit: number;
+  memoryLimit:      number;
+  agents:           AgentEntry[];
+}
+
 // ─── API responses ────────────────────────────────────────────────────────────
 
 export interface DashboardResponse {
