@@ -1230,16 +1230,6 @@
 }
 .config-add-btn:hover { background: #f3f4f6; }
 
-.config-agent-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  padding: 0.65rem;
-  margin-bottom: 0.75rem;
-}
 
 .config-agent-card {
   border: 1px solid #e5e7eb;

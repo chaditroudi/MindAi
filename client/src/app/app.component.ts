@@ -156,7 +156,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     };
     const intent = intentMap[msg.intent ?? ''] ?? 'inquiry';
     try {
-      const { id } = await this.api.saveResult(userId, {
+      await this.api.saveResult(userId, {
         title,
         prompt: msg.prompt ?? '',
         intent,
@@ -165,7 +165,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.savedIds.add(msg.messageId);
       const fresh = await this.api.listSavedResults(userId);
       this.st.patch({ savedResults: fresh, sidebarOpen: true, sidebarTab: 'saved' });
-      void id;
     } catch (err) {
       console.error('saveResult failed:', err);
     }
