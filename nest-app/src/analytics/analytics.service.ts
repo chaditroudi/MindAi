@@ -548,6 +548,7 @@ export class AnalyticsService {
     effectiveApiKey: string;
     userModel?:      string;
     userProvider?:   string;
+    maxTokens?:      number;
   }): Promise<void> {
     const summary = this.buildResponseSummary(params.type, params.prompt, params.result);
     if (summary.length <= MIN_SUMMARY_LENGTH_FOR_MEMORY) return;
@@ -560,6 +561,7 @@ export class AnalyticsService {
         params.effectiveApiKey,
         params.userModel,
         params.userProvider,
+        params.maxTokens,
       );
     } catch (err) {
       this.logger.warn(`memory.extractAndSave failed: ${err}`);
