@@ -18,6 +18,7 @@ import { SavedResultsModule } from './saved-results/saved-results.module';
 import { UserKeysModule } from './user-keys/user-keys.module';
 import { UserSettingsModule } from './user-settings/user-settings.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AgentConfigModule } from './agent-config/agent-config.module';
 
 const angularDist = path.join(__dirname, '..', '..', 'client', 'dist', 'mind-ui', 'browser');
 const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
