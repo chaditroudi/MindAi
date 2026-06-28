@@ -126,6 +126,7 @@ export class AnalyticsService {
     private readonly cfg:           ConfigService,
     private readonly memory:        MemoryService,
     private readonly userSettings:  UserSettingsService,
+    private readonly agentConfig:   AgentConfigService,
   ) {}
 
   // --------------------------------------------------------------------------
@@ -163,11 +164,18 @@ export class AnalyticsService {
 
     this.ensureDataSources();
 
-    const settings          = await this.userSettings.findByUser(req.userId);
-    const userKey           = settings?.apiKey?.trim()    || null;
-    const userModel         = settings?.model?.trim()     || undefined;
-    const userProvider      = settings?.provider?.trim()  || undefined;
-    const inputTokenLimit   = settings?.inputTokenLimit   ?? 4_000;
+    const [settings, agentCfg] = await Promise.all([
+      this.userSettings.findByUser(req.userId),
+      this.agentConfig.getConfig(),
+    ]);
+
+    const userKey      = settings?.apiKey?.trim()    || null;
+    const userModel    = settings?.model?.trim()     || undefined;
+    const userProvider = settings?.provider?.trim()  || undefined;
+
+    // Token limits: user setting → agent config → hardcoded default
+    const inputTokenLimit  = settings?.inputTokenLimit  ?? agentCfg.inputTokenLimit;
+    const outputTokenLimit = settings?.outputTokenLimit ?? agentCfg.outputTokenLimit;
 
     if (settings && (!userKey || !userProvider || !userModel)) {
       throw new BadRequestException(
@@ -175,7 +183,7 @@ export class AnalyticsService {
       );
     }
 
-    const { primaryKey, globalKey } = this.resolveApiKeys(userKey);
+    const { primaryKey, globalKey } = await this.resolveApiKeys(userKey, agentCfg);
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
 
