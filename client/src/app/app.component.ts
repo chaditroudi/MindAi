@@ -202,8 +202,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       if (res.configured) {
         this.st.patch({
           hasKey: true, showKeyModal: false,
-          provider: res.provider ?? '',
-          selectedModel: res.model ?? '',
+          provider:        res.provider        ?? '',
+          selectedModel:   res.model           ?? '',
+          inputTokenLimit: res.inputTokenLimit ?? 4_000,
         });
       } else {
         this.st.patch({ hasKey: false, showKeyModal: true });
@@ -214,16 +215,17 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   async saveApiKey(): Promise<void> {
-    const trimmed  = this.modalKey.trim();
-    const provider = this.st.snap.provider || 'groq';
-    const model    = this.st.snap.selectedModel || (this.modelsForProvider(provider)[0]?.value ?? '');
+    const trimmed        = this.modalKey.trim();
+    const provider       = this.st.snap.provider || 'groq';
+    const model          = this.st.snap.selectedModel || (this.modelsForProvider(provider)[0]?.value ?? '');
+    const inputTokenLimit = this.st.snap.inputTokenLimit || 4_000;
     if (!trimmed || !model) return;
 
     try {
-      await this.api.saveSettings(this.st.snap.userId, { apiKey: trimmed, provider, model });
+      await this.api.saveSettings(this.st.snap.userId, { apiKey: trimmed, provider, model, inputTokenLimit });
       this.st.patch({
         hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
-        provider, selectedModel: model,
+        provider, selectedModel: model, inputTokenLimit,
       });
       this.modalKey = '';
     } catch (err) {

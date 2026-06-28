@@ -31,13 +31,14 @@ export interface AppState {
   pendingPrompt:     string;
 
   // API key (stored in MongoDB; userId is the local reference)
-  userId:        string;
-  hasKey:        boolean;
-  keyRejected:   boolean;
-  keyErrorText:  string;
-  showKeyModal:  boolean;
-  provider:      string;
-  selectedModel: string;
+  userId:          string;
+  hasKey:          boolean;
+  keyRejected:     boolean;
+  keyErrorText:    string;
+  showKeyModal:    boolean;
+  provider:        string;
+  selectedModel:   string;
+  inputTokenLimit: number;
 }
 
 const INITIAL: AppState = {
@@ -63,13 +64,14 @@ const INITIAL: AppState = {
   pendingSuggestion: false,
   pendingPrompt:     '',
 
-  userId:        '',
-  hasKey:        false,
-  keyRejected:   false,
-  keyErrorText:  '',
-  showKeyModal:  false,
-  provider:      '',
-  selectedModel: '',
+  userId:          '',
+  hasKey:          false,
+  keyRejected:     false,
+  keyErrorText:    '',
+  showKeyModal:    false,
+  provider:        '',
+  selectedModel:   '',
+  inputTokenLimit: 4_000,
 };
 
 @Injectable({ providedIn: 'root' })
