@@ -174,7 +174,7 @@
                 <input class="config-input" type="password" placeholder="API key"
                   [(ngModel)]="newAgent.apiKey" />
                 <div class="config-field" style="margin:0">
-                  <label class="config-label">Input token limit (context per request)</label>
+                  <label class="config-label">Input token limit <span class="config-label-hint">(context sent per request)</span></label>
                   <select class="config-input" [(ngModel)]="newAgent.inputTokenLimit">
                     @for (opt of INPUT_TOKEN_OPTIONS; track opt.value) {
                       <option [ngValue]="opt.value">{{ opt.label }}</option>
@@ -182,7 +182,15 @@
                   </select>
                 </div>
                 <div class="config-field" style="margin:0">
-                  <label class="config-label">Token budget (0 = unlimited)</label>
+                  <label class="config-label">Output token limit <span class="config-label-hint">(AI response length)</span></label>
+                  <select class="config-input" [(ngModel)]="newAgent.outputTokenLimit">
+                    @for (opt of OUTPUT_TOKEN_OPTIONS; track opt.value) {
+                      <option [ngValue]="opt.value">{{ opt.label }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="config-field" style="margin:0">
+                  <label class="config-label">Credit budget <span class="config-label-hint">(total tokens, 0 = unlimited)</span></label>
                   <input class="config-input" type="number" min="0" placeholder="e.g. 500000"
                     [(ngModel)]="newAgent.tokenBudget" />
                 </div>
@@ -224,9 +232,8 @@
                 </div>
 
                 <div class="config-agent-meta">
-                  <span class="config-agent-meta-item">
-                    Input limit: <strong>{{ agent.inputTokenLimit.toLocaleString() }} tokens</strong>
-                  </span>
+                  <span class="config-agent-meta-item">In: <strong>{{ agent.inputTokenLimit.toLocaleString() }}</strong></span>
+                  <span class="config-agent-meta-item">Out: <strong>{{ agent.outputTokenLimit.toLocaleString() }}</strong></span>
                 </div>
 
                 @if (agent.tokenBudget > 0) {
@@ -238,12 +245,21 @@
                         [class.config-usage-fill--over]="agentUsagePct(agent) >= 100">
                       </div>
                     </div>
-                    <span class="config-usage-label">{{ agentUsageLabel(agent) }}</span>
+                    <div class="config-usage-breakdown">
+                      <span>{{ agentTotalUsed(agent).toLocaleString() }} / {{ agent.tokenBudget.toLocaleString() }} credits</span>
+                      <span>{{ agentCreditsLeft(agent).toLocaleString() }} left</span>
+                    </div>
+                    <div class="config-usage-detail">
+                      <span>↑ {{ (agent.inputTokensUsed ?? 0).toLocaleString() }} input</span>
+                      <span>↓ {{ (agent.outputTokensUsed ?? 0).toLocaleString() }} output</span>
+                    </div>
                   </div>
                 } @else {
-                  <span class="config-usage-label config-usage-label--dim">
-                    {{ agent.tokensUsed.toLocaleString() }} tokens used · unlimited budget
-                  </span>
+                  <div class="config-usage-detail">
+                    <span>↑ {{ (agent.inputTokensUsed ?? 0).toLocaleString() }} input</span>
+                    <span>↓ {{ (agent.outputTokensUsed ?? 0).toLocaleString() }} output</span>
+                    <span class="config-usage-label--dim">· unlimited</span>
+                  </div>
                 }
               </div>
             }
