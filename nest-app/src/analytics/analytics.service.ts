@@ -209,10 +209,12 @@ export class AnalyticsService {
     const durationMs = Date.now() - t0;
     this.logger.log(`done in ${durationMs}ms`);
 
-    // Track token usage against the agent budget (fire-and-forget)
+    // Track input + output credits against the agent budget (fire-and-forget)
     if (access.agentApiKey) {
-      const usedTokens = this.estimateRequestTokens(prompt, memoryContext, result);
-      void this.agentConfig.trackUsage(access.agentApiKey, usedTokens);
+      const contextText  = memoryContext.map(m => typeof m.content === 'string' ? m.content : '').join(' ');
+      const inputTokens  = estimateTokens(prompt) + estimateTokens(contextText);
+      const outputTokens = estimateTokens(JSON.stringify(result ?? ''));
+      void this.agentConfig.trackUsage(access.agentApiKey, inputTokens, outputTokens);
     }
 
     return this.buildResponse({
@@ -250,18 +252,6 @@ export class AnalyticsService {
     throw new UnauthorizedException(
       'No API key configured. Add one in Settings or configure an active agent in Agent Config.',
     );
-  }
-
-  private estimateRequestTokens(
-    prompt:        string,
-    memoryContext: CoreMessage[],
-    result:        unknown,
-  ): number {
-    const contextText = memoryContext
-      .map(m => (typeof m.content === 'string' ? m.content : ''))
-      .join(' ');
-    const resultText = JSON.stringify(result ?? '');
-    return estimateTokens(prompt) + estimateTokens(contextText) + estimateTokens(resultText);
   }
 
   private async resolveSession(req: AnalyticsRequest): Promise<{
