@@ -183,9 +183,8 @@ export class AnalyticsService {
 
     let result: unknown;
     try {
-      // outputTokenLimit is intentionally omitted — each AI skill enforces its own limit
       result = await this.executeByIntent(intent, prompt, memoryContext,
-        access.apiKey, access.model, access.provider);
+        access.apiKey, access.model, access.provider, access.outputTokenLimit);
     } catch (err) {
       if (isInvalidKeyError(err)) {
         throw Object.assign(
@@ -233,20 +232,22 @@ export class AnalyticsService {
   ): AccessResult {
     if (userKey) {
       return {
-        apiKey:          userKey,
-        model:           userModel,
-        provider:        userProvider,
-        inputTokenLimit: userTokenLimit ?? 4_000,
+        apiKey:           userKey,
+        model:            userModel,
+        provider:         userProvider,
+        inputTokenLimit:  userTokenLimit ?? 4_000,
+        outputTokenLimit: 2_000,
       };
     }
     const active = agentCfg.agents.find(a => a.status === 'active');
     if (active?.apiKey) {
       return {
-        apiKey:          active.apiKey,
-        model:           active.model,
-        provider:        active.provider,
-        inputTokenLimit: active.inputTokenLimit,
-        agentApiKey:     active.apiKey,
+        apiKey:           active.apiKey,
+        model:            active.model,
+        provider:         active.provider,
+        inputTokenLimit:  active.inputTokenLimit,
+        outputTokenLimit: active.outputTokenLimit,
+        agentApiKey:      active.apiKey,
       };
     }
     throw new UnauthorizedException(

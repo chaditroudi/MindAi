@@ -80,7 +80,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   memoryLimitDraft = 50;
   newAgent: AgentEntry = {
     status: 'idle', provider: 'groq', model: '', apiKey: '',
-    inputTokenLimit: 4_000, tokenBudget: 0, tokensUsed: 0,
+    inputTokenLimit: 4_000, outputTokenLimit: 2_000,
+    tokenBudget: 0, inputTokensUsed: 0, outputTokensUsed: 0,
   };
   showAddAgent = false;
 

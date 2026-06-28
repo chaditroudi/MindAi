@@ -140,13 +140,15 @@ export interface MemoryConfigResponse {
 export type AgentStatus = 'active' | 'disabled' | 'expired' | 'idle';
 
 export interface AgentEntry {
-  status:          AgentStatus;
-  provider:        string;
-  model:           string;
-  apiKey:          string;
-  inputTokenLimit: number;   // context window the user can fill per request
-  tokenBudget:     number;   // lifetime token budget (0 = unlimited)
-  tokensUsed:      number;   // accumulated usage, auto-tracked
+  status:           AgentStatus;
+  provider:         string;
+  model:            string;
+  apiKey:           string;
+  inputTokenLimit:  number;  // max tokens user can send per request
+  outputTokenLimit: number;  // max tokens AI can generate per request
+  tokenBudget:      number;  // total credit balance (0 = unlimited)
+  inputTokensUsed:  number;  // accumulated input tokens consumed
+  outputTokensUsed: number;  // accumulated output tokens consumed
 }
 
 export interface AgentConfigResponse {
