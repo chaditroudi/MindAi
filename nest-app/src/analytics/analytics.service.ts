@@ -190,7 +190,7 @@ export class AnalyticsService {
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
     const memoryContext = await this.buildMemoryContext(
-      req.userId, sessionId, prompt, access.inputTokenLimit,
+      req.userId, sessionId, prompt,
     );
 
     this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
@@ -304,10 +304,9 @@ export class AnalyticsService {
   }
 
   private async buildMemoryContext(
-    userId:          string,
-    sessionId:       string,
-    prompt:          string,
-    inputTokenLimit: number,
+    userId:    string,
+    sessionId: string,
+    prompt:    string,
   ): Promise<CoreMessage[]> {
     const sessionContext = await getMemoryContext(sessionId);
     const longTerm       = await this.memory.getRelevantContext(userId, prompt);
@@ -319,26 +318,7 @@ export class AnalyticsService {
         ]
       : [];
 
-    const messages     = [...longTermMessages, ...sessionContext];
-    const promptTokens = estimateTokens(prompt);
-    let budget         = inputTokenLimit - promptTokens;
-
-    const trimmed: CoreMessage[] = [];
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const content = typeof messages[i].content === 'string' ? messages[i].content as string : '';
-      const cost    = estimateTokens(content);
-      if (budget - cost < 0) break;
-      budget -= cost;
-      trimmed.unshift(messages[i]);
-    }
-
-    if (trimmed.length < messages.length) {
-      this.logger.warn(
-        `input token limit ${inputTokenLimit}: dropped ${messages.length - trimmed.length} context message(s)`,
-      );
-    }
-
-    return trimmed;
+    return [...longTermMessages, ...sessionContext];
   }
 
   // ── Response building ────────────────────────────────────────────────────────
