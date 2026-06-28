@@ -8,7 +8,7 @@ export interface UserSettingsDto {
   model:    string;
 }
 
-interface ValidationResult {
+export interface ValidationResult {
   ok:       boolean;
   provider: string;
   model:    string;
