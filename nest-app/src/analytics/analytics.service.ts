@@ -7,7 +7,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { CoreMessage } from 'ai';
-import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
@@ -15,7 +14,7 @@ import { getSources } from '../sources/sources-cache';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
-import { AgentConfigService } from '../agent-config/agent-config.service';
+import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-config.service';
 import { estimateTokens } from '../ai/token';
 import {
   sessionExists,
@@ -27,19 +26,38 @@ import {
   type ConversationMessage,
 } from '../session/memory';
 
+// ── Prompt validation ──────────────────────────────────────────────────────────
 
 const promptSchema = z.string()
   .min(1, 'Prompt is required')
   .max(1000, 'Prompt must be 1000 characters or fewer');
 
+// ── Types ──────────────────────────────────────────────────────────────────────
+
 type ResolvedType = 'dashboard' | 'report' | 'inquiry';
 
-const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
+export interface AnalyticsRequest {
+  prompt:    string;
+  intent?:   string;
+  sessionId?: string | null;
+  userId:    string;
+}
+
+export interface AnalyticsResponse {
+  intent:    string;
+  sessionId: string;
+  messageId: string;
+  [key: string]: unknown;
+}
+
+// ── Error classification ───────────────────────────────────────────────────────
 
 const ERROR_CODES = {
   INVALID_API_KEY: 'INVALID_API_KEY',
-  LLM_RATE_LIMIT: 'LLM_RATE_LIMIT',
+  LLM_RATE_LIMIT:  'LLM_RATE_LIMIT',
 } as const;
+
+const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
 
 function getErrorStatus(err: unknown): number | undefined {
   return (err as { statusCode?: number; status?: number }).statusCode
@@ -86,81 +104,47 @@ function extractRetryDelay(err: unknown): string | null {
   return match?.[1]?.trim() ?? null;
 }
 
-function buildRateLimitMessage(err: unknown, withKeyHint: boolean): string {
-  const retryIn = extractRetryDelay(err);
-  const suffix = withKeyHint ? ' or use a different API key.' : '.';
-  if (retryIn) return `API quota reached. Try again in ${retryIn}${suffix}`;
-  return withKeyHint
-    ? 'API quota reached. Please try again later or use a different API key.'
-    : 'API quota reached. Please try again later.';
-}
-
-// ============================================================================
-// Types
-// ============================================================================
-
-export interface AnalyticsRequest {
-  prompt: string;
-  intent?: string;
-  sessionId?: string | null;
-  userId: string;
-}
-
-export interface AnalyticsResponse {
-  intent: string;
-  sessionId: string;
-  messageId: string;
-  [key: string]: unknown;
-}
-
-// ============================================================================
-// Service
-// ============================================================================
+// ── Service ────────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
 
   constructor(
-    private readonly pipeline:      PipelineService,
-    private readonly cfg:           ConfigService,
-    private readonly memory:        MemoryService,
-    private readonly userSettings:  UserSettingsService,
-    private readonly agentConfig:   AgentConfigService,
+    private readonly pipeline:     PipelineService,
+    private readonly memory:       MemoryService,
+    private readonly userSettings: UserSettingsService,
+    private readonly agentConfig:  AgentConfigService,
   ) {}
 
-  // --------------------------------------------------------------------------
-  // Intent execution
-  // --------------------------------------------------------------------------
+  // ── Intent dispatch ──────────────────────────────────────────────────────────
 
   private async executeByIntent(
     intent:        string | undefined,
     prompt:        string,
     memoryContext: CoreMessage[],
     apiKey:        string,
-    userModel?:    string,
-    userProvider?: string,
+    model?:        string,
+    provider?:     string,
     maxTokens?:    number,
   ): Promise<unknown> {
     switch (intent) {
       case 'dashboard':
-        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, userModel, userProvider, maxTokens);
+        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, model, provider, maxTokens);
       case 'report':
-        return this.pipeline.executeReport(prompt, memoryContext, apiKey, userModel, userProvider, maxTokens);
+        return this.pipeline.executeReport(prompt, memoryContext, apiKey, model, provider, maxTokens);
       case 'inquiry':
-        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, userModel, userProvider, maxTokens);
+        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, model, provider, maxTokens);
       default:
-        return this.pipeline.execute(prompt, memoryContext, apiKey, userModel, userProvider, maxTokens);
+        return this.pipeline.execute(prompt, memoryContext, apiKey, model, provider, maxTokens);
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Public API
-  // --------------------------------------------------------------------------
+  // ── Public API ───────────────────────────────────────────────────────────────
 
   async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
     const prompt = promptSchema.parse(req.prompt);
-    const intent = req.intent; // LLM supervisor determines skill dynamically when unset
+    const intent = req.intent;
 
     this.ensureDataSources();
 
@@ -173,58 +157,57 @@ export class AnalyticsService {
     const userModel    = settings?.model?.trim()     || undefined;
     const userProvider = settings?.provider?.trim()  || undefined;
 
-    // Token limits: user setting → agent config → hardcoded default
     const inputTokenLimit  = settings?.inputTokenLimit  ?? agentCfg.inputTokenLimit;
     const outputTokenLimit = settings?.outputTokenLimit ?? agentCfg.outputTokenLimit;
 
     if (settings && (!userKey || !userProvider || !userModel)) {
       throw new BadRequestException(
-        'Incomplete setup: please provide a valid API key, provider, and model in Settings before using AI features.',
+        'Incomplete setup: please provide a valid API key, provider, and model in Settings.',
       );
     }
 
-    const { primaryKey, globalKey } = this.resolveApiKeys(userKey, agentCfg);
+    const { apiKey, model, provider } = this.resolveAccess(userKey, userModel, userProvider, agentCfg);
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
-
     const memoryContext = await this.buildMemoryContext(req.userId, sessionId, prompt, inputTokenLimit);
 
-    this.logger.log(
-      `prompt: "${prompt}" | intent: ${intent}${req.intent ? '' : ' (auto)'} | session: ${sessionId}`,
-    );
+    this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
     const t0 = Date.now();
 
-    const { result, effectiveApiKey } = await this.runWithFallback(
-      intent,
-      prompt,
-      memoryContext,
-      primaryKey,
-      userKey,
-      globalKey,
-      req.userId,
-      userModel,
-      userProvider,
-      outputTokenLimit,
-    );
+    let result: unknown;
+    try {
+      result = await this.executeByIntent(intent, prompt, memoryContext, apiKey, model, provider, outputTokenLimit);
+    } catch (err) {
+      if (isInvalidKeyError(err)) {
+        throw Object.assign(
+          new UnauthorizedException('Invalid API key. Please update it in Settings or Agent Config.'),
+          { code: ERROR_CODES.INVALID_API_KEY },
+        );
+      }
+      if (isProviderRateLimitError(err)) {
+        const retryIn = extractRetryDelay(err);
+        const msg = retryIn
+          ? `API quota reached. Try again in ${retryIn}.`
+          : 'API quota reached. Please try again later.';
+        throw Object.assign(
+          new HttpException({ error: msg }, HttpStatus.TOO_MANY_REQUESTS),
+          { code: ERROR_CODES.LLM_RATE_LIMIT },
+        );
+      }
+      throw err;
+    }
+
     this.logger.log(`done in ${Date.now() - t0}ms`);
 
     return this.buildResponse({
-      result,
-      prompt,
-      effectiveApiKey,
-      sessionId,
-      displayIntent,
-      userId: req.userId,
+      result, prompt, apiKey, sessionId,
+      displayIntent, userId: req.userId,
       durationMs: Date.now() - t0,
-      userModel,
-      userProvider,
-      outputTokenLimit,
+      model, provider, outputTokenLimit,
     });
   }
 
-  // --------------------------------------------------------------------------
-  // Setup helpers
-  // --------------------------------------------------------------------------
+  // ── Setup helpers ────────────────────────────────────────────────────────────
 
   private ensureDataSources(): void {
     if (!getSources().length) {
@@ -232,26 +215,22 @@ export class AnalyticsService {
     }
   }
 
-  private resolveApiKeys(
-    userKey:   string | null,
-    agentCfg?: import('../agent-config/agent-config.service').ResolvedConfig,
-  ): { globalKey: string | null; primaryKey: string } {
-    const groqGlobal   = this.cfg.get<string>('llm.groqApiKey')?.trim()   || null;
-    const openaiGlobal = this.cfg.get<string>('llm.openaiApiKey')?.trim() || null;
-    const envGlobalKey = groqGlobal || openaiGlobal || null;
-
-    // Priority: user key → active agent key → env global key
-    const activeAgentKey = agentCfg?.agents.find(a => a.status === 'active')?.apiKey?.trim() || null;
-    const globalKey      = activeAgentKey || envGlobalKey;
-    const primaryKey     = userKey || globalKey;
-
-    if (!primaryKey) {
-      throw new UnauthorizedException(
-        'No API key configured. Add one in Settings or configure an active agent.',
-      );
+  private resolveAccess(
+    userKey:      string | null,
+    userModel:    string | undefined,
+    userProvider: string | undefined,
+    agentCfg:     ResolvedConfig,
+  ): { apiKey: string; model?: string; provider?: string } {
+    if (userKey) {
+      return { apiKey: userKey, model: userModel, provider: userProvider };
     }
-
-    return { globalKey, primaryKey };
+    const active = agentCfg.agents.find(a => a.status === 'active');
+    if (active?.apiKey) {
+      return { apiKey: active.apiKey, model: active.model, provider: active.provider };
+    }
+    throw new UnauthorizedException(
+      'No API key configured. Add one in Settings or configure an active agent in Agent Config.',
+    );
   }
 
   private async resolveSession(req: AnalyticsRequest): Promise<{
@@ -271,14 +250,14 @@ export class AnalyticsService {
 
   private toDisplayIntent(intent: string | undefined): SessionIntent {
     if (intent === 'dashboard') return 'dashboard';
-    if (intent === 'report') return 'report';
+    if (intent === 'report')    return 'report';
     return 'inquiry';
   }
 
   private async buildMemoryContext(
-    userId: string,
-    sessionId: string,
-    prompt: string,
+    userId:          string,
+    sessionId:       string,
+    prompt:          string,
     inputTokenLimit: number,
   ): Promise<CoreMessage[]> {
     const sessionContext = await getMemoryContext(sessionId);
@@ -305,229 +284,67 @@ export class AnalyticsService {
     }
 
     if (trimmed.length < messages.length) {
-      this.logger.warn(`input token limit ${inputTokenLimit}: dropped ${messages.length - trimmed.length} context message(s)`);
+      this.logger.warn(
+        `input token limit ${inputTokenLimit}: dropped ${messages.length - trimmed.length} context message(s)`,
+      );
     }
 
     return trimmed;
   }
 
-
-  private async runWithFallback(
-    intent:        string | undefined,
-    prompt:        string,
-    memoryContext: CoreMessage[],
-    primaryKey:    string,
-    storedKey:     string | null,
-    globalKey:     string | null,
-    userId:        string,
-    userModel?:    string,
-    userProvider?: string,
-    maxTokens?:    number,
-  ): Promise<{ result: unknown; effectiveApiKey: string }> {
-    try {
-      const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey, userModel, userProvider, maxTokens);
-      return { result, effectiveApiKey: primaryKey };
-    } catch (err) {
-      return this.handleExecutionError(err, {
-        intent,
-        prompt,
-        memoryContext,
-        storedKey,
-        globalKey,
-        userId,
-        userModel,
-        userProvider,
-        maxTokens,
-      });
-    }
-  }
-
-  private async handleExecutionError(
-    err: unknown,
-    ctx: {
-      intent:        string | undefined;
-      prompt:        string;
-      memoryContext: CoreMessage[];
-      storedKey:     string | null;
-      globalKey:     string | null;
-      userId:        string;
-      userModel?:    string;
-      userProvider?: string;
-      maxTokens?:    number;
-    },
-  ): Promise<{ result: unknown; effectiveApiKey: string }> {
-    const { intent, prompt, memoryContext, storedKey, globalKey, userId, userModel, userProvider, maxTokens } = ctx;
-    const canFallback = !!(storedKey && globalKey && storedKey !== globalKey);
-
-    if (isInvalidKeyError(err)) {
-      if (!canFallback) {
-        throw Object.assign(
-          new UnauthorizedException('Invalid API key. Please update it in settings.'),
-          { code: ERROR_CODES.INVALID_API_KEY },
-        );
-      }
-      return this.retryWithGlobalKey({
-        intent,
-        prompt,
-        memoryContext,
-        userId,
-        storedKey,
-        globalKey: globalKey!,
-        maxTokens,
-        onInvalid: () => { throw Object.assign(
-          new UnauthorizedException('Global API key is also invalid. Contact the administrator.'),
-          { code: ERROR_CODES.INVALID_API_KEY },
-        ); },
-        onRateLimit: (retryErr) => { throw Object.assign(
-          new HttpException(
-            { error: buildRateLimitMessage(retryErr, false) },
-            HttpStatus.TOO_MANY_REQUESTS,
-          ),
-          { code: ERROR_CODES.LLM_RATE_LIMIT },
-        ); },
-      });
-    }
-
-    if (isProviderRateLimitError(err)) {
-      if (!canFallback) {
-        throw Object.assign(
-          new HttpException(
-            { error: buildRateLimitMessage(err, true) },
-            HttpStatus.TOO_MANY_REQUESTS,
-          ),
-          { code: ERROR_CODES.LLM_RATE_LIMIT },
-        );
-      }
-      return this.retryWithGlobalKey({
-        intent,
-        prompt,
-        memoryContext,
-        userId,
-        storedKey,
-        globalKey: globalKey!,
-        maxTokens,
-        onInvalid: () => { throw Object.assign(
-          new UnauthorizedException('Global API key is invalid. Contact the administrator.'),
-          { code: ERROR_CODES.INVALID_API_KEY },
-        ); },
-        onRateLimit: (retryErr) => { throw Object.assign(
-          new HttpException(
-            { error: buildRateLimitMessage(retryErr ?? err, true) },
-            HttpStatus.TOO_MANY_REQUESTS,
-          ),
-          { code: ERROR_CODES.LLM_RATE_LIMIT },
-        ); },
-        onOther: (retryErr) => {
-          throw retryErr;
-        },
-      });
-    }
-
-    throw err;
-  }
-
-  private async retryWithGlobalKey(opts: {
-    intent: string | undefined;
-    prompt: string;
-    memoryContext: CoreMessage[];
-    userId: string;
-    storedKey: string;
-    globalKey: string;
-    maxTokens?: number;
-    onInvalid: () => never;
-    onRateLimit: (retryErr: unknown) => never;
-    onOther?: (retryErr: unknown) => never;
-  }): Promise<{ result: unknown; effectiveApiKey: string }> {
-    this.logger.warn(`Per-user key for user ${opts.userId} rejected — retrying with global key`);
-    try {
-      const result = await this.executeByIntent(
-        opts.intent,
-        opts.prompt,
-        opts.memoryContext,
-        opts.globalKey,
-        undefined,
-        undefined,
-        opts.maxTokens,
-      );
-      return { result, effectiveApiKey: opts.globalKey };
-    } catch (retryErr) {
-      if (isInvalidKeyError(retryErr)) opts.onInvalid();
-      if (isProviderRateLimitError(retryErr)) opts.onRateLimit(retryErr);
-      if (opts.onOther) opts.onOther(retryErr);
-      throw retryErr;
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // Response building
-  // --------------------------------------------------------------------------
+  // ── Response building ────────────────────────────────────────────────────────
 
   private resolveType(result: unknown): ResolvedType {
-    if (result && typeof result === 'object' && 'widgets' in result) return 'dashboard';
+    if (result && typeof result === 'object' && 'widgets' in result)        return 'dashboard';
     if (result && typeof result === 'object' && 'reportSections' in result) return 'report';
     return 'inquiry';
   }
 
-  private toMessageResult(
-    type: ResolvedType,
-    result: unknown,
-    durationMs: number,
-  ): MessageResult {
+  private toMessageResult(type: ResolvedType, result: unknown, durationMs: number): MessageResult {
     const r = result as Record<string, unknown>;
     switch (type) {
-      case 'dashboard':        return {
-          type: 'dashboard',
-          dashboardSpec: result as MessageResult['dashboardSpec'],
-          durationMs,
-        };
+      case 'dashboard':
+        return { type: 'dashboard', dashboardSpec: result as MessageResult['dashboardSpec'], durationMs };
       case 'report':
-        return {
-          type: 'report',
-          reportSections: (r.reportSections as MessageResult['reportSections']) ?? [],
-          durationMs,
-        };
+        return { type: 'report', reportSections: (r.reportSections as MessageResult['reportSections']) ?? [], durationMs };
       case 'inquiry':
-        return {
-          type: 'inquiry',
-          summary: (r.summary as string) ?? '',
-          durationMs,
-        };
+        return { type: 'inquiry', summary: (r.summary as string) ?? '', durationMs };
     }
   }
 
   private buildResponseSummary(type: ResolvedType, prompt: string, result: unknown): string {
     const r = result as Record<string, unknown>;
     if (type === 'inquiry') return (r.summary as string) ?? '';
-    if (type === 'report') return `Report generated: ${prompt}`;
+    if (type === 'report')  return `Report generated: ${prompt}`;
     return `Dashboard generated: ${prompt}`;
   }
 
   private buildResponse(params: {
-    result:           unknown;
-    prompt:           string;
-    effectiveApiKey:  string;
-    sessionId:        string;
-    displayIntent:    SessionIntent;
-    userId:           string;
-    durationMs:       number;
-    userModel?:       string;
-    userProvider?:    string;
+    result:          unknown;
+    prompt:          string;
+    apiKey:          string;
+    sessionId:       string;
+    displayIntent:   SessionIntent;
+    userId:          string;
+    durationMs:      number;
+    model?:          string;
+    provider?:       string;
     outputTokenLimit?: number;
   }): AnalyticsResponse {
-    const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs, userModel, userProvider, outputTokenLimit } = params;
-    const type = this.resolveType(result);
+    const { result, prompt, apiKey, sessionId, displayIntent, userId, durationMs, model, provider, outputTokenLimit } = params;
+    const type        = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
-    const messageId = randomUUID();
+    const messageId   = randomUUID();
 
     const assistantMessage: ConversationMessage & { role: 'assistant'; result: MessageResult } = {
       messageId,
-      role: 'assistant',
-      result: messageResult,
+      role:      'assistant',
+      result:    messageResult,
       createdAt: new Date().toISOString(),
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, effectiveApiKey, userModel, userProvider, maxTokens: outputTokenLimit });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, model, provider, maxTokens: outputTokenLimit });
 
     if (type === 'dashboard') {
       return { intent: 'dashboard', chart: result, sessionId, messageId };
@@ -536,16 +353,16 @@ export class AnalyticsService {
   }
 
   private async persistTurn(params: {
-    sessionId: string;
-    prompt: string;
-    displayIntent: SessionIntent;
+    sessionId:        string;
+    prompt:           string;
+    displayIntent:    SessionIntent;
     assistantMessage: ConversationMessage & { role: 'assistant'; result: MessageResult };
   }): Promise<void> {
     try {
       await saveConversationTurn({
         threadId: params.sessionId,
-        prompt: params.prompt,
-        intent: params.displayIntent,
+        prompt:   params.prompt,
+        intent:   params.displayIntent,
         assistant: params.assistantMessage,
       });
     } catch (err) {
@@ -554,15 +371,15 @@ export class AnalyticsService {
   }
 
   private async maybeExtractMemory(params: {
-    type:            ResolvedType;
-    prompt:          string;
-    result:          unknown;
-    userId:          string;
-    sessionId:       string;
-    effectiveApiKey: string;
-    userModel?:      string;
-    userProvider?:   string;
-    maxTokens?:      number;
+    type:      ResolvedType;
+    prompt:    string;
+    result:    unknown;
+    userId:    string;
+    sessionId: string;
+    apiKey:    string;
+    model?:    string;
+    provider?: string;
+    maxTokens?: number;
   }): Promise<void> {
     const summary = this.buildResponseSummary(params.type, params.prompt, params.result);
     if (summary.length <= MIN_SUMMARY_LENGTH_FOR_MEMORY) return;
@@ -572,9 +389,9 @@ export class AnalyticsService {
         params.sessionId,
         params.prompt,
         summary,
-        params.effectiveApiKey,
-        params.userModel,
-        params.userProvider,
+        params.apiKey,
+        params.model,
+        params.provider,
         params.maxTokens,
       );
     } catch (err) {
