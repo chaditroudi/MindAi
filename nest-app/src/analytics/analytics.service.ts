@@ -143,8 +143,10 @@ export class AnalyticsService {
         return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, userModel, userProvider);
       case 'report':
         return this.pipeline.executeReport(prompt, memoryContext, apiKey, userModel, userProvider);
-      default:
+      case 'inquiry':
         return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, userModel, userProvider);
+      default:
+        return this.pipeline.execute(prompt, memoryContext, apiKey, userModel, userProvider);
     }
   }
 
@@ -154,7 +156,7 @@ export class AnalyticsService {
 
   async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
     const prompt = promptSchema.parse(req.prompt);
-    const intent = req.intent ?? detectIntent(prompt);
+    const intent = req.intent; // LLM supervisor determines skill dynamically when unset
 
     this.ensureDataSources();
 

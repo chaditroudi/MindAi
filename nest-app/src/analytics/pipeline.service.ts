@@ -429,4 +429,40 @@ export class PipelineService {
     this.logger.log('inquiry done');
     return result;
   }
+
+  // Dynamic routing — supervisor plan determines the skill; no pre-detection needed
+  async execute(
+    prompt:        string,
+    context:       CoreMessage[] = [],
+    apiKey?:       string,
+    userModel?:    string,
+    userProvider?: string,
+  ): Promise<DashboardSpec | ReportResult | InquiryResult> {
+    const { plan, rows } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider);
+
+    if (plan.skills.includes('chart')) {
+      if (!rows.length) throw new Error('No data found. Try rephrasing your question or checking the data source.');
+      const source = this.resolveSource(plan.query.sourceName);
+      const chart  = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider);
+      if (chart.widgets.length) {
+        this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart }).catch(() => undefined);
+      }
+      return chart;
+    }
+
+    if (plan.skills.includes('report') && rows.length) {
+      const result = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider });
+      this.logger.log(`report done | sections: ${result.reportSections.length}`);
+      return result;
+    }
+
+    if (plan.skills.includes('inquiry') && rows.length) {
+      this.logger.log(`inquiry | rows: ${rows.length}`);
+      const result = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider });
+      this.logger.log('inquiry done');
+      return result;
+    }
+
+    return { summary: 'The request could not be answered from the available sources.' };
+  }
 }
