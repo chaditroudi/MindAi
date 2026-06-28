@@ -202,7 +202,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async saveApiKey(): Promise<void> {
     const trimmed  = this.modalKey.trim();
     const provider = this.st.snap.provider || 'groq';
-    const model    = this.st.snap.selectedModel || this.modelsForProvider(provider)[0]?.value ?? '';
+    const model    = this.st.snap.selectedModel || (this.modelsForProvider(provider)[0]?.value ?? '');
     if (!trimmed || !model) return;
 
     try {
@@ -243,7 +243,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async testConnection(): Promise<void> {
     const trimmed  = this.modalKey.trim();
     const provider = this.st.snap.provider || 'groq';
-    const model    = this.st.snap.selectedModel || this.modelsForProvider(provider)[0]?.value ?? '';
+    const model    = this.st.snap.selectedModel || (this.modelsForProvider(provider)[0]?.value ?? '');
     if (!trimmed || !model) return;
     this.testStatus = 'testing';
     this.testError  = '';
