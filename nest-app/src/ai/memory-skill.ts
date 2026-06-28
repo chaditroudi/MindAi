@@ -17,7 +17,7 @@ export interface ExtractedMemory {
 
 const extractionSchema = z.object({
   memories: z.array(z.object({
-    type:       z.enum(['goal', 'insight', 'preference', 'context', 'decision']),
+    type:       z.enum(['goal', 'insight', 'preference', 'context', 'decision', 'entity', 'correction']),
     content:    z.string().min(5).max(300),
     tags:       z.array(z.string().max(40)).max(5),
     importance: z.number().int().min(1).max(5),
