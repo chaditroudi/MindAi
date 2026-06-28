@@ -1,21 +1,16 @@
 import {
   Controller, Post, Get, Body, Headers,
-  UnauthorizedException, HttpException, HttpStatus, Logger,
+  HttpException, HttpStatus, Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { AnalyticsService } from './analytics.service';
+import { requireUserId } from '../common/helpers/user-id';
 
 class AnalyticsDto {
   @IsString() @MinLength(1) @MaxLength(1000) prompt!: string;
   @IsOptional() @IsString() intent?: string;
   @IsOptional() @IsString() sessionId?: string | null;
-}
-
-function requireUserId(raw: string | undefined): string {
-  const id = raw?.trim();
-  if (!id) throw new UnauthorizedException('User ID missing. Please reload the app.');
-  return id;
 }
 
 @Controller('api')

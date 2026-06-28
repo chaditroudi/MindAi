@@ -57,7 +57,10 @@ export function logTrace(tag: string, msg: string, data?: unknown): void {
 @Injectable()
 export class AppLogger implements LoggerService {
   log(message: string, context?: string)   { emit(context ?? 'nest', message); }
-  error(message: string, context?: string) { emit(context ?? 'nest', `${COLORS.red}ERROR${COLORS.reset} ${message}`); }
+  error(message: string, stackOrContext?: string, context?: string) {
+    const tag = context ?? (stackOrContext && !stackOrContext.includes('\n') ? stackOrContext : 'nest');
+    emit(tag, `${COLORS.red}ERROR${COLORS.reset} ${message}`);
+  }
   warn(message: string, context?: string)  { emit(context ?? 'nest', `${COLORS.yellow}WARN${COLORS.reset}  ${message}`); }
   debug(message: string, context?: string) { if (process.env['DEBUG']) emit(context ?? 'nest', message); }
   verbose()                                { /* omit verbose */ }

@@ -1,17 +1,10 @@
-import { Controller, Get, Delete, Patch, Body, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Delete, Patch, Body, Headers } from '@nestjs/common';
 import { IsBoolean } from 'class-validator';
 import { MemoryService } from './memory.service';
+import { requireUserId } from '../common/helpers/user-id';
 
-function requireUserId(raw: string | undefined): string {
-  const id = raw?.trim();
-  if (!id) throw new UnauthorizedException('User ID missing.');
-  return id;
-}
-
-// DTO for PATCH /api/memory/config
-// class-validator ensures the body contains a real boolean, not a string
 class MemoryConfigDto {
-  @IsBoolean()  
+  @IsBoolean()
   extractionEnabled!: boolean;
 }
 

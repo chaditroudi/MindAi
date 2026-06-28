@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Delete, Body, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Headers } from '@nestjs/common';
 import { IsString, MinLength, MaxLength } from 'class-validator';
 import { UserSettingsService } from './user-settings.service';
+import { requireUserId } from '../common/helpers/user-id';
 
 class SaveSettingsDto {
   @IsString() @MinLength(1) @MaxLength(500)
@@ -11,12 +12,6 @@ class SaveSettingsDto {
 
   @IsString() @MinLength(1) @MaxLength(200)
   model!: string;
-}
-
-function requireUserId(raw: string | undefined): string {
-  const id = raw?.trim();
-  if (!id) throw new UnauthorizedException('User ID missing.');
-  return id;
 }
 
 @Controller('api/settings')

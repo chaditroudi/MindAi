@@ -61,7 +61,11 @@ export class UserKeysController {
       let url: string;
 
       if (dto.verifyUrl?.trim()) {
-        url  = dto.verifyUrl.trim();
+        const candidate = dto.verifyUrl.trim();
+        if (!ALLOWED_VERIFY_URLS.has(candidate)) {
+          throw new BadRequestException('verifyUrl must be a known provider endpoint.');
+        }
+        url  = candidate;
         name = dto.provider?.trim() || 'Custom';
       } else {
         const detected = autoDetect(key);
