@@ -163,19 +163,20 @@ export class AnalyticsService {
   // --------------------------------------------------------------------------
 
   private async executeByIntent(
-    intent: string | undefined,
-    prompt: string,
+    intent:        string | undefined,
+    prompt:        string,
     memoryContext: CoreMessage[],
-    apiKey: string,
-    userModel?: string,
+    apiKey:        string,
+    userModel?:    string,
+    userProvider?: string,
   ): Promise<unknown> {
     switch (intent) {
       case 'dashboard':
-        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, userModel);
+        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, userModel, userProvider);
       case 'report':
-        return this.pipeline.executeReport(prompt, memoryContext, apiKey, userModel);
+        return this.pipeline.executeReport(prompt, memoryContext, apiKey, userModel, userProvider);
       default:
-        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, userModel);
+        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, userModel, userProvider);
     }
   }
 
@@ -189,9 +190,17 @@ export class AnalyticsService {
 
     this.ensureDataSources();
 
-    const settings   = await this.userSettings.findByUser(req.userId);
-    const userKey    = settings?.apiKey?.trim() || null;
-    const userModel  = settings?.model?.trim()  || undefined;
+    const settings     = await this.userSettings.findByUser(req.userId);
+    const userKey      = settings?.apiKey?.trim()    || null;
+    const userModel    = settings?.model?.trim()     || undefined;
+    const userProvider = settings?.provider?.trim()  || undefined;
+
+    if (settings && (!userKey || !userProvider || !userModel)) {
+      throw new BadRequestException(
+        'Incomplete setup: please provide a valid API key, provider, and model in Settings before using AI features.',
+      );
+    }
+
     const { primaryKey, globalKey } = this.resolveApiKeys(userKey);
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
@@ -211,6 +220,7 @@ export class AnalyticsService {
       globalKey,
       req.userId,
       userModel,
+      userProvider,
     );
     this.logger.log(`done in ${Date.now() - t0}ms`);
 
@@ -223,6 +233,7 @@ export class AnalyticsService {
       userId: req.userId,
       durationMs: Date.now() - t0,
       userModel,
+      userProvider,
     });
   }
 
@@ -298,17 +309,18 @@ export class AnalyticsService {
   // --------------------------------------------------------------------------
 
   private async runWithFallback(
-    intent: string | undefined,
-    prompt: string,
+    intent:        string | undefined,
+    prompt:        string,
     memoryContext: CoreMessage[],
-    primaryKey: string,
-    storedKey: string | null,
-    globalKey: string | null,
-    userId: string,
-    userModel?: string,
+    primaryKey:    string,
+    storedKey:     string | null,
+    globalKey:     string | null,
+    userId:        string,
+    userModel?:    string,
+    userProvider?: string,
   ): Promise<{ result: unknown; effectiveApiKey: string }> {
     try {
-      const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey, userModel);
+      const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey, userModel, userProvider);
       return { result, effectiveApiKey: primaryKey };
     } catch (err) {
       return this.handleExecutionError(err, {
@@ -318,6 +330,8 @@ export class AnalyticsService {
         storedKey,
         globalKey,
         userId,
+        userModel,
+        userProvider,
       });
     }
   }
@@ -325,15 +339,17 @@ export class AnalyticsService {
   private async handleExecutionError(
     err: unknown,
     ctx: {
-      intent: string | undefined;
-      prompt: string;
+      intent:        string | undefined;
+      prompt:        string;
       memoryContext: CoreMessage[];
-      storedKey: string | null;
-      globalKey: string | null;
-      userId: string;
+      storedKey:     string | null;
+      globalKey:     string | null;
+      userId:        string;
+      userModel?:    string;
+      userProvider?: string;
     },
   ): Promise<{ result: unknown; effectiveApiKey: string }> {
-    const { intent, prompt, memoryContext, storedKey, globalKey, userId } = ctx;
+    const { intent, prompt, memoryContext, storedKey, globalKey, userId, userModel, userProvider } = ctx;
     const canFallback = !!(storedKey && globalKey && storedKey !== globalKey);
 
     if (isInvalidKeyError(err)) {
@@ -474,16 +490,17 @@ export class AnalyticsService {
   }
 
   private buildResponse(params: {
-    result: unknown;
-    prompt: string;
+    result:          unknown;
+    prompt:          string;
     effectiveApiKey: string;
-    sessionId: string;
-    displayIntent: SessionIntent;
-    userId: string;
-    durationMs: number;
-    userModel?: string;
+    sessionId:       string;
+    displayIntent:   SessionIntent;
+    userId:          string;
+    durationMs:      number;
+    userModel?:      string;
+    userProvider?:   string;
   }): AnalyticsResponse {
-    const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs, userModel } = params;
+    const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs, userModel, userProvider } = params;
     const type = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
     const messageId = randomUUID();
@@ -496,7 +513,7 @@ export class AnalyticsService {
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, effectiveApiKey, userModel });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, effectiveApiKey, userModel, userProvider });
 
     if (type === 'dashboard') {
       return { intent: 'dashboard', chart: result, sessionId, messageId };
@@ -523,13 +540,14 @@ export class AnalyticsService {
   }
 
   private async maybeExtractMemory(params: {
-    type: ResolvedType;
-    prompt: string;
-    result: unknown;
-    userId: string;
-    sessionId: string;
+    type:            ResolvedType;
+    prompt:          string;
+    result:          unknown;
+    userId:          string;
+    sessionId:       string;
     effectiveApiKey: string;
-    userModel?: string;
+    userModel?:      string;
+    userProvider?:   string;
   }): Promise<void> {
     const summary = this.buildResponseSummary(params.type, params.prompt, params.result);
     if (summary.length <= MIN_SUMMARY_LENGTH_FOR_MEMORY) return;
@@ -541,6 +559,7 @@ export class AnalyticsService {
         summary,
         params.effectiveApiKey,
         params.userModel,
+        params.userProvider,
       );
     } catch (err) {
       this.logger.warn(`memory.extractAndSave failed: ${err}`);
