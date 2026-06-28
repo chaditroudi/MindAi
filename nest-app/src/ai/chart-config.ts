@@ -8,7 +8,7 @@ export interface ChartDefinition {
   optionalPlanFields?: string[];
   llmHidden?:          boolean;
   requiresAxis?:       boolean;
-  requiresLabel?:      boolaean;
+  requiresLabel?:      boolean;
   requiresSeries?:     boolean;
   requiresXY?:         boolean;
   requiresValue?:      boolean;
