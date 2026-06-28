@@ -6,14 +6,21 @@ import type { DashboardSpec, SkillKind, ChartHint, DataSource } from '../types';
 
 export type { ChartDefinition } from './chart-config';
 export { CHART_DEFINITIONS }    from './chart-config';
-import { dashboardSchema }       from './chart-config';
-import type { LlmWidget, LlmDashboard } from './chart-config';
+import { dashboardSchema, CHART_DEFINITIONS } from './chart-config';
+import type { LlmWidget, LlmDashboard }       from './chart-config';
 
 import type { DataRow, WidgetPlan } from './chart-types';
 import { buildRowProfile } from './chart-profile';
 import { prepareRenderRows } from './chart-aggregation';
 import { RENDERERS, mergeChartOptions } from './chart-renderers';
 import { repairWidgetPlan, validateWidget, planFieldProps, getFieldValue } from './chart-repair';
+
+// Validate at startup: every visible SKILL.md chart type must have a renderer.
+for (const def of CHART_DEFINITIONS) {
+  if (!def.llmHidden && !(def.type in RENDERERS)) {
+    throw new Error(`No renderer for chart type "${def.type}" — add it to chart-renderers.ts`);
+  }
+}
 
 // ── Widget rendering ───────────────────────────────────────────────────────────
 
