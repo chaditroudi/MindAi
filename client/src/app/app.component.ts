@@ -258,53 +258,86 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   readonly PROVIDER_MODELS: Record<string, { value: string; label: string }[]> = {
     groq: [
-      { value: 'llama-3.3-70b-versatile',         label: 'Llama 3.3 70B Versatile (recommended)' },
-      { value: 'llama-3.1-70b-versatile',         label: 'Llama 3.1 70B Versatile' },
-      { value: 'llama-3.1-8b-instant',            label: 'Llama 3.1 8B Instant (fast)' },
-      { value: 'llama3-70b-8192',                 label: 'Llama 3 70B' },
-      { value: 'llama3-8b-8192',                  label: 'Llama 3 8B' },
-      { value: 'llama-3.2-90b-vision-preview',    label: 'Llama 3.2 90B Vision' },
-      { value: 'llama-3.2-11b-vision-preview',    label: 'Llama 3.2 11B Vision' },
-      { value: 'llama-3.2-3b-preview',            label: 'Llama 3.2 3B' },
-      { value: 'llama-3.2-1b-preview',            label: 'Llama 3.2 1B' },
-      { value: 'mixtral-8x7b-32768',              label: 'Mixtral 8x7B' },
-      { value: 'gemma2-9b-it',                    label: 'Gemma 2 9B' },
-      { value: 'gemma-7b-it',                     label: 'Gemma 7B' },
-      { value: 'qwen-qwq-32b',                    label: 'Qwen QwQ 32B' },
-      { value: 'deepseek-r1-distill-llama-70b',   label: 'DeepSeek R1 Distill Llama 70B' },
-      { value: 'compound-beta',                   label: 'Compound Beta' },
-      { value: 'compound-beta-mini',              label: 'Compound Beta Mini' },
+      // ── Llama 4 ──
+      { value: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick 17B (recommended)' },
+      { value: 'meta-llama/llama-4-scout-17b-16e-instruct',     label: 'Llama 4 Scout 17B' },
+      // ── Llama 3.3 ──
+      { value: 'llama-3.3-70b-versatile',                       label: 'Llama 3.3 70B Versatile' },
+      { value: 'llama-3.3-70b-specdec',                         label: 'Llama 3.3 70B SpecDec (fast)' },
+      // ── Llama 3.1 ──
+      { value: 'llama-3.1-70b-versatile',                       label: 'Llama 3.1 70B Versatile' },
+      { value: 'llama-3.1-8b-instant',                          label: 'Llama 3.1 8B Instant (fast)' },
+      // ── Llama 3.2 ──
+      { value: 'llama-3.2-90b-vision-preview',                  label: 'Llama 3.2 90B Vision' },
+      { value: 'llama-3.2-11b-vision-preview',                  label: 'Llama 3.2 11B Vision' },
+      { value: 'llama-3.2-3b-preview',                          label: 'Llama 3.2 3B' },
+      { value: 'llama-3.2-1b-preview',                          label: 'Llama 3.2 1B' },
+      // ── Llama 3 ──
+      { value: 'llama3-70b-8192',                               label: 'Llama 3 70B' },
+      { value: 'llama3-8b-8192',                                label: 'Llama 3 8B' },
+      // ── DeepSeek ──
+      { value: 'deepseek-r1-distill-llama-70b',                 label: 'DeepSeek R1 Distill Llama 70B' },
+      { value: 'deepseek-r1-distill-qwen-32b',                  label: 'DeepSeek R1 Distill Qwen 32B' },
+      // ── Qwen ──
+      { value: 'qwen-qwq-32b',                                  label: 'Qwen QwQ 32B' },
+      { value: 'qwen-2.5-72b-instruct',                         label: 'Qwen 2.5 72B Instruct' },
+      { value: 'qwen-2.5-coder-32b-instruct',                   label: 'Qwen 2.5 Coder 32B' },
+      // ── Mixtral / Gemma ──
+      { value: 'mixtral-8x7b-32768',                            label: 'Mixtral 8x7B' },
+      { value: 'gemma2-9b-it',                                  label: 'Gemma 2 9B' },
+      // ── Compound ──
+      { value: 'compound-beta',                                  label: 'Compound Beta' },
+      { value: 'compound-beta-mini',                             label: 'Compound Beta Mini (fast)' },
     ],
     openai: [
-      { value: 'gpt-4o',              label: 'GPT-4o (recommended)' },
-      { value: 'gpt-4o-mini',         label: 'GPT-4o Mini (fast)' },
-      { value: 'chatgpt-4o-latest',   label: 'ChatGPT-4o Latest' },
-      { value: 'gpt-4-turbo',         label: 'GPT-4 Turbo' },
-      { value: 'gpt-4',               label: 'GPT-4' },
-      { value: 'gpt-3.5-turbo',       label: 'GPT-3.5 Turbo' },
-      { value: 'o1',                  label: 'o1' },
-      { value: 'o1-mini',             label: 'o1 Mini' },
-      { value: 'o3-mini',             label: 'o3 Mini' },
-      { value: 'o3',                  label: 'o3' },
+      // ── GPT-4.1 ──
+      { value: 'gpt-4.1',              label: 'GPT-4.1 (recommended)' },
+      { value: 'gpt-4.1-mini',         label: 'GPT-4.1 Mini (fast)' },
+      { value: 'gpt-4.1-nano',         label: 'GPT-4.1 Nano (fastest)' },
+      // ── GPT-4o ──
+      { value: 'gpt-4o',               label: 'GPT-4o' },
+      { value: 'gpt-4o-mini',          label: 'GPT-4o Mini' },
+      { value: 'chatgpt-4o-latest',    label: 'ChatGPT-4o Latest' },
+      // ── o-series reasoning ──
+      { value: 'o4-mini',              label: 'o4 Mini (reasoning, fast)' },
+      { value: 'o3',                   label: 'o3 (reasoning)' },
+      { value: 'o3-mini',              label: 'o3 Mini (reasoning)' },
+      { value: 'o1',                   label: 'o1 (reasoning)' },
+      { value: 'o1-mini',              label: 'o1 Mini (reasoning)' },
+      { value: 'o1-pro',               label: 'o1 Pro (reasoning, powerful)' },
+      // ── GPT-4 ──
+      { value: 'gpt-4-turbo',          label: 'GPT-4 Turbo' },
+      { value: 'gpt-4',                label: 'GPT-4' },
+      { value: 'gpt-3.5-turbo',        label: 'GPT-3.5 Turbo' },
     ],
     anthropic: [
+      // ── Claude 4 ──
       { value: 'claude-opus-4-8',              label: 'Claude Opus 4.8 (most capable)' },
       { value: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6 (recommended)' },
       { value: 'claude-haiku-4-5-20251001',    label: 'Claude Haiku 4.5 (fast)' },
+      // ── Claude 3.7 ──
+      { value: 'claude-3-7-sonnet-20250219',   label: 'Claude 3.7 Sonnet' },
+      // ── Claude 3.5 ──
       { value: 'claude-3-5-sonnet-20241022',   label: 'Claude 3.5 Sonnet' },
       { value: 'claude-3-5-haiku-20241022',    label: 'Claude 3.5 Haiku' },
+      // ── Claude 3 ──
       { value: 'claude-3-opus-20240229',       label: 'Claude 3 Opus' },
       { value: 'claude-3-sonnet-20240229',     label: 'Claude 3 Sonnet' },
       { value: 'claude-3-haiku-20240307',      label: 'Claude 3 Haiku' },
     ],
     google: [
-      { value: 'gemini-2.0-flash',             label: 'Gemini 2.0 Flash (recommended)' },
-      { value: 'gemini-2.0-flash-exp',         label: 'Gemini 2.0 Flash Exp' },
-      { value: 'gemini-2.0-flash-lite',        label: 'Gemini 2.0 Flash Lite (fast)' },
+      // ── Gemini 2.5 ──
+      { value: 'gemini-2.5-pro',               label: 'Gemini 2.5 Pro (most capable)' },
+      { value: 'gemini-2.5-flash',             label: 'Gemini 2.5 Flash (recommended)' },
+      { value: 'gemini-2.5-flash-lite-preview', label: 'Gemini 2.5 Flash Lite (fast)' },
+      // ── Gemini 2.0 ──
+      { value: 'gemini-2.0-flash',             label: 'Gemini 2.0 Flash' },
+      { value: 'gemini-2.0-flash-lite',        label: 'Gemini 2.0 Flash Lite' },
+      { value: 'gemini-2.0-pro-exp',           label: 'Gemini 2.0 Pro Exp' },
+      // ── Gemini 1.5 ──
       { value: 'gemini-1.5-pro',               label: 'Gemini 1.5 Pro' },
       { value: 'gemini-1.5-flash',             label: 'Gemini 1.5 Flash' },
       { value: 'gemini-1.5-flash-8b',          label: 'Gemini 1.5 Flash 8B' },
-      { value: 'gemini-1.0-pro',               label: 'Gemini 1.0 Pro' },
     ],
   };
 

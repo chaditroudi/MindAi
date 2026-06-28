@@ -22,16 +22,16 @@ const TIMEOUT_ENV_KEYS: Record<AgentRole, string> = {
 
 const PROVIDER_DEFAULTS: Record<AIProvider, Record<AgentRole, string>> = {
   groq: {
-    supervisor: 'llama-3.3-70b-versatile',
-    chart:      'llama-3.3-70b-versatile',
-    writer:     'llama-3.1-8b-instant',
+    supervisor: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+    chart:      'meta-llama/llama-4-maverick-17b-128e-instruct',
+    writer:     'llama-3.3-70b-specdec',
     memory:     'llama-3.1-8b-instant',
   },
   openai: {
-    supervisor: 'gpt-4o-mini',
-    chart:      'gpt-4o-mini',
-    writer:     'gpt-4o-mini',
-    memory:     'gpt-4o-mini',
+    supervisor: 'gpt-4.1',
+    chart:      'gpt-4.1',
+    writer:     'gpt-4.1-mini',
+    memory:     'gpt-4.1-mini',
   },
   anthropic: {
     supervisor: 'claude-sonnet-4-6',
@@ -40,10 +40,10 @@ const PROVIDER_DEFAULTS: Record<AIProvider, Record<AgentRole, string>> = {
     memory:     'claude-haiku-4-5-20251001',
   },
   google: {
-    supervisor: 'gemini-2.0-flash',
-    chart:      'gemini-2.0-flash',
-    writer:     'gemini-2.0-flash',
-    memory:     'gemini-2.0-flash',
+    supervisor: 'gemini-2.5-flash',
+    chart:      'gemini-2.5-flash',
+    writer:     'gemini-2.5-flash',
+    memory:     'gemini-2.5-flash-lite-preview',
   },
 };
 
