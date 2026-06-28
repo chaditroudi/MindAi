@@ -43,6 +43,7 @@ export async function extractMemories(
       messages: [{
         role:    'user',
         content: JSON.stringify({
+          mode:         'EXTRACT',
           userPrompt:   prompt,
           aiResponse:   responseSummary,
         }),

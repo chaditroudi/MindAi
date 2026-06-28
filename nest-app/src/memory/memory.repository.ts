@@ -5,13 +5,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { log } from '../common/logger/app.logger';
 
-export type MemoryType = 'goal' | 'insight' | 'preference' | 'context' | 'decision';
+export type MemoryType = 'goal' | 'insight' | 'preference' | 'context' | 'decision' | 'entity' | 'correction';
 
 @Schema({ timestamps: true, collection: 'memory_items' })
 export class MemoryItem {
   @Prop({ required: true, index: true }) userId!: string;
   @Prop({ required: true }) sessionId!: string;
-  @Prop({ required: true, enum: ['goal', 'insight', 'preference', 'context', 'decision'] }) type!: MemoryType;
+  @Prop({ required: true, enum: ['goal', 'insight', 'preference', 'context', 'decision', 'entity', 'correction'] }) type!: MemoryType;
   @Prop({ required: true }) content!: string;
   @Prop({ type: [String], default: [] }) tags!: string[];
   @Prop({ min: 1, max: 5, default: 3 }) importance!: number;
