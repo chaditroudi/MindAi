@@ -99,10 +99,10 @@ async function validateAnthropic(apiKey: string, model: string): Promise<void> {
 async function validateGoogle(apiKey: string, model: string): Promise<void> {
   let res: Response;
   try {
-    res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
-      { signal: AbortSignal.timeout(TIMEOUT_MS) },
-    );
+    res = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+      headers: { 'x-goog-api-key': apiKey },
+      signal:  AbortSignal.timeout(TIMEOUT_MS),
+    });
   } catch {
     throw new HttpException('Cannot reach Google AI. Check your network connection.', HttpStatus.BAD_GATEWAY);
   }

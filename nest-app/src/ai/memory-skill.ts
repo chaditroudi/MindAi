@@ -35,7 +35,7 @@ export async function extractMemories(
       model:       resolveModel('memory', apiKey, userModel),
       abortSignal: freshSignal('memory'),
       temperature: 0,
-      maxRetries:  0,
+      maxRetries:  1,
       maxTokens:   MAX_TOKENS,
       schema:      extractionSchema,
       system:      SKILL_PROMPT,

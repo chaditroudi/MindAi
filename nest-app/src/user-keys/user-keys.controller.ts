@@ -33,12 +33,15 @@ function autoDetect(key: string): { name: string; url: string } | null {
   return null;
 }
 
+const ALLOWED_VERIFY_URLS = new Set(Object.values(KNOWN_PROVIDERS));
+
 async function pingKey(apiKey: string, url: string): Promise<'valid' | 'invalid' | 'unreachable'> {
+  const isAnthropic = apiKey.startsWith('sk-ant-');
+  const headers: Record<string, string> = isAnthropic
+    ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+    : { Authorization: `Bearer ${apiKey}` };
   try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      signal:  AbortSignal.timeout(8_000),
-    });
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(8_000) });
     if (res.status === 200) return 'valid';
     if (res.status === 401 || res.status === 403) return 'invalid';
     return 'unreachable';

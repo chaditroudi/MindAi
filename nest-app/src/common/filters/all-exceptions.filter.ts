@@ -47,7 +47,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         if (typeof attached === 'string') errorCode = attached;
       }
     } else {
-      errorMsg = exception instanceof Error ? exception.message : 'Internal server error';
+      errorMsg = 'Internal server error';
     }
 
     const body: Record<string, unknown> = { error: errorMsg };
