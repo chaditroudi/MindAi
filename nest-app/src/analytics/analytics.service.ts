@@ -25,10 +25,6 @@ import {
   type ConversationMessage,
 } from '../session/memory';
 
-// ============================================================================
-// Constants & Schemas
-// ============================================================================
-
 const DASHBOARD_PATTERNS = [
   /\b(chart|graph|plot|visuali[sz]e?|dashboard|widget)\b/i,
   /\b(pie|bar|donut|funnel|scatter|heatmap|histogram|gauge|treemap)\b/i,
