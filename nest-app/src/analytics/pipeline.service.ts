@@ -5,6 +5,8 @@ import type { CoreMessage } from 'ai';
 import { runSupervisorPlan } from '../ai/planner';
 import { runChart } from '../ai/chart';
 import { runReportSkill, runInquirySkill } from '../ai/writer';
+import { addUsage, zeroUsage } from '../ai/token';
+import type { TokenUsage } from '../ai/token';
 import { getSources } from '../sources/sources-cache';
 import { normalizeToken } from '../sources/sources-cache';
 import { CacheService } from '../cache/cache.service';
@@ -33,8 +35,9 @@ type Row              = Record<string, unknown>;
 type ResolvedPipeline = { pipeline: Row[]; collection: string };
 
 export interface AggregationResult {
-  plan: TaskPlan;
-  rows: Row[];
+  plan:  TaskPlan;
+  rows:  Row[];
+  usage: TokenUsage;
 }
 
 export interface ReportResult {
@@ -44,6 +47,11 @@ export interface ReportResult {
 
 export interface InquiryResult {
   summary: string;
+}
+
+export interface ExecuteResult<T> {
+  result: T;
+  usage:  TokenUsage;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────

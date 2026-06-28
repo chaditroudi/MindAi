@@ -1,5 +1,6 @@
 import { generateObject } from 'ai';
 import type { CoreMessage } from 'ai';
+import type { TokenUsage } from './token';
 import { z } from 'zod';
 import { resolveModel, freshSignal } from './model';
 import { interpolateTemplate, readMarkdownSection, skillFile } from './skill-prompt';
@@ -172,7 +173,7 @@ export async function runSupervisorPlan({
   userProvider?: string;
   hint?:         string;
   maxTokens?:    number;
-}): Promise<TaskPlan> {
+}): Promise<{ plan: TaskPlan; usage: TokenUsage }> {
   const start = Date.now();
   log('planner', `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length}${hint ? ' | retry' : ''} | prompt: "${prompt}"`);
 
@@ -180,7 +181,7 @@ export async function runSupervisorPlan({
     ? `${JSON.stringify({ prompt, intent })}\n\nPREVIOUS ATTEMPT FAILED — ${hint}`
     : JSON.stringify({ prompt, intent });
 
-  const { object } = await generateObject({
+  const { object, usage } = await generateObject({
     model:       resolveModel('supervisor', apiKey, userModel, userProvider),
     abortSignal: freshSignal('supervisor'),
     schema:      buildPlanSchema(intent),
@@ -196,10 +197,13 @@ export async function runSupervisorPlan({
   });
 
   const { strategy, chartHint } = object as { strategy?: string; chartHint?: string };
-  log('planner', `done in ${Date.now() - start}ms | strategy: ${strategy ?? '-'} | chartHint: ${chartHint ?? '-'} | stages: ${object.pipeline.length}`);
+  log('planner', `done in ${Date.now() - start}ms | strategy: ${strategy ?? '-'} | chartHint: ${chartHint ?? '-'} | stages: ${object.pipeline.length} | in:${usage.promptTokens} out:${usage.completionTokens}`);
   logTrace('planner', `generated plan`, object);
 
-  return finalizeTaskPlan({ plan: object as TaskPlan, intent, availableSources: sources });
+  return {
+    plan:  finalizeTaskPlan({ plan: object as TaskPlan, intent, availableSources: sources }),
+    usage: { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens },
+  };
 }
 
 function finalizeTaskPlan({
