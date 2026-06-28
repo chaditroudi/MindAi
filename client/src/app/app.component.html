@@ -142,26 +142,10 @@
         <div class="config-panel">
 
           <section class="config-section">
-            <h4 class="config-section-title">Token Limits</h4>
-            <div class="config-field">
-              <label class="config-label">Input token limit</label>
-              <select class="config-input" [(ngModel)]="tokenDraft.inputTokenLimit">
-                @for (opt of INPUT_TOKEN_OPTIONS; track opt.value) {
-                  <option [ngValue]="opt.value">{{ opt.label }}</option>
-                }
-              </select>
-            </div>
-            <div class="config-field">
-              <label class="config-label">Output token limit</label>
-              <select class="config-input" [(ngModel)]="tokenDraft.outputTokenLimit">
-                @for (opt of OUTPUT_TOKEN_OPTIONS; track opt.value) {
-                  <option [ngValue]="opt.value">{{ opt.label }}</option>
-                }
-              </select>
-            </div>
+            <h4 class="config-section-title">Memory</h4>
             <div class="config-field">
               <label class="config-label">Memory limit (items)</label>
-              <select class="config-input" [(ngModel)]="tokenDraft.memoryLimit">
+              <select class="config-input" [(ngModel)]="memoryLimitDraft">
                 @for (opt of MEMORY_LIMIT_OPTIONS; track opt.value) {
                   <option [ngValue]="opt.value">{{ opt.label }}</option>
                 }
@@ -189,9 +173,22 @@
                   [(ngModel)]="newAgent.model" />
                 <input class="config-input" type="password" placeholder="API key"
                   [(ngModel)]="newAgent.apiKey" />
+                <div class="config-field" style="margin:0">
+                  <label class="config-label">Input token limit (context per request)</label>
+                  <select class="config-input" [(ngModel)]="newAgent.inputTokenLimit">
+                    @for (opt of INPUT_TOKEN_OPTIONS; track opt.value) {
+                      <option [ngValue]="opt.value">{{ opt.label }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="config-field" style="margin:0">
+                  <label class="config-label">Token budget (0 = unlimited)</label>
+                  <input class="config-input" type="number" min="0" placeholder="e.g. 500000"
+                    [(ngModel)]="newAgent.tokenBudget" />
+                </div>
                 <select class="config-input" [(ngModel)]="newAgent.status">
-                  @for (s of STATUS_OPTIONS; track s) {
-                    <option [value]="s">{{ s }}</option>
+                  @for (st of STATUS_OPTIONS; track st) {
+                    <option [value]="st">{{ st }}</option>
                   }
                 </select>
                 <button class="config-save-btn" (click)="addAgentToList()"
@@ -204,25 +201,50 @@
             }
 
             @for (agent of agentDraft; track $index; let i = $index) {
-              <div class="config-agent-row">
-                <div class="config-agent-info">
-                  <span class="config-agent-provider">{{ agent.provider }}</span>
-                  <span class="config-agent-model">{{ agent.model }}</span>
+              <div class="config-agent-card">
+                <div class="config-agent-header">
+                  <div class="config-agent-info">
+                    <span class="config-agent-provider">{{ agent.provider }}</span>
+                    <span class="config-agent-model">{{ agent.model }}</span>
+                  </div>
+                  <div class="config-agent-controls">
+                    <select class="config-status-select config-status--{{ agent.status }}"
+                      [ngModel]="agent.status"
+                      (ngModelChange)="setAgentStatus(i, $event)">
+                      @for (opt of STATUS_OPTIONS; track opt) {
+                        <option [value]="opt">{{ opt }}</option>
+                      }
+                    </select>
+                    <button class="config-remove-btn" (click)="removeAgent(i)" title="Remove">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div class="config-agent-controls">
-                  <select class="config-status-select config-status--{{ agent.status }}"
-                    [ngModel]="agent.status"
-                    (ngModelChange)="setAgentStatus(i, $event)">
-                    @for (opt of STATUS_OPTIONS; track opt) {
-                      <option [value]="opt">{{ opt }}</option>
-                    }
-                  </select>
-                  <button class="config-remove-btn" (click)="removeAgent(i)" title="Remove">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                  </button>
+
+                <div class="config-agent-meta">
+                  <span class="config-agent-meta-item">
+                    Input limit: <strong>{{ agent.inputTokenLimit.toLocaleString() }} tokens</strong>
+                  </span>
                 </div>
+
+                @if (agent.tokenBudget > 0) {
+                  <div class="config-usage">
+                    <div class="config-usage-bar">
+                      <div class="config-usage-fill"
+                        [style.width.%]="agentUsagePct(agent)"
+                        [class.config-usage-fill--warn]="agentUsagePct(agent) >= 80"
+                        [class.config-usage-fill--over]="agentUsagePct(agent) >= 100">
+                      </div>
+                    </div>
+                    <span class="config-usage-label">{{ agentUsageLabel(agent) }}</span>
+                  </div>
+                } @else {
+                  <span class="config-usage-label config-usage-label--dim">
+                    {{ agent.tokensUsed.toLocaleString() }} tokens used · unlimited budget
+                  </span>
+                }
               </div>
             }
           </section>

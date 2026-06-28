@@ -633,26 +633,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   readonly STATUS_OPTIONS: AgentStatus[] = ['active', 'idle', 'disabled', 'expired'];
 
   readonly INPUT_TOKEN_OPTIONS: { label: string; value: number }[] = [
-    { label: '1,000',   value: 1_000 },
-    { label: '2,000',   value: 2_000 },
-    { label: '4,000 (default)', value: 4_000 },
-    { label: '8,000',   value: 8_000 },
-    { label: '16,000',  value: 16_000 },
-    { label: '32,000',  value: 32_000 },
-    { label: '64,000',  value: 64_000 },
-    { label: '128,000', value: 128_000 },
-  ];
-
-  readonly OUTPUT_TOKEN_OPTIONS: { label: string; value: number }[] = [
-    { label: '256',             value: 256 },
-    { label: '512',             value: 512 },
-    { label: '800 (default)',   value: 800 },
     { label: '1,000',           value: 1_000 },
     { label: '2,000',           value: 2_000 },
-    { label: '4,000',           value: 4_000 },
+    { label: '4,000 (default)', value: 4_000 },
     { label: '8,000',           value: 8_000 },
     { label: '16,000',          value: 16_000 },
     { label: '32,000',          value: 32_000 },
+    { label: '64,000',          value: 64_000 },
+    { label: '128,000',         value: 128_000 },
   ];
 
   readonly MEMORY_LIMIT_OPTIONS: { label: string; value: number }[] = [
@@ -663,6 +651,17 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     { label: '200',          value: 200 },
     { label: '500',          value: 500 },
   ];
+
+  agentUsagePct(agent: AgentEntry): number {
+    if (!agent.tokenBudget) return 0;
+    return Math.min(100, Math.round((agent.tokensUsed / agent.tokenBudget) * 100));
+  }
+
+  agentUsageLabel(agent: AgentEntry): string {
+    if (!agent.tokenBudget) return `${agent.tokensUsed.toLocaleString()} used (unlimited)`;
+    const remaining = Math.max(0, agent.tokenBudget - agent.tokensUsed);
+    return `${agent.tokensUsed.toLocaleString()} / ${agent.tokenBudget.toLocaleString()} · ${remaining.toLocaleString()} left`;
+  }
 
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
     const base = { messageId: data.messageId, role: 'assistant' as const, prompt };
