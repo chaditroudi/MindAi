@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { resolveModel, freshSignal } from './model';
 import { readMarkdownSection, skillFile } from './skill-prompt';
 import { log } from '../common/logger/app.logger';
-import type { MemoryType } from '../memory/memory.schema';
+import type { MemoryType } from '../memory/memory.repository';
 
 const SKILL_PROMPT  = readMarkdownSection(skillFile('memory', 'SKILL.md'), 'Runtime Prompt');
 const MAX_TOKENS    = Number(process.env['MEMORY_MAX_TOKENS'] ?? 400);
