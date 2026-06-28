@@ -182,14 +182,14 @@ export class AnalyticsService {
     const t0 = Date.now();
 
     let result: unknown;
-    let promptTokens = 0;
-    let completionTokens = 0;
+    let inputTokens  = 0;
+    let outputTokens = 0;
     try {
       const executed = await this.executeByIntent(intent, prompt, memoryContext,
         access.apiKey, access.model, access.provider, access.outputTokenLimit);
-      result           = executed.result;
-      promptTokens     = executed.usage.promptTokens;
-      completionTokens = executed.usage.completionTokens;
+      result       = executed.result;
+      inputTokens  = executed.usage.inputTokens;
+      outputTokens = executed.usage.outputTokens;
     } catch (err) {
       if (isInvalidKeyError(err)) {
         throw Object.assign(
@@ -211,11 +211,11 @@ export class AnalyticsService {
     }
 
     const durationMs = Date.now() - t0;
-    this.logger.log(`done in ${durationMs}ms | in:${promptTokens} out:${completionTokens}`);
+    this.logger.log(`done in ${durationMs}ms | in:${inputTokens} out:${outputTokens}`);
 
     // Track exact token counts against the agent budget (fire-and-forget)
     if (access.agentApiKey) {
-      void this.agentConfig.trackUsage(access.agentApiKey, promptTokens, completionTokens);
+      void this.agentConfig.trackUsage(access.agentApiKey, inputTokens, outputTokens);
     }
 
     return this.buildResponse({
