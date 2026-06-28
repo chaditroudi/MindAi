@@ -148,7 +148,6 @@ export class AnalyticsService {
     const prompt = promptSchema.parse(req.prompt);
     const intent = req.intent;
 
-
     const [settings, agentCfg] = await Promise.all([
       this.userSettings.findByUser(req.userId),
       this.agentConfig.getConfig(),
@@ -158,26 +157,28 @@ export class AnalyticsService {
     const userModel    = settings?.model?.trim()     || undefined;
     const userProvider = settings?.provider?.trim()  || undefined;
 
-    const inputTokenLimit  = settings?.inputTokenLimit  ?? agentCfg.inputTokenLimit;
-    const outputTokenLimit = settings?.outputTokenLimit ?? agentCfg.outputTokenLimit;
-
     if (settings && (!userKey || !userProvider || !userModel)) {
       throw new BadRequestException(
         'Incomplete setup: please provide a valid API key, provider, and model in Settings.',
       );
     }
 
-    const { apiKey, model, provider } = this.resolveAccess(userKey, userModel, userProvider, agentCfg);
+    const access = this.resolveAccess(userKey, userModel, userProvider, agentCfg,
+      settings?.inputTokenLimit);
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
-    const memoryContext = await this.buildMemoryContext(req.userId, sessionId, prompt, inputTokenLimit);
+    const memoryContext = await this.buildMemoryContext(
+      req.userId, sessionId, prompt, access.inputTokenLimit,
+    );
 
     this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
     const t0 = Date.now();
 
     let result: unknown;
     try {
-      result = await this.executeByIntent(intent, prompt, memoryContext, apiKey, model, provider, outputTokenLimit);
+      // outputTokenLimit is intentionally omitted — each AI skill enforces its own limit
+      result = await this.executeByIntent(intent, prompt, memoryContext,
+        access.apiKey, access.model, access.provider);
     } catch (err) {
       if (isInvalidKeyError(err)) {
         throw Object.assign(
@@ -198,34 +199,62 @@ export class AnalyticsService {
       throw err;
     }
 
-    this.logger.log(`done in ${Date.now() - t0}ms`);
+    const durationMs = Date.now() - t0;
+    this.logger.log(`done in ${durationMs}ms`);
+
+    // Track token usage against the agent budget (fire-and-forget)
+    if (access.agentApiKey) {
+      const usedTokens = this.estimateRequestTokens(prompt, memoryContext, result);
+      void this.agentConfig.trackUsage(access.agentApiKey, usedTokens);
+    }
 
     return this.buildResponse({
-      result, prompt, apiKey, sessionId,
-      displayIntent, userId: req.userId,
-      durationMs: Date.now() - t0,
-      model, provider, outputTokenLimit,
+      result, prompt, apiKey: access.apiKey, sessionId,
+      displayIntent, userId: req.userId, durationMs,
+      model: access.model, provider: access.provider,
     });
   }
 
-
-
   private resolveAccess(
-    userKey:      string | null,
-    userModel:    string | undefined,
-    userProvider: string | undefined,
-    agentCfg:     ResolvedConfig,
-  ): { apiKey: string; model?: string; provider?: string } {
+    userKey:         string | null,
+    userModel:       string | undefined,
+    userProvider:    string | undefined,
+    agentCfg:        ResolvedConfig,
+    userTokenLimit?: number,
+  ): AccessResult {
     if (userKey) {
-      return { apiKey: userKey, model: userModel, provider: userProvider };
+      return {
+        apiKey:          userKey,
+        model:           userModel,
+        provider:        userProvider,
+        inputTokenLimit: userTokenLimit ?? 4_000,
+      };
     }
     const active = agentCfg.agents.find(a => a.status === 'active');
     if (active?.apiKey) {
-      return { apiKey: active.apiKey, model: active.model, provider: active.provider };
+      return {
+        apiKey:          active.apiKey,
+        model:           active.model,
+        provider:        active.provider,
+        inputTokenLimit: active.inputTokenLimit,
+        agentApiKey:     active.apiKey,
+      };
     }
     throw new UnauthorizedException(
       'No API key configured. Add one in Settings or configure an active agent in Agent Config.',
     );
+  }
+
+  private estimateRequestTokens(
+    prompt:        string,
+    memoryContext: CoreMessage[],
+    result:        unknown,
+  ): number {
+    const contextText = memoryContext
+      .map(m => (typeof m.content === 'string' ? m.content : ''))
+      .join(' ');
+    const resultText = JSON.stringify(result ?? '');
+    return estimateTokens(prompt) + estimateTokens(contextText) + estimateTokens(resultText);
   }
 
   private async resolveSession(req: AnalyticsRequest): Promise<{
@@ -315,21 +344,20 @@ export class AnalyticsService {
   }
 
   private buildResponse(params: {
-    result:          unknown;
-    prompt:          string;
-    apiKey:          string;
-    sessionId:       string;
-    displayIntent:   SessionIntent;
-    userId:          string;
-    durationMs:      number;
-    model?:          string;
-    provider?:       string;
-    outputTokenLimit?: number;
+    result:        unknown;
+    prompt:        string;
+    apiKey:        string;
+    sessionId:     string;
+    displayIntent: SessionIntent;
+    userId:        string;
+    durationMs:    number;
+    model?:        string;
+    provider?:     string;
   }): AnalyticsResponse {
-    const { result, prompt, apiKey, sessionId, displayIntent, userId, durationMs, model, provider, outputTokenLimit } = params;
-    const type        = this.resolveType(result);
+    const { result, prompt, apiKey, sessionId, displayIntent, userId, durationMs, model, provider } = params;
+    const type          = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
-    const messageId   = randomUUID();
+    const messageId     = randomUUID();
 
     const assistantMessage: ConversationMessage & { role: 'assistant'; result: MessageResult } = {
       messageId,
@@ -339,7 +367,7 @@ export class AnalyticsService {
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, model, provider, maxTokens: outputTokenLimit });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, model, provider });
 
     if (type === 'dashboard') {
       return { intent: 'dashboard', chart: result, sessionId, messageId };
@@ -374,7 +402,6 @@ export class AnalyticsService {
     apiKey:    string;
     model?:    string;
     provider?: string;
-    maxTokens?: number;
   }): Promise<void> {
     const summary = this.buildResponseSummary(params.type, params.prompt, params.result);
     if (summary.length <= MIN_SUMMARY_LENGTH_FOR_MEMORY) return;
@@ -387,7 +414,6 @@ export class AnalyticsService {
         params.apiKey,
         params.model,
         params.provider,
-        params.maxTokens,
       );
     } catch (err) {
       this.logger.warn(`memory.extractAndSave failed: ${err}`);
