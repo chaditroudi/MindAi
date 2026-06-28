@@ -339,9 +339,10 @@ export class AnalyticsService {
       userId:        string;
       userModel?:    string;
       userProvider?: string;
+      maxTokens?:    number;
     },
   ): Promise<{ result: unknown; effectiveApiKey: string }> {
-    const { intent, prompt, memoryContext, storedKey, globalKey, userId, userModel, userProvider } = ctx;
+    const { intent, prompt, memoryContext, storedKey, globalKey, userId, userModel, userProvider, maxTokens } = ctx;
     const canFallback = !!(storedKey && globalKey && storedKey !== globalKey);
 
     if (isInvalidKeyError(err)) {
@@ -358,6 +359,7 @@ export class AnalyticsService {
         userId,
         storedKey,
         globalKey: globalKey!,
+        maxTokens,
         onInvalid: () => { throw Object.assign(
           new UnauthorizedException('Global API key is also invalid. Contact the administrator.'),
           { code: ERROR_CODES.INVALID_API_KEY },
@@ -389,6 +391,7 @@ export class AnalyticsService {
         userId,
         storedKey,
         globalKey: globalKey!,
+        maxTokens,
         onInvalid: () => { throw Object.assign(
           new UnauthorizedException('Global API key is invalid. Contact the administrator.'),
           { code: ERROR_CODES.INVALID_API_KEY },
@@ -416,6 +419,7 @@ export class AnalyticsService {
     userId: string;
     storedKey: string;
     globalKey: string;
+    maxTokens?: number;
     onInvalid: () => never;
     onRateLimit: (retryErr: unknown) => never;
     onOther?: (retryErr: unknown) => never;
@@ -427,6 +431,9 @@ export class AnalyticsService {
         opts.prompt,
         opts.memoryContext,
         opts.globalKey,
+        undefined,
+        undefined,
+        opts.maxTokens,
       );
       return { result, effectiveApiKey: opts.globalKey };
     } catch (retryErr) {
