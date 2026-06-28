@@ -15,6 +15,7 @@ import { getSources } from '../sources/sources-cache';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
+import { estimateTokens } from '../ai/token';
 import {
   sessionExists,
   ensureThread,
@@ -160,10 +161,11 @@ export class AnalyticsService {
 
     this.ensureDataSources();
 
-    const settings     = await this.userSettings.findByUser(req.userId);
-    const userKey      = settings?.apiKey?.trim()    || null;
-    const userModel    = settings?.model?.trim()     || undefined;
-    const userProvider = settings?.provider?.trim()  || undefined;
+    const settings          = await this.userSettings.findByUser(req.userId);
+    const userKey           = settings?.apiKey?.trim()    || null;
+    const userModel         = settings?.model?.trim()     || undefined;
+    const userProvider      = settings?.provider?.trim()  || undefined;
+    const inputTokenLimit   = settings?.inputTokenLimit   ?? 4_000;
 
     if (settings && (!userKey || !userProvider || !userModel)) {
       throw new BadRequestException(
