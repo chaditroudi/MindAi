@@ -210,6 +210,7 @@ export class AnalyticsService {
       durationMs: Date.now() - t0,
       userModel,
       userProvider,
+      outputTokenLimit,
     });
   }
 
@@ -490,17 +491,18 @@ export class AnalyticsService {
   }
 
   private buildResponse(params: {
-    result:          unknown;
-    prompt:          string;
-    effectiveApiKey: string;
-    sessionId:       string;
-    displayIntent:   SessionIntent;
-    userId:          string;
-    durationMs:      number;
-    userModel?:      string;
-    userProvider?:   string;
+    result:           unknown;
+    prompt:           string;
+    effectiveApiKey:  string;
+    sessionId:        string;
+    displayIntent:    SessionIntent;
+    userId:           string;
+    durationMs:       number;
+    userModel?:       string;
+    userProvider?:    string;
+    outputTokenLimit?: number;
   }): AnalyticsResponse {
-    const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs, userModel, userProvider } = params;
+    const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs, userModel, userProvider, outputTokenLimit } = params;
     const type = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
     const messageId = randomUUID();
