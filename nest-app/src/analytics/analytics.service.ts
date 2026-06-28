@@ -146,7 +146,6 @@ export class AnalyticsService {
     const prompt = promptSchema.parse(req.prompt);
     const intent = req.intent;
 
-    this.ensureDataSources();
 
     const [settings, agentCfg] = await Promise.all([
       this.userSettings.findByUser(req.userId),
@@ -208,11 +207,6 @@ export class AnalyticsService {
   }
 
 
-  private ensureDataSources(): void {
-    if (!getSources().length) {
-      throw new BadRequestException('No data sources configured. Run the seed script first.');
-    }
-  }
 
   private resolveAccess(
     userKey:      string | null,
