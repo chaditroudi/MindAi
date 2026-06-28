@@ -43,6 +43,8 @@ function renderWidget(plan: WidgetPlan, rows: DataRow[], keys: Set<string>, id: 
 const MAX_WIDGETS = Number(process.env['CHART_MAX_WIDGETS'] ?? 3);
 const MAX_TOKENS  = Number(process.env['CHART_MAX_TOKENS']  ?? 1000);
 
+export interface ChartResult { result: DashboardSpec; usage: TokenUsage; }
+
 export async function runChart(
   rows:          Record<string, unknown>[],
   prompt:        string,
@@ -53,9 +55,9 @@ export async function runChart(
   userModel?:    string,
   userProvider?: string,
   maxTokens?:    number,
-): Promise<DashboardSpec> {
+): Promise<ChartResult> {
   if (!rows.length) {
-    return { layout: 'operational', title: 'No data', summary: 'No rows returned for this request.', widgets: [] };
+    return { result: { layout: 'operational', title: 'No data', summary: 'No rows returned for this request.', widgets: [] }, usage: { promptTokens: 0, completionTokens: 0 } };
   }
 
   log('chart', `rows: ${rows.length} | strategy: ${strategy ?? 'standard'} | hint: ${chartHint ?? '-'} | source: ${source?.name ?? '?'}`);
@@ -64,9 +66,10 @@ export async function runChart(
   const profile = buildRowProfile(keys, rows as DataRow[]);
 
   let plan: LlmDashboard;
+  let llmUsage: TokenUsage = { promptTokens: 0, completionTokens: 0 };
   const t0 = Date.now();
   try {
-    const { object } = await generateObject({
+    const { object, usage } = await generateObject({
       model:       resolveModel('chart', apiKey, userModel, userProvider),
       abortSignal: freshSignal('chart'),
       temperature: 0,
@@ -76,7 +79,8 @@ export async function runChart(
       messages:    [{ role: 'user', content: buildChartPrompt(rows, prompt, strategy, chartHint, source) }],
     });
     plan = object;
-    log('chart:llm', `done in ${Date.now() - t0}ms | proposed: ${plan.widgets.length} widget(s)`);
+    llmUsage = { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens };
+    log('chart:llm', `done in ${Date.now() - t0}ms | proposed: ${plan.widgets.length} widget(s) | in:${usage.promptTokens} out:${usage.completionTokens}`);
     logTrace('chart:llm', 'widget plan', plan);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -105,5 +109,5 @@ export async function runChart(
 
   log('chart', `done | widgets: ${widgets.length}${dropped.length ? ` | dropped: ${dropped.length}` : ''} | layout: ${plan.layout}`);
 
-  return { layout: plan.layout, title: prompt, summary: plan.summary, widgets } as DashboardSpec;
+  return { result: { layout: plan.layout, title: prompt, summary: plan.summary, widgets } as DashboardSpec, usage: llmUsage };
 }
