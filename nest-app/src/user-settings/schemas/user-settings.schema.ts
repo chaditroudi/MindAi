@@ -13,4 +13,10 @@ export class UserSettings {
 
   @Prop({ required: true })
   model!: string;
+
+  @Prop({required:false})
+  inputTokenLimit!: number;
+  
+  @Prop({required:false})
+  outputTokenLimit!:number;
 }
