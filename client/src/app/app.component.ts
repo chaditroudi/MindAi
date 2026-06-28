@@ -666,7 +666,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   ];
 
   agentTotalUsed(agent: AgentEntry): number {
-    return (agent.inputTokensUsed ?? 0) + (agent.outputTokensUsed ?? 0);
+    return agent.inputTokensUsed + agent.outputTokensUsed;
   }
 
   agentUsagePct(agent: AgentEntry): number {

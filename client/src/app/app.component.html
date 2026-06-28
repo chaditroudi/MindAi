@@ -250,14 +250,14 @@
                       <span>{{ agentCreditsLeft(agent).toLocaleString() }} left</span>
                     </div>
                     <div class="config-usage-detail">
-                      <span>↑ {{ (agent.inputTokensUsed ?? 0).toLocaleString() }} input</span>
-                      <span>↓ {{ (agent.outputTokensUsed ?? 0).toLocaleString() }} output</span>
+                      <span>↑ {{ agent.inputTokensUsed.toLocaleString() }} input</span>
+                      <span>↓ {{ agent.outputTokensUsed.toLocaleString() }} output</span>
                     </div>
                   </div>
                 } @else {
                   <div class="config-usage-detail">
-                    <span>↑ {{ (agent.inputTokensUsed ?? 0).toLocaleString() }} input</span>
-                    <span>↓ {{ (agent.outputTokensUsed ?? 0).toLocaleString() }} output</span>
+                    <span>↑ {{ agent.inputTokensUsed.toLocaleString() }} input</span>
+                    <span>↓ {{ agent.outputTokensUsed.toLocaleString() }} output</span>
                     <span class="config-usage-label--dim">· unlimited</span>
                   </div>
                 }

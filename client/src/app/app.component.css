@@ -1301,6 +1301,19 @@
 }
 .config-usage-fill--warn { background: #f59e0b; }
 .config-usage-fill--over { background: #dc2626; }
+.config-usage-breakdown {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #374151;
+}
+.config-usage-detail {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.68rem;
+  color: #9ca3af;
+}
 .config-usage-label {
   font-size: 0.7rem;
   color: #6b7280;
