@@ -17,7 +17,14 @@ import { UserSettingsService } from '../user-settings/user-settings.service';
 import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-config.service';
 import { estimateTokens } from '../ai/token';
 
-type AccessResult = { apiKey: string; model?: string; provider?: string; inputTokenLimit: number; agentApiKey?: string };
+interface AccessResult {
+  apiKey:           string;
+  model?:           string;
+  provider?:        string;
+  inputTokenLimit:  number;
+  outputTokenLimit: number;
+  agentApiKey?:     string;
+}
 import {
   sessionExists,
   ensureThread,
