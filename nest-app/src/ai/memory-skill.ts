@@ -30,6 +30,7 @@ export async function extractMemories(
   apiKey?: string,
   userModel?: string,
   userProvider?: string,
+  maxTokens?: number,
 ): Promise<ExtractedMemory[]> {
   try {
     const { object } = await generateObject({
@@ -37,7 +38,7 @@ export async function extractMemories(
       abortSignal: freshSignal('memory'),
       temperature: 0,
       maxRetries:  1,
-      maxTokens:   MAX_TOKENS,
+      maxTokens:   maxTokens ?? MAX_TOKENS,
       schema:      extractionSchema,
       system:      SKILL_PROMPT,
       messages: [{

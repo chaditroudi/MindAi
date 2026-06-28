@@ -72,6 +72,7 @@ export class PipelineService {
     apiKey?:       string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<AggregationResult> {
     const sources = getSources();
     const dateNow = Date.now();
@@ -84,7 +85,7 @@ export class PipelineService {
       }
     }
 
-    const { plan, rows, collection } = await this.runWithRetry(prompt, intent, sources, context, apiKey, userModel, userProvider);
+    const { plan, rows, collection } = await this.runWithRetry(prompt, intent, sources, context, apiKey, userModel, userProvider, maxTokens);
     const durationMs = Date.now() - dateNow;
     this.logger.log(`result | collection: ${collection ?? '—'} | rows: ${rows.length} | ${durationMs}ms`);
 
@@ -100,11 +101,12 @@ export class PipelineService {
     apiKey?:       string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<{ plan: TaskPlan; rows: Row[]; collection?: string }> {
     let hint: string | undefined;
 
     for (let attempt = 0; attempt < 2; attempt++) {
-      const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, userModel, userProvider, hint });
+      const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, userModel, userProvider, hint, maxTokens });
       this.logger.log(
         `plan [${attempt + 1}] | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`,
       );
@@ -330,6 +332,7 @@ export class PipelineService {
     apiKey?:       string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<DashboardSpec | InquiryResult> {
     if (!context.length) {
       const cached = await this.cache.getCached<DashboardSpec>(DASHBOARD_FULL_INTENT, prompt);

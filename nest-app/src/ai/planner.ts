@@ -161,6 +161,7 @@ export async function runSupervisorPlan({
   userModel,
   userProvider,
   hint,
+  maxTokens,
 }: {
   prompt:        string;
   intent:        IntentKind;
@@ -170,6 +171,7 @@ export async function runSupervisorPlan({
   userModel?:    string;
   userProvider?: string;
   hint?:         string;
+  maxTokens?:    number;
 }): Promise<TaskPlan> {
   const start = Date.now();
   log('planner', `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length}${hint ? ' | retry' : ''} | prompt: "${prompt}"`);
@@ -185,7 +187,7 @@ export async function runSupervisorPlan({
     mode:        'json',
     temperature: 0,
     maxRetries:  1,
-    maxTokens:   MAX_TOKENS,
+    maxTokens:   maxTokens ?? MAX_TOKENS,
     system:      buildPlannerPrompt(intent, sources),
     messages: [
       ...context,
