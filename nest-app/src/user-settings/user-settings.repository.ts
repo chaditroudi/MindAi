@@ -6,12 +6,13 @@ import { Model } from 'mongoose';
 
 @Schema({ collection: 'user_settings', timestamps: true, versionKey: false })
 export class UserSettings {
-  @Prop({ required: true, unique: true, index: true }) userId!:          string;
-  @Prop({ required: true })                            apiKey!:          string;
-  @Prop({ required: true })                            provider!:        string;
-  @Prop({ required: true })                            model!:           string;
-  @Prop({ min: 1, default: 4_000 })                   inputTokenLimit?: number;
-  @Prop({ min: 1, default: 800 })                     outputTokenLimit?: number;
+  @Prop({ required: true, unique: true, index: true }) userId!:   string;
+  @Prop({ required: true })                            apiKey!:   string;
+  @Prop({ required: true })                            provider!: string;
+  @Prop({ required: true })                            model!:    string;
+
+  // How many input tokens the user's personal key allows per request
+  @Prop({ min: 1, default: 4_000 }) inputTokenLimit?: number;
 }
 
 export type UserSettingsDocument = HydratedDocument<UserSettings>;
@@ -29,7 +30,6 @@ export class UserSettingsRepository {
     provider:         string;
     model:            string;
     inputTokenLimit?: number;
-    outputTokenLimit?: number;
   }): Promise<void> {
     await this.model.replaceOne({ userId }, { userId, ...data }, { upsert: true });
   }

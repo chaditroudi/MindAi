@@ -3,11 +3,10 @@ import { UserSettingsRepository } from './user-settings.repository';
 import type { UserSettingsDocument } from './user-settings.repository';
 
 export interface UserSettingsDto {
-  apiKey:            string;
-  provider:          string;
-  model:             string;
-  inputTokenLimit?:  number;
-  outputTokenLimit?: number;
+  apiKey:           string;
+  provider:         string;
+  model:            string;
+  inputTokenLimit?: number;
 }
 
 export interface ValidationResult {

@@ -15,9 +15,6 @@ class SaveSettingsDto {
 
   @IsOptional() @IsInt() @Min(1) @Max(128_000)
   inputTokenLimit?: number;
-
-  @IsOptional() @IsInt() @Min(1) @Max(32_000)
-  outputTokenLimit?: number;
 }
 
 @Controller('api/settings')
@@ -45,12 +42,11 @@ export class UserSettingsController {
     const settings = await this.service.findByUser(userId);
     if (!settings) return { configured: false };
     return {
-      configured:       true,
-      provider:         settings.provider,
-      model:            settings.model,
-      keyPreview:       `${settings.apiKey.slice(0, 6)}...${settings.apiKey.slice(-4)}`,
-      inputTokenLimit:  settings.inputTokenLimit  ?? 4_000,
-      outputTokenLimit: settings.outputTokenLimit ?? 800,
+      configured:      true,
+      provider:        settings.provider,
+      model:           settings.model,
+      keyPreview:      `${settings.apiKey.slice(0, 6)}...${settings.apiKey.slice(-4)}`,
+      inputTokenLimit: settings.inputTokenLimit ?? 4_000,
     };
   }
 
