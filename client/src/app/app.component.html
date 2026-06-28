@@ -658,7 +658,9 @@
       }
 
       <label class="key-modal-label">Provider</label>
-      <select #providerSelect class="key-modal-input" [value]="s.provider || 'groq'">
+      <select class="key-modal-input"
+        [ngModel]="s.provider || 'groq'"
+        (ngModelChange)="st.patch({ provider: $event, selectedModel: '' }); testStatus = 'idle'">
         <option value="groq">Groq</option>
         <option value="openai">OpenAI</option>
         <option value="anthropic">Anthropic</option>
@@ -666,22 +668,25 @@
       </select>
 
       <label class="key-modal-label">Model</label>
-      <select #modelSelect class="key-modal-input" [value]="s.selectedModel || modelsForProvider(providerSelect.value)[0]?.value">
-        @for (m of modelsForProvider(providerSelect.value); track m.value) {
+      <select class="key-modal-input"
+        [ngModel]="s.selectedModel || modelsForProvider(s.provider || 'groq')[0]?.value"
+        (ngModelChange)="st.patch({ selectedModel: $event })">
+        @for (m of modelsForProvider(s.provider || 'groq'); track m.value) {
           <option [value]="m.value">{{ m.label }}</option>
         }
       </select>
 
       <label class="key-modal-label">API Key</label>
-      <input #keyInput type="password" class="key-modal-input"
-        [placeholder]="providerSelect.value === 'openai' ? 'sk-…' : providerSelect.value === 'anthropic' ? 'sk-ant-…' : providerSelect.value === 'google' ? 'AIza…' : 'gsk_…'"
+      <input type="password" class="key-modal-input"
+        [placeholder]="(s.provider || 'groq') === 'openai' ? 'sk-…' : (s.provider || 'groq') === 'anthropic' ? 'sk-ant-…' : (s.provider || 'groq') === 'google' ? 'AIza…' : 'gsk_…'"
+        [(ngModel)]="modalKey"
         (input)="testStatus = 'idle'; testError = ''"
-        (keydown.enter)="saveApiKey(keyInput.value, providerSelect.value, modelSelect.value)" />
+        (keydown.enter)="saveApiKey()" />
 
       @if (testStatus !== 'idle') {
         <div class="key-modal-test-result" [class.ok]="testStatus === 'ok'" [class.error]="testStatus === 'error'" [class.testing]="testStatus === 'testing'">
           @if (testStatus === 'testing') { Validating… }
-          @if (testStatus === 'ok')      { Key is valid — {{ providerSelect.value }} / {{ modelSelect.value }} confirmed. }
+          @if (testStatus === 'ok')      { Key is valid — {{ s.provider || 'groq' }} / {{ s.selectedModel }} confirmed. }
           @if (testStatus === 'error')   { {{ testError }} }
         </div>
       }
@@ -692,10 +697,10 @@
           <button class="key-modal-danger" (click)="clearApiKey()">Remove key</button>
         }
         <button class="key-modal-secondary" [disabled]="testStatus === 'testing'"
-          (click)="testConnection(keyInput.value, providerSelect.value, modelSelect.value)">
+          (click)="testConnection()">
           {{ testStatus === 'testing' ? 'Testing…' : 'Test connection' }}
         </button>
-        <button class="key-modal-primary" (click)="saveApiKey(keyInput.value, providerSelect.value, modelSelect.value)">Save & continue</button>
+        <button class="key-modal-primary" (click)="saveApiKey()">Save & continue</button>
       </div>
     </div>
   </div>

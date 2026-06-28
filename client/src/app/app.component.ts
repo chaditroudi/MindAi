@@ -69,7 +69,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private readonly charts = inject(ChartRenderService);
 
   testStatus: 'idle' | 'testing' | 'ok' | 'error' = 'idle';
-  testError = '';
+  testError  = '';
+  modalKey   = '';
 
   private readonly destroy$      = new Subject<void>();
   private readonly initedWidgets = new Set<string>();
@@ -198,9 +199,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  async saveApiKey(key: string, provider: string, model: string): Promise<void> {
-    const trimmed = key.trim();
-    if (!trimmed || !provider || !model) return;
+  async saveApiKey(): Promise<void> {
+    const trimmed  = this.modalKey.trim();
+    const provider = this.st.snap.provider || 'groq';
+    const model    = this.st.snap.selectedModel || this.modelsForProvider(provider)[0]?.value ?? '';
+    if (!trimmed || !model) return;
 
     try {
       await this.api.saveSettings(this.st.snap.userId, { apiKey: trimmed, provider, model });
@@ -208,6 +211,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
         provider, selectedModel: model,
       });
+      this.modalKey = '';
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save settings. Please try again.';
       this.st.patch({ keyRejected: true, keyErrorText: message });
@@ -225,18 +229,22 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       provider: '',
       selectedModel: '',
     });
+    this.modalKey = '';
   }
 
   clearApiKey(): void {
     void this.api.deleteSettings(this.st.snap.userId).catch(() => undefined);
     this.st.patch({ hasKey: false, showKeyModal: true, provider: '', selectedModel: '' });
+    this.modalKey   = '';
     this.testStatus = 'idle';
     this.testError  = '';
   }
 
-  async testConnection(key: string, provider: string, model: string): Promise<void> {
-    const trimmed = key.trim();
-    if (!trimmed || !provider || !model) return;
+  async testConnection(): Promise<void> {
+    const trimmed  = this.modalKey.trim();
+    const provider = this.st.snap.provider || 'groq';
+    const model    = this.st.snap.selectedModel || this.modelsForProvider(provider)[0]?.value ?? '';
+    if (!trimmed || !model) return;
     this.testStatus = 'testing';
     this.testError  = '';
     try {
