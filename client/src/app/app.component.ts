@@ -601,7 +601,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (!this.newAgent.model || !this.newAgent.apiKey) return;
     this.agentDraft   = [...this.agentDraft, { ...this.newAgent }];
     this.newAgent     = { status: 'idle', provider: 'groq', model: '', apiKey: '',
-                          inputTokenLimit: 4_000, tokenBudget: 0, tokensUsed: 0 };
+                          inputTokenLimit: 4_000, outputTokenLimit: 2_000,
+                          tokenBudget: 0, inputTokensUsed: 0, outputTokensUsed: 0 };
     this.showAddAgent = false;
   }
 
