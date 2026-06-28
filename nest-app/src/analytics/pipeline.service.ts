@@ -343,16 +343,16 @@ export class PipelineService {
     userModel?:    string,
     userProvider?: string,
     maxTokens?:    number,
-  ): Promise<DashboardSpec | InquiryResult> {
+  ): Promise<ExecuteResult<DashboardSpec | InquiryResult>> {
     if (!context.length) {
       const cached = await this.cache.getCached<DashboardSpec>(DASHBOARD_FULL_INTENT, prompt);
       if (cached) {
         this.logger.log('full dashboard cache hit — skipping both LLM calls');
-        return cached;
+        return { result: cached, usage: zeroUsage() };
       }
     }
 
-    const { plan, rows } = await this.aggregate(prompt, 'dashboard', context, apiKey, userModel, userProvider, maxTokens);
+    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'dashboard', context, apiKey, userModel, userProvider, maxTokens);
 
     if (!plan.skills.includes('chart')) {
       this.logger.log('dashboard → falling back to inquiry (needsData: false)');
@@ -363,7 +363,7 @@ export class PipelineService {
     }
 
     const source = this.resolveSource(plan.query.sourceName);
-    const chart  = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens);
+    const { result: chart, usage: chartUsage } = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens);
 
     if (chart.widgets.length) {
       this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart })
@@ -373,7 +373,7 @@ export class PipelineService {
       }
     }
 
-    return chart;
+    return { result: chart, usage: addUsage(aggUsage, chartUsage) };
   }
 
   async executeReport(
@@ -383,22 +383,22 @@ export class PipelineService {
     userModel?:    string,
     userProvider?: string,
     maxTokens?:    number,
-  ): Promise<ReportResult> {
+  ): Promise<ExecuteResult<ReportResult>> {
     if (!context.length) {
       const cached = await this.cache.getCached<ReportResult>('report:full', prompt);
       if (cached) {
         this.logger.log('full report cache hit — skipping LLM calls');
-        return cached;
+        return { result: cached, usage: zeroUsage() };
       }
     }
 
-    const { plan, rows } = await this.aggregate(prompt, 'report', context, apiKey, userModel, userProvider, maxTokens);
+    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'report', context, apiKey, userModel, userProvider, maxTokens);
 
     if (!plan.skills.includes('report')) {
-      return { reportSections: [{ heading: 'No Data', body: 'The request could not be answered from the available sources.' }] };
+      return { result: { reportSections: [{ heading: 'No Data', body: 'The request could not be answered from the available sources.' }] }, usage: aggUsage };
     }
     if (!rows.length) {
-      return { reportSections: [{ heading: 'No Data', body: 'No matching records found for this request.' }] };
+      return { result: { reportSections: [{ heading: 'No Data', body: 'No matching records found for this request.' }] }, usage: aggUsage };
     }
 
     this.logger.log(`report | rows: ${rows.length}`);
@@ -407,19 +407,19 @@ export class PipelineService {
       const source = this.resolveSource(plan.query.sourceName);
       const chartFallback = { layout: 'operational' as const, title: prompt, summary: '', widgets: [] };
 
-      const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey, userModel, userProvider, maxTokens });
+      const { result: reportResult, usage: reportUsage } = await runReportSkill({ rows, prompt, withChart: true, apiKey, userModel, userProvider, maxTokens });
       this.logger.log(`report done | sections: ${reportResult.reportSections.length} — generating chart`);
-      const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens)
-        .catch((err) => { this.logger.warn(`chart failed (non-fatal): ${err}`); return chartFallback; });
-      const fullResult = { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
+      const chartRun = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens)
+        .catch((err) => { this.logger.warn(`chart failed (non-fatal): ${err}`); return { result: chartFallback, usage: zeroUsage() }; });
+      const fullResult = { ...reportResult, ...(chartRun.result.widgets.length ? { chart: chartRun.result } : {}) };
       if (!context.length) this.cache.setCached('report:full', prompt, fullResult).catch(() => undefined);
-      return fullResult;
+      return { result: fullResult, usage: addUsage(aggUsage, addUsage(reportUsage, chartRun.usage)) };
     }
 
-    const result = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
+    const { result, usage: writerUsage } = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
     this.logger.log(`report done | sections: ${result.reportSections.length}`);
     if (!context.length) this.cache.setCached('report:full', prompt, result).catch(() => undefined);
-    return result;
+    return { result, usage: addUsage(aggUsage, writerUsage) };
   }
 
   async executeInquiry(
@@ -429,20 +429,20 @@ export class PipelineService {
     userModel?:    string,
     userProvider?: string,
     maxTokens?:    number,
-  ): Promise<InquiryResult> {
-    const { plan, rows } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider, maxTokens);
+  ): Promise<ExecuteResult<InquiryResult>> {
+    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider, maxTokens);
 
     if (!plan.skills.includes('inquiry')) {
-      return { summary: 'The request could not be answered from the available sources.' };
+      return { result: { summary: 'The request could not be answered from the available sources.' }, usage: aggUsage };
     }
     if (!rows.length) {
-      return { summary: 'No matching data found for this question.' };
+      return { result: { summary: 'No matching data found for this question.' }, usage: aggUsage };
     }
 
     this.logger.log(`inquiry | rows: ${rows.length}`);
-    const result = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
+    const { result, usage: writerUsage } = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
     this.logger.log('inquiry done');
-    return result;
+    return { result, usage: addUsage(aggUsage, writerUsage) };
   }
 
   // Dynamic routing — supervisor plan determines the skill; no pre-detection needed
@@ -453,32 +453,32 @@ export class PipelineService {
     userModel?:    string,
     userProvider?: string,
     maxTokens?:    number,
-  ): Promise<DashboardSpec | ReportResult | InquiryResult> {
-    const { plan, rows } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider, maxTokens);
+  ): Promise<ExecuteResult<DashboardSpec | ReportResult | InquiryResult>> {
+    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider, maxTokens);
 
     if (plan.skills.includes('chart')) {
       if (!rows.length) throw new Error('No data found. Try rephrasing your question or checking the data source.');
       const source = this.resolveSource(plan.query.sourceName);
-      const chart  = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens);
+      const { result: chart, usage: chartUsage } = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens);
       if (chart.widgets.length) {
         this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart }).catch(() => undefined);
       }
-      return chart;
+      return { result: chart, usage: addUsage(aggUsage, chartUsage) };
     }
 
     if (plan.skills.includes('report') && rows.length) {
-      const result = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
+      const { result, usage: writerUsage } = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
       this.logger.log(`report done | sections: ${result.reportSections.length}`);
-      return result;
+      return { result, usage: addUsage(aggUsage, writerUsage) };
     }
 
     if (plan.skills.includes('inquiry') && rows.length) {
       this.logger.log(`inquiry | rows: ${rows.length}`);
-      const result = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
+      const { result, usage: writerUsage } = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
       this.logger.log('inquiry done');
-      return result;
+      return { result, usage: addUsage(aggUsage, writerUsage) };
     }
 
-    return { summary: 'The request could not be answered from the available sources.' };
+    return { result: { summary: 'The request could not be answered from the available sources.' }, usage: aggUsage };
   }
 }
