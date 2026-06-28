@@ -89,6 +89,7 @@ export function createSkillAgent(
   userProvider?: string,
 ): Agent {
   return new Agent({
+    id:           role,
     name:         role,
     instructions,
     model:        resolveModel(role, apiKey, userModel, userProvider),
