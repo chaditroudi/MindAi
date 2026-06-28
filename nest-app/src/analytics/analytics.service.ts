@@ -184,6 +184,8 @@ export class AnalyticsService {
       `prompt: "${prompt}" | intent: ${intent}${req.intent ? '' : ' (auto)'} | session: ${sessionId}`,
     );
     const t0 = Date.now();
+    const outputTokenLimit = settings?.outputTokenLimit ?? 800;
+
     const { result, effectiveApiKey } = await this.runWithFallback(
       intent,
       prompt,
@@ -194,6 +196,7 @@ export class AnalyticsService {
       req.userId,
       userModel,
       userProvider,
+      outputTokenLimit,
     );
     this.logger.log(`done in ${Date.now() - t0}ms`);
 
@@ -306,9 +309,10 @@ export class AnalyticsService {
     userId:        string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<{ result: unknown; effectiveApiKey: string }> {
     try {
-      const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey, userModel, userProvider);
+      const result = await this.executeByIntent(intent, prompt, memoryContext, primaryKey, userModel, userProvider, maxTokens);
       return { result, effectiveApiKey: primaryKey };
     } catch (err) {
       return this.handleExecutionError(err, {

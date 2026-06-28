@@ -442,13 +442,14 @@ export class PipelineService {
     apiKey?:       string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<DashboardSpec | ReportResult | InquiryResult> {
-    const { plan, rows } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider);
+    const { plan, rows } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider, maxTokens);
 
     if (plan.skills.includes('chart')) {
       if (!rows.length) throw new Error('No data found. Try rephrasing your question or checking the data source.');
       const source = this.resolveSource(plan.query.sourceName);
-      const chart  = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider);
+      const chart  = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens);
       if (chart.widgets.length) {
         this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart }).catch(() => undefined);
       }
@@ -456,7 +457,7 @@ export class PipelineService {
     }
 
     if (plan.skills.includes('report') && rows.length) {
-      const result = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider });
+      const result = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
       this.logger.log(`report done | sections: ${result.reportSections.length}`);
       return result;
     }
