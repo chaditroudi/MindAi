@@ -149,7 +149,6 @@ export class AnalyticsService {
     }
   }
 
-  // ── Public API ───────────────────────────────────────────────────────────────
 
   async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
     const prompt = promptSchema.parse(req.prompt);
