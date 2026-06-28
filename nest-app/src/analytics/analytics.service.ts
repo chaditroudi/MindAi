@@ -15,7 +15,7 @@ import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
 import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-config.service';
-import { estimateTokens } from '../ai/token';
+import type { TokenUsage } from '../ai/token';
 
 interface AccessResult {
   apiKey:           string;
