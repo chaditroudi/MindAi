@@ -177,7 +177,7 @@ export class AnalyticsService {
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
 
-    const memoryContext = await this.buildMemoryContext(req.userId, sessionId, prompt);
+    const memoryContext = await this.buildMemoryContext(req.userId, sessionId, prompt, inputTokenLimit);
 
     this.logger.log(
       `prompt: "${prompt}" | intent: ${intent}${req.intent ? '' : ' (auto)'} | session: ${sessionId}`,
