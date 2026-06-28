@@ -12,6 +12,10 @@ class SaveSettingsDto {
 
   @IsString() @MinLength(1) @MaxLength(200)
   model!: string;
+
+  inputTokenLimit!:number;
+  outputTokenLimit!:number;
+
 }
 
 @Controller('api/settings')
