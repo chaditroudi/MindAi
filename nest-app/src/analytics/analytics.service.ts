@@ -15,7 +15,8 @@ import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
 import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-config.service';
-import type { TokenUsage } from '../ai/token';
+import { estimateTokens } from '../ai/token';
+import type { ExecuteResult } from './pipeline.service';
 
 interface AccessResult {
   apiKey:           string;
@@ -136,7 +137,7 @@ export class AnalyticsService {
     model?:        string,
     provider?:     string,
     maxTokens?:    number,
-  ): Promise<unknown> {
+  ): Promise<ExecuteResult<unknown>> {
     switch (intent) {
       case 'dashboard':
         return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, model, provider, maxTokens);
@@ -181,9 +182,14 @@ export class AnalyticsService {
     const t0 = Date.now();
 
     let result: unknown;
+    let promptTokens = 0;
+    let completionTokens = 0;
     try {
-      result = await this.executeByIntent(intent, prompt, memoryContext,
+      const executed = await this.executeByIntent(intent, prompt, memoryContext,
         access.apiKey, access.model, access.provider, access.outputTokenLimit);
+      result           = executed.result;
+      promptTokens     = executed.usage.promptTokens;
+      completionTokens = executed.usage.completionTokens;
     } catch (err) {
       if (isInvalidKeyError(err)) {
         throw Object.assign(
@@ -205,14 +211,11 @@ export class AnalyticsService {
     }
 
     const durationMs = Date.now() - t0;
-    this.logger.log(`done in ${durationMs}ms`);
+    this.logger.log(`done in ${durationMs}ms | in:${promptTokens} out:${completionTokens}`);
 
-    // Track input + output credits against the agent budget (fire-and-forget)
+    // Track exact token counts against the agent budget (fire-and-forget)
     if (access.agentApiKey) {
-      const contextText  = memoryContext.map(m => typeof m.content === 'string' ? m.content : '').join(' ');
-      const inputTokens  = estimateTokens(prompt) + estimateTokens(contextText);
-      const outputTokens = estimateTokens(JSON.stringify(result ?? ''));
-      void this.agentConfig.trackUsage(access.agentApiKey, inputTokens, outputTokens);
+      void this.agentConfig.trackUsage(access.agentApiKey, promptTokens, completionTokens);
     }
 
     return this.buildResponse({
