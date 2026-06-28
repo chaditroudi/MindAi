@@ -342,18 +342,18 @@ export class PipelineService {
       }
     }
 
-    const { plan, rows } = await this.aggregate(prompt, 'dashboard', context, apiKey, userModel, userProvider);
+    const { plan, rows } = await this.aggregate(prompt, 'dashboard', context, apiKey, userModel, userProvider, maxTokens);
 
     if (!plan.skills.includes('chart')) {
       this.logger.log('dashboard → falling back to inquiry (needsData: false)');
-      return this.executeInquiry(prompt, context, apiKey, userModel, userProvider);
+      return this.executeInquiry(prompt, context, apiKey, userModel, userProvider, maxTokens);
     }
     if (!rows.length) {
       throw new Error('No data found. Try rephrasing your question or checking the data source.');
     }
 
     const source = this.resolveSource(plan.query.sourceName);
-    const chart  = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider);
+    const chart  = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens);
 
     if (chart.widgets.length) {
       this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart })
@@ -372,6 +372,7 @@ export class PipelineService {
     apiKey?:       string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<ReportResult> {
     if (!context.length) {
       const cached = await this.cache.getCached<ReportResult>('report:full', prompt);
@@ -381,7 +382,7 @@ export class PipelineService {
       }
     }
 
-    const { plan, rows } = await this.aggregate(prompt, 'report', context, apiKey, userModel, userProvider);
+    const { plan, rows } = await this.aggregate(prompt, 'report', context, apiKey, userModel, userProvider, maxTokens);
 
     if (!plan.skills.includes('report')) {
       return { reportSections: [{ heading: 'No Data', body: 'The request could not be answered from the available sources.' }] };
@@ -396,16 +397,16 @@ export class PipelineService {
       const source = this.resolveSource(plan.query.sourceName);
       const chartFallback = { layout: 'operational' as const, title: prompt, summary: '', widgets: [] };
 
-      const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey, userModel, userProvider });
+      const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey, userModel, userProvider, maxTokens });
       this.logger.log(`report done | sections: ${reportResult.reportSections.length} — generating chart`);
-      const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider)
+      const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens)
         .catch((err) => { this.logger.warn(`chart failed (non-fatal): ${err}`); return chartFallback; });
       const fullResult = { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
       if (!context.length) this.cache.setCached('report:full', prompt, fullResult).catch(() => undefined);
       return fullResult;
     }
 
-    const result = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider });
+    const result = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
     this.logger.log(`report done | sections: ${result.reportSections.length}`);
     if (!context.length) this.cache.setCached('report:full', prompt, result).catch(() => undefined);
     return result;
@@ -417,8 +418,9 @@ export class PipelineService {
     apiKey?:       string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<InquiryResult> {
-    const { plan, rows } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider);
+    const { plan, rows } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider, maxTokens);
 
     if (!plan.skills.includes('inquiry')) {
       return { summary: 'The request could not be answered from the available sources.' };
@@ -428,7 +430,7 @@ export class PipelineService {
     }
 
     this.logger.log(`inquiry | rows: ${rows.length}`);
-    const result = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider });
+    const result = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
     this.logger.log('inquiry done');
     return result;
   }
@@ -461,7 +463,7 @@ export class PipelineService {
 
     if (plan.skills.includes('inquiry') && rows.length) {
       this.logger.log(`inquiry | rows: ${rows.length}`);
-      const result = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider });
+      const result = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
       this.logger.log('inquiry done');
       return result;
     }

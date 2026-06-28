@@ -138,16 +138,17 @@ export class AnalyticsService {
     apiKey:        string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<unknown> {
     switch (intent) {
       case 'dashboard':
-        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, userModel, userProvider);
+        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, userModel, userProvider, maxTokens);
       case 'report':
-        return this.pipeline.executeReport(prompt, memoryContext, apiKey, userModel, userProvider);
+        return this.pipeline.executeReport(prompt, memoryContext, apiKey, userModel, userProvider, maxTokens);
       case 'inquiry':
-        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, userModel, userProvider);
+        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, userModel, userProvider, maxTokens);
       default:
-        return this.pipeline.execute(prompt, memoryContext, apiKey, userModel, userProvider);
+        return this.pipeline.execute(prompt, memoryContext, apiKey, userModel, userProvider, maxTokens);
     }
   }
 
