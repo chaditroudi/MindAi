@@ -21,29 +21,29 @@ async function getPipeline(): Promise<EmbeddingPipeline> {
   if (_loading) return _loading;
 
   _loading = (async () => {
-    const { pipeline } = await getModule();
-    log('embeddings', 'loading all-MiniLM-L6-v2 (~25MB download on first run)...');
-    const p = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    log('embeddings', 'embedding model ready');
-    _pipe = p as EmbeddingPipeline;
-    _loading = null;
-    return _pipe;
+    try {
+      const { pipeline } = await getModule();
+      log('embeddings', 'loading all-MiniLM-L6-v2 (~25MB download on first run)...');
+      const p = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+      log('embeddings', 'embedding model ready');
+      _pipe    = p as EmbeddingPipeline;
+      _loading = null;
+      return _pipe;
+    } catch (err) {
+      _loading = null;
+      throw err;
+    }
   })();
 
   return _loading;
 }
 
-/** Warm up the model in the background at server start (avoids delay on first user query). */
 export function warmupEmbeddings(): void {
   getPipeline().catch(err =>
     log('embeddings', `warmup failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`),
   );
 }
 
-/**
- * Returns a normalised 384-dimensional embedding vector.
- * Uses all-MiniLM-L6-v2 via WASM — fully local, no API key required.
- */
 export async function generateEmbedding(text: string): Promise<number[]> {
   const pipe = await getPipeline();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,7 +51,6 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   return Array.from(output.data as Float32Array);
 }
 
-/** Cosine similarity between two L2-normalised vectors. */
 export function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];

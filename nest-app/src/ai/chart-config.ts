@@ -22,14 +22,19 @@ interface SkillConfig {
 
 const cfg = readJsonSection<SkillConfig>(skillFile('chart', 'SKILL.md'), 'Chart Config');
 
+function assertNonEmpty(arr: string[], label: string): [string, ...string[]] {
+  if (!arr.length) throw new Error(`SKILL.md: "${label}" must have at least one entry`);
+  return arr as [string, ...string[]];
+}
+
 export const CHART_DEFINITIONS: readonly ChartDefinition[] = cfg.types;
-export const CHART_AGGREGATIONS     = cfg.aggregations as [string, ...string[]];
+export const CHART_AGGREGATIONS     = assertNonEmpty(cfg.aggregations, 'aggregations');
 export const LLM_CHART_AGGREGATIONS = [...CHART_AGGREGATIONS, 'none'] as [string, ...string[]];
-export const DASHBOARD_LAYOUTS      = cfg.layouts as [string, ...string[]];
+export const DASHBOARD_LAYOUTS      = assertNonEmpty(cfg.layouts, 'layouts');
 export const CHART_BY_TYPE          = Object.fromEntries(cfg.types.map(d => [d.type, d])) as Record<string, ChartDefinition>;
 
 function getLlmChartTypes(): [string, ...string[]] {
-  return cfg.types.filter(d => !d.llmHidden).map(d => d.type) as [string, ...string[]];
+  return assertNonEmpty(cfg.types.filter(d => !d.llmHidden).map(d => d.type), 'visible chart types');
 }
 
 export const chartOptionsSchema = z.record(z.unknown()).optional();

@@ -134,8 +134,10 @@ function renderKpi(plan: WidgetPlan, data: DataRow[], id: string) {
 function renderGauge(plan: WidgetPlan, data: DataRow[], id: string) {
   const vf = resolveNumericValueField(data, plan.valueField);
   if (!vf || !data.length) return null;
+  const val = num(data[0][vf]);
+  const max = val <= 1 ? 1 : val <= 100 ? 100 : Math.ceil(val * 1.2);
   return widget(plan, id, {
-    series: [{ type: 'gauge', data: [{ value: num(data[0][vf]), name: plan.title }], min: 0, max: 100 }],
+    series: [{ type: 'gauge', data: [{ value: val, name: plan.title }], min: 0, max }],
   });
 }
 
@@ -172,7 +174,7 @@ function renderHeatmap(plan: WidgetPlan, data: DataRow[], id: string) {
     yVals.indexOf(str(r[plan.yField!])),
     num(r[plan.valueField!]),
   ]);
-  const maxVal = Math.max(...heatData.map(d => d[2]), 1);
+  const maxVal = heatData.reduce((m, d) => Math.max(m, d[2]), 1);
   return widget(plan, id, {
     tooltip:   { position: 'top' },
     xAxis:     { type: 'category', data: xVals },

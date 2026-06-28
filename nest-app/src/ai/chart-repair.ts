@@ -88,8 +88,6 @@ export function repairWidgetPlan(raw: LlmWidget, profile: RowProfile, _rows: Dat
     );
   }
 
-  if (plan.type === 'table') repairColumns(plan, profile);
-
   return plan;
 }
 

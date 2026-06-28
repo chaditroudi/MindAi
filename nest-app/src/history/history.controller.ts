@@ -11,7 +11,7 @@ export class HistoryController {
     @Query('skip')   rawSkip?: string,
     @Query('limit')  rawLimit?: string,
   ) {
-    const skip  = Number(rawSkip)  || 0;
+    const skip  = Math.max(0, Number(rawSkip) || 0);
     const limit = Math.min(Number(rawLimit) || 20, 100);
     return this.history.listResults({ intent, skip, limit });
   }

@@ -460,7 +460,8 @@ export class AnalyticsService {
     userModel?: string;
   }): AnalyticsResponse {
     const { result, prompt, effectiveApiKey, sessionId, displayIntent, userId, durationMs, userModel } = params;
-    const type = this.resolveType(result);    const messageResult = this.toMessageResult(type, result, durationMs);
+    const type = this.resolveType(result);
+    const messageResult = this.toMessageResult(type, result, durationMs);
     const messageId = randomUUID();
 
     const assistantMessage: ConversationMessage & { role: 'assistant'; result: MessageResult } = {
