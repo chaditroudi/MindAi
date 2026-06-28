@@ -577,6 +577,61 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   // private
 
+  // agent config
+
+  async loadAgentConfig(): Promise<void> {
+    try {
+      const cfg = await this.api.getAgentConfig();
+      this.st.patch({ agentConfig: cfg });
+      this.agentDraft = cfg.agents.map(a => ({ ...a }));
+      this.tokenDraft = {
+        inputTokenLimit:  cfg.inputTokenLimit,
+        outputTokenLimit: cfg.outputTokenLimit,
+        memoryLimit:      cfg.memoryLimit,
+      };
+    } catch { /* non-critical */ }
+  }
+
+  openConfigTab(): void {
+    this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
+    void this.loadAgentConfig();
+  }
+
+  addAgentToList(): void {
+    if (!this.newAgent.model || !this.newAgent.apiKey) return;
+    this.agentDraft = [...this.agentDraft, { ...this.newAgent }];
+    this.newAgent   = { status: 'idle', provider: 'groq', model: '', apiKey: '' };
+    this.showAddAgent = false;
+  }
+
+  removeAgent(index: number): void {
+    this.agentDraft = this.agentDraft.filter((_, i) => i !== index);
+  }
+
+  setAgentStatus(index: number, status: AgentStatus): void {
+    this.agentDraft = this.agentDraft.map((a, i) =>
+      i === index ? { ...a, status } : a,
+    );
+  }
+
+  async saveAgentConfig(): Promise<void> {
+    this.configSaving = true;
+    this.configError  = '';
+    try {
+      const saved = await this.api.saveAgentConfig({
+        ...this.tokenDraft,
+        agents: this.agentDraft,
+      });
+      this.st.patch({ agentConfig: saved });
+    } catch (err) {
+      this.configError = err instanceof Error ? err.message : 'Failed to save config.';
+    } finally {
+      this.configSaving = false;
+    }
+  }
+
+  readonly STATUS_OPTIONS: AgentStatus[] = ['active', 'idle', 'disabled', 'expired'];
+
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
     const base = { messageId: data.messageId, role: 'assistant' as const, prompt };
 

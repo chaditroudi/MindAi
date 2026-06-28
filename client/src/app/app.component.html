@@ -70,6 +70,8 @@
               <span class="sidebar-tab-count">{{ s.memories.length }}</span>
             }
           </button>
+          <button class="sidebar-tab" [class.sidebar-tab--active]="s.sidebarTab === 'config'"
+            (click)="openConfigTab()">Config</button>
         </div>
         @if (s.sidebarTab === 'history') {
           <button class="new-btn" (click)="newSession()" title="New session">
@@ -128,6 +130,98 @@
               </button>
             </div>
           }
+        </div>
+      }
+
+      @if (s.sidebarTab === 'config') {
+        <div class="config-panel">
+
+          <section class="config-section">
+            <h4 class="config-section-title">Token Limits</h4>
+            <div class="config-field">
+              <label class="config-label">Input token limit</label>
+              <input class="config-input" type="number" min="1" max="128000"
+                [(ngModel)]="tokenDraft.inputTokenLimit" />
+            </div>
+            <div class="config-field">
+              <label class="config-label">Output token limit</label>
+              <input class="config-input" type="number" min="1" max="32000"
+                [(ngModel)]="tokenDraft.outputTokenLimit" />
+            </div>
+            <div class="config-field">
+              <label class="config-label">Memory limit</label>
+              <input class="config-input" type="number" min="1" max="500"
+                [(ngModel)]="tokenDraft.memoryLimit" />
+            </div>
+          </section>
+
+          <section class="config-section">
+            <div class="config-section-head">
+              <h4 class="config-section-title">Agents</h4>
+              <button class="config-add-btn" (click)="showAddAgent = !showAddAgent">
+                {{ showAddAgent ? 'Cancel' : '+ Add' }}
+              </button>
+            </div>
+
+            @if (showAddAgent) {
+              <div class="config-agent-form">
+                <select class="config-input" [(ngModel)]="newAgent.provider">
+                  <option value="groq">Groq</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="google">Google</option>
+                </select>
+                <input class="config-input" type="text" placeholder="Model (e.g. llama-3.3-70b-versatile)"
+                  [(ngModel)]="newAgent.model" />
+                <input class="config-input" type="password" placeholder="API key"
+                  [(ngModel)]="newAgent.apiKey" />
+                <select class="config-input" [(ngModel)]="newAgent.status">
+                  @for (s of STATUS_OPTIONS; track s) {
+                    <option [value]="s">{{ s }}</option>
+                  }
+                </select>
+                <button class="config-save-btn" (click)="addAgentToList()"
+                  [disabled]="!newAgent.model || !newAgent.apiKey">Add agent</button>
+              </div>
+            }
+
+            @if (!agentDraft.length) {
+              <div class="config-empty">No agents configured. Add one above.</div>
+            }
+
+            @for (agent of agentDraft; track $index; let i = $index) {
+              <div class="config-agent-row">
+                <div class="config-agent-info">
+                  <span class="config-agent-provider">{{ agent.provider }}</span>
+                  <span class="config-agent-model">{{ agent.model }}</span>
+                </div>
+                <div class="config-agent-controls">
+                  <select class="config-status-select config-status--{{ agent.status }}"
+                    [ngModel]="agent.status"
+                    (ngModelChange)="setAgentStatus(i, $event)">
+                    @for (opt of STATUS_OPTIONS; track opt) {
+                      <option [value]="opt">{{ opt }}</option>
+                    }
+                  </select>
+                  <button class="config-remove-btn" (click)="removeAgent(i)" title="Remove">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            }
+          </section>
+
+          @if (configError) {
+            <div class="config-error">{{ configError }}</div>
+          }
+
+          <button class="config-save-btn config-save-btn--primary" (click)="saveAgentConfig()"
+            [disabled]="configSaving">
+            {{ configSaving ? 'Saving…' : 'Save config' }}
+          </button>
+
         </div>
       }
 
