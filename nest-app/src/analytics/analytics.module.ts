@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ChartResult, ChartResultSchema } from '../ai/schemas/chart-result.schema';
+import { ChartResult, ChartResultSchema } from '../ai/chart-results.repository';
 import { ChartResultsRepository } from '../ai/chart-results.repository';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';

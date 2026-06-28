@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UserSettings, UserSettingsSchema } from '../ai/schemas/user-settings.schema';
-import { UserSettingsRepository } from './user-settings.repository';
+import { UserSettings, UserSettingsSchema, UserSettingsRepository } from './user-settings.repository';
 import { UserSettingsService } from './user-settings.service';
 import { UserSettingsController } from './user-settings.controller';
 

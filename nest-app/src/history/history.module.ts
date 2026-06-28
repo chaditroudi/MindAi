@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PipelineRun, PipelineRunSchema } from './schemas/pipeline-run.schema';
+import { PipelineRun, PipelineRunSchema, ResultsHistoryRepository } from './results-history.repository';
 import { HistoryController } from './history.controller';
 import { HistoryService } from './history.service';
-import { ResultsHistoryRepository } from './results-history.repository';
 
 @Module({
   imports: [

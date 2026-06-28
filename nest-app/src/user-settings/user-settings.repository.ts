@@ -1,7 +1,26 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { type HydratedDocument } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { UserSettings, type UserSettingsDocument } from '../ai/schemas/user-settings.schema';
+
+@Schema({ collection: 'user_settings', timestamps: true, versionKey: false })
+export class UserSettings {
+  @Prop({ required: true, unique: true, index: true })
+  userId!: string;
+
+  @Prop({ required: true })
+  apiKey!: string;
+
+  @Prop({ required: true })
+  provider!: string;
+
+  @Prop({ required: true })
+  model!: string;
+}
+
+export type UserSettingsDocument = HydratedDocument<UserSettings>;
+export const UserSettingsSchema = SchemaFactory.createForClass(UserSettings);
 
 @Injectable()
 export class UserSettingsRepository {

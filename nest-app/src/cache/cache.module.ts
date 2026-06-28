@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PromptCache, PromptCacheSchema } from './schemas/prompt-cache.schema';
+import { PromptCache, PromptCacheSchema, CacheService } from './cache.service';
 import { CacheController } from './cache.controller';
-import { CacheService } from './cache.service';
 
 @Module({
   imports: [

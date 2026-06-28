@@ -1,8 +1,31 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { type HydratedDocument } from 'mongoose';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Source, type SourceDocument } from './schemas/source.schema';
 import { getSources, setSourcesCache, type DataSource } from './sources-cache';
+import type { DataSourceField } from '../types';
+
+@Schema({ collection: 'sources', versionKey: false, timestamps: true, suppressReservedKeysWarning: true })
+export class Source {
+  @Prop({ required: true, trim: true })
+  name: string;
+
+  @Prop({ required: true, unique: true, index: true, trim: true })
+  collection: string;
+
+  @Prop()
+  description?: string;
+
+  @Prop({ type: [Object], required: true })
+  fields: DataSourceField[];
+
+  @Prop({ type: Object })
+  meta?: Record<string, unknown>;
+}
+
+export type SourceDocument = HydratedDocument<Source>;
+export const SourceSchema = SchemaFactory.createForClass(Source);
 
 const MODE_META = {
   dashboard: {
@@ -30,7 +53,6 @@ export class SourcesService implements OnModuleInit {
     private readonly model: Model<SourceDocument>,
   ) {}
 
-  /** Load all sources into in-memory cache on app startup. */
   async onModuleInit(): Promise<void> {
     await this.reloadCache();
     const sources = getSources();
@@ -62,7 +84,6 @@ export class SourcesService implements OnModuleInit {
   }
 
   async register(source: DataSource): Promise<{ ok: boolean; loaded: number }> {
-    // `collection` is a valid field name but conflicts with Mongoose's typing; cast required
     await this.model.replaceOne(
       { collection: source.collection } as Record<string, unknown>,
       source as unknown as Record<string, unknown>,
