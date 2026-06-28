@@ -45,6 +45,7 @@ const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
     UserKeysModule,
     UserSettingsModule,
     AnalyticsModule,
+    AgentConfigModule,
     ...(angularBuilt
       ? [ServeStaticModule.forRoot({
           rootPath: angularDist,

@@ -9,6 +9,7 @@ import { CacheModule } from '../cache/cache.module';
 import { HistoryModule } from '../history/history.module';
 import { MemoryModule } from '../memory/memory.module';
 import { UserSettingsModule } from '../user-settings/user-settings.module';
+import { AgentConfigModule } from '../agent-config/agent-config.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UserSettingsModule } from '../user-settings/user-settings.module';
     HistoryModule,
     MemoryModule,
     UserSettingsModule,
+    AgentConfigModule,
   ],
   controllers: [AnalyticsController],
   providers:   [AnalyticsService, PipelineService, ChartResultsRepository],
