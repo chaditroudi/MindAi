@@ -50,6 +50,11 @@
   <!-- ── Main layout ───────────────────────────────────────────────────────── -->
   <div class="main-layout">
 
+    <!-- ── Sidebar backdrop (mobile only) ───────────────────────────────────── -->
+    @if (s.sidebarOpen) {
+      <div class="sidebar-backdrop" (click)="st.patch({ sidebarOpen: false })"></div>
+    }
+
     <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
     <aside class="sidebar" [class.sidebar--closed]="!s.sidebarOpen">
       <div class="sidebar-head">
