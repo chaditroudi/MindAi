@@ -2,6 +2,7 @@ import { createOpenAI }              from '@ai-sdk/openai';
 import { createAnthropic }           from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI }  from '@ai-sdk/google';
 import type { LanguageModelV1 }      from 'ai';
+import { Agent }                     from '@mastra/core/agent';
 
 export type AgentRole  = 'supervisor' | 'writer' | 'chart' | 'memory';
 export type AIProvider = 'groq' | 'openai' | 'anthropic' | 'google';
@@ -78,4 +79,18 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
 export function freshSignal(role: AgentRole): AbortSignal {
   const ms = Number(process.env[TIMEOUT_ENV_KEYS[role]]) || 15_000;
   return AbortSignal.timeout(ms);
+}
+
+export function createSkillAgent(
+  role: AgentRole,
+  instructions: string,
+  apiKey?: string,
+  userModel?: string,
+  userProvider?: string,
+): Agent {
+  return new Agent({
+    name:         role,
+    instructions,
+    model:        resolveModel(role, apiKey, userModel, userProvider),
+  });
 }

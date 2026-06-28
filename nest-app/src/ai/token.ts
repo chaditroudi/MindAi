@@ -3,15 +3,15 @@ export function estimateTokens(text: string): number {
 }
 
 export interface TokenUsage {
-  promptTokens:     number;
-  completionTokens: number;
+  inputTokens:  number;
+  outputTokens: number;
 }
 
 export function addUsage(a: TokenUsage, b: TokenUsage): TokenUsage {
   return {
-    promptTokens:     a.promptTokens     + b.promptTokens,
-    completionTokens: a.completionTokens + b.completionTokens,
+    inputTokens:  a.inputTokens  + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
   };
 }
 
-export const zeroUsage = (): TokenUsage => ({ promptTokens: 0, completionTokens: 0 });
+export const zeroUsage = (): TokenUsage => ({ inputTokens: 0, outputTokens: 0 });
