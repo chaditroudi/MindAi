@@ -324,6 +324,7 @@ export class AnalyticsService {
         userId,
         userModel,
         userProvider,
+        maxTokens,
       });
     }
   }
