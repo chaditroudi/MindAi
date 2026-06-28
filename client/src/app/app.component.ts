@@ -20,6 +20,7 @@ import type {
   ModeKey, PromptExample, WidgetSpec,
   AnalyticsResponse, DashboardResponse, InquiryResponse, ReportResponse,
   ConversationMessage, MessageResult, SavedResultSummary,
+  AgentEntry, AgentStatus,
 } from './app.types';
 
 const INTENT_MAP: Record<ModeKey, 'dashboard' | 'report' | 'general_question'> = {
@@ -72,6 +73,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   testError  = '';
   modalKey   = '';
 
+  // Agent config editing state
+  configSaving   = false;
+  configError    = '';
+  agentDraft:    AgentEntry[] = [];
+  tokenDraft     = { inputTokenLimit: 4000, outputTokenLimit: 800, memoryLimit: 50 };
+  newAgent: AgentEntry = { status: 'idle', provider: 'groq', model: '', apiKey: '' };
+  showAddAgent   = false;
+
   private readonly destroy$      = new Subject<void>();
   private readonly initedWidgets = new Set<string>();
   private timerStart             = 0;
@@ -103,6 +112,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     void this.loadSavedResults();
     void this.loadMemories();
     void this.loadMemoryConfig();
+    void this.loadAgentConfig();
   }
 
   ngAfterViewChecked(): void {

@@ -56,8 +56,9 @@ const INITIAL: AppState = {
   sessions:      [],
   savedResults:  [],
   viewingSaved:  null,
-  memories:               [],
+  memories:                [],
   memoryExtractionEnabled: true,
+  agentConfig:             null,
 
   pendingSuggestion: false,
   pendingPrompt:     '',
