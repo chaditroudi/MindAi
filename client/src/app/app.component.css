@@ -826,6 +826,12 @@
 .key-modal-desc a { color: #2563eb; text-decoration: none; }
 .key-modal-desc a:hover { text-decoration: underline; }
 
+.key-modal-label-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 0.25rem;
+}
 .key-modal-input {
   width: 100%;
   padding: 0.6rem 0.75rem;
