@@ -51,6 +51,7 @@ export async function runChart(
   apiKey?:       string,
   userModel?:    string,
   userProvider?: string,
+  maxTokens?:    number,
 ): Promise<DashboardSpec> {
   if (!rows.length) {
     return { layout: 'operational', title: 'No data', summary: 'No rows returned for this request.', widgets: [] };
@@ -68,7 +69,7 @@ export async function runChart(
       model:       resolveModel('chart', apiKey, userModel, userProvider),
       abortSignal: freshSignal('chart'),
       temperature: 0,
-      maxTokens:   MAX_TOKENS,
+      maxTokens:   maxTokens ?? MAX_TOKENS,
       maxRetries:  1,
       schema:      dashboardSchema,
       messages:    [{ role: 'user', content: buildChartPrompt(rows, prompt, strategy, chartHint, source) }],

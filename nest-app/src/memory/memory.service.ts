@@ -43,13 +43,14 @@ export class MemoryService {
     apiKey?:       string,
     userModel?:    string,
     userProvider?: string,
+    maxTokens?:    number,
   ): Promise<void> {
     if (!this.extractionEnabled) {
       this.logger.debug('memory extraction skipped (disabled)');
       return;
     }
 
-    const extracted = await extractMemories(prompt, summary, apiKey, userModel, userProvider);
+    const extracted = await extractMemories(prompt, summary, apiKey, userModel, userProvider, maxTokens);
     if (!extracted.length) return;
 
     await this.repo.upsert(
