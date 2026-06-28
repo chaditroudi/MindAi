@@ -74,12 +74,15 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   modalKey   = '';
 
   // Agent config editing state
-  configSaving   = false;
-  configError    = '';
-  agentDraft:    AgentEntry[] = [];
-  tokenDraft     = { inputTokenLimit: 4000, outputTokenLimit: 800, memoryLimit: 50 };
-  newAgent: AgentEntry = { status: 'idle', provider: 'groq', model: '', apiKey: '' };
-  showAddAgent   = false;
+  configSaving = false;
+  configError  = '';
+  agentDraft:  AgentEntry[] = [];
+  memoryLimitDraft = 50;
+  newAgent: AgentEntry = {
+    status: 'idle', provider: 'groq', model: '', apiKey: '',
+    inputTokenLimit: 4_000, tokenBudget: 0, tokensUsed: 0,
+  };
+  showAddAgent = false;
 
   private readonly destroy$      = new Subject<void>();
   private readonly initedWidgets = new Set<string>();
@@ -583,12 +586,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     try {
       const cfg = await this.api.getAgentConfig();
       this.st.patch({ agentConfig: cfg });
-      this.agentDraft = cfg.agents.map(a => ({ ...a }));
-      this.tokenDraft = {
-        inputTokenLimit:  cfg.inputTokenLimit,
-        outputTokenLimit: cfg.outputTokenLimit,
-        memoryLimit:      cfg.memoryLimit,
-      };
+      this.agentDraft      = cfg.agents.map(a => ({ ...a }));
+      this.memoryLimitDraft = cfg.memoryLimit;
     } catch { /* non-critical */ }
   }
 
@@ -599,8 +598,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   addAgentToList(): void {
     if (!this.newAgent.model || !this.newAgent.apiKey) return;
-    this.agentDraft = [...this.agentDraft, { ...this.newAgent }];
-    this.newAgent   = { status: 'idle', provider: 'groq', model: '', apiKey: '' };
+    this.agentDraft   = [...this.agentDraft, { ...this.newAgent }];
+    this.newAgent     = { status: 'idle', provider: 'groq', model: '', apiKey: '',
+                          inputTokenLimit: 4_000, tokenBudget: 0, tokensUsed: 0 };
     this.showAddAgent = false;
   }
 
@@ -619,8 +619,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.configError  = '';
     try {
       const saved = await this.api.saveAgentConfig({
-        ...this.tokenDraft,
-        agents: this.agentDraft,
+        memoryLimit: this.memoryLimitDraft,
+        agents:      this.agentDraft,
       });
       this.st.patch({ agentConfig: saved });
     } catch (err) {
