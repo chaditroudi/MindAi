@@ -93,12 +93,12 @@ export class PipelineService {
       }
     }
 
-    const { plan, rows, collection } = await this.runWithRetry(prompt, intent, sources, context, apiKey, userModel, userProvider, maxTokens);
+    const { plan, rows, collection, usage } = await this.runWithRetry(prompt, intent, sources, context, apiKey, userModel, userProvider, maxTokens);
     const durationMs = Date.now() - dateNow;
     this.logger.log(`result | collection: ${collection ?? '—'} | rows: ${rows.length} | ${durationMs}ms`);
 
     if (collection) this.flush(intent, prompt, plan, collection, rows, durationMs);
-    return { plan, rows };
+    return { plan, rows, usage };
   }
 
   private async runWithRetry(
@@ -110,11 +110,13 @@ export class PipelineService {
     userModel?:    string,
     userProvider?: string,
     maxTokens?:    number,
-  ): Promise<{ plan: TaskPlan; rows: Row[]; collection?: string }> {
-    let hint: string | undefined;
+  ): Promise<{ plan: TaskPlan; rows: Row[]; collection?: string; usage: TokenUsage }> {
+    let hint:         string | undefined;
+    let plannerUsage: TokenUsage = zeroUsage();
 
     for (let attempt = 0; attempt < 2; attempt++) {
-      const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, userModel, userProvider, hint, maxTokens });
+      const { plan, usage } = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, userModel, userProvider, hint, maxTokens });
+      plannerUsage = addUsage(plannerUsage, usage);
       this.logger.log(
         `plan [${attempt + 1}] | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`,
       );
@@ -131,7 +133,7 @@ export class PipelineService {
         throw err;
       }
 
-      if (!resolved) return { plan, rows: [] };
+      if (!resolved) return { plan, rows: [], usage: plannerUsage };
 
       let rows: Row[];
       try {
@@ -177,7 +179,7 @@ export class PipelineService {
         continue;
       }
 
-      return { plan, rows, collection: resolved.collection };
+      return { plan, rows, collection: resolved.collection, usage: plannerUsage };
     }
 
     throw new Error('Pipeline failed after 2 attempts — check your data source schema and field values.');
