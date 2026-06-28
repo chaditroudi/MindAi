@@ -515,7 +515,7 @@ export class AnalyticsService {
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, effectiveApiKey, userModel, userProvider });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, effectiveApiKey, userModel, userProvider, maxTokens: outputTokenLimit });
 
     if (type === 'dashboard') {
       return { intent: 'dashboard', chart: result, sessionId, messageId };
