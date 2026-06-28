@@ -63,10 +63,6 @@ const ERROR_CODES = {
   LLM_RATE_LIMIT: 'LLM_RATE_LIMIT',
 } as const;
 
-// ============================================================================
-// Error classification helpers
-// ============================================================================
-
 function getErrorStatus(err: unknown): number | undefined {
   return (err as { statusCode?: number; status?: number }).statusCode
     ?? (err as { status?: number }).status;
