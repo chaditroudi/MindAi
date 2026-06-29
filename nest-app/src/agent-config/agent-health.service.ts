@@ -5,7 +5,6 @@ import { buildProviderValidationRequest } from '../ai/model';
 
 const PROBE_TIMEOUT_MS = 8_000;
 
-// Keywords that indicate quota/billing exhaustion (not a transient rate limit)
 const QUOTA_EXHAUSTED_PATTERNS = [
   'free_tier', 'free tier', 'resource_exhausted',
   'insufficient_quota', 'quota exceeded', 'billing',
@@ -23,14 +22,13 @@ export class AgentHealthService {
 
   constructor(private readonly repo: AgentConfigRepository) {}
 
-  // Runs every 5 minutes — probes each non-disabled agent and updates status
   @Cron('*/5 * * * *')
   async checkAllAgents(): Promise<void> {
     const config = await this.repo.get();
     if (!config?.agents?.length) return;
 
     for (const agent of config.agents) {
-      if (agent.status === 'disabled') continue; // admin-disabled, never auto-change
+      if (agent.status === 'disabled') continue;
 
       const healthy    = await this.probeProvider(agent.provider, agent.apiKey);
       const newStatus: AgentStatus = healthy ? 'active' : 'expired';
