@@ -46,6 +46,15 @@ async function validateApiKey(apiKey: string, provider: string): Promise<void> {
   // other non-OK = provider endpoint temporarily down → don't block save
 }
 
+function sanitizeSettings(dto: UserSettingsDto): UserSettingsDto {
+  return {
+    apiKey:           dto.apiKey.trim(),
+    provider:         dto.provider.trim().toLowerCase(),
+    model:            dto.model.trim(),
+    inputTokenLimit:  dto.inputTokenLimit,
+  };
+}
+
 // ── Service ────────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -53,8 +62,8 @@ export class UserSettingsService {
   constructor(private readonly repo: UserSettingsRepository) {}
 
   async validate(dto: UserSettingsDto): Promise<ValidationResult> {
-    const { apiKey, provider, model } = dto;
-    const providerKey = provider.trim().toLowerCase();
+    const { apiKey, provider, model } = sanitizeSettings(dto);
+    const providerKey = provider;
     // Resolve effective provider: use the user's string if it's in the registry,
     // otherwise auto-detect from the API key prefix (AIza→google, sk-ant-→anthropic, etc.)
     const effective = PROVIDERS[providerKey]
@@ -64,9 +73,11 @@ export class UserSettingsService {
     return { ok: true, provider: providerKey, model };
   }
 
-  async save(userId: string, dto: UserSettingsDto): Promise<void> {
-    await this.validate(dto);
-    await this.repo.save(userId, dto);
+  async save(userId: string, dto: UserSettingsDto): Promise<ValidationResult> {
+    const clean = sanitizeSettings(dto);
+    const result = await this.validate(clean);
+    await this.repo.save(userId, clean);
+    return result;
   }
 
   async findByUser(userId: string): Promise<UserSettingsDocument | null> {

@@ -32,8 +32,7 @@ export class UserSettingsController {
     @Headers('x-user-id') rawUserId: string,
   ) {
     const userId = requireUserId(rawUserId);
-    await this.service.save(userId, dto);
-    return { ok: true, provider: dto.provider, model: dto.model };
+    return this.service.save(userId, dto);
   }
 
   @Get()
