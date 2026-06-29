@@ -785,9 +785,9 @@
       <label class="key-modal-label">
         Model
         <button class="key-modal-load-btn" type="button"
-          [disabled]="modelsLoading || !s.provider || !modalKey.trim()"
+          [disabled]="modelsLoading || !s.provider"
           (click)="loadModels()">
-          {{ modelsLoading ? 'Loading…' : 'Load models' }}
+          {{ modelsLoading ? 'Loading…' : 'Refresh models' }}
         </button>
       </label>
       @if (modelsError) {
@@ -801,16 +801,16 @@
         (ngModelChange)="onSettingsModelChange($event)"
         [disabled]="!s.provider"
         [attr.list]="availableModels.length ? 'settings-model-options' : null"
-        placeholder="Type a model id or load available models" />
+        placeholder="Select or type a model id" />
       <datalist id="settings-model-options">
         @for (m of availableModels; track m.id) {
           <option [value]="m.id">{{ m.label }}</option>
         }
       </datalist>
       @if (loadedModels.length) {
-        <p class="key-modal-label-hint" style="margin:2px 0 8px">{{ loadedModels.length }} models loaded from {{ s.provider }}</p>
+        <p class="key-modal-label-hint" style="margin:2px 0 8px">{{ loadedModels.length }} models available for {{ s.provider }}</p>
       } @else {
-        <p class="key-modal-label-hint" style="margin:2px 0 8px">You can always type a model id manually.</p>
+        <p class="key-modal-label-hint" style="margin:2px 0 8px">Select a provider to see available models.</p>
       }
 
       <label class="key-modal-label">
@@ -911,9 +911,9 @@
       <label class="key-modal-label">
         Model
         <button class="key-modal-load-btn" type="button"
-          [disabled]="newAgentModelsLoading || !newAgent.provider || !newAgent.apiKey.trim()"
+          [disabled]="newAgentModelsLoading || !newAgent.provider"
           (click)="loadNewAgentModels()">
-          {{ newAgentModelsLoading ? 'Loading…' : 'Load models' }}
+          {{ newAgentModelsLoading ? 'Loading…' : 'Refresh models' }}
         </button>
       </label>
       @if (newAgentModelsError) {
