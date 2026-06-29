@@ -15,9 +15,9 @@
     "lint": "eslint \"src/**/*.ts\" --fix"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.12",
-    "@ai-sdk/google": "^1.2.22",
-    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/anthropic": "^2.0.83",
+    "@ai-sdk/google": "^2.0.76",
+    "@ai-sdk/openai": "^2.0.109",
     "@mastra/core": "^1.41.0",
     "@mastra/libsql": "^1.12.1",
     "@mastra/memory": "^1.20.2",
@@ -27,7 +27,7 @@
     "@nestjs/mongoose": "^11.0.4",
     "@nestjs/platform-express": "^11.1.27",
     "@nestjs/serve-static": "^5.0.5",
-    "ai": "^4.3.19",
+    "ai": "^5.0.206",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^16.4.5",
