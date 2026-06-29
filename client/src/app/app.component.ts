@@ -365,18 +365,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       { value: 'claude-3-haiku-20240307',      label: 'Claude 3 Haiku' },
     ],
     google: [
-      // ── Gemini 2.5 ──
-      { value: 'gemini-2.5-pro',               label: 'Gemini 2.5 Pro (most capable)' },
-      { value: 'gemini-2.5-flash',             label: 'Gemini 2.5 Flash (recommended)' },
-      { value: 'gemini-2.5-flash-lite-preview', label: 'Gemini 2.5 Flash Lite (fast)' },
-      // ── Gemini 2.0 ──
-      { value: 'gemini-2.0-flash',             label: 'Gemini 2.0 Flash' },
-      { value: 'gemini-2.0-flash-lite',        label: 'Gemini 2.0 Flash Lite' },
-      { value: 'gemini-2.0-pro-exp',           label: 'Gemini 2.0 Pro Exp' },
-      // ── Gemini 1.5 ──
-      { value: 'gemini-1.5-pro',               label: 'Gemini 1.5 Pro' },
-      { value: 'gemini-1.5-flash',             label: 'Gemini 1.5 Flash' },
-      { value: 'gemini-1.5-flash-8b',          label: 'Gemini 1.5 Flash 8B' },
+      // ── Gemini 2.0 — recommended for free tier ──
+      { value: 'gemini-2.0-flash',             label: 'Gemini 2.0 Flash (recommended · free tier)' },
+      { value: 'gemini-2.0-flash-lite',        label: 'Gemini 2.0 Flash Lite (fastest · free tier)' },
+      // ── Gemini 2.5 — may require paid plan ──
+      { value: 'gemini-2.5-flash',             label: 'Gemini 2.5 Flash' },
+      { value: 'gemini-2.5-flash-lite-preview', label: 'Gemini 2.5 Flash Lite' },
+      { value: 'gemini-2.5-pro',               label: 'Gemini 2.5 Pro (paid plan)' },
     ],
   };
 
