@@ -9,10 +9,6 @@ const {
   MONGODB_SERVER_SELECTION_TIMEOUT_MS,
   MONGODB_CONNECT_RETRIES,
   MONGODB_PIPELINE_TIMEOUT_MS,
-  AI_API_KEY,
-  GROQ_API_KEY,   // kept for backwards compatibility — prefer AI_API_KEY
-  AI_MODEL,
-  AI_PROVIDER,
   SUPERVISOR_TIMEOUT_MS,
   CHART_TIMEOUT_MS,
   WRITER_TIMEOUT_MS,
@@ -40,9 +36,6 @@ export const config = {
   },
 
   llm: {
-    apiKey:   AI_API_KEY ?? GROQ_API_KEY,
-    model:    AI_MODEL,
-    provider: AI_PROVIDER,
     timeouts: {
       supervisor: positiveNumber(SUPERVISOR_TIMEOUT_MS, 15_000),
       chart:      positiveNumber(CHART_TIMEOUT_MS,      20_000),

@@ -30,11 +30,17 @@ export function resolveModel(
   model?:    string,
   provider?: string,
 ): LanguageModelV1 {
-  const key              = apiKey   ?? config.llm.apiKey   ?? '';
-  const resolvedModel    = model    ?? config.llm.model;
-  const resolvedProvider = provider ?? config.llm.provider ?? detectProvider(key);
+  const key              = apiKey?.trim() ?? '';
+  const resolvedModel    = model?.trim();
+  const resolvedProvider = provider?.trim().toLowerCase() || detectProvider(key);
   const baseURL          = resolvedProvider ? PROVIDERS[resolvedProvider] : undefined;
 
+  if (!key) {
+    throw new Error(
+      `No API key configured for role "${role}". ` +
+      `Please add one in Settings.`,
+    );
+  }
   if (!resolvedProvider || !baseURL) {
     throw new Error(
       `No provider configured for role "${role}". ` +
