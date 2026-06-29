@@ -118,10 +118,16 @@ function isProviderRateLimitError(err: unknown): boolean {
 
 function isFreeTierExhausted(err: unknown): boolean {
   const msg = getErrorMessage(err).toLowerCase();
-  // Google: "limit: 0" in quota failure + "free_tier" metric name
-  return msg.includes('free_tier') || msg.includes('free tier') ||
-         (msg.includes('limit: 0') && msg.includes('quota')) ||
-         msg.includes('resource_exhausted');
+  // Google uses RESOURCE_EXHAUSTED for both temporary RPM/TPM limits AND
+  // actual free-tier daily quota exhaustion. Only treat as exhausted when
+  // accompanied by free_tier / per_day / daily indicators — not on its own.
+  return (
+    msg.includes('free_tier') ||
+    msg.includes('free tier') ||
+    (msg.includes('limit: 0') && msg.includes('quota')) ||
+    (msg.includes('resource_exhausted') && msg.includes('per_day')) ||
+    (msg.includes('resource_exhausted') && msg.includes('daily'))
+  );
 }
 
 function extractRetryDelay(err: unknown): string | null {
@@ -134,15 +140,16 @@ function extractRetryDelay(err: unknown): string | null {
 }
 
 function isModelNotFoundError(err: unknown): boolean {
-  const msg    = getErrorMessage(err).toLowerCase();
-  const status = getErrorStatus(err);
+  const msg = getErrorMessage(err).toLowerCase();
+  // Do NOT rely on status 404 alone — other errors can return 404.
+  // Match on specific message patterns from Google, OpenAI, Groq, Anthropic.
   return (
-    status === 404 ||
     msg.includes('is not found for api version') ||
     msg.includes('is not supported for generatecontent') ||
     msg.includes('model not found') ||
     msg.includes('does not exist') ||
-    msg.includes('no such model')
+    msg.includes('no such model') ||
+    (msg.includes('404') && msg.includes('model'))
   );
 }
 
