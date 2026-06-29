@@ -117,7 +117,7 @@ Reference detection in `resolveReference()` handles FK fields in 3 ways:
 | `POST`   | `/api/sources`                 | ✓    | Register / update a dataset               |
 | `DELETE` | `/api/sources/:collection`     | ✓    | Remove a dataset                           |
 | `GET`    | `/health`                      | —    | MongoDB ping + sources count               |
-| `GET`    | `/api/provider`                | —    | Returns `{ provider: "groq" }`             |
+| `GET`    | `/api/provider`                | —    | Returns `{ provider: "", hasGlobalKey: false }` — provider/model/key come from user settings |
 
 ---
 
