@@ -655,7 +655,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   addAgentToList(): void {
-    if (!this.newAgent.model || !this.newAgent.apiKey) return;
+    if (!this.newAgent.provider || !this.newAgent.model || !this.newAgent.apiKey) return;
     this.agentDraft   = [...this.agentDraft, { ...this.newAgent }];
     this.newAgent     = { status: 'idle', provider: '', model: '', apiKey: '',
                           inputTokenLimit: 4_000, outputTokenLimit: 2_000,
