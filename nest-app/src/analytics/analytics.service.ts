@@ -196,8 +196,15 @@ export class AnalyticsService {
       );
     }
 
+    const roleModels = {
+      supervisorModel: settings?.supervisorModel?.trim() || undefined,
+      chartModel:      settings?.chartModel?.trim()      || undefined,
+      writerModel:     settings?.writerModel?.trim()     || undefined,
+      memoryModel:     settings?.memoryModel?.trim()     || undefined,
+    };
+
     const access = this.resolveAccess(userKey, userModel, userProvider, agentCfg,
-      settings?.inputTokenLimit);
+      settings?.inputTokenLimit, roleModels);
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
     const memoryContext = await this.buildMemoryContext(
@@ -214,7 +221,13 @@ export class AnalyticsService {
     for (;;) {
       try {
         const executed = await this.executeByIntent(intent, prompt, context, {
-          apiKey: access.apiKey, model: access.model, provider: access.provider, maxTokens: access.maxTokens,
+          apiKey:          access.apiKey,
+          model:           access.model,
+          provider:        access.provider,
+          maxTokens:       access.maxTokens,
+          supervisorModel: access.supervisorModel,
+          chartModel:      access.chartModel,
+          writerModel:     access.writerModel,
         });
         result       = executed.result;
         inputTokens  = executed.usage.inputTokens;
@@ -274,23 +287,39 @@ export class AnalyticsService {
     userProvider:    string | undefined,
     agentCfg:        ResolvedConfig,
     userTokenLimit?: number,
+    roleModels?:     { supervisorModel?: string; chartModel?: string; writerModel?: string; memoryModel?: string },
   ): AccessResult {
     if (userKey) {
       return {
-        apiKey:     userKey,
-        model:      userModel,
-        provider:   userProvider,
-        maxTokens:  userTokenLimit ?? 4_000,
+        apiKey:          userKey,
+        model:           userModel,
+        provider:        userProvider,
+        maxTokens:       userTokenLimit ?? 4_000,
+        supervisorModel: roleModels?.supervisorModel,
+        chartModel:      roleModels?.chartModel,
+        writerModel:     roleModels?.writerModel,
+        memoryModel:     roleModels?.memoryModel,
       };
     }
-    const active = agentCfg.agents.find(a => a.status === 'active');
+
+    // Pick the best active agent: unlimited budget first, then most budget remaining
+    const active = agentCfg.agents
+      .filter(a => a.status === 'active')
+      .sort((a, b) => {
+        if (a.tokenBudget === 0) return -1;
+        if (b.tokenBudget === 0) return 1;
+        const aLeft = a.tokenBudget - a.inputTokensUsed - a.outputTokensUsed;
+        const bLeft = b.tokenBudget - b.inputTokensUsed - b.outputTokensUsed;
+        return bLeft - aLeft;
+      })[0];
+
     if (active?.apiKey) {
       return {
-        apiKey:       active.apiKey,
-        model:        active.model,
-        provider:     active.provider,
-        maxTokens:    active.outputTokenLimit,
-        agentApiKey:  active.apiKey,
+        apiKey:      active.apiKey,
+        model:       active.model,
+        provider:    active.provider,
+        maxTokens:   active.outputTokenLimit,
+        agentApiKey: active.apiKey,
       };
     }
     throw new UnauthorizedException(

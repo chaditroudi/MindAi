@@ -36,10 +36,14 @@ type ResolvedPipeline = { pipeline: Row[]; collection: string };
 
 // Bundles the four LLM call parameters that were previously repeated in every signature.
 export interface LlmOpts {
-  apiKey?:    string;
-  model?:     string;
-  provider?:  string;
-  maxTokens?: number;
+  apiKey?:          string;
+  model?:           string;
+  provider?:        string;
+  maxTokens?:       number;
+  // per-role model overrides — same provider/key, different model per agent role
+  supervisorModel?: string;
+  chartModel?:      string;
+  writerModel?:     string;
 }
 
 export interface AggregationResult {
