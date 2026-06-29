@@ -139,6 +139,14 @@ export function resolveModel(
 ): LanguageModel {
   const key      = apiKey?.trim() ?? '';
   const provider = normalizeProvider(userProvider) ?? detectProvider(key);
+  const model    = userModel?.trim();
+
+  if (!key) {
+    throw new Error(
+      `No API key configured for role "${role}". ` +
+      `Please add one in Settings or Agent Config.`,
+    );
+  }
 
   if (!provider) {
     throw new Error(
@@ -149,7 +157,7 @@ export function resolveModel(
 
   const baseURL = PROVIDERS[provider];
 
-  if (!userModel) {
+  if (!model) {
     throw new Error(
       `No model configured for role "${role}" (provider: ${provider}). ` +
       `Please select a model in Settings.`,
@@ -159,12 +167,12 @@ export function resolveModel(
   switch (provider) {
     case 'anthropic':
       // Uses Anthropic's native SDK — different API format from OpenAI
-      return createAnthropic({ apiKey: key })(userModel);
+      return createAnthropic({ apiKey: key })(model);
     case 'google':
       // Uses Google's native SDK — hits generateContent, not chat/completions or responses
-      return createGoogleGenerativeAI({ apiKey: key, baseURL })(userModel);
+      return createGoogleGenerativeAI({ apiKey: key, baseURL })(model);
     case 'groq':
-      return createGroq({ apiKey: key, baseURL })(userModel);
+      return createGroq({ apiKey: key, baseURL })(model);
     case 'openai':
     case 'mistral':
     case 'together':
@@ -172,14 +180,14 @@ export function resolveModel(
       // .chat() forces Chat Completions endpoint (/chat/completions)
       // Without it, @ai-sdk/openai v2 defaults to the Responses API (/responses)
       // which these providers do not support.
-      return createOpenAI({ apiKey: key, baseURL }).chat(userModel);
+      return createOpenAI({ apiKey: key, baseURL }).chat(model);
     default:
       if (!baseURL) {
         throw new Error(
           `Unsupported provider "${provider}". Supported: ${Object.keys(PROVIDERS).join(', ')}.`,
         );
       }
-      return createOpenAI({ apiKey: key, baseURL }).chat(userModel);
+      return createOpenAI({ apiKey: key, baseURL }).chat(model);
   }
 }
 

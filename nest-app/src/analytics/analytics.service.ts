@@ -275,8 +275,7 @@ export class AnalyticsService {
         if (isStructuredOutputUnsupportedError(err)) {
           throw new BadRequestException(
             'This model does not support structured outputs required by this app. ' +
-            'For Groq, use: llama-3.3-70b-versatile or llama-3.1-8b-instant. ' +
-            'Please update your model in Settings.',
+            'Please choose a model that supports structured or JSON outputs for this provider, then try again.',
           );
         }
         if (isModelNotFoundError(err)) {
@@ -293,7 +292,8 @@ export class AnalyticsService {
         if (isProviderRateLimitError(err)) {
           const retryIn = extractRetryDelay(err);
           const msg = isFreeTierExhausted(err)
-            ? 'Free tier quota exhausted. Switch to gemini-2.0-flash (free tier) or enable billing on your Google account.'
+            ? `The current quota for ${access.provider ?? 'this provider'} is exhausted. ` +
+              'Try another model, use a different key, or enable billing for this provider account.'
             : retryIn
               ? `Rate limit reached. Try again in ${retryIn}.`
               : 'Rate limit reached. Please try again in a moment.';
