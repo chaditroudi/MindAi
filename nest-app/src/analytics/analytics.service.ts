@@ -244,7 +244,7 @@ export class AnalyticsService {
     return this.buildResponse({
       result, prompt, apiKey: access.apiKey, sessionId,
       displayIntent, userId: req.userId, durationMs,
-      inputTokens, outputTokens,
+      inputTokens, outputTokens, outputTokenLimit: access.outputTokenLimit,
       agentApiKey: access.agentApiKey,
       model: access.model, provider: access.provider,
     });
@@ -349,21 +349,28 @@ export class AnalyticsService {
   }
 
   private buildResponse(params: {
-    result:        unknown;
-    prompt:        string;
-    apiKey:        string;
-    sessionId:     string;
-    displayIntent: SessionIntent;
-    userId:        string;
-    durationMs:    number;
-    inputTokens:   number;
-    outputTokens:  number;
-    agentApiKey?:  string;
-    model?:        string;
-    provider?:     string;
+    result:             unknown;
+    prompt:             string;
+    apiKey:             string;
+    sessionId:          string;
+    displayIntent:      SessionIntent;
+    userId:             string;
+    durationMs:         number;
+    inputTokens:        number;
+    outputTokens:       number;
+    outputTokenLimit?:  number;
+    agentApiKey?:       string;
+    model?:             string;
+    provider?:          string;
   }): AnalyticsResponse {
     const { result, prompt, apiKey, sessionId, displayIntent, userId,
-            durationMs, inputTokens, outputTokens, agentApiKey, model, provider } = params;
+            durationMs, inputTokens, outputTokens, outputTokenLimit, agentApiKey, model, provider } = params;
+
+    const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens > outputTokenLimit;
+    const tokenWarning = tokenLimitExceeded
+      ? `This response used ${outputTokens} tokens, exceeding your configured limit of ${outputTokenLimit}. ` +
+        `Do you wish to continue? Further requests may also exceed this limit.`
+      : undefined;
     const type          = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
     const messageId     = randomUUID();
@@ -378,10 +385,12 @@ export class AnalyticsService {
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
     void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model, provider });
 
+    const tokenFields = tokenLimitExceeded ? { tokenLimitExceeded, tokenWarning } : {};
+
     if (type === 'dashboard') {
-      return { intent: 'dashboard', chart: result, sessionId, messageId, inputTokens, outputTokens };
+      return { intent: 'dashboard', chart: result, sessionId, messageId, inputTokens, outputTokens, ...tokenFields };
     }
-    return { intent: type, ...(result as object), sessionId, messageId, inputTokens, outputTokens };
+    return { intent: type, ...(result as object), sessionId, messageId, inputTokens, outputTokens, ...tokenFields };
   }
 
   private async persistTurn(params: {
