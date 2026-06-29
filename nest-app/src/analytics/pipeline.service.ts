@@ -12,6 +12,7 @@ import { CacheService } from '../cache/cache.service';
 import { HistoryService } from '../history/history.service';
 import { ChartResultsRepository } from '../ai/chart-results.repository';
 import type { IntentKind, DataSource, TaskPlan, DashboardSpec, ReportSection } from '../types';
+import { readJsonSection, skillFile } from '../ai/skill-prompt';
 
 function patchConvert(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(patchConvert);

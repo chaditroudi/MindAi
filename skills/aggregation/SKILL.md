@@ -446,3 +446,26 @@ a query timeout, so a malformed plan can't run away with the database.
   block, and one example. Keep label/value output keys stable.
 - **New language** → add keyword examples under the INQUIRY/REPORT blocks; the base
   prompt already detects and records `language`.
+
+## Pipeline Config
+
+Machine-readable configuration loaded by `src/analytics/pipeline.service.ts` at startup.
+Edit this section to change safety rules or stage validation behaviour without touching TypeScript.
+
+```json
+{
+  "forbiddenStages": [
+    "$function", "$accumulator", "$merge", "$out",
+    "$where", "$eval", "$unionWith", "$graphLookup", "$listSessions"
+  ],
+  "stageSemantics": {
+    "$match":     { "validateKeys": true,  "walkValues": true,  "computeKeys": false, "skipIdKey": false },
+    "$sort":      { "validateKeys": true,  "walkValues": true,  "computeKeys": false, "skipIdKey": false },
+    "$group":     { "validateKeys": false, "walkValues": true,  "computeKeys": true,  "skipIdKey": true  },
+    "$addFields": { "validateKeys": false, "walkValues": true,  "computeKeys": true,  "skipIdKey": false },
+    "$set":       { "validateKeys": false, "walkValues": true,  "computeKeys": true,  "skipIdKey": false },
+    "$project":   { "validateKeys": false, "walkValues": true,  "computeKeys": true,  "skipIdKey": true  },
+    "$lookup":    { "validateKeys": false, "walkValues": false, "computeKeys": false, "skipIdKey": false, "special": "lookup" }
+  }
+}
+```
