@@ -16,38 +16,53 @@ const analyticsInputSchema = z.object({
   prompt: z.string().min(1).max(1000),
 });
 
-const buildDashboardTool = createTool({
-  id:          'build-dashboard',
-  description: 'Execute the full dashboard pipeline: aggregate data then build a multi-widget visualization. Covers trend, comparison, anomaly detection, distribution, and executive overview.',
-  inputSchema:  analyticsInputSchema,
-  outputSchema: z.record(z.unknown()),
-  execute: async ({ prompt }) => executeDashboard(prompt) as unknown as Promise<Record<string, unknown>>,
-});
+// Factory: creates an agent with per-request credentials so each user's
+// model/provider/API key is used both for the supervisor and all tool calls.
+export function createAnalyticsAgent(
+  apiKey?:   string,
+  model?:    string,
+  provider?: string,
+): Agent {
+  const buildDashboardTool = createTool({
+    id:          'build-dashboard',
+    description: 'Execute the full dashboard pipeline: aggregate data then build a multi-widget visualization. Covers trend, comparison, anomaly detection, distribution, and executive overview.',
+    inputSchema:  analyticsInputSchema,
+    outputSchema: z.record(z.unknown()),
+    execute: async ({ prompt }) =>
+      executeDashboard(prompt, [], apiKey, model, provider) as unknown as Promise<Record<string, unknown>>,
+  });
 
-const generateReportTool = createTool({
-  id:          'generate-report',
-  description: 'Execute the full report pipeline: aggregate data then write a structured analytical report with sections and insights.',
-  inputSchema:  analyticsInputSchema,
-  outputSchema: z.record(z.unknown()),
-  execute: async ({ prompt }) => executeReport(prompt) as Promise<Record<string, unknown>>,
-});
+  const generateReportTool = createTool({
+    id:          'generate-report',
+    description: 'Execute the full report pipeline: aggregate data then write a structured analytical report with sections and insights.',
+    inputSchema:  analyticsInputSchema,
+    outputSchema: z.record(z.unknown()),
+    execute: async ({ prompt }) =>
+      executeReport(prompt, [], apiKey, model, provider) as Promise<Record<string, unknown>>,
+  });
 
-const executeInquiryTool = createTool({
-  id:          'execute-inquiry',
-  description: 'Execute the full inquiry pipeline: aggregate data then return a concise factual answer. Use for direct questions, counts, rankings, specific values.',
-  inputSchema:  analyticsInputSchema,
-  outputSchema: z.record(z.unknown()),
-  execute: async ({ prompt }) => executeInquiry(prompt) as Promise<Record<string, unknown>>,
-});
+  const executeInquiryTool = createTool({
+    id:          'execute-inquiry',
+    description: 'Execute the full inquiry pipeline: aggregate data then return a concise factual answer. Use for direct questions, counts, rankings, specific values.',
+    inputSchema:  analyticsInputSchema,
+    outputSchema: z.record(z.unknown()),
+    execute: async ({ prompt }) =>
+      executeInquiry(prompt, [], apiKey, model, provider) as Promise<Record<string, unknown>>,
+  });
 
-export const analyticsAgent = new Agent({
-  id:    'mind-analytics-agent',
-  name:  'MindAnalyticsAgent',
-  model: resolveModel('supervisor'),
-  instructions: INSTRUCTIONS,
-  tools: {
-    buildDashboard: buildDashboardTool,
-    generateReport: generateReportTool,
-    executeInquiry: executeInquiryTool,
-  },
-});
+  return new Agent({
+    id:    'mind-analytics-agent',
+    name:  'MindAnalyticsAgent',
+    model: resolveModel('supervisor', apiKey, model, provider),
+    instructions: INSTRUCTIONS,
+    tools: {
+      buildDashboard: buildDashboardTool,
+      generateReport: generateReportTool,
+      executeInquiry: executeInquiryTool,
+    },
+  });
+}
+
+// System-level singleton — used by the Mastra server when no user context is available.
+// Falls back to AI_API_KEY / AI_MODEL / AI_PROVIDER env vars (see src/config.ts).
+export const analyticsAgent = createAnalyticsAgent();

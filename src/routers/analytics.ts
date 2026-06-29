@@ -2,11 +2,11 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { featureRegistry } from '../features/registry.js';
-import { analyticsAgent } from '../session/agent.js';
+import { createAnalyticsAgent } from '../session/agent.js';
 import { loadSession, saveSession } from '../middleware/session.middleware.js';
 import type { MessageResult, ConversationMessage } from '../session/memory.js';
 import { getSources } from '../db/sources-cache.js';
-import { getUserKey } from '../db/user-keys.repository.js';
+import { getUserSettings } from '../db/user-keys.repository.js';
 import { log, logSep } from '../utils/logger.js';
 
 const analyticsInputSchema = z.object({
@@ -16,7 +16,7 @@ const analyticsInputSchema = z.object({
 export const analyticsRouter = Router();
 
 analyticsRouter.get('/provider', (_req, res) => {
-  // Provider is determined per-user from their saved API key — no server-level default.
+  // Provider is determined per-user from their saved settings — no server-level default.
   res.json({ provider: '', hasGlobalKey: false });
 });
 
@@ -27,8 +27,9 @@ analyticsRouter.post('/analytics', loadSession, saveSession, async (req, res) =>
       res.status(401).json({ error: 'User ID missing. Please reload the app.' });
       return;
     }
-    const userApiKey = await getUserKey(userId);
-    if (!userApiKey) {
+
+    const settings = await getUserSettings(userId);
+    if (!settings) {
       res.status(401).json({ error: 'No API key found. Please add your AI provider key in settings.' });
       return;
     }
@@ -54,10 +55,13 @@ analyticsRouter.post('/analytics', loadSession, saveSession, async (req, res) =>
 
     const handler = knownIntent ? featureRegistry[knownIntent] : null;
     if (handler) {
-      result = await handler(ctx.prompt, req.memoryContext, userApiKey);
+      result = await handler(ctx.prompt, req.memoryContext, settings.apiKey, settings.model, settings.provider);
     } else {
       log('router', 'no intent — routing through analyticsAgent');
-      const agentResponse = await analyticsAgent.generateLegacy(
+      // Create a per-request agent so the user's own model/provider/key are used
+      // for both intent routing and all skill tool calls.
+      const agent = createAnalyticsAgent(settings.apiKey, settings.model, settings.provider);
+      const agentResponse = await agent.generateLegacy(
         [{ role: 'user', content: ctx.prompt }],
         { maxSteps: 2 },
       );
@@ -70,7 +74,7 @@ analyticsRouter.post('/analytics', loadSession, saveSession, async (req, res) =>
 
     const r = result as Record<string, unknown>;
     const resolvedType: 'dashboard' | 'report' | 'inquiry' =
-      r && 'widgets' in r         ? 'dashboard'
+      r && 'widgets' in r          ? 'dashboard'
       : r && 'reportSections' in r ? 'report'
       : 'inquiry';
 
