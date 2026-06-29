@@ -86,6 +86,45 @@ const FORBIDDEN_STAGES  = new Set(pipelineCfg.forbiddenStages);
 const STAGE_BEHAVIORS   = pipelineCfg.stageSemantics;
 const DASHBOARD_FULL_INTENT = 'dashboard:full';
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizePipelineStage(
+  stage: unknown,
+  index: number,
+): { stage: Row; strippedKeys: string[] } {
+  if (!isPlainRecord(stage)) {
+    throw new Error(`Pipeline stage ${index + 1} must be a plain object.`);
+  }
+
+  const keys = Object.keys(stage);
+  if (!keys.length) {
+    throw new Error(`Pipeline stage ${index + 1} must not be empty.`);
+  }
+
+  const operatorKeys = keys.filter(key => key.startsWith('$'));
+  if (!operatorKeys.length) {
+    throw new Error(
+      `Pipeline stage ${index + 1} must include exactly one MongoDB operator key starting with "$". ` +
+      `Found keys: ${keys.join(', ')}.`,
+    );
+  }
+
+  if (operatorKeys.length > 1) {
+    throw new Error(
+      `Pipeline stage ${index + 1} must contain exactly one MongoDB operator key. ` +
+      `Found operators: ${operatorKeys.join(', ')}.`,
+    );
+  }
+
+  const op = operatorKeys[0];
+  return {
+    stage:        { [op]: stage[op] },
+    strippedKeys: keys.filter(key => key !== op),
+  };
+}
+
 @Injectable()
 export class PipelineService {
   private readonly logger = new Logger(PipelineService.name);
@@ -149,10 +188,11 @@ export class PipelineService {
       let resolved: ResolvedPipeline | null;
       try {
         resolved = this.resolvePipeline(plan, sources);
+        if (resolved) plan.pipeline = resolved.pipeline;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (attempt === 0) {
-          hint = `Field validation failed: ${msg}. Use only the exact field names listed in the schema — check casing carefully.`;
+          hint = this.buildPlanValidationHint(msg);
           continue;
         }
         throw err;
@@ -162,7 +202,7 @@ export class PipelineService {
 
       let rows: Row[];
       try {
-        rows = await this.runAggregation(resolved.collection, patchConvert(plan.pipeline!) as Row[]);
+        rows = await this.runAggregation(resolved.collection, patchConvert(resolved.pipeline) as Row[]);
       } catch (err) {
         const msg   = err instanceof Error ? err.message : String(err);
         const lower = msg.toLowerCase();
@@ -173,8 +213,8 @@ export class PipelineService {
         throw err;
       }
 
-      if (rows.length === 0 && plan.needsData && attempt === 0 && this.hasStringMatch(plan.pipeline ?? [])) {
-        hint = `The pipeline returned 0 rows: ${JSON.stringify(plan.pipeline)}. ` +
+      if (rows.length === 0 && plan.needsData && attempt === 0 && this.hasStringMatch(resolved.pipeline)) {
+        hint = `The pipeline returned 0 rows: ${JSON.stringify(resolved.pipeline)}. ` +
           `The $match filter values may not match actual data — check enum values use exact casing from schema allowed values.`;
         continue;
       }
