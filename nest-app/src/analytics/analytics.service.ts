@@ -253,6 +253,11 @@ export class AnalyticsService {
           context = context.slice(drop);
           continue;
         }
+        if (isModelNotFoundError(err)) {
+          throw new BadRequestException(
+            'Model not found or no longer supported. Please open Settings and select a valid model for your provider.',
+          );
+        }
         if (isInvalidKeyError(err)) {
           throw Object.assign(
             new UnauthorizedException('Invalid API key. Please update it in Settings or Agent Config.'),
@@ -262,7 +267,7 @@ export class AnalyticsService {
         if (isProviderRateLimitError(err)) {
           const retryIn = extractRetryDelay(err);
           const msg = isFreeTierExhausted(err)
-            ? 'Free tier quota exhausted for this model. Switch to a lighter model (e.g. gemini-1.5-flash, llama-3.1-8b) or enable billing on your provider account.'
+            ? 'Free tier quota exhausted. Switch to gemini-2.0-flash (free tier) or enable billing on your Google account.'
             : retryIn
               ? `Rate limit reached. Try again in ${retryIn}.`
               : 'Rate limit reached. Please try again in a moment.';
