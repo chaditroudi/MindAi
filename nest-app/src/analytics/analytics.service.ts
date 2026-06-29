@@ -411,7 +411,6 @@ export class AnalyticsService {
     return [...longTermMessages, ...sessionContext];
   }
 
-  // ── Response building ────────────────────────────────────────────────────────
 
   private resolveType(result: unknown): ResolvedType {
     if (result && typeof result === 'object' && 'widgets' in result)        return 'dashboard';
