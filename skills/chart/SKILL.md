@@ -332,22 +332,99 @@ To add a new chart type: (1) add entry here, (2) register a renderer in `chart.t
   "aggregations": ["sum", "avg", "count", "min", "max"],
   "layouts": ["analytical", "executive", "operational"],
   "types": [
-    {"type":"kpi_card",             "requiredFields":["valueField"],                           "optionalFields":[],                      "requiresValue":true},
-    {"type":"gauge_chart",          "requiredFields":["valueField"],                           "optionalFields":[],                      "requiresValue":true},
-    {"type":"bar_chart",            "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc","topN"],"requiresAxis":true,"requiresLabel":true,"requiresValue":true},
-    {"type":"horizontal_bar_chart", "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc","topN"],"requiresAxis":true,"requiresLabel":true,"requiresValue":true},
-    {"type":"donut_chart",          "requiredFields":["labelField","valueField"],               "optionalFields":["agg","topN"],          "requiresAxis":true,"requiresLabel":true,"requiresValue":true},
-    {"type":"line_chart",           "requiredFields":["xField","valueField"],                   "optionalFields":["sortDesc"],            "requiresAxis":true,"requiresValue":true},
-    {"type":"area_chart",           "requiredFields":["xField","valueField"],                   "optionalFields":[],                      "requiresAxis":true,"requiresValue":true},
-    {"type":"multi_line_chart",     "requiredFields":["xField","valueField","seriesField"],     "optionalFields":[],                      "requiresAxis":true,"requiresSeries":true,"requiresValue":true},
-    {"type":"grouped_bar_chart",    "requiredFields":["labelField","valueField","seriesField"], "optionalFields":["agg"],                 "requiresAxis":true,"requiresLabel":true,"requiresSeries":true,"requiresValue":true},
-    {"type":"stacked_bar_chart",    "requiredFields":["labelField","valueField","seriesField"], "optionalFields":["agg"],                 "requiresAxis":true,"requiresLabel":true,"requiresSeries":true,"requiresValue":true},
-    {"type":"scatter_plot",         "requiredFields":["xField","yField"],                       "optionalFields":[],                      "optionalPlanFields":["labelField"],"requiresAxis":true,"requiresXY":true},
-    {"type":"funnel_chart",         "requiredFields":["labelField","valueField"],               "optionalFields":["agg","sortDesc"],      "requiresAxis":true,"requiresLabel":true,"requiresValue":true},
-    {"type":"radar_chart",          "requiredFields":["labelField"],                            "optionalFields":["columns","agg"],       "requiresAxis":true,"requiresLabel":true},
-    {"type":"heatmap",              "requiredFields":["xField","yField","valueField"],          "optionalFields":[],                      "requiresAxis":true,"requiresXY":true,"requiresValue":true},
-    {"type":"table",                "requiredFields":[],                                        "optionalFields":["columns"],             "llmHidden":true},
-    {"type":"custom",               "requiredFields":[],                                        "optionalFields":["chartOptions"]}
+    {
+      "type": "kpi_card",
+      "requiredFields": ["valueField"], "optionalFields": [],
+      "requiresValue": true,
+      "fieldResolution": { "valueField": ["numeric"] }
+    },
+    {
+      "type": "gauge_chart",
+      "requiredFields": ["valueField"], "optionalFields": [],
+      "requiresValue": true,
+      "fieldResolution": { "valueField": ["numeric"] }
+    },
+    {
+      "type": "bar_chart",
+      "requiredFields": ["labelField", "valueField"], "optionalFields": ["agg", "sortDesc", "topN"],
+      "requiresAxis": true, "requiresLabel": true, "requiresValue": true,
+      "fieldResolution": { "labelField": ["categorical", "temporal"], "valueField": ["numeric"] }
+    },
+    {
+      "type": "horizontal_bar_chart",
+      "requiredFields": ["labelField", "valueField"], "optionalFields": ["agg", "sortDesc", "topN"],
+      "requiresAxis": true, "requiresLabel": true, "requiresValue": true,
+      "fieldResolution": { "labelField": ["categorical", "temporal"], "valueField": ["numeric"] }
+    },
+    {
+      "type": "donut_chart",
+      "requiredFields": ["labelField", "valueField"], "optionalFields": ["agg", "topN"],
+      "requiresAxis": true, "requiresLabel": true, "requiresValue": true,
+      "fieldResolution": { "labelField": ["categorical", "temporal"], "valueField": ["numeric"] }
+    },
+    {
+      "type": "line_chart",
+      "requiredFields": ["xField", "valueField"], "optionalFields": ["sortDesc"],
+      "requiresAxis": true, "requiresValue": true,
+      "fieldResolution": { "xField": ["temporal", "categorical"], "valueField": ["numeric"] }
+    },
+    {
+      "type": "area_chart",
+      "requiredFields": ["xField", "valueField"], "optionalFields": [],
+      "requiresAxis": true, "requiresValue": true,
+      "fieldResolution": { "xField": ["temporal", "categorical"], "valueField": ["numeric"] }
+    },
+    {
+      "type": "multi_line_chart",
+      "requiredFields": ["xField", "valueField", "seriesField"], "optionalFields": [],
+      "requiresAxis": true, "requiresSeries": true, "requiresValue": true,
+      "fieldResolution": { "xField": ["temporal", "categorical"], "seriesField": ["categorical"], "valueField": ["numeric"] }
+    },
+    {
+      "type": "grouped_bar_chart",
+      "requiredFields": ["labelField", "valueField", "seriesField"], "optionalFields": ["agg"],
+      "requiresAxis": true, "requiresLabel": true, "requiresSeries": true, "requiresValue": true,
+      "fieldResolution": { "labelField": ["categorical", "temporal"], "seriesField": ["categorical"], "valueField": ["numeric"] },
+      "clearFields": ["xField"]
+    },
+    {
+      "type": "stacked_bar_chart",
+      "requiredFields": ["labelField", "valueField", "seriesField"], "optionalFields": ["agg"],
+      "requiresAxis": true, "requiresLabel": true, "requiresSeries": true, "requiresValue": true,
+      "fieldResolution": { "labelField": ["categorical", "temporal"], "seriesField": ["categorical"], "valueField": ["numeric"] },
+      "clearFields": ["xField"]
+    },
+    {
+      "type": "funnel_chart",
+      "requiredFields": ["labelField", "valueField"], "optionalFields": ["agg", "sortDesc"],
+      "requiresAxis": true, "requiresLabel": true, "requiresValue": true,
+      "fieldResolution": { "labelField": ["categorical", "temporal"], "valueField": ["numeric"] }
+    },
+    {
+      "type": "scatter_plot",
+      "requiredFields": ["xField", "yField"], "optionalFields": [],
+      "optionalPlanFields": ["labelField"],
+      "requiresAxis": true, "requiresXY": true
+    },
+    {
+      "type": "radar_chart",
+      "requiredFields": ["labelField"], "optionalFields": ["columns", "agg"],
+      "requiresAxis": true, "requiresLabel": true
+    },
+    {
+      "type": "heatmap",
+      "requiredFields": ["xField", "yField", "valueField"], "optionalFields": [],
+      "requiresAxis": true, "requiresXY": true, "requiresValue": true
+    },
+    {
+      "type": "table",
+      "requiredFields": [], "optionalFields": ["columns"],
+      "llmHidden": true
+    },
+    {
+      "type": "custom",
+      "requiredFields": [], "optionalFields": ["chartOptions"]
+    }
   ]
 }
 ```
