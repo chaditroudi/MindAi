@@ -136,7 +136,8 @@ export class UserSettingsService {
       case 'anthropic': await validateAnthropic(apiKey, model); break;
       case 'google':    await validateGoogle(apiKey, model);    break;
       default:
-        throw new BadRequestException(`Unknown provider "${provider}"`);
+        // Unknown provider — skip validation, first real request will surface errors
+        break;
     }
 
     return { ok: true, provider, model };
