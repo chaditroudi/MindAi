@@ -15,6 +15,11 @@ class SaveSettingsDto {
 
   @IsOptional() @IsInt() @Min(1) @Max(128_000)
   inputTokenLimit?: number;
+
+  @IsOptional() @IsString() @MaxLength(200) supervisorModel?: string;
+  @IsOptional() @IsString() @MaxLength(200) chartModel?:      string;
+  @IsOptional() @IsString() @MaxLength(200) writerModel?:     string;
+  @IsOptional() @IsString() @MaxLength(200) memoryModel?:     string;
 }
 
 @Controller('api/settings')
@@ -48,6 +53,10 @@ export class UserSettingsController {
       inputTokenLimit:  settings.inputTokenLimit ?? 4_000,
       inputTokensUsed:  settings.inputTokensUsed  ?? 0,
       outputTokensUsed: settings.outputTokensUsed ?? 0,
+      supervisorModel:  settings.supervisorModel,
+      chartModel:       settings.chartModel,
+      writerModel:      settings.writerModel,
+      memoryModel:      settings.memoryModel,
     };
   }
 
