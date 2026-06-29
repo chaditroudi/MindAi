@@ -212,7 +212,8 @@ export function createSkillAgent(
 export function skillProviderOptions(
   apiKey?:       string,
   userProvider?: string,
-): Record<string, unknown> | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
   const prov = normalizeProvider(userProvider) ?? detectProvider(apiKey?.trim() ?? '');
   return prov === 'groq' ? { groq: { structuredOutputs: false } } : undefined;
 }
