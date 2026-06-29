@@ -785,7 +785,7 @@
       <label class="key-modal-label">
         Model
         <button class="key-modal-load-btn" type="button"
-          [disabled]="modelsLoading || !s.provider"
+          [disabled]="modelsLoading || !s.provider || !modalKey.trim()"
           (click)="loadModels()">
           {{ modelsLoading ? 'Loading…' : 'Load models' }}
         </button>
@@ -911,7 +911,7 @@
       <label class="key-modal-label">
         Model
         <button class="key-modal-load-btn" type="button"
-          [disabled]="newAgentModelsLoading || !newAgent.provider"
+          [disabled]="newAgentModelsLoading || !newAgent.provider || !newAgent.apiKey.trim()"
           (click)="loadNewAgentModels()">
           {{ newAgentModelsLoading ? 'Loading…' : 'Load models' }}
         </button>

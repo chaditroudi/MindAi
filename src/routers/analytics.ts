@@ -57,7 +57,7 @@ analyticsRouter.post('/analytics', loadSession, saveSession, async (req, res) =>
     if (handler) {
       result = await handler(ctx.prompt, req.memoryContext, settings.apiKey, settings.model, settings.provider);
     } else {
-      log('router', 'no intent — routing through analyticsAgent');
+      log('router', 'no intent — routing through dynamic analytics agent');
       // Create a per-request agent so the user's own model/provider/key are used
       // for both intent routing and all skill tool calls.
       const agent = createAnalyticsAgent(settings.apiKey, settings.model, settings.provider);
