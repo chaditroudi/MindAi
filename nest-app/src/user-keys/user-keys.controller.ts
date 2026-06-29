@@ -3,6 +3,7 @@ import {
   HttpException, HttpStatus,
 } from '@nestjs/common';
 import { IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import { PROVIDERS, detectProvider } from '../ai/model';
 
 class VerifyKeyDto {
   @IsString() @MinLength(1) @MaxLength(500)
@@ -17,32 +18,28 @@ class VerifyKeyDto {
   verifyUrl?: string;
 }
 
-const KNOWN_PROVIDERS: Record<string, string> = {
-  groq:      'https://api.groq.com/openai/v1/models',
-  openai:    'https://api.openai.com/v1/models',
-  anthropic: 'https://api.anthropic.com/v1/models',
-  mistral:   'https://api.mistral.ai/v1/models',
-  cohere:    'https://api.cohere.ai/v1/models',
-  together:  'https://api.together.xyz/v1/models',
-};
+// Build /models URL map from the shared PROVIDERS registry (single source of truth).
+const MODEL_URLS: Record<string, string> = Object.fromEntries(
+  Object.entries(PROVIDERS).map(([name, base]) => [name, `${base}/models`]),
+);
+
+// Allowlist for verifyUrl — prevents SSRF by restricting to known provider endpoints.
+const ALLOWED_VERIFY_URLS = new Set(Object.values(MODEL_URLS));
 
 function autoDetect(key: string): { name: string; url: string } | null {
-  if (key.startsWith('gsk_'))    return { name: 'Groq',      url: KNOWN_PROVIDERS['groq']! };
-  if (key.startsWith('sk-ant-')) return { name: 'Anthropic', url: KNOWN_PROVIDERS['anthropic']! };
-  if (key.startsWith('sk-'))     return { name: 'OpenAI',    url: KNOWN_PROVIDERS['openai']! };
-  return null;
+  // gsk_ is Groq's key prefix; all others via detectProvider()
+  const provider = key.startsWith('gsk_') ? 'groq' : detectProvider(key);
+  const url = MODEL_URLS[provider];
+  return url ? { name: provider, url } : null;
 }
 
-const ALLOWED_VERIFY_URLS = new Set(Object.values(KNOWN_PROVIDERS));
-
 async function pingKey(apiKey: string, url: string): Promise<'valid' | 'invalid' | 'unreachable'> {
-  const isAnthropic = apiKey.startsWith('sk-ant-');
-  const headers: Record<string, string> = isAnthropic
-    ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
-    : { Authorization: `Bearer ${apiKey}` };
   try {
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(8_000) });
-    if (res.status === 200) return 'valid';
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (res.status === 200 || res.status === 429) return 'valid'; // 429 = rate-limited but key is valid
     if (res.status === 401 || res.status === 403) return 'invalid';
     return 'unreachable';
   } catch {
@@ -63,10 +60,10 @@ export class UserKeysController {
       if (dto.verifyUrl?.trim()) {
         const candidate = dto.verifyUrl.trim();
         if (!ALLOWED_VERIFY_URLS.has(candidate)) {
-          throw new BadRequestException('verifyUrl must be a known provider endpoint.');
+          throw new BadRequestException('verifyUrl must be one of the known provider model endpoints.');
         }
         url  = candidate;
-        name = dto.provider?.trim() || 'Custom';
+        name = dto.provider?.trim() || 'custom';
       } else {
         const detected = autoDetect(key);
         if (detected) {
@@ -74,17 +71,17 @@ export class UserKeysController {
           url  = detected.url;
         } else if (dto.provider?.trim()) {
           const providerKey = dto.provider.trim().toLowerCase();
-          const known = KNOWN_PROVIDERS[providerKey];
+          const known = MODEL_URLS[providerKey];
           if (!known) {
             throw new BadRequestException(
-              `Unknown provider "${dto.provider}". Pass a "verifyUrl" or use a Groq key (gsk_…) or OpenAI key (sk-…).`,
+              `Unknown provider "${dto.provider}". Supported: ${Object.keys(PROVIDERS).join(', ')}.`,
             );
           }
-          name = dto.provider.trim();
+          name = providerKey;
           url  = known;
         } else {
           throw new BadRequestException(
-            'Cannot detect provider from this key. Use a Groq key (gsk_…) or OpenAI key (sk-…).',
+            'Cannot detect provider from this key prefix. Please select a provider explicitly.',
           );
         }
       }

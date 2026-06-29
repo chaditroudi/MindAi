@@ -29,7 +29,7 @@ analyticsRouter.post('/analytics', loadSession, saveSession, async (req, res) =>
     }
     const userApiKey = await getUserKey(userId);
     if (!userApiKey) {
-      res.status(401).json({ error: 'No API key found. Please enter your Groq API key in the settings.' });
+      res.status(401).json({ error: 'No API key found. Please add your AI provider key in settings.' });
       return;
     }
 
@@ -99,7 +99,7 @@ analyticsRouter.post('/analytics', loadSession, saveSession, async (req, res) =>
     const msg = err instanceof Error ? err.message : String(err);
     log('router', `ERROR: ${msg}`);
     if (isInvalidKeyError(err)) {
-      res.status(422).json({ error: 'Invalid Groq API key. Please update it in settings.', code: 'INVALID_API_KEY' });
+      res.status(422).json({ error: 'Invalid API key. Please update it in settings.', code: 'INVALID_API_KEY' });
       return;
     }
     res.status(500).json({ error: msg });
