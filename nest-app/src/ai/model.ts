@@ -69,9 +69,8 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
       return createOpenAI({ apiKey: key })(model);
     default:
       return createOpenAI({
-        baseURL:       'https://api.groq.com/openai/v1',
-        apiKey:        key,
-        compatibility: 'compatible',
+        baseURL: 'https://api.groq.com/openai/v1',
+        apiKey:  key,
       })(model);
   }
 }
