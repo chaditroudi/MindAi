@@ -1,12 +1,15 @@
 import { z } from 'zod';
 import { log, logTrace } from '../common/logger/app.logger';
 import { createSkillAgent, freshSignal, skillProviderOptions } from './model';
+import { readMarkdownSection, skillFile } from './skill-prompt';
 import type { TokenUsage } from './token';
 import { buildChartPrompt } from '../prompts';
 import type { DashboardSpec, SkillKind, ChartHint, DataSource, WidgetSpec } from '../types';
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+
+const CHART_INSTRUCTIONS    = readMarkdownSection(skillFile('chart', 'SKILL.md'), 'System Instructions');
 
 const MAX_WIDGETS           = Number(process.env['CHART_MAX_WIDGETS'] ?? 4);
 const MAX_TOKENS            = Number(process.env['CHART_MAX_TOKENS'] ?? 2_000);
@@ -290,7 +293,7 @@ export async function runChart(
   const rowKeys = new Set<string>(rows.flatMap(row => Object.keys(row)));
   const t0 = Date.now();
 
-  const agent = createSkillAgent('chart', '', apiKey, userModel, userProvider);
+  const agent = createSkillAgent('chart', CHART_INSTRUCTIONS, apiKey, userModel, userProvider);
   const result = await agent.generate(
     [{ role: 'user', content: buildChartPrompt(rows, prompt, strategy, chartHint, source) }],
     {
