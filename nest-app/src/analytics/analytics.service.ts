@@ -23,7 +23,6 @@ interface AccessResult {
   provider?:         string;
   maxTokens:         number;
   agentApiKey?:      string;
-  // per-role model overrides (Option A: same key/provider, different model per agent)
   supervisorModel?:  string;
   chartModel?:       string;
   writerModel?:      string;
