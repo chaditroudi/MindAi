@@ -53,11 +53,11 @@ export async function runInquirySkill({ prompt, rows, apiKey, model, provider }:
   return object;
 }
 
-export async function runReportSkill({ prompt, rows, withChart, apiKey }: WriterInput): Promise<ReportSections> {
+export async function runReportSkill({ prompt, rows, withChart, apiKey, model, provider }: WriterInput): Promise<ReportSections> {
   const start = Date.now();
   log('writer:report', `rows: ${rows.length} | maxTokens: ${REPORT_MAX_TOKENS} | withChart: ${withChart ?? false}`);
   const { object } = await generateObject({
-    model: resolveModel('writer', apiKey),
+    model: resolveModel('writer', apiKey, model, provider),
     abortSignal: freshSignal('writer'),
     temperature: 0,
     maxRetries: 1,
