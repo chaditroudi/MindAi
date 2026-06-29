@@ -426,6 +426,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return this.PROVIDER_MODELS[this.normalizeProvider(provider)] ?? [];
   }
 
+  isUnlistedModel(provider: string | null | undefined, model: string | null | undefined): boolean {
+    if (!model) return false;
+    return !this.modelsForProvider(provider).some(m => m.value === model);
+  }
+
   apiKeyPlaceholder(provider: string | null | undefined): string {
     switch (this.normalizeProvider(provider)) {
       case 'openai':    return 'sk-...';
