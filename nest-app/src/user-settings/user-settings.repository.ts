@@ -13,6 +13,12 @@ export class UserSettings {
 
   @Prop({ min: 1, default: 4_000 }) inputTokenLimit?: number;
 
+  // Per-role model overrides — same provider/key, different model per agent role
+  @Prop() supervisorModel?: string;
+  @Prop() chartModel?:      string;
+  @Prop() writerModel?:     string;
+  @Prop() memoryModel?:     string;
+
   // Lifetime accumulated usage for this user's personal key
   @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
   @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
