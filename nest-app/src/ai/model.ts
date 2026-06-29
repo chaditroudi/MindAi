@@ -71,7 +71,7 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
       return createOpenAI({
         baseURL: 'https://api.groq.com/openai/v1',
         apiKey:  key,
-      }).chat(model);
+      }).chat(model, { structuredOutputs: false });
   }
 }
 

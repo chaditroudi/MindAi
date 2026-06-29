@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { createSkillAgent, freshSignal } from './model';
 import { interpolateTemplate, readMarkdownSection, skillFile } from './skill-prompt';
 import { normalizeToken } from '../sources/sources-cache';
-import { log, logTrace } from '../common/logger/app.logger';
 import type { DataSource, DataSourceField, TaskPlan, IntentKind } from '../types';
 
 const skillPath                  = skillFile('aggregation', 'SKILL.md');
@@ -196,8 +195,6 @@ export async function runSupervisorPlan({
     outputTokens: result.usage.outputTokens ?? 0,
   };
 
-  log('planner', `done in ${Date.now() - start}ms | strategy: ${object.strategy ?? '-'} | chartHint: ${object.chartHint ?? '-'} | stages: ${object.pipeline?.length ?? 0} | in:${usage.inputTokens} out:${usage.outputTokens}`);
-  logTrace('planner', `generated plan`, object);
 
   return {
     plan:  finalizeTaskPlan({ plan: object as TaskPlan, intent, availableSources: sources }),
