@@ -39,22 +39,11 @@ function getLlmChartTypes(): [string, ...string[]] {
   return assertNonEmpty(cfg.types.filter(d => !d.llmHidden).map(d => d.type), 'visible chart types');
 }
 
-export const chartOptionsSchema = z.record(z.unknown()).optional();
-
 export const widgetSchema = z.object({
-  type:         z.enum(getLlmChartTypes()),
-  title:        z.string(),
-  insight:      z.string().optional(),
-  labelField:   z.string().optional(),
-  valueField:   z.string().optional(),
-  xField:       z.string().optional(),
-  yField:       z.string().optional(),
-  seriesField:  z.string().optional(),
-  columns:      z.array(z.string()).optional(),
-  agg:          z.enum(LLM_CHART_AGGREGATIONS).optional(),
-  sortDesc:     z.boolean().optional(),
-  topN:         z.number().int().positive().optional(),
-  chartOptions: chartOptionsSchema,
+  type:    z.enum(getLlmChartTypes()),
+  title:   z.string(),
+  insight: z.string().optional(),
+  option:  z.record(z.unknown()),
 });
 
 export const dashboardSchema = z.object({
