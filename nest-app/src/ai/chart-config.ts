@@ -12,8 +12,6 @@ export interface ChartDefinition {
   requiresSeries?:     boolean;
   requiresXY?:         boolean;
   requiresValue?:      boolean;
-  // Driven from SKILL.md — field name → ordered role preferences for auto-repair.
-  // Types without this (scatter, heatmap, radar, table) use repairSpecial() instead.
   fieldResolution?:    Record<string, string[]>;
   clearFields?:        string[];
 }
