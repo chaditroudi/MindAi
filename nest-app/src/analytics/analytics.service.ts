@@ -53,12 +53,14 @@ export interface AnalyticsRequest {
 }
 
 export interface AnalyticsResponse {
-  intent:       string;
-  sessionId:    string;
-  messageId:    string;
-  inputTokens:  number;
-  outputTokens: number;
-  [key: string]: unknown;
+  intent:              string;
+  sessionId:           string;
+  messageId:           string;
+  inputTokens:         number;
+  outputTokens:        number;
+  tokenLimitExceeded?: boolean;
+  tokenWarning?:       string;
+  [key: string]:       unknown;
 }
 
 // ── Error classification ───────────────────────────────────────────────────────
