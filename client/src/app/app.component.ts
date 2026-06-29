@@ -54,6 +54,8 @@ const WIDGET_TYPE_LABELS: Record<string, string> = {
 };
 
 type WidgetDisplayKind = 'chart' | 'kpi' | 'table' | 'unknown';
+type ModelSuggestion = { value: string; label: string };
+type ProviderSuggestion = { value: string; label: string };
 
 @Component({
   selector:    'app-root',
@@ -214,9 +216,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   async saveApiKey(): Promise<void> {
-    const trimmed        = this.modalKey.trim();
-    const provider       = this.st.snap.provider || 'groq';
-    const model          = this.st.snap.selectedModel || (this.modelsForProvider(provider)[0]?.value ?? '');
+    const trimmed         = this.modalKey.trim();
+    const provider        = this.effectiveProvider(this.st.snap.provider);
+    const model           = this.effectiveModel(provider, this.st.snap.selectedModel);
     const inputTokenLimit = this.st.snap.inputTokenLimit || 4_000;
     if (!trimmed || !model) return;
 
@@ -257,8 +259,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   async testConnection(): Promise<void> {
     const trimmed  = this.modalKey.trim();
-    const provider = this.st.snap.provider || 'groq';
-    const model    = this.st.snap.selectedModel || (this.modelsForProvider(provider)[0]?.value ?? '');
+    const provider = this.effectiveProvider(this.st.snap.provider);
+    const model    = this.effectiveModel(provider, this.st.snap.selectedModel);
     if (!trimmed || !model) return;
     this.testStatus = 'testing';
     this.testError  = '';
