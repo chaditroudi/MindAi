@@ -73,7 +73,7 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
       return wrapLanguageModel({
         model: createGroq({ apiKey: key })(model),
         middleware: {
-          wrapGenerate: async ({ doGenerate, params }) => doGenerate({
+          transformParams: async ({ params }) => ({
             ...params,
             providerOptions: {
               ...params.providerOptions,
