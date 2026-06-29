@@ -40,7 +40,7 @@ export const config = {
   },
 
   llm: {
-    apiKey:   AI_API_KEY ?? GROQ_API_KEY, // system-level fallback when user has no key configured
+    apiKey:   AI_API_KEY ?? GROQ_API_KEY,
     model:    AI_MODEL,
     provider: AI_PROVIDER,
     timeouts: {

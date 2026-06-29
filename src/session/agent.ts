@@ -61,4 +61,12 @@ export function createAnalyticsAgent(
   });
 }
 
-export const analyticsAgent = createAnalyticsAgent();
+// System-level singleton for the Mastra server — lazily created so a missing
+// AI_MODEL / AI_PROVIDER env var does not crash the process at import time.
+let _systemAgent: Agent | undefined;
+export const analyticsAgent: Agent = new Proxy({} as Agent, {
+  get(_t, prop) {
+    if (!_systemAgent) _systemAgent = createAnalyticsAgent();
+    return (_systemAgent as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
