@@ -7,8 +7,7 @@ import { runChart } from '../ai/chart';
 import { runReportSkill, runInquirySkill } from '../ai/writer';
 import { addUsage, zeroUsage } from '../ai/token';
 import type { TokenUsage } from '../ai/token';
-import { getSources } from '../sources/sources-cache';
-import { normalizeToken } from '../sources/sources-cache';
+import { getSources, normalizeToken } from '../sources/sources-cache';
 import { CacheService } from '../cache/cache.service';
 import { HistoryService } from '../history/history.service';
 import { ChartResultsRepository } from '../ai/chart-results.repository';
@@ -33,6 +32,14 @@ function patchConvert(value: unknown): unknown {
 
 type Row              = Record<string, unknown>;
 type ResolvedPipeline = { pipeline: Row[]; collection: string };
+
+// Bundles the four LLM call parameters that were previously repeated in every signature.
+export interface LlmOpts {
+  apiKey?:    string;
+  model?:     string;
+  provider?:  string;
+  maxTokens?: number;
+}
 
 export interface AggregationResult {
   plan:  TaskPlan;
@@ -74,13 +81,10 @@ export class PipelineService {
   // ── Core aggregation ────────────────────────────────────────────────────────
 
   async aggregate(
-    prompt:        string,
-    intent:        IntentKind,
-    context:       CoreMessage[] = [],
-    apiKey?:       string,
-    userModel?:    string,
-    userProvider?: string,
-    maxTokens?:    number,
+    prompt:  string,
+    intent:  IntentKind,
+    context: CoreMessage[] = [],
+    opts:    LlmOpts = {},
   ): Promise<AggregationResult> {
     const sources = getSources();
     const dateNow = Date.now();
@@ -93,7 +97,7 @@ export class PipelineService {
       }
     }
 
-    const { plan, rows, collection, usage } = await this.runWithRetry(prompt, intent, sources, context, apiKey, userModel, userProvider, maxTokens);
+    const { plan, rows, collection, usage } = await this.runWithRetry(prompt, intent, sources, context, opts);
     const durationMs = Date.now() - dateNow;
     this.logger.log(`result | collection: ${collection ?? '—'} | rows: ${rows.length} | ${durationMs}ms`);
 
@@ -102,20 +106,20 @@ export class PipelineService {
   }
 
   private async runWithRetry(
-    prompt:        string,
-    intent:        IntentKind,
-    sources:       DataSource[],
-    context:       CoreMessage[],
-    apiKey?:       string,
-    userModel?:    string,
-    userProvider?: string,
-    maxTokens?:    number,
+    prompt:  string,
+    intent:  IntentKind,
+    sources: DataSource[],
+    context: CoreMessage[],
+    opts:    LlmOpts,
   ): Promise<{ plan: TaskPlan; rows: Row[]; collection?: string; usage: TokenUsage }> {
+    const { apiKey, model: userModel, provider: userProvider, maxTokens } = opts;
     let hint:         string | undefined;
     let plannerUsage: TokenUsage = zeroUsage();
 
     for (let attempt = 0; attempt < 2; attempt++) {
-      const { plan, usage } = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, userModel, userProvider, hint, maxTokens });
+      const { plan, usage } = await runSupervisorPlan({
+        prompt, intent, sources, context, apiKey, userModel, userProvider, hint, maxTokens,
+      });
       plannerUsage = addUsage(plannerUsage, usage);
       this.logger.log(
         `plan [${attempt + 1}] | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`,
@@ -139,41 +143,11 @@ export class PipelineService {
       try {
         rows = await this.runAggregation(resolved.collection, patchConvert(plan.pipeline!) as Row[]);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg   = err instanceof Error ? err.message : String(err);
+        const lower = msg.toLowerCase();
         if (attempt === 0) {
-          const lower = msg.toLowerCase();
-          if (lower.includes('unsupported conversion')) {
-            hint = `MongoDB aggregation error: "${msg}". When converting integer/string fields to dates, always use $convert with onError: null and onNull: null, e.g. { $convert: { input: "$field", to: "date", onError: null, onNull: null } }.`;
-            continue;
-          }
-          if (lower.includes('exclusion') && lower.includes('inclusion projection')) {
-            hint = `MongoDB aggregation error: "${msg}". In a $project that includes fields (field: 1), you CANNOT also exclude nested fields like "<join>._id": 0 — MongoDB forbids mixing exclusion and inclusion except for the root "_id". Instead, add a separate $unset stage BEFORE $project to remove the joined _id: { "$unset": "<joinAlias>._id" }. Then $project only lists the fields you want (never exclude joined _id there).`;
-            this.logger.warn(`retrying after MongoDB projection mix error`);
-            continue;
-          }
-          if (
-            lower.includes('only supports date') ||
-            lower.includes('arguments to $date') ||
-            (lower.includes('bson type') && lower.includes('date')) ||
-            (lower.includes('convert') && lower.includes('to date'))
-          ) {
-            const src = sources.find(s => s.collection === resolved!.collection || s.name === resolved!.collection);
-            const intTemporalFields = (src?.fields ?? [])
-              .filter(f =>
-                (f.type === 'integer' || f.type === 'number') &&
-                (f.role === 'temporal' || ['year', 'month', 'date', 'day'].some(t => f.name.toLowerCase().includes(t)))
-              )
-              .map(f => `"${f.name}" (stored as ${f.type}, NOT a Date)`)
-              .join(', ');
-            hint = `MongoDB aggregation error: "${msg}". ` +
-              (intTemporalFields
-                ? `The temporal fields ${intTemporalFields} are plain integers, NOT Date objects. `
-                : '') +
-              `Do NOT use date extraction operators ($year, $month, $dayOfMonth, $dateToString, $dateToParts, $toDate, etc.) on integer or number fields. ` +
-              `Instead, reference them directly as numbers: e.g., group by year using "$startYear" as the _id value.`;
-            this.logger.warn(`retrying after MongoDB date-type error: ${msg}`);
-            continue;
-          }
+          hint = this.buildRetryHint(msg, lower, resolved, sources);
+          if (hint) continue;
         }
         throw err;
       }
@@ -188,6 +162,49 @@ export class PipelineService {
     }
 
     throw new Error('Pipeline failed after 2 attempts — check your data source schema and field values.');
+  }
+
+  private buildRetryHint(
+    msg:      string,
+    lower:    string,
+    resolved: ResolvedPipeline,
+    sources:  DataSource[],
+  ): string | undefined {
+    if (lower.includes('unsupported conversion')) {
+      return `MongoDB aggregation error: "${msg}". When converting integer/string fields to dates, always use $convert with onError: null and onNull: null, e.g. { $convert: { input: "$field", to: "date", onError: null, onNull: null } }.`;
+    }
+
+    if (lower.includes('exclusion') && lower.includes('inclusion projection')) {
+      this.logger.warn(`retrying after MongoDB projection mix error`);
+      return `MongoDB aggregation error: "${msg}". In a $project that includes fields (field: 1), you CANNOT also exclude nested fields like "<join>._id": 0 — MongoDB forbids mixing exclusion and inclusion except for the root "_id". Instead, add a separate $unset stage BEFORE $project to remove the joined _id: { "$unset": "<joinAlias>._id" }. Then $project only lists the fields you want (never exclude joined _id there).`;
+    }
+
+    if (
+      lower.includes('only supports date') ||
+      lower.includes('arguments to $date') ||
+      (lower.includes('bson type') && lower.includes('date')) ||
+      (lower.includes('convert') && lower.includes('to date'))
+    ) {
+      const src = sources.find(s =>
+        s.collection === resolved.collection || s.name === resolved.collection,
+      );
+      const intTemporalFields = (src?.fields ?? [])
+        .filter(f =>
+          (f.type === 'integer' || f.type === 'number') &&
+          (f.role === 'temporal' || ['year', 'month', 'date', 'day'].some(t => f.name.toLowerCase().includes(t)))
+        )
+        .map(f => `"${f.name}" (stored as ${f.type}, NOT a Date)`)
+        .join(', ');
+      this.logger.warn(`retrying after MongoDB date-type error: ${msg}`);
+      return (
+        `MongoDB aggregation error: "${msg}". ` +
+        (intTemporalFields ? `The temporal fields ${intTemporalFields} are plain integers, NOT Date objects. ` : '') +
+        `Do NOT use date extraction operators ($year, $month, $dayOfMonth, $dateToString, $dateToParts, $toDate, etc.) on integer or number fields. ` +
+        `Instead, reference them directly as numbers: e.g., group by year using "$startYear" as the _id value.`
+      );
+    }
+
+    return undefined;
   }
 
   private hasStringMatch(pipeline: Row[]): boolean {
@@ -339,15 +356,73 @@ export class PipelineService {
     return getSources().find(s => s.name === sourceName || s.collection === sourceName);
   }
 
+  // ── Skill dispatcher ────────────────────────────────────────────────────────
+  // Single place that maps plan.skills → the right skill function(s).
+  // Callers handle caching and intent-specific early-exits before delegating here.
+
+  private async dispatchSkills(
+    plan:     TaskPlan,
+    rows:     Row[],
+    prompt:   string,
+    aggUsage: TokenUsage,
+    opts:     LlmOpts,
+  ): Promise<ExecuteResult<DashboardSpec | ReportResult | InquiryResult>> {
+    const { apiKey, model: userModel, provider: userProvider, maxTokens } = opts;
+    const source = this.resolveSource(plan.query.sourceName);
+
+    // Chart-only (dashboard intent, or auto-routed without a report narrative)
+    if (plan.skills.includes('chart') && !plan.skills.includes('report')) {
+      if (!rows.length) throw new Error('No data found. Try rephrasing your question or checking the data source.');
+      const { result: chart, usage } = await runChart(
+        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens,
+      );
+      if (chart.widgets.length) {
+        this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart }).catch(() => undefined);
+      }
+      return { result: chart, usage: addUsage(aggUsage, usage) };
+    }
+
+    // Report — optionally accompanied by a chart when wantChart=true
+    if (plan.skills.includes('report') && rows.length) {
+      const withChart = plan.skills.includes('chart') && rows.length >= 2;
+      const { result: rep, usage: repUsage } = await runReportSkill({
+        rows, prompt, withChart, apiKey, userModel, userProvider, maxTokens,
+      });
+      this.logger.log(`report done | sections: ${rep.reportSections.length}${withChart ? ' — generating chart' : ''}`);
+
+      if (!withChart) return { result: rep, usage: addUsage(aggUsage, repUsage) };
+
+      const fallback = { layout: 'operational' as const, title: prompt, summary: '', widgets: [] };
+      const { result: chart, usage: chartUsage } = await runChart(
+        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens,
+      ).catch(err => {
+        this.logger.warn(`chart failed (non-fatal): ${err}`);
+        return { result: fallback, usage: zeroUsage() };
+      });
+      const merged = { ...rep, ...(chart.widgets.length ? { chart } : {}) };
+      return { result: merged, usage: addUsage(aggUsage, addUsage(repUsage, chartUsage)) };
+    }
+
+    // Inquiry
+    if (plan.skills.includes('inquiry') && rows.length) {
+      this.logger.log(`inquiry | rows: ${rows.length}`);
+      const { result, usage } = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
+      this.logger.log('inquiry done');
+      return { result, usage: addUsage(aggUsage, usage) };
+    }
+
+    return {
+      result: { summary: 'The request could not be answered from the available sources.' },
+      usage:  aggUsage,
+    };
+  }
+
   // ── Feature executors ───────────────────────────────────────────────────────
 
   async executeDashboard(
-    prompt:        string,
-    context:       CoreMessage[] = [],
-    apiKey?:       string,
-    userModel?:    string,
-    userProvider?: string,
-    maxTokens?:    number,
+    prompt:  string,
+    context: CoreMessage[] = [],
+    opts:    LlmOpts = {},
   ): Promise<ExecuteResult<DashboardSpec | InquiryResult>> {
     if (!context.length) {
       const cached = await this.cache.getCached<DashboardSpec>(DASHBOARD_FULL_INTENT, prompt);
@@ -357,37 +432,25 @@ export class PipelineService {
       }
     }
 
-    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'dashboard', context, apiKey, userModel, userProvider, maxTokens);
+    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'dashboard', context, opts);
 
     if (!plan.skills.includes('chart')) {
       this.logger.log('dashboard → falling back to inquiry (needsData: false)');
-      return this.executeInquiry(prompt, context, apiKey, userModel, userProvider, maxTokens);
-    }
-    if (!rows.length) {
-      throw new Error('No data found. Try rephrasing your question or checking the data source.');
+      return this.executeInquiry(prompt, context, opts);
     }
 
-    const source = this.resolveSource(plan.query.sourceName);
-    const { result: chart, usage: chartUsage } = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens);
-
-    if (chart.widgets.length) {
-      this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart })
-        .catch(() => undefined);
-      if (!context.length) {
-        this.cache.setCached(DASHBOARD_FULL_INTENT, prompt, chart).catch(() => undefined);
-      }
+    const dispatched = await this.dispatchSkills(plan, rows, prompt, aggUsage, opts);
+    const chart = dispatched.result as DashboardSpec;
+    if (chart.widgets?.length && !context.length) {
+      this.cache.setCached(DASHBOARD_FULL_INTENT, prompt, chart).catch(() => undefined);
     }
-
-    return { result: chart, usage: addUsage(aggUsage, chartUsage) };
+    return dispatched;
   }
 
   async executeReport(
-    prompt:        string,
-    context:       CoreMessage[] = [],
-    apiKey?:       string,
-    userModel?:    string,
-    userProvider?: string,
-    maxTokens?:    number,
+    prompt:  string,
+    context: CoreMessage[] = [],
+    opts:    LlmOpts = {},
   ): Promise<ExecuteResult<ReportResult>> {
     if (!context.length) {
       const cached = await this.cache.getCached<ReportResult>('report:full', prompt);
@@ -397,7 +460,7 @@ export class PipelineService {
       }
     }
 
-    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'report', context, apiKey, userModel, userProvider, maxTokens);
+    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'report', context, opts);
 
     if (!plan.skills.includes('report')) {
       return { result: { reportSections: [{ heading: 'No Data', body: 'The request could not be answered from the available sources.' }] }, usage: aggUsage };
@@ -407,83 +470,26 @@ export class PipelineService {
     }
 
     this.logger.log(`report | rows: ${rows.length}`);
-
-    if (plan.skills.includes('chart') && rows.length >= 2) {
-      const source = this.resolveSource(plan.query.sourceName);
-      const chartFallback = { layout: 'operational' as const, title: prompt, summary: '', widgets: [] };
-
-      const { result: reportResult, usage: reportUsage } = await runReportSkill({ rows, prompt, withChart: true, apiKey, userModel, userProvider, maxTokens });
-      this.logger.log(`report done | sections: ${reportResult.reportSections.length} — generating chart`);
-      const chartRun = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens)
-        .catch((err) => { this.logger.warn(`chart failed (non-fatal): ${err}`); return { result: chartFallback, usage: zeroUsage() }; });
-      const fullResult = { ...reportResult, ...(chartRun.result.widgets.length ? { chart: chartRun.result } : {}) };
-      if (!context.length) this.cache.setCached('report:full', prompt, fullResult).catch(() => undefined);
-      return { result: fullResult, usage: addUsage(aggUsage, addUsage(reportUsage, chartRun.usage)) };
-    }
-
-    const { result, usage: writerUsage } = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
-    this.logger.log(`report done | sections: ${result.reportSections.length}`);
-    if (!context.length) this.cache.setCached('report:full', prompt, result).catch(() => undefined);
-    return { result, usage: addUsage(aggUsage, writerUsage) };
+    const dispatched = await this.dispatchSkills(plan, rows, prompt, aggUsage, opts);
+    if (!context.length) this.cache.setCached('report:full', prompt, dispatched.result).catch(() => undefined);
+    return dispatched as ExecuteResult<ReportResult>;
   }
 
   async executeInquiry(
-    prompt:        string,
-    context:       CoreMessage[] = [],
-    apiKey?:       string,
-    userModel?:    string,
-    userProvider?: string,
-    maxTokens?:    number,
+    prompt:  string,
+    context: CoreMessage[] = [],
+    opts:    LlmOpts = {},
   ): Promise<ExecuteResult<InquiryResult>> {
-    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider, maxTokens);
-
-    if (!plan.skills.includes('inquiry')) {
-      return { result: { summary: 'The request could not be answered from the available sources.' }, usage: aggUsage };
-    }
-    if (!rows.length) {
-      return { result: { summary: 'No matching data found for this question.' }, usage: aggUsage };
-    }
-
-    this.logger.log(`inquiry | rows: ${rows.length}`);
-    const { result, usage: writerUsage } = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
-    this.logger.log('inquiry done');
-    return { result, usage: addUsage(aggUsage, writerUsage) };
+    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'general_question', context, opts);
+    return this.dispatchSkills(plan, rows, prompt, aggUsage, opts) as Promise<ExecuteResult<InquiryResult>>;
   }
 
-  // Dynamic routing — supervisor plan determines the skill; no pre-detection needed
   async execute(
-    prompt:        string,
-    context:       CoreMessage[] = [],
-    apiKey?:       string,
-    userModel?:    string,
-    userProvider?: string,
-    maxTokens?:    number,
+    prompt:  string,
+    context: CoreMessage[] = [],
+    opts:    LlmOpts = {},
   ): Promise<ExecuteResult<DashboardSpec | ReportResult | InquiryResult>> {
-    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'general_question', context, apiKey, userModel, userProvider, maxTokens);
-
-    if (plan.skills.includes('chart')) {
-      if (!rows.length) throw new Error('No data found. Try rephrasing your question or checking the data source.');
-      const source = this.resolveSource(plan.query.sourceName);
-      const { result: chart, usage: chartUsage } = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens);
-      if (chart.widgets.length) {
-        this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart }).catch(() => undefined);
-      }
-      return { result: chart, usage: addUsage(aggUsage, chartUsage) };
-    }
-
-    if (plan.skills.includes('report') && rows.length) {
-      const { result, usage: writerUsage } = await runReportSkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
-      this.logger.log(`report done | sections: ${result.reportSections.length}`);
-      return { result, usage: addUsage(aggUsage, writerUsage) };
-    }
-
-    if (plan.skills.includes('inquiry') && rows.length) {
-      this.logger.log(`inquiry | rows: ${rows.length}`);
-      const { result, usage: writerUsage } = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
-      this.logger.log('inquiry done');
-      return { result, usage: addUsage(aggUsage, writerUsage) };
-    }
-
-    return { result: { summary: 'The request could not be answered from the available sources.' }, usage: aggUsage };
+    const { plan, rows, usage: aggUsage } = await this.aggregate(prompt, 'general_question', context, opts);
+    return this.dispatchSkills(plan, rows, prompt, aggUsage, opts);
   }
 }

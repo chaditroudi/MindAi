@@ -15,7 +15,7 @@ import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
 import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-config.service';
-import type { ExecuteResult } from './pipeline.service';
+import type { ExecuteResult, LlmOpts } from './pipeline.service';
 
 interface AccessResult {
   apiKey:           string;
@@ -148,20 +148,13 @@ export class AnalyticsService {
     intent:        string | undefined,
     prompt:        string,
     memoryContext: CoreMessage[],
-    apiKey:        string,
-    model?:        string,
-    provider?:     string,
-    maxTokens?:    number,
+    opts:          LlmOpts,
   ): Promise<ExecuteResult<unknown>> {
     switch (intent) {
-      case 'dashboard':
-        return this.pipeline.executeDashboard(prompt, memoryContext, apiKey, model, provider, maxTokens);
-      case 'report':
-        return this.pipeline.executeReport(prompt, memoryContext, apiKey, model, provider, maxTokens);
-      case 'inquiry':
-        return this.pipeline.executeInquiry(prompt, memoryContext, apiKey, model, provider, maxTokens);
-      default:
-        return this.pipeline.execute(prompt, memoryContext, apiKey, model, provider, maxTokens);
+      case 'dashboard': return this.pipeline.executeDashboard(prompt, memoryContext, opts);
+      case 'report':    return this.pipeline.executeReport(prompt, memoryContext, opts);
+      case 'inquiry':   return this.pipeline.executeInquiry(prompt, memoryContext, opts);
+      default:          return this.pipeline.execute(prompt, memoryContext, opts);
     }
   }
 
