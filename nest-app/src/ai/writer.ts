@@ -51,6 +51,7 @@ export async function runInquirySkill({ prompt, rows, apiKey, userModel, userPro
       structuredOutput: { schema: summarySchema },
       modelSettings:    { maxOutputTokens: limit, temperature: 0, maxRetries: 1 },
       abortSignal:      freshSignal('writer'),
+      providerOptions:  skillProviderOptions(apiKey, userProvider),
     },
   );
 
@@ -74,6 +75,7 @@ export async function runReportSkill({ prompt, rows, withChart, apiKey, userMode
       structuredOutput: { schema: reportSectionsSchema },
       modelSettings:    { maxOutputTokens: limit, temperature: 0, maxRetries: 1 },
       abortSignal:      freshSignal('writer'),
+      providerOptions:  skillProviderOptions(apiKey, userProvider),
     },
   );
 
