@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Headers, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { IsString, IsInt, IsOptional, Min, Max, MinLength, MaxLength } from 'class-validator';
 import { UserSettingsService } from './user-settings.service';
 import { requireUserId } from '../common/helpers/user-id';
@@ -33,8 +33,31 @@ export class UserSettingsController {
     const apiKey   = (body.apiKey   ?? '').trim();
     if (!provider || !apiKey) throw new BadRequestException('provider and apiKey are required.');
     if (!PROVIDERS[provider])  throw new BadRequestException(`Unknown provider "${provider}".`);
-    const models = await fetchProviderModels(provider, apiKey);
-    return { models };
+    try {
+      const models = await fetchProviderModels(provider, apiKey);
+      return { models };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/provider returned (401|403)/i.test(msg)) {
+        throw new BadRequestException(`Invalid ${provider} API key.`);
+      }
+      if (/provider returned 429/i.test(msg)) {
+        throw new HttpException(
+          `Rate limit reached for ${provider}. Try again shortly.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      if (err instanceof TypeError || /failed to fetch|econnrefused|socket|network/i.test(msg)) {
+        throw new HttpException(
+          `Cannot reach ${provider}. Check your network connection.`,
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+      throw new HttpException(
+        `Failed to list models from ${provider}: ${msg}`,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
   }
 
   @Post('validate')
