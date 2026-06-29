@@ -371,30 +371,38 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.newAgentModelsError = 'Select a provider first.';
       return;
     }
+    const requestId = ++this.newAgentModelsRequestId;
     this.newAgentModelsLoading = true;
     this.newAgentModelsError   = '';
     try {
-      this.newAgentLoadedModels = await this.fetchModels(provider);
+      const models = await this.fetchModels(provider);
+      if (requestId !== this.newAgentModelsRequestId) return; // superseded by a newer request
+      this.newAgentLoadedModels = models;
     } catch (err) {
+      if (requestId !== this.newAgentModelsRequestId) return;
       this.newAgentModelsError  = err instanceof Error ? err.message : 'Failed to load models.';
       this.newAgentLoadedModels = [];
     } finally {
-      this.newAgentModelsLoading = false;
+      if (requestId === this.newAgentModelsRequestId) this.newAgentModelsLoading = false;
     }
   }
 
   async loadModels(): Promise<void> {
     const provider = this.effectiveProvider(this.st.snap.provider);
     if (!provider) return;
+    const requestId = ++this.modelsRequestId;
     this.modelsLoading = true;
     this.modelsError   = '';
     try {
-      this.loadedModels = await this.fetchModels(provider);
+      const models = await this.fetchModels(provider);
+      if (requestId !== this.modelsRequestId) return; // superseded by a newer request
+      this.loadedModels = models;
     } catch (err) {
+      if (requestId !== this.modelsRequestId) return;
       this.modelsError  = err instanceof Error ? err.message : 'Failed to load models.';
       this.loadedModels = [];
     } finally {
-      this.modelsLoading = false;
+      if (requestId === this.modelsRequestId) this.modelsLoading = false;
     }
   }
 
