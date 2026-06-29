@@ -111,6 +111,14 @@ function isProviderRateLimitError(err: unknown): boolean {
   );
 }
 
+function isFreeTierExhausted(err: unknown): boolean {
+  const msg = getErrorMessage(err).toLowerCase();
+  // Google: "limit: 0" in quota failure + "free_tier" metric name
+  return msg.includes('free_tier') || msg.includes('free tier') ||
+         (msg.includes('limit: 0') && msg.includes('quota')) ||
+         msg.includes('resource_exhausted');
+}
+
 function extractRetryDelay(err: unknown): string | null {
   // Handles Groq "try again in 30s", Google "Please retry in 45.15s", OpenAI "Try again in 60s"
   const match = /(?:try\s+again|retry)\s+in\s+([\d.]+)\s*s/i.exec(getErrorMessage(err));
@@ -222,9 +230,11 @@ export class AnalyticsService {
         }
         if (isProviderRateLimitError(err)) {
           const retryIn = extractRetryDelay(err);
-          const msg = retryIn
-            ? `API quota reached. Try again in ${retryIn}.`
-            : 'API quota reached. Please try again later.';
+          const msg = isFreeTierExhausted(err)
+            ? 'Free tier quota exhausted for this model. Switch to a lighter model (e.g. gemini-1.5-flash, llama-3.1-8b) or enable billing on your provider account.'
+            : retryIn
+              ? `Rate limit reached. Try again in ${retryIn}.`
+              : 'Rate limit reached. Please try again in a moment.';
           throw Object.assign(
             new HttpException({ error: msg }, HttpStatus.TOO_MANY_REQUESTS),
             { code: ERROR_CODES.LLM_RATE_LIMIT },
