@@ -62,9 +62,24 @@ export interface ExecuteResult<T> {
   usage:  TokenUsage;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Pipeline config — loaded from skills/aggregation/SKILL.md ─────────────────
 
-const FORBIDDEN_STAGES      = new Set(['$function', '$merge', '$out', '$where', '$eval']);
+interface StageBehavior {
+  validateKeys: boolean;
+  walkValues:   boolean;
+  computeKeys:  boolean;
+  skipIdKey:    boolean;
+  special?:     string;
+}
+
+interface PipelineConfig {
+  forbiddenStages: string[];
+  stageSemantics:  Record<string, StageBehavior>;
+}
+
+const pipelineCfg    = readJsonSection<PipelineConfig>(skillFile('aggregation', 'SKILL.md'), 'Pipeline Config');
+const FORBIDDEN_STAGES  = new Set(pipelineCfg.forbiddenStages);
+const STAGE_BEHAVIORS   = pipelineCfg.stageSemantics;
 const DASHBOARD_FULL_INTENT = 'dashboard:full';
 
 @Injectable()
