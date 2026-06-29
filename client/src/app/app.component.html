@@ -771,29 +771,28 @@
       }
 
       <label class="key-modal-label">Provider</label>
-      <input class="key-modal-input" type="text" list="provider-suggestions"
+      <select class="key-modal-input"
         [ngModel]="s.provider"
-        placeholder="e.g. google, groq, openai"
-        (ngModelChange)="onProviderChange($event)" />
-      <datalist id="provider-suggestions">
-        @for (provider of PROVIDER_SUGGESTIONS; track provider.value) {
-          <option [value]="provider.value">{{ provider.label }}</option>
+        (ngModelChange)="onProviderChange($event)">
+        <option value="">— select a provider —</option>
+        @for (p of PROVIDER_SUGGESTIONS; track p.value) {
+          <option [value]="p.value">{{ p.label }}</option>
         }
-      </datalist>
+      </select>
 
-      <label class="key-modal-label">
-        Model
-        <span class="key-modal-label-hint">— choose a suggestion or type any model id</span>
-      </label>
-      <input class="key-modal-input" type="text" list="settings-model-suggestions"
+      <label class="key-modal-label">Model</label>
+      <select class="key-modal-input"
         [ngModel]="s.selectedModel"
-        placeholder="e.g. gemini-2.5-pro"
-        (ngModelChange)="st.patch({ selectedModel: $event }); testStatus = 'idle'; testError = ''" />
-      <datalist id="settings-model-suggestions">
+        (ngModelChange)="st.patch({ selectedModel: $event }); testStatus = 'idle'; testError = ''"
+        [disabled]="!s.provider">
+        <option value="">— select a model —</option>
+        @if (s.selectedModel && !modelsForProvider(s.provider).find(m => m.value === s.selectedModel)) {
+          <option [value]="s.selectedModel">{{ s.selectedModel }} ⚠ not in list</option>
+        }
         @for (m of modelsForProvider(s.provider); track m.value) {
           <option [value]="m.value">{{ m.label }}</option>
         }
-      </datalist>
+      </select>
 
       <label class="key-modal-label">
         Input token limit
@@ -872,14 +871,12 @@
       <div class="agent-modal-row">
         <div class="agent-modal-col">
           <label class="key-modal-label">Provider</label>
-          <input class="key-modal-input" type="text" list="agent-provider-suggestions"
-            placeholder="e.g. google, groq, openai"
-            [(ngModel)]="newAgent.provider" />
-          <datalist id="agent-provider-suggestions">
-            @for (provider of PROVIDER_SUGGESTIONS; track provider.value) {
-              <option [value]="provider.value">{{ provider.label }}</option>
+          <select class="key-modal-input" [(ngModel)]="newAgent.provider">
+            <option value="">— select —</option>
+            @for (p of PROVIDER_SUGGESTIONS; track p.value) {
+              <option [value]="p.value">{{ p.label }}</option>
             }
-          </datalist>
+          </select>
         </div>
         <div class="agent-modal-col">
           <label class="key-modal-label">Status</label>
