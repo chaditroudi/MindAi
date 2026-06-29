@@ -24,6 +24,64 @@ export const PROVIDERS: Record<string, string> = {
   perplexity: 'https://api.perplexity.ai',
 };
 
+// ── Static model registry ──────────────────────────────────────────────────────
+// Curated per-provider model lists returned by GET/POST /api/settings/models.
+// No network call — add or remove entries here as providers release new models.
+
+export const PROVIDER_MODELS: Record<string, { id: string; label: string }[]> = {
+  openai: [
+    { id: 'gpt-4o',              label: 'GPT-4o' },
+    { id: 'gpt-4o-mini',         label: 'GPT-4o Mini' },
+    { id: 'gpt-4-turbo',         label: 'GPT-4 Turbo' },
+    { id: 'o1',                  label: 'o1' },
+    { id: 'o1-mini',             label: 'o1 Mini' },
+    { id: 'o3',                  label: 'o3' },
+    { id: 'o3-mini',             label: 'o3 Mini' },
+  ],
+  anthropic: [
+    { id: 'claude-opus-4-8',              label: 'Claude Opus 4.8' },
+    { id: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6' },
+    { id: 'claude-haiku-4-5-20251001',    label: 'Claude Haiku 4.5' },
+    { id: 'claude-3-5-sonnet-20241022',   label: 'Claude 3.5 Sonnet' },
+    { id: 'claude-3-5-haiku-20241022',    label: 'Claude 3.5 Haiku' },
+    { id: 'claude-3-opus-20240229',       label: 'Claude 3 Opus' },
+  ],
+  google: [
+    { id: 'gemini-2.5-pro',    label: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash',  label: 'Gemini 2.5 Flash' },
+    { id: 'gemini-2.0-flash',  label: 'Gemini 2.0 Flash' },
+    { id: 'gemini-1.5-pro',    label: 'Gemini 1.5 Pro' },
+    { id: 'gemini-1.5-flash',  label: 'Gemini 1.5 Flash' },
+  ],
+  groq: [
+    { id: 'llama-3.3-70b-versatile',  label: 'Llama 3.3 70B Versatile' },
+    { id: 'llama-3.1-70b-versatile',  label: 'Llama 3.1 70B Versatile' },
+    { id: 'llama-3.1-8b-instant',     label: 'Llama 3.1 8B Instant' },
+    { id: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B' },
+    { id: 'gemma2-9b-it',             label: 'Gemma 2 9B' },
+  ],
+  mistral: [
+    { id: 'mistral-large-latest',   label: 'Mistral Large' },
+    { id: 'mistral-medium-latest',  label: 'Mistral Medium' },
+    { id: 'mistral-small-latest',   label: 'Mistral Small' },
+    { id: 'codestral-latest',       label: 'Codestral' },
+    { id: 'open-mistral-nemo',      label: 'Mistral Nemo' },
+  ],
+  together: [
+    { id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',  label: 'Llama 3.3 70B Turbo' },
+    { id: 'meta-llama/Llama-3.1-70B-Instruct-Turbo',  label: 'Llama 3.1 70B Turbo' },
+    { id: 'meta-llama/Llama-3.1-8B-Instruct-Turbo',   label: 'Llama 3.1 8B Turbo' },
+    { id: 'mistralai/Mixtral-8x7B-Instruct-v0.1',     label: 'Mixtral 8x7B' },
+    { id: 'Qwen/Qwen2.5-72B-Instruct-Turbo',          label: 'Qwen 2.5 72B Turbo' },
+  ],
+  perplexity: [
+    { id: 'sonar-pro',            label: 'Sonar Pro' },
+    { id: 'sonar',                label: 'Sonar' },
+    { id: 'sonar-reasoning-pro',  label: 'Sonar Reasoning Pro' },
+    { id: 'sonar-reasoning',      label: 'Sonar Reasoning' },
+  ],
+};
+
 // ── Provider detection from API key prefix ────────────────────────────────────
 
 export function detectProviderFromApiKey(apiKey: string): ProviderName | null {
