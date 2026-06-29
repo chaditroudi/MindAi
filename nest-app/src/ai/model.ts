@@ -84,6 +84,51 @@ export function buildProviderValidationRequest(
   };
 }
 
+// ── Dynamic model list fetcher ────────────────────────────────────────────────
+
+export async function fetchProviderModels(
+  provider: string,
+  apiKey:   string,
+): Promise<{ id: string; label: string }[]> {
+  const request = buildProviderValidationRequest(provider, apiKey);
+  if (!request) return [];
+
+  const res = await fetch(request.url, {
+    headers: request.headers,
+    signal:  AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) throw new Error(`Provider returned ${res.status} when listing models.`);
+
+  const json = await res.json() as unknown;
+  const norm = normalizeProvider(provider);
+
+  if (norm === 'google') {
+    type GoogleModel = { name: string; displayName?: string; supportedGenerationMethods?: string[] };
+    const list = (json as { models?: GoogleModel[] }).models ?? [];
+    return list
+      .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+      .map(m => ({
+        id:    m.name.replace(/^models\//, ''),
+        label: m.displayName ?? m.name.replace(/^models\//, ''),
+      }));
+  }
+
+  if (norm === 'anthropic') {
+    type AnthropicModel = { id: string; display_name?: string };
+    const list = (json as { data?: AnthropicModel[] }).data ?? [];
+    return list.map(m => ({ id: m.id, label: m.display_name ?? m.id }));
+  }
+
+  // OpenAI-compatible: Groq, OpenAI, Mistral, Together, Perplexity
+  type OAIModel = { id: string };
+  const list: OAIModel[] = (json as { data?: OAIModel[] }).data
+    ?? (Array.isArray(json) ? (json as OAIModel[]) : []);
+  return list
+    .filter(m => m.id && typeof m.id === 'string')
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(m => ({ id: m.id, label: m.id }));
+}
+
 // ── Model resolver ────────────────────────────────────────────────────────────
 
 export function resolveModel(

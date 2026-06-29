@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Delete, Body, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Headers, BadRequestException } from '@nestjs/common';
 import { IsString, IsInt, IsOptional, Min, Max, MinLength, MaxLength } from 'class-validator';
 import { UserSettingsService } from './user-settings.service';
 import { requireUserId } from '../common/helpers/user-id';
+import { fetchProviderModels, PROVIDERS } from '../ai/model';
 
 class SaveSettingsDto {
   @IsString() @MinLength(1) @MaxLength(500)
