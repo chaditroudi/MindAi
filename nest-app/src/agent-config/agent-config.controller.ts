@@ -1,15 +1,20 @@
 import { Controller, Get, Put, Body } from '@nestjs/common';
-import { IsString, IsInt, IsOptional, IsArray, IsEnum, Min, ValidateNested } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsArray, IsEnum, IsIn, MinLength, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AgentConfigService } from './agent-config.service';
+import { PROVIDERS } from '../ai/model';
 
 class AgentEntryDto {
   @IsEnum(['active', 'disabled', 'expired', 'idle'])
   status!: 'active' | 'disabled' | 'expired' | 'idle';
 
-  @IsString() provider!: string;
-  @IsString() model!:    string;
-  @IsString() apiKey!:   string;
+  @IsString() @IsIn(Object.keys(PROVIDERS), {
+    message: `provider must be one of: ${Object.keys(PROVIDERS).join(', ')}`,
+  })
+  provider!: string;
+
+  @IsString() @MinLength(1) @MaxLength(200) model!:   string;
+  @IsString() @MinLength(1) @MaxLength(500) apiKey!:  string;
 
   @IsOptional() @IsInt() @Min(1) inputTokenLimit?:  number;
   @IsOptional() @IsInt() @Min(1) outputTokenLimit?: number;
