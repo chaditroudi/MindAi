@@ -225,20 +225,22 @@ export function resolveModel(
     case 'groq':
       return createGroq({ apiKey: key, baseURL })(model);
     case 'openai':
+      // .chat() forces Chat Completions endpoint (/chat/completions)
+      // Without it, @ai-sdk/openai v2 defaults to the Responses API (/responses)
+      return createOpenAI({ apiKey: key, baseURL }).chat(model);
     case 'mistral':
     case 'together':
     case 'perplexity':
-      // .chat() forces Chat Completions endpoint (/chat/completions)
-      // Without it, @ai-sdk/openai v2 defaults to the Responses API (/responses)
-      // which these providers do not support.
-      return createOpenAI({ apiKey: key, baseURL }).chat(model);
+      // compatibility:'compatible' keeps role:"system" instead of the OpenAI-only
+      // role:"developer" that strict mode emits — Mistral/Together/Perplexity reject it.
+      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(model);
     default:
       if (!baseURL) {
         throw new Error(
           `Unsupported provider "${provider}". Supported: ${Object.keys(PROVIDERS).join(', ')}.`,
         );
       }
-      return createOpenAI({ apiKey: key, baseURL }).chat(model);
+      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(model);
   }
 }
 
