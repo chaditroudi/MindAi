@@ -786,7 +786,7 @@
         (ngModelChange)="st.patch({ selectedModel: $event }); testStatus = 'idle'; testError = ''"
         [disabled]="!s.provider">
         <option value="">— select a model —</option>
-        @if (s.selectedModel && !modelsForProvider(s.provider).find(m => m.value === s.selectedModel)) {
+        @if (s.selectedModel && !modelsForProvider(s.provider).find(m => m.value === s.selectedModel!)) {
           <option [value]="s.selectedModel">{{ s.selectedModel }} ⚠ not in list</option>
         }
         @for (m of modelsForProvider(s.provider); track m.value) {
