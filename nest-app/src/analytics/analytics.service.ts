@@ -53,9 +53,11 @@ export interface AnalyticsRequest {
 }
 
 export interface AnalyticsResponse {
-  intent:    string;
-  sessionId: string;
-  messageId: string;
+  intent:       string;
+  sessionId:    string;
+  messageId:    string;
+  inputTokens:  number;
+  outputTokens: number;
   [key: string]: unknown;
 }
 
@@ -238,14 +240,18 @@ export class AnalyticsService {
     const durationMs = Date.now() - t0;
     this.logger.log(`done in ${durationMs}ms | in:${inputTokens} out:${outputTokens}`);
 
-    // Track exact token counts against the agent budget (fire-and-forget)
+    // Persist token usage (fire-and-forget) — agent budget or personal-key counter
     if (access.agentApiKey) {
       void this.agentConfig.trackUsage(access.agentApiKey, inputTokens, outputTokens);
+    } else {
+      void this.userSettings.incrementUsage(req.userId, inputTokens, outputTokens);
     }
 
     return this.buildResponse({
       result, prompt, apiKey: access.apiKey, sessionId,
       displayIntent, userId: req.userId, durationMs,
+      inputTokens, outputTokens,
+      agentApiKey: access.agentApiKey,
       model: access.model, provider: access.provider,
     });
   }
@@ -356,10 +362,14 @@ export class AnalyticsService {
     displayIntent: SessionIntent;
     userId:        string;
     durationMs:    number;
+    inputTokens:   number;
+    outputTokens:  number;
+    agentApiKey?:  string;
     model?:        string;
     provider?:     string;
   }): AnalyticsResponse {
-    const { result, prompt, apiKey, sessionId, displayIntent, userId, durationMs, model, provider } = params;
+    const { result, prompt, apiKey, sessionId, displayIntent, userId,
+            durationMs, inputTokens, outputTokens, agentApiKey, model, provider } = params;
     const type          = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
     const messageId     = randomUUID();
@@ -372,12 +382,12 @@ export class AnalyticsService {
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, model, provider });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model, provider });
 
     if (type === 'dashboard') {
-      return { intent: 'dashboard', chart: result, sessionId, messageId };
+      return { intent: 'dashboard', chart: result, sessionId, messageId, inputTokens, outputTokens };
     }
-    return { intent: type, ...(result as object), sessionId, messageId };
+    return { intent: type, ...(result as object), sessionId, messageId, inputTokens, outputTokens };
   }
 
   private async persistTurn(params: {

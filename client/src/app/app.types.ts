@@ -123,11 +123,13 @@ export interface ProviderResponse {
 // ─── User Settings ────────────────────────────────────────────────────────────
 
 export interface UserSettingsResponse {
-  configured:       boolean;
-  provider?:        string;
-  model?:           string;
-  keyPreview?:      string;
-  inputTokenLimit?: number;
+  configured:        boolean;
+  provider?:         string;
+  model?:            string;
+  keyPreview?:       string;
+  inputTokenLimit?:  number;
+  inputTokensUsed?:  number;
+  outputTokensUsed?: number;
 }
 
 // ─── Memory config ────────────────────────────────────────────────────────────
