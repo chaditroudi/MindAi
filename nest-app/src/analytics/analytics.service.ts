@@ -408,9 +408,10 @@ export class AnalyticsService {
     agentApiKey?:       string;
     model?:             string;
     provider?:          string;
+    memoryModel?:       string;
   }): AnalyticsResponse {
     const { result, prompt, apiKey, sessionId, displayIntent, userId,
-            durationMs, inputTokens, outputTokens, outputTokenLimit, agentApiKey, model, provider } = params;
+            durationMs, inputTokens, outputTokens, outputTokenLimit, agentApiKey, model, provider, memoryModel } = params;
 
     const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
     const tokenWarning = tokenLimitExceeded
@@ -429,7 +430,7 @@ export class AnalyticsService {
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model, provider });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model: memoryModel ?? model, provider });
 
     const tokenFields = tokenLimitExceeded ? { tokenLimitExceeded, tokenWarning } : {};
 

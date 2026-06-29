@@ -69,6 +69,14 @@ export class AgentConfigRepository {
     ).lean() as Promise<AgentConfigDocument>;
   }
 
+  async updateAgentStatus(agentApiKey: string, status: AgentStatus): Promise<void> {
+    await this.model.updateOne(
+      {},
+      { $set: { 'agents.$[agent].status': status } },
+      { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+    );
+  }
+
   async incrementUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
     // Atomically increment both counters for the matching agent
     const doc = await this.model.findOneAndUpdate(
