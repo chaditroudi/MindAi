@@ -43,6 +43,16 @@ function repairSpecial(plan: WidgetPlan, profile: RowProfile): void {
       const numeric = pickFields(profile, ['numeric'], [plan.labelField ?? ''], 2);
       patchPlanField(plan, 'xField',     resolveFieldName(plan.xField,     profile, ['numeric'],     [plan.yField    ?? '', plan.labelField ?? '']) ?? numeric[0]);
       patchPlanField(plan, 'yField',     resolveFieldName(plan.yField,     profile, ['numeric'],     [plan.xField    ?? '', plan.labelField ?? '']) ?? numeric[1]);
+      // Last-resort: if repair left both axes pointing at the same field, force the second to a different one.
+      // This happens when the model assigns the same field to both xField and yField and only one numeric
+      // field exists in the pool (budget stored as numeric-string fails isNumericLike for some rows, etc.)
+      if (plan.xField && plan.xField === plan.yField) {
+        const alt = pickFields(profile, ['numeric', 'categorical'], [plan.xField, plan.labelField ?? ''], 1)[0];
+        if (alt) {
+          log('chart:fix', `scatter xField===yField="${plan.xField}" — forcing yField="${alt}"`);
+          plan.yField = alt;
+        }
+      }
       patchPlanField(plan, 'labelField', resolveFieldName(plan.labelField, profile, ['categorical'], [plan.xField    ?? '', plan.yField ?? '']));
       break;
     }
@@ -148,6 +158,8 @@ export function validateWidget(
     reasons.push(`${w.type} requires seriesField`);
   if (def?.requiresXY && (!w.xField || !w.yField))
     reasons.push(`${w.type} requires xField and yField`);
+  if (def?.requiresXY && w.xField && w.xField === w.yField)
+    reasons.push(`${w.type} xField and yField must be different fields (both are "${w.xField}")`);
 
   return { ok: reasons.length === 0, reasons };
 }
