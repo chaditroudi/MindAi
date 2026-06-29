@@ -1,10 +1,13 @@
-import { log }                               from '../common/logger/app.logger';
-import { CHART_BY_TYPE }                      from './chart-config';
-import type { LlmWidget }                     from './chart-config';
-import type { DataRow, RowProfile, WidgetPlan } from '../types';
+import { log }                                        from '../common/logger/app.logger';
+import { CHART_BY_TYPE }                               from './chart-config';
+import type { LlmWidget }                              from './chart-config';
+import type { DataRow, RowProfile, WidgetPlan }        from '../types';
+import type { FieldKind }                             from '../types';
 import { isNumericLike, pickFields, resolveFieldName } from './chart-profile';
 
 type ChartAgg = WidgetPlan['agg'];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function patchPlanField(plan: WidgetPlan, field: keyof WidgetPlan, value: string | undefined) {
   if (!value) return;
@@ -14,7 +17,14 @@ function patchPlanField(plan: WidgetPlan, field: keyof WidgetPlan, value: string
   }
 }
 
-function repairColumns(plan: WidgetPlan, profile: RowProfile) {
+// Build the exclude list for a field from every other string-valued plan field.
+function collectExcludes(plan: WidgetPlan, skipField: string): string[] {
+  return Object.entries(plan)
+    .filter(([k]) => k !== skipField && k !== 'type' && k !== 'title' && k !== 'insight' && k !== 'agg')
+    .flatMap(([, v]) => (typeof v === 'string' ? [v] : []));
+}
+
+function repairColumns(plan: WidgetPlan, profile: RowProfile): void {
   if (plan.type === 'radar_chart') {
     const valid = (plan.columns ?? []).filter(col => profile.numeric.includes(col));
     plan.columns = valid.length ? valid : pickFields(profile, ['numeric'], [plan.labelField ?? ''], 6);
@@ -24,72 +34,83 @@ function repairColumns(plan: WidgetPlan, profile: RowProfile) {
   }
 }
 
-function normalizeFields(w: LlmWidget): LlmWidget {
-  const def = CHART_BY_TYPE[w.type];
-  if (def?.requiresLabel && !w.labelField && w.xField) return { ...w, labelField: w.xField, xField: undefined };
-  return w;
-}
+// ── Special-case repair for the 4 types whose logic cannot be expressed as config ──
 
-export function repairWidgetPlan(raw: LlmWidget, profile: RowProfile, _rows: DataRow[]): WidgetPlan {
-  const { agg, ...rest } = normalizeFields(raw);
-  const plan = { ...rest, ...(agg && agg !== 'none' ? { agg: agg as ChartAgg } : {}) } as WidgetPlan;
-
+function repairSpecial(plan: WidgetPlan, profile: RowProfile): void {
   switch (plan.type) {
-    case 'line_chart':
-    case 'area_chart':
-      patchPlanField(plan, 'xField',      resolveFieldName(plan.xField,      profile, ['temporal', 'categorical'], [plan.valueField ?? '', plan.seriesField ?? '']));
-      patchPlanField(plan, 'valueField',  resolveFieldName(plan.valueField,  profile, ['numeric'],                 [plan.xField ?? '', plan.seriesField ?? '']));
-      break;
-    case 'multi_line_chart':
-      patchPlanField(plan, 'xField',      resolveFieldName(plan.xField,      profile, ['temporal', 'categorical'], [plan.seriesField ?? '', plan.valueField ?? '']));
-      patchPlanField(plan, 'seriesField', resolveFieldName(plan.seriesField, profile, ['categorical'],             [plan.xField ?? '', plan.valueField ?? '']));
-      patchPlanField(plan, 'valueField',  resolveFieldName(plan.valueField,  profile, ['numeric'],                 [plan.xField ?? '', plan.seriesField ?? '']));
-      break;
     case 'scatter_plot': {
+      // Needs two *different* numeric fields — config roles alone cannot express the uniqueness constraint.
       const numeric = pickFields(profile, ['numeric'], [plan.labelField ?? ''], 2);
-      patchPlanField(plan, 'xField',      resolveFieldName(plan.xField,      profile, ['numeric'], [plan.yField ?? '',   plan.labelField ?? '']) ?? numeric[0]);
-      patchPlanField(plan, 'yField',      resolveFieldName(plan.yField,      profile, ['numeric'], [plan.xField ?? '',   plan.labelField ?? '']) ?? numeric[1]);
-      patchPlanField(plan, 'labelField',  resolveFieldName(plan.labelField,  profile, ['categorical'], [plan.xField ?? '', plan.yField ?? '']));
+      patchPlanField(plan, 'xField',     resolveFieldName(plan.xField,     profile, ['numeric'],     [plan.yField    ?? '', plan.labelField ?? '']) ?? numeric[0]);
+      patchPlanField(plan, 'yField',     resolveFieldName(plan.yField,     profile, ['numeric'],     [plan.xField    ?? '', plan.labelField ?? '']) ?? numeric[1]);
+      patchPlanField(plan, 'labelField', resolveFieldName(plan.labelField, profile, ['categorical'], [plan.xField    ?? '', plan.yField ?? '']));
       break;
     }
     case 'heatmap':
-      patchPlanField(plan, 'xField',      resolveFieldName(plan.xField,      profile, ['categorical', 'temporal'], [plan.yField ?? '',     plan.valueField ?? '']));
-      patchPlanField(plan, 'yField',      resolveFieldName(plan.yField,      profile, ['categorical', 'temporal'], [plan.xField ?? '',     plan.valueField ?? '']));
-      patchPlanField(plan, 'valueField',  resolveFieldName(plan.valueField,  profile, ['numeric'],                 [plan.xField ?? '',     plan.yField ?? '']));
-      break;
-    case 'grouped_bar_chart':
-    case 'stacked_bar_chart':
-      patchPlanField(plan, 'labelField',  resolveFieldName(plan.labelField ?? plan.xField, profile, ['categorical', 'temporal'], [plan.seriesField ?? '', plan.valueField ?? '']));
-      patchPlanField(plan, 'seriesField', resolveFieldName(plan.seriesField,               profile, ['categorical'],             [plan.labelField ?? '',  plan.valueField ?? '']));
-      patchPlanField(plan, 'valueField',  resolveFieldName(plan.valueField,                profile, ['numeric'],                 [plan.labelField ?? '',  plan.seriesField ?? '']));
-      plan.xField = undefined;
+      // x and y must be *different* categoricals — same uniqueness problem as scatter.
+      patchPlanField(plan, 'xField',     resolveFieldName(plan.xField,     profile, ['categorical', 'temporal'], [plan.yField     ?? '', plan.valueField ?? '']));
+      patchPlanField(plan, 'yField',     resolveFieldName(plan.yField,     profile, ['categorical', 'temporal'], [plan.xField     ?? '', plan.valueField ?? '']));
+      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'],                 [plan.xField     ?? '', plan.yField ?? '']));
       break;
     case 'radar_chart':
+      // labelField is standard, but columns[] is an array repair — a different data shape.
       patchPlanField(plan, 'labelField', resolveFieldName(plan.labelField ?? plan.xField, profile, ['categorical'], []));
       repairColumns(plan, profile);
       break;
     case 'table':
+      // No single field mapping — repairs a columns[] array.
       repairColumns(plan, profile);
       break;
-    case 'kpi_card':
-    case 'gauge_chart':
-      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'], []));
-      break;
-    default:
-      patchPlanField(plan, 'labelField', resolveFieldName(plan.labelField ?? plan.xField, profile, ['categorical', 'temporal'], [plan.valueField ?? '']));
-      patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField,                profile, ['numeric'],                 [plan.labelField ?? '']));
-      plan.xField = undefined;
-      break;
+  }
+}
+
+// ── Main entry point ──────────────────────────────────────────────────────────
+
+export function repairWidgetPlan(raw: LlmWidget, profile: RowProfile, _rows: DataRow[]): WidgetPlan {
+  const { agg, ...rest } = raw;
+  const plan = { ...rest, ...(agg && agg !== 'none' ? { agg: agg as ChartAgg } : {}) } as WidgetPlan;
+  const def  = CHART_BY_TYPE[plan.type];
+
+  // Pre-normalize: label-axis charts sometimes receive xField where labelField was expected.
+  if (def?.requiresLabel && !plan.labelField && plan.xField) {
+    plan.labelField = plan.xField;
+    plan.xField     = undefined;
   }
 
-  if (CHART_BY_TYPE[plan.type]?.requiresValue && plan.agg !== 'count' && !plan.valueField) {
-    patchPlanField(plan, 'valueField',
+  if (def?.fieldResolution) {
+    // Generic resolution — roles come from SKILL.md, adding a new chart type here is config-only.
+    for (const [field, roles] of Object.entries(def.fieldResolution)) {
+      patchPlanField(
+        plan,
+        field as keyof WidgetPlan,
+        resolveFieldName(
+          (plan as Record<string, unknown>)[field] as string | undefined,
+          profile,
+          roles,
+          collectExcludes(plan, field),
+        ),
+      );
+    }
+    for (const f of def.clearFields ?? []) {
+      (plan as Record<string, unknown>)[f] = undefined;
+    }
+  } else {
+    repairSpecial(plan, profile);
+  }
+
+  // Post-fix: last-resort valueField fallback for requiresValue types.
+  if (def?.requiresValue && plan.agg !== 'count' && !plan.valueField) {
+    patchPlanField(
+      plan,
+      'valueField',
       pickFields(profile, ['numeric'], [plan.labelField ?? '', plan.xField ?? '', plan.seriesField ?? '', plan.yField ?? ''], 1)[0],
     );
   }
 
   return plan;
 }
+
+// ── Validation helpers (used by chart.ts) ─────────────────────────────────────
 
 export function planFieldProps(type: string): string[] {
   const def = CHART_BY_TYPE[type];
