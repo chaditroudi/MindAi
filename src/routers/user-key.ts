@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { saveUserKey, deleteUserKey, getUserKey } from '../db/user-keys.repository.js';
+import { PROVIDERS, detectProvider } from '../ai/model.js';
 
 export const userKeyRouter = Router();
 
@@ -14,7 +15,7 @@ async function pingKey(apiKey: string, url: string): Promise<'valid' | 'invalid'
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(8_000),
     });
-    if (res.status === 200) return 'valid';
+    if (res.status === 200 || res.status === 429) return 'valid'; // 429 = rate-limited but key is valid
     if (res.status === 401 || res.status === 403) return 'invalid';
     return 'unreachable';
   } catch {
@@ -22,11 +23,11 @@ async function pingKey(apiKey: string, url: string): Promise<'valid' | 'invalid'
   }
 }
 
-function resolveProvider(key: string): { name: string; url: string } | null {
-  if (key.startsWith('gsk_'))    return { name: 'groq',      url: 'https://api.groq.com/openai/v1/models' };
-  if (key.startsWith('sk-ant-')) return { name: 'anthropic', url: 'https://api.anthropic.com/v1/models' };
-  if (key.startsWith('sk-'))     return { name: 'openai',    url: 'https://api.openai.com/v1/models' };
-  return null;
+function resolveProvider(key: string): { name: string; url: string } {
+  // gsk_ is Groq's own key prefix; all others use prefix detection from the PROVIDERS registry
+  const provider = key.startsWith('gsk_') ? 'groq' : detectProvider(key);
+  const baseURL  = PROVIDERS[provider] ?? PROVIDERS.groq;
+  return { name: provider, url: `${baseURL}/models` };
 }
 
 // POST /api/key — verify + save
@@ -39,18 +40,14 @@ userKeyRouter.post('/key', async (req, res) => {
     const key = apiKey.trim();
 
     const provider = resolveProvider(key);
-    if (!provider) {
-      res.status(400).json({ error: 'Unrecognised key format. Use a Groq key (gsk_…) or OpenAI key (sk-…).' });
-      return;
-    }
+    const status   = await pingKey(key, provider.url);
 
-    const status = await pingKey(key, provider.url);
     if (status === 'invalid') {
       res.status(400).json({ error: `This ${provider.name} API key was rejected — it may be incorrect or revoked.` });
       return;
     }
     if (status === 'unreachable') {
-      res.status(502).json({ error: `Could not reach ${provider.name} to verify the key. Please try again.` });
+      res.status(502).json({ error: `Could not reach ${provider.name} to verify the key. Please check your network connection.` });
       return;
     }
 
