@@ -231,6 +231,13 @@ export class PipelineService {
     resolved: ResolvedPipeline,
     sources:  DataSource[],
   ): string | undefined {
+    if (
+      lower.includes('pipeline stage') &&
+      (lower.includes('exactly one') || lower.includes('operator key') || lower.includes('non-empty'))
+    ) {
+      return `Pipeline structure error: "${msg}". Each pipeline item must be exactly one MongoDB stage object like { "$match": { ... } }. Do not merge multiple stages into one object, and do not add commentary keys beside the stage operator.`;
+    }
+
     if (lower.includes('unsupported conversion')) {
       return `MongoDB aggregation error: "${msg}". When converting integer/string fields to dates, always use $convert with onError: null and onNull: null, e.g. { $convert: { input: "$field", to: "date", onError: null, onNull: null } }.`;
     }
@@ -268,6 +275,17 @@ export class PipelineService {
     return undefined;
   }
 
+  private buildPlanValidationHint(msg: string): string {
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes('pipeline stage') &&
+      (lower.includes('exactly one') || lower.includes('operator key') || lower.includes('non-empty'))
+    ) {
+      return `Pipeline structure failed: ${msg}. Each item in pipeline must be a single MongoDB stage object like { "$match": { ... } }. Do not combine multiple stages or attach extra descriptive keys.`;
+    }
+    return `Field validation failed: ${msg}. Use only the exact field names listed in the schema — check casing carefully.`;
+  }
+
   private hasStringMatch(pipeline: Row[]): boolean {
     return pipeline.some(stage => {
       const match = stage['$match'] as Record<string, unknown> | undefined;
@@ -291,7 +309,17 @@ export class PipelineService {
     }
     const collection = source?.collection ?? plan.query.sourceName!;
 
-    for (const stage of plan.pipeline) {
+    const normalizedPipeline = plan.pipeline.map((stage, index) => {
+      const normalized = normalizePipelineStage(stage, index);
+      if (normalized.strippedKeys.length) {
+        this.logger.warn(
+          `pipeline stage ${index + 1}: stripped non-operator keys [${normalized.strippedKeys.join(', ')}]`,
+        );
+      }
+      return normalized.stage;
+    });
+
+    for (const stage of normalizedPipeline) {
       const op = Object.keys(stage)[0];
       if (op && FORBIDDEN_STAGES.has(op)) {
         throw new Error(`Pipeline stage "${op}" is not permitted`);
@@ -299,10 +327,10 @@ export class PipelineService {
     }
 
     if (source?.fields?.length) {
-      this.validatePipelineFields(plan.pipeline, source);
+      this.validatePipelineFields(normalizedPipeline, source);
     }
 
-    return { pipeline: plan.pipeline, collection };
+    return { pipeline: normalizedPipeline, collection };
   }
 
   private validatePipelineFields(pipeline: Row[], source: DataSource): void {
