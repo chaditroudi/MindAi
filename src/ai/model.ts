@@ -15,11 +15,13 @@ export const PROVIDERS: Record<string, string> = {
   perplexity: 'https://api.perplexity.ai',
 };
 
-export function detectProvider(apiKey: string): string {
+// Returns null when the key prefix doesn't match a known provider — no silent groq fallback.
+export function detectProvider(apiKey: string): string | null {
+  if (apiKey.startsWith('gsk_'))   return 'groq';
   if (apiKey.startsWith('sk-ant-')) return 'anthropic';
   if (apiKey.startsWith('AIza'))   return 'google';
   if (apiKey.startsWith('sk-'))    return 'openai';
-  return 'groq';
+  return null;
 }
 
 export function resolveModel(
@@ -28,11 +30,17 @@ export function resolveModel(
   model?:    string,
   provider?: string,
 ): LanguageModelV1 {
-  const key          = apiKey   ?? config.llm.apiKey   ?? '';
+  const key              = apiKey   ?? config.llm.apiKey   ?? '';
   const resolvedModel    = model    ?? config.llm.model;
   const resolvedProvider = provider ?? config.llm.provider ?? detectProvider(key);
-  const baseURL          = PROVIDERS[resolvedProvider];
+  const baseURL          = resolvedProvider ? PROVIDERS[resolvedProvider] : undefined;
 
+  if (!resolvedProvider || !baseURL) {
+    throw new Error(
+      `No provider configured for role "${role}". ` +
+      `Please select a provider in Settings.`,
+    );
+  }
   if (!resolvedModel) {
     throw new Error(
       `No model configured for role "${role}" (provider: ${resolvedProvider}). ` +
@@ -40,7 +48,7 @@ export function resolveModel(
     );
   }
 
-  return createOpenAI({ apiKey: key, baseURL })(resolvedModel);
+  return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(resolvedModel);
 }
 
 export function freshSignal(role: AgentRole): AbortSignal {

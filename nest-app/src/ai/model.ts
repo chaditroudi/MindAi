@@ -39,10 +39,9 @@ export function detectProviderFromApiKey(apiKey: string): ProviderName | null {
   return null;
 }
 
-export function detectProvider(apiKey: string): string {
-  const detected = detectProviderFromApiKey(apiKey);
-  if (detected) return detected;
-  return 'groq';
+// Returns null when the key prefix doesn't match — no silent groq fallback.
+export function detectProvider(apiKey: string): string | null {
+  return detectProviderFromApiKey(apiKey);
 }
 
 function normalizeProvider(provider?: string): string | undefined {
