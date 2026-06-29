@@ -258,22 +258,20 @@ export class AnalyticsService {
   ): AccessResult {
     if (userKey) {
       return {
-        apiKey:           userKey,
-        model:            userModel,
-        provider:         userProvider,
-        inputTokenLimit:  userTokenLimit ?? 4_000,
-        outputTokenLimit: 2_000,
+        apiKey:     userKey,
+        model:      userModel,
+        provider:   userProvider,
+        maxTokens:  userTokenLimit ?? 4_000,
       };
     }
     const active = agentCfg.agents.find(a => a.status === 'active');
     if (active?.apiKey) {
       return {
-        apiKey:           active.apiKey,
-        model:            active.model,
-        provider:         active.provider,
-        inputTokenLimit:  active.inputTokenLimit,
-        outputTokenLimit: active.outputTokenLimit,
-        agentApiKey:      active.apiKey,
+        apiKey:       active.apiKey,
+        model:        active.model,
+        provider:     active.provider,
+        maxTokens:    active.outputTokenLimit,
+        agentApiKey:  active.apiKey,
       };
     }
     throw new UnauthorizedException(
