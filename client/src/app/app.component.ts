@@ -81,7 +81,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   agentDraft:  AgentEntry[] = [];
   memoryLimitDraft = 50;
   newAgent: AgentEntry = {
-    status: 'idle', provider: 'groq', model: '', apiKey: '',
+    status: 'idle', provider: '', model: '', apiKey: '',
     inputTokenLimit: 4_000, outputTokenLimit: 2_000,
     tokenBudget: 0, inputTokensUsed: 0, outputTokensUsed: 0,
   };
@@ -373,7 +373,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   effectiveProvider(provider: string | null | undefined): string {
-    return this.normalizeProvider(provider) || 'groq';
+    return this.normalizeProvider(provider);
   }
 
   defaultModelForProvider(provider: string | null | undefined): string {
@@ -646,7 +646,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   addAgentToList(): void {
     if (!this.newAgent.model || !this.newAgent.apiKey) return;
     this.agentDraft   = [...this.agentDraft, { ...this.newAgent }];
-    this.newAgent     = { status: 'idle', provider: 'groq', model: '', apiKey: '',
+    this.newAgent     = { status: 'idle', provider: '', model: '', apiKey: '',
                           inputTokenLimit: 4_000, outputTokenLimit: 2_000,
                           tokenBudget: 0, inputTokensUsed: 0, outputTokensUsed: 0 };
     this.showAddAgent = false;
