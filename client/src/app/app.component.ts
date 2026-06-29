@@ -227,9 +227,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       if (res.configured) {
         this.st.patch({
           hasKey: true, showKeyModal: false,
-          provider:        res.provider        ?? '',
-          selectedModel:   res.model           ?? '',
-          inputTokenLimit: res.inputTokenLimit ?? 4_000,
+          provider:        this.normalizeProvider(res.provider),
+          selectedModel:   this.effectiveModel(res.model),
+          inputTokenLimit: this.coercePositiveInt(res.inputTokenLimit, 4_000),
         });
         this.supervisorModel = res.supervisorModel ?? '';
         this.chartModel      = res.chartModel      ?? '';
@@ -246,8 +246,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async saveApiKey(): Promise<void> {
     const trimmed         = this.modalKey.trim();
     const provider        = this.effectiveProvider(this.st.snap.provider);
-    const model           = (this.st.snap.selectedModel ?? '').trim();
-    const inputTokenLimit = this.st.snap.inputTokenLimit || 4_000;
+    const model           = this.effectiveModel(this.st.snap.selectedModel);
+    const inputTokenLimit = this.coercePositiveInt(this.st.snap.inputTokenLimit, 4_000);
 
     if (!provider) {
       this.st.patch({ keyRejected: true, keyErrorText: 'Please select a provider before saving.' });
@@ -306,7 +306,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async testConnection(): Promise<void> {
     const trimmed  = this.modalKey.trim();
     const provider = this.effectiveProvider(this.st.snap.provider);
-    const model    = (this.st.snap.selectedModel ?? '').trim();
+    const model    = this.effectiveModel(this.st.snap.selectedModel);
     if (!trimmed || !provider || !model) return;
     this.testStatus = 'testing';
     this.testError  = '';
@@ -635,8 +635,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     try {
       const cfg = await this.api.getAgentConfig();
       this.st.patch({ agentConfig: cfg });
-      this.agentDraft      = cfg.agents.map(a => ({ ...a }));
-      this.memoryLimitDraft = cfg.memoryLimit;
+      this.agentDraft       = cfg.agents.map(agent => this.sanitizeAgent(agent));
+      this.memoryLimitDraft = this.coercePositiveInt(cfg.memoryLimit, 50);
     } catch { /* non-critical */ }
   }
 
@@ -646,11 +646,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   addAgentToList(): void {
-    if (!this.newAgent.provider || !this.newAgent.model || !this.newAgent.apiKey) return;
-    this.agentDraft   = [...this.agentDraft, { ...this.newAgent }];
-    this.newAgent     = { status: 'idle', provider: '', model: '', apiKey: '',
-                          inputTokenLimit: 4_000, outputTokenLimit: 2_000,
-                          tokenBudget: 0, inputTokensUsed: 0, outputTokensUsed: 0 };
+    const agent = this.sanitizeAgent(this.newAgent);
+    if (!agent.provider || !agent.model || !agent.apiKey) return;
+    this.agentDraft           = [...this.agentDraft, agent];
+    this.newAgent             = this.createEmptyAgent();
+    this.newAgentLoadedModels = [];
+    this.newAgentModelsError  = '';
     this.showAddAgent = false;
   }
 
@@ -669,10 +670,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.configError  = '';
     try {
       const saved = await this.api.saveAgentConfig({
-        memoryLimit: this.memoryLimitDraft,
-        agents:      this.agentDraft,
+        memoryLimit: this.coercePositiveInt(this.memoryLimitDraft, 50),
+        agents:      this.agentDraft.map(agent => this.sanitizeAgent(agent)),
       });
       this.st.patch({ agentConfig: saved });
+      this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
+      this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
     } catch (err) {
       this.configError = err instanceof Error ? err.message : 'Failed to save config.';
     } finally {
@@ -681,28 +684,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   readonly STATUS_OPTIONS: AgentStatus[] = ['active', 'idle', 'disabled', 'expired'];
-
-  readonly INPUT_TOKEN_OPTIONS: { label: string; value: number }[] = [
-    { label: '1,000',           value: 1_000 },
-    { label: '2,000',           value: 2_000 },
-    { label: '4,000 (default)', value: 4_000 },
-    { label: '8,000',           value: 8_000 },
-    { label: '16,000',          value: 16_000 },
-    { label: '32,000',          value: 32_000 },
-    { label: '64,000',          value: 64_000 },
-    { label: '128,000',         value: 128_000 },
-  ];
-
-  readonly OUTPUT_TOKEN_OPTIONS: { label: string; value: number }[] = [
-    { label: '256',             value: 256 },
-    { label: '512',             value: 512 },
-    { label: '1,000',           value: 1_000 },
-    { label: '2,000 (default)', value: 2_000 },
-    { label: '4,000',           value: 4_000 },
-    { label: '8,000',           value: 8_000 },
-    { label: '16,000',          value: 16_000 },
-    { label: '32,000',          value: 32_000 },
-  ];
 
   readonly MEMORY_LIMIT_OPTIONS: { label: string; value: number }[] = [
     { label: '10',           value: 10 },
@@ -724,6 +705,59 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   agentCreditsLeft(agent: AgentEntry): number {
     return Math.max(0, agent.tokenBudget - this.agentTotalUsed(agent));
+  }
+
+  private createEmptyAgent(): AgentEntry {
+    return {
+      status:           'idle',
+      provider:         '',
+      model:            '',
+      apiKey:           '',
+      inputTokenLimit:  4_000,
+      outputTokenLimit: 2_000,
+      tokenBudget:      0,
+      inputTokensUsed:  0,
+      outputTokensUsed: 0,
+    };
+  }
+
+  private sanitizeAgent(agent: AgentEntry): AgentEntry {
+    return {
+      ...agent,
+      provider:         this.effectiveProvider(agent.provider),
+      model:            this.effectiveModel(agent.model),
+      apiKey:           agent.apiKey.trim(),
+      inputTokenLimit:  this.coercePositiveInt(agent.inputTokenLimit, 4_000),
+      outputTokenLimit: this.coercePositiveInt(agent.outputTokenLimit, 2_000),
+      tokenBudget:      this.coerceNonNegativeInt(agent.tokenBudget),
+      inputTokensUsed:  this.coerceNonNegativeInt(agent.inputTokensUsed),
+      outputTokensUsed: this.coerceNonNegativeInt(agent.outputTokensUsed),
+    };
+  }
+
+  private coercePositiveInt(value: number | string | null | undefined, fallback: number): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : fallback;
+  }
+
+  private coerceNonNegativeInt(value: number | string | null | undefined, fallback = 0): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : fallback;
+  }
+
+  private async fetchModels(provider: string, apiKey: string): Promise<ModelOption[]> {
+    const res  = await this.api.listModels({ provider, apiKey });
+    const seen = new Set<string>();
+    return res.models
+      .map(model => ({
+        id:    model.id.trim(),
+        label: (model.label ?? model.id).trim(),
+      }))
+      .filter(model => {
+        if (!model.id || seen.has(model.id)) return false;
+        seen.add(model.id);
+        return true;
+      });
   }
 
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
