@@ -680,7 +680,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
-    const base = { messageId: data.messageId, role: 'assistant' as const, prompt };
+    const base = {
+      messageId:    data.messageId,
+      role:         'assistant' as const,
+      prompt,
+      inputTokens:  data.inputTokens,
+      outputTokens: data.outputTokens,
+    };
 
     if (data.intent === 'dashboard' && 'chart' in data) {
       return { ...base, intent: 'dashboard', result: { type: 'dashboard', dashboardSpec: (data as DashboardResponse).chart, durationMs } };

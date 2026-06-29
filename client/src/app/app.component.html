@@ -420,6 +420,9 @@
                   </div>
                   <div class="result-footer">
                     <span class="result-timing">{{ msg.result.durationMs | number }}ms</span>
+                    @if (msg.inputTokens) {
+                      <span class="result-tokens" title="in:{{ msg.inputTokens | number }} out:{{ msg.outputTokens | number }}">{{ (msg.inputTokens + msg.outputTokens!) | number }} tokens</span>
+                    }
                     <button class="save-btn" [class.save-btn--saved]="savedIds.has(msg.messageId)"
                       (click)="saveResult(msg)" title="Save result">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -444,6 +447,9 @@
                   </div>
                   <div class="result-footer">
                     <span class="result-timing">{{ msg.result.durationMs | number }}ms</span>
+                    @if (msg.inputTokens) {
+                      <span class="result-tokens" title="in:{{ msg.inputTokens | number }} out:{{ msg.outputTokens | number }}">{{ (msg.inputTokens + msg.outputTokens!) | number }} tokens</span>
+                    }
                     <button class="save-btn" [class.save-btn--saved]="savedIds.has(msg.messageId)"
                       (click)="saveResult(msg)" title="Save result">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -518,6 +524,9 @@
                   </div>
                   <div class="result-footer">
                     <span class="result-timing">{{ msg.result.durationMs | number }}ms</span>
+                    @if (msg.inputTokens) {
+                      <span class="result-tokens" title="in:{{ msg.inputTokens | number }} out:{{ msg.outputTokens | number }}">{{ (msg.inputTokens + msg.outputTokens!) | number }} tokens</span>
+                    }
                   </div>
                 </section>
               }
@@ -529,6 +538,9 @@
                   </div>
                   <div class="result-footer">
                     <span class="result-timing">{{ msg.result.durationMs | number }}ms</span>
+                    @if (msg.inputTokens) {
+                      <span class="result-tokens" title="in:{{ msg.inputTokens | number }} out:{{ msg.outputTokens | number }}">{{ (msg.inputTokens + msg.outputTokens!) | number }} tokens</span>
+                    }
                     <button class="save-btn" [class.save-btn--saved]="savedIds.has(msg.messageId)"
                       (click)="saveResult(msg)" title="Save result">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
