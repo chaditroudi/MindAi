@@ -6,7 +6,6 @@ import { getCached, setCached } from '../db/prompt-cache.js';
 import { log } from '../utils/logger.js';
 import type { DashboardSpec } from '../types/index.js';
 
-// 'dashboard:full' caches the complete DashboardSpec — skips both LLM calls on a hit
 const FULL_CACHE_INTENT = 'dashboard:full';
 
 export async function executeDashboard(
@@ -14,7 +13,6 @@ export async function executeDashboard(
   context: CoreMessage[] = [],
   apiKey?: string,
 ): Promise<DashboardSpec> {
-  // Full result cache — only valid for single-turn requests (no conversation context)
   if (context.length === 0) {
     const cached = await getCached<DashboardSpec>(FULL_CACHE_INTENT, prompt);
     if (cached) {
