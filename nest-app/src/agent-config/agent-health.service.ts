@@ -68,14 +68,11 @@ export class AgentHealthService {
 
       if (res.status === 429) {
         const body = await res.text().catch(() => '');
-        // Rate-limited but key is valid → still usable (transient)
-        // Quota-exhausted → mark expired
         return !isQuotaExhausted(body);
       }
 
       return res.ok;
     } catch {
-      // Network timeout or DNS failure — assume healthy to avoid premature expiry
       return true;
     }
   }

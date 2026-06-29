@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createSkillAgent, freshSignal } from './model';
+import { createSkillAgent, freshSignal, skillProviderOptions } from './model';
 import { readMarkdownSection, skillFile } from './skill-prompt';
 import { log } from '../common/logger/app.logger';
 import type { MemoryType } from '../memory/memory.repository';
