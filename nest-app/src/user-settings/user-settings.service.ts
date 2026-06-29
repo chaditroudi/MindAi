@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { UserSettingsRepository } from './user-settings.repository';
 import type { UserSettingsDocument } from './user-settings.repository';
-import { buildProviderValidationRequest, detectProviderFromApiKey, PROVIDERS } from '../ai/model';
+import { buildProviderValidationRequest, PROVIDERS } from '../ai/model';
 
 export interface UserSettingsDto {
   apiKey:           string;
@@ -63,14 +63,15 @@ export class UserSettingsService {
 
   async validate(dto: UserSettingsDto): Promise<ValidationResult> {
     const { apiKey, provider, model } = sanitizeSettings(dto);
-    const providerKey = provider;
-    // Resolve effective provider: use the user's string if it's in the registry,
-    // otherwise auto-detect from the API key prefix (AIza→google, sk-ant-→anthropic, etc.)
-    const effective = PROVIDERS[providerKey]
-      ? providerKey
-      : (detectProviderFromApiKey(apiKey) ?? providerKey);
-    await validateApiKey(apiKey, effective);
-    return { ok: true, provider: providerKey, model };
+
+    if (!PROVIDERS[provider]) {
+      throw new BadRequestException(
+        `Unknown provider "${provider}". Supported: ${Object.keys(PROVIDERS).join(', ')}.`,
+      );
+    }
+
+    await validateApiKey(apiKey, provider);
+    return { ok: true, provider, model };
   }
 
   async save(userId: string, dto: UserSettingsDto): Promise<ValidationResult> {
