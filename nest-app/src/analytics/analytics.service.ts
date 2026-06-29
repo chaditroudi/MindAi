@@ -18,11 +18,16 @@ import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-c
 import type { ExecuteResult, LlmOpts } from './pipeline.service';
 
 interface AccessResult {
-  apiKey:       string;
-  model?:       string;
-  provider?:    string;
-  maxTokens:    number;    // max output tokens sent to LLM; warning fires when response hits this cap
-  agentApiKey?: string;
+  apiKey:            string;
+  model?:            string;
+  provider?:         string;
+  maxTokens:         number;
+  agentApiKey?:      string;
+  // per-role model overrides (Option A: same key/provider, different model per agent)
+  supervisorModel?:  string;
+  chartModel?:       string;
+  writerModel?:      string;
+  memoryModel?:      string;
 }
 import {
   sessionExists,

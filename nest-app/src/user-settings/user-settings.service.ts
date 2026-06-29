@@ -4,10 +4,14 @@ import type { UserSettingsDocument } from './user-settings.repository';
 import { buildProviderValidationRequest, PROVIDERS } from '../ai/model';
 
 export interface UserSettingsDto {
-  apiKey:           string;
-  provider:         string;
-  model:            string;
-  inputTokenLimit?: number;
+  apiKey:            string;
+  provider:          string;
+  model:             string;
+  inputTokenLimit?:  number;
+  supervisorModel?:  string;
+  chartModel?:       string;
+  writerModel?:      string;
+  memoryModel?:      string;
 }
 
 export interface ValidationResult {
@@ -46,12 +50,21 @@ async function validateApiKey(apiKey: string, provider: string): Promise<void> {
   // other non-OK = provider endpoint temporarily down → don't block save
 }
 
+function trimOrUndefined(s?: string): string | undefined {
+  const t = s?.trim();
+  return t || undefined;
+}
+
 function sanitizeSettings(dto: UserSettingsDto): UserSettingsDto {
   return {
     apiKey:           dto.apiKey.trim(),
     provider:         dto.provider.trim().toLowerCase(),
     model:            dto.model.trim(),
     inputTokenLimit:  dto.inputTokenLimit,
+    supervisorModel:  trimOrUndefined(dto.supervisorModel),
+    chartModel:       trimOrUndefined(dto.chartModel),
+    writerModel:      trimOrUndefined(dto.writerModel),
+    memoryModel:      trimOrUndefined(dto.memoryModel),
   };
 }
 
