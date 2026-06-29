@@ -164,8 +164,11 @@ export function resolveModel(
       // Uses Google's native SDK — hits generateContent, not chat/completions or responses
       return createGoogleGenerativeAI({ apiKey: key, baseURL })(userModel);
     case 'groq':
-      // Groq SDK handles its own endpoint correctly
-      return createGroq({ apiKey: key, baseURL })(userModel);
+      // structuredOutputs:false → uses json_object mode instead of json_schema mode.
+      // json_schema strict mode requires additionalProperties:false on every nested
+      // object, which is incompatible with open pipeline-stage schemas (z.record).
+      // json_object still enforces valid JSON; Zod validates the shape on our side.
+      return createGroq({ apiKey: key, baseURL })(userModel, { structuredOutputs: false });
     case 'openai':
     case 'mistral':
     case 'together':

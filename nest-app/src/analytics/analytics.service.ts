@@ -141,10 +141,13 @@ function extractRetryDelay(err: unknown): string | null {
 
 function isStructuredOutputUnsupportedError(err: unknown): boolean {
   const msg = getErrorMessage(err).toLowerCase();
+  // Only match when the provider says the MODEL doesn't support the format.
+  // Do NOT match "json_schema validation failed" errors — those are schema
+  // compatibility issues, not a model limitation, and need a different message.
   return (
-    msg.includes('json_schema') ||
-    (msg.includes('response format') && msg.includes('not support')) ||
-    (msg.includes('structured output') && msg.includes('not support'))
+    msg.includes('does not support response format') ||
+    (msg.includes('not support') && msg.includes('json_schema')) ||
+    (msg.includes('response format') && msg.includes('not support'))
   );
 }
 
