@@ -32,14 +32,6 @@ async function bootstrap() {
   const logger = app.get(AppLogger);
   logger.log(`NestJS + Mongoose ready on http://localhost:${port}`, 'bootstrap');
 
-  const aiKey = (process.env['AI_API_KEY'] ?? process.env['GROQ_API_KEY'])?.trim();
-  if (!aiKey) {
-    logger.warn('No global AI key set (AI_API_KEY) — all requests will require a per-user key', 'AI');
-  } else {
-    const provider = process.env['AI_PROVIDER'] ?? 'auto-detected';
-    const model    = process.env['AI_MODEL']    ?? '(from user settings)';
-    logger.log(`AI ready [${provider}] | model: ${model}`, 'AI');
-  }
   const memoryPath = process.env['LIBSQL_URL'] ?? 'file:./data/memory.db';
   logger.log(`Session memory: ${memoryPath}`, 'AI');
 

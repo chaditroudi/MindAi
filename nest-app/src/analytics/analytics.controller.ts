@@ -2,7 +2,6 @@ import {
   Controller, Post, Get, Body, Headers,
   HttpException, HttpStatus, Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { AnalyticsService } from './analytics.service';
 import { requireUserId } from '../common/helpers/user-id';
@@ -17,15 +16,13 @@ class AnalyticsDto {
 export class AnalyticsController {
   private readonly logger = new Logger(AnalyticsController.name);
 
-  constructor(
-    private readonly analytics: AnalyticsService,
-    private readonly cfg: ConfigService,
-  ) {}
+  constructor(private readonly analytics: AnalyticsService) {}
 
   @Get('provider')
   getProvider() {
-    const hasGlobalKey = !!this.cfg.get<string>('llm.apiKey')?.trim();
-    return { hasGlobalKey };
+    // Provider, model, and API key are always per-user (saved in user settings).
+    // No server-level global key exists.
+    return { provider: '', hasGlobalKey: false };
   }
 
   @Post('analytics')
