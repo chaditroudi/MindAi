@@ -29,7 +29,7 @@ export class AnalyticsApiService {
     return this.req(this.http.get<UserSettingsResponse>('/api/settings', { headers }));
   }
 
-  listModels(dto: { provider: string; apiKey: string }): Promise<{ models: { id: string; label: string }[] }> {
+  listModels(dto: { provider: string; apiKey?: string }): Promise<{ models: { id: string; label: string }[] }> {
     return this.req(this.http.post<{ models: { id: string; label: string }[] }>('/api/settings/models', dto));
   }
 

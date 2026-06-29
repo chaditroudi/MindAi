@@ -341,6 +341,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.modelsError  = '';
     this.testStatus   = 'idle';
     this.testError    = '';
+    if (provider.trim()) void this.loadModels();
   }
 
   onSettingsModelChange(model: string): void {
@@ -358,6 +359,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.newAgent.model       = '';
     this.newAgentLoadedModels = [];
     this.newAgentModelsError  = '';
+    if (provider.trim()) void this.loadNewAgentModels();
   }
 
   async loadNewAgentModels(): Promise<void> {
