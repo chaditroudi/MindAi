@@ -1,6 +1,4 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createGroq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 import { Agent } from '@mastra/core/agent';
@@ -10,13 +8,14 @@ export type AgentRole = 'supervisor' | 'writer' | 'chart' | 'memory';
 type ProviderName = keyof typeof PROVIDERS;
 
 // ── Provider registry ──────────────────────────────────────────────────────────
-// Maps provider slug → provider API base URL.
-// Model names come entirely from the user's UI (settings / agent config) — no defaults here.
+// Maps provider slug → OpenAI-compatible Chat Completions base URL.
+// All non-Anthropic providers are accessed via the OpenAI-compat API.
+// Google's OpenAI-compat path requires the /openai suffix on the base URL.
 
 export const PROVIDERS: Record<string, string> = {
   groq:       'https://api.groq.com/openai/v1',
   openai:     'https://api.openai.com/v1',
-  google:     'https://generativelanguage.googleapis.com/v1beta',
+  google:     'https://generativelanguage.googleapis.com/v1beta/openai',
   anthropic:  'https://api.anthropic.com/v1',
   mistral:    'https://api.mistral.ai/v1',
   together:   'https://api.together.xyz/v1',
