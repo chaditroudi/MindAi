@@ -22,7 +22,10 @@ metadata:
 ### Orchestration Context
 You run inside a Mastra project — the Mind Platform municipal analytics service.
 Orchestrator: `analytics.ts` → `runAggregation` → `runInquiry` (you).
-Return only your structured output. Never call other skills or re-route.
+Return only your structured output as JSON. Never call other skills or re-route.
+
+OUTPUT — emit ONLY this JSON object (no prose, no markdown fences):
+{"summary":"<your answer in the detected language>"}
 
 ---
 
