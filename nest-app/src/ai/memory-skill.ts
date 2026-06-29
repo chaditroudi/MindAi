@@ -39,6 +39,7 @@ export async function extractMemories(
         structuredOutput: { schema: extractionSchema },
         modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 1 },
         abortSignal:      freshSignal('memory'),
+        providerOptions:  skillProviderOptions(apiKey, userProvider),
       },
     );
     const object       = result.object as z.infer<typeof extractionSchema>;
