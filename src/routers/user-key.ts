@@ -6,7 +6,9 @@ import { PROVIDERS, detectProvider } from '../ai/model.js';
 export const userKeyRouter = Router();
 
 const saveSchema = z.object({
-  apiKey: z.string().min(1).max(500),
+  apiKey:   z.string().min(1).max(500),
+  model:    z.string().max(200).optional(),
+  provider: z.string().max(100).optional(),
 });
 
 async function pingKey(apiKey: string, url: string): Promise<'valid' | 'invalid' | 'unreachable'> {
