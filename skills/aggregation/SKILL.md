@@ -47,12 +47,12 @@ markdown fences. Validate against this shape in `src/features/pipeline.ts`.
 
 ```typescript
 interface TaskPlan {
-  needsData:  boolean;                 // false ⇒ schema cannot answer ⇒ pipeline MUST be []
-  intent:     'dashboard' | 'report' | 'general_question';
+  needsData:   boolean;                // false ⇒ schema cannot answer ⇒ pipeline MUST be []
   query: {
     sourceName: string;                // a collection name that EXISTS in the schema
-    pipeline:   PipelineStage[];        // validated MongoDB stages (see Safety)
+    limit?:     number;                // optional row cap (overrides $limit default)
   };
+  pipeline:    PipelineStage[];        // ROOT-LEVEL — validated MongoDB stages (see Safety)
   // Visualisation hints (dashboard always; report only when wantChart=true)
   strategy?:  'standard' | 'trend' | 'comparison' | 'anomaly' | 'overview';
   chartHint?: 'ranking' | 'distribution' | 'part_of_whole'
@@ -66,8 +66,37 @@ interface TaskPlan {
 }
 ```
 
+**CRITICAL — `pipeline` is at the root of the JSON object, NOT inside `query`.**
+
+Minimal correct response example:
+```json
+{
+  "needsData": true,
+  "query": { "sourceName": "projects" },
+  "pipeline": [
+    { "$match": { "status": { "$ne": null } } },
+    { "$group": { "_id": "$status", "count": { "$sum": 1 } } },
+    { "$project": { "_id": 0, "label": "$_id", "value": "$count" } },
+    { "$sort": { "value": -1 } },
+    { "$limit": 20 }
+  ],
+  "strategy": "standard",
+  "chartHint": "distribution"
+}
+```
+
+When `needsData=false` (schema cannot answer):
+```json
+{
+  "needsData": false,
+  "query": {},
+  "pipeline": []
+}
+```
+
 **Hard invariants** (reject the plan if violated):
 - `needsData === false` ⟺ `pipeline.length === 0`.
+- `pipeline` is ALWAYS a top-level key — never nest it inside `query`.
 - `sourceName` is a real collection from `{{DATABASE_SCHEMA}}`.
 - Every field referenced in the pipeline exists in that collection's schema
   (except computed fields the pipeline itself introduces with `$addFields`/`$group`).
@@ -80,6 +109,11 @@ interface TaskPlan {
 You are an analytics query planner for the Mind Platform.
 Read the DATABASE SCHEMA, the USER PROMPT, and any CONVERSATION CONTEXT, then emit
 **exactly one** TaskPlan as strict JSON. No commentary, no markdown fences.
+
+OUTPUT SHAPE — emit EXACTLY this structure (pipeline is a TOP-LEVEL key, NOT inside query):
+{"needsData":true,"query":{"sourceName":"<collection>"},"pipeline":[...stages...],"strategy":"standard","chartHint":"distribution"}
+
+When schema cannot answer: {"needsData":false,"query":{},"pipeline":[]}
 
 TODAY = {{TODAY}}   <!-- OPTIONAL — needs code wiring: ISO date string, e.g. 2026-06-17.
                          Use it to resolve "this year", "last 30 days", "since January". -->
