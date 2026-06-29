@@ -3,6 +3,7 @@ import { createGroq }                from '@ai-sdk/groq';
 import { createAnthropic }           from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI }  from '@ai-sdk/google';
 import type { LanguageModel }        from 'ai';
+import { wrapLanguageModel }         from 'ai';
 import { Agent }                     from '@mastra/core/agent';
 
 export type AgentRole  = 'supervisor' | 'writer' | 'chart' | 'memory';
@@ -69,7 +70,18 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
     case 'openai':
       return createOpenAI({ apiKey: key }).chat(model);
     default:
-      return createGroq({ apiKey: key })(model);
+      return wrapLanguageModel({
+        model: createGroq({ apiKey: key })(model),
+        middleware: {
+          wrapGenerate: async ({ doGenerate, params }) => doGenerate({
+            ...params,
+            providerOptions: {
+              ...params.providerOptions,
+              groq: { ...params.providerOptions?.['groq'], structuredOutputs: false },
+            },
+          }),
+        },
+      });
   }
 }
 
