@@ -54,8 +54,7 @@ const WIDGET_TYPE_LABELS: Record<string, string> = {
 };
 
 type WidgetDisplayKind = 'chart' | 'kpi' | 'table' | 'unknown';
-type ModelSuggestion = { value: string; label: string };
-type ProviderSuggestion = { value: string; label: string };
+type ModelOption = { id: string; label: string };
 
 @Component({
   selector:    'app-root',
@@ -75,9 +74,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   testError  = '';
   modalKey   = '';
 
-  loadedModels:  { id: string; label: string }[] = [];
-  modelsLoading  = false;
-  modelsError    = '';
+  loadedModels: ModelOption[] = [];
+  modelsLoading = false;
+  modelsError   = '';
+
+  newAgentLoadedModels: ModelOption[] = [];
+  newAgentModelsLoading = false;
+  newAgentModelsError   = '';
 
   // Per-role model overrides (Option A: same key/provider, different model per agent)
   supervisorModel = '';
@@ -105,11 +108,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   configError  = '';
   agentDraft:  AgentEntry[] = [];
   memoryLimitDraft = 50;
-  newAgent: AgentEntry = {
-    status: 'idle', provider: '', model: '', apiKey: '',
-    inputTokenLimit: 4_000, outputTokenLimit: 2_000,
-    tokenBudget: 0, inputTokensUsed: 0, outputTokensUsed: 0,
-  };
+  newAgent: AgentEntry = this.createEmptyAgent();
   showAddAgent = false;
 
   private readonly destroy$      = new Subject<void>();
@@ -320,74 +319,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  readonly PROVIDER_SUGGESTIONS: ProviderSuggestion[] = [
-    { value: 'groq',       label: 'Groq' },
-    { value: 'openai',     label: 'OpenAI' },
-    { value: 'anthropic',  label: 'Anthropic' },
-    { value: 'google',     label: 'Google Gemini' },
-    { value: 'mistral',    label: 'Mistral' },
-    { value: 'together',   label: 'Together AI' },
-    { value: 'perplexity', label: 'Perplexity' },
-  ];
-
-  readonly PROVIDER_MODELS: Record<string, ModelSuggestion[]> = {
-    groq: [
-      // Only models confirmed to support json_schema structured outputs on Groq.
-      // Llama 4, SpecDec, Llama 3.2 vision, DeepSeek, Qwen do NOT support it.
-      { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile (recommended)' },
-      { value: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B Instant (fast)' },
-      { value: 'llama3-70b-8192',         label: 'Llama 3 70B' },
-      { value: 'llama3-8b-8192',          label: 'Llama 3 8B (fast)' },
-      { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
-      { value: 'gemma2-9b-it',            label: 'Gemma 2 9B' },
-    ],
-    openai: [
-      // ── GPT-4.1 ──
-      { value: 'gpt-4.1',              label: 'GPT-4.1 (recommended)' },
-      { value: 'gpt-4.1-mini',         label: 'GPT-4.1 Mini (fast)' },
-      { value: 'gpt-4.1-nano',         label: 'GPT-4.1 Nano (fastest)' },
-      // ── GPT-4o ──
-      { value: 'gpt-4o',               label: 'GPT-4o' },
-      { value: 'gpt-4o-mini',          label: 'GPT-4o Mini' },
-      { value: 'chatgpt-4o-latest',    label: 'ChatGPT-4o Latest' },
-      // ── o-series reasoning ──
-      { value: 'o4-mini',              label: 'o4 Mini (reasoning, fast)' },
-      { value: 'o3',                   label: 'o3 (reasoning)' },
-      { value: 'o3-mini',              label: 'o3 Mini (reasoning)' },
-      { value: 'o1',                   label: 'o1 (reasoning)' },
-      { value: 'o1-mini',              label: 'o1 Mini (reasoning)' },
-      { value: 'o1-pro',               label: 'o1 Pro (reasoning, powerful)' },
-      // ── GPT-4 ──
-      { value: 'gpt-4-turbo',          label: 'GPT-4 Turbo' },
-      { value: 'gpt-4',                label: 'GPT-4' },
-      { value: 'gpt-3.5-turbo',        label: 'GPT-3.5 Turbo' },
-    ],
-    anthropic: [
-      // ── Claude 4 ──
-      { value: 'claude-opus-4-8',              label: 'Claude Opus 4.8 (most capable)' },
-      { value: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6 (recommended)' },
-      { value: 'claude-haiku-4-5-20251001',    label: 'Claude Haiku 4.5 (fast)' },
-      // ── Claude 3.7 ──
-      { value: 'claude-3-7-sonnet-20250219',   label: 'Claude 3.7 Sonnet' },
-      // ── Claude 3.5 ──
-      { value: 'claude-3-5-sonnet-20241022',   label: 'Claude 3.5 Sonnet' },
-      { value: 'claude-3-5-haiku-20241022',    label: 'Claude 3.5 Haiku' },
-      // ── Claude 3 ──
-      { value: 'claude-3-opus-20240229',       label: 'Claude 3 Opus' },
-      { value: 'claude-3-sonnet-20240229',     label: 'Claude 3 Sonnet' },
-      { value: 'claude-3-haiku-20240307',      label: 'Claude 3 Haiku' },
-    ],
-    google: [
-      // ── Gemini 2.0 — recommended for free tier ──
-      { value: 'gemini-2.0-flash',             label: 'Gemini 2.0 Flash (recommended · free tier)' },
-      { value: 'gemini-2.0-flash-lite',        label: 'Gemini 2.0 Flash Lite (fastest · free tier)' },
-      // ── Gemini 2.5 — may require paid plan ──
-      { value: 'gemini-2.5-flash',             label: 'Gemini 2.5 Flash' },
-      { value: 'gemini-2.5-flash-lite-preview', label: 'Gemini 2.5 Flash Lite' },
-      { value: 'gemini-2.5-pro',               label: 'Gemini 2.5 Pro (paid plan)' },
-    ],
-  };
-
   normalizeProvider(provider: string | null | undefined): string {
     return (provider ?? '').trim().toLowerCase();
   }
@@ -396,39 +327,57 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return this.normalizeProvider(provider);
   }
 
-  defaultModelForProvider(provider: string | null | undefined): string {
-    return this.modelsForProvider(provider)[0]?.value ?? '';
-  }
-
-  effectiveModel(_provider: string | null | undefined, model: string | null | undefined): string {
+  effectiveModel(model: string | null | undefined): string {
     return (model ?? '').trim();
   }
 
-  modelsForProvider(provider: string | null | undefined): ModelSuggestion[] {
-    return this.PROVIDER_MODELS[this.normalizeProvider(provider)] ?? [];
-  }
-
-  isUnlistedModel(provider: string | null | undefined, model: string | null | undefined): boolean {
-    if (!model) return false;
-    return !this.modelsForProvider(provider).some(m => m.value === model);
-  }
-
-  apiKeyPlaceholder(provider: string | null | undefined): string {
-    switch (this.normalizeProvider(provider)) {
-      case 'openai':    return 'sk-...';
-      case 'anthropic': return 'sk-ant-...';
-      case 'google':    return 'AIza...';
-      case 'groq':      return 'gsk_...';
-      default:          return 'Paste your provider API key';
-    }
+  apiKeyPlaceholder(): string {
+    return 'Paste the API key for this provider';
   }
 
   onProviderChange(provider: string): void {
-    this.st.patch({ provider, selectedModel: '' });
+    this.st.patch({ provider: this.normalizeProvider(provider), selectedModel: '' });
     this.loadedModels = [];
     this.modelsError  = '';
     this.testStatus   = 'idle';
     this.testError    = '';
+  }
+
+  onSettingsModelChange(model: string): void {
+    this.st.patch({ selectedModel: model });
+    this.testStatus = 'idle';
+    this.testError  = '';
+  }
+
+  onUserTokenLimitChange(value: number | string): void {
+    this.st.patch({ inputTokenLimit: this.coercePositiveInt(value, 4_000) });
+  }
+
+  onNewAgentProviderChange(provider: string): void {
+    this.newAgent.provider    = this.normalizeProvider(provider);
+    this.newAgent.model       = '';
+    this.newAgentLoadedModels = [];
+    this.newAgentModelsError  = '';
+  }
+
+  async loadNewAgentModels(): Promise<void> {
+    const provider = this.effectiveProvider(this.newAgent.provider);
+    const apiKey   = this.newAgent.apiKey.trim();
+    if (!provider || !apiKey) {
+      this.newAgentModelsError = 'Enter the agent provider and API key first, then click Load models.';
+      return;
+    }
+
+    this.newAgentModelsLoading = true;
+    this.newAgentModelsError   = '';
+    try {
+      this.newAgentLoadedModels = await this.fetchModels(provider, apiKey);
+    } catch (err) {
+      this.newAgentModelsError  = err instanceof Error ? err.message : 'Failed to load models.';
+      this.newAgentLoadedModels = [];
+    } finally {
+      this.newAgentModelsLoading = false;
+    }
   }
 
   async loadModels(): Promise<void> {
@@ -441,11 +390,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.modelsLoading = true;
     this.modelsError   = '';
     try {
-      const res = await this.api.listModels({ provider, apiKey });
-      this.loadedModels = res.models;
-      if (res.models.length && !res.models.find(m => m.id === this.st.snap.selectedModel)) {
-        this.st.patch({ selectedModel: '' });
-      }
+      this.loadedModels = await this.fetchModels(provider, apiKey);
     } catch (err) {
       this.modelsError  = err instanceof Error ? err.message : 'Failed to load models.';
       this.loadedModels = [];
@@ -454,11 +399,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  get availableModels(): { value: string; label: string }[] {
-    if (this.loadedModels.length) {
-      return this.loadedModels.map(m => ({ value: m.id, label: m.label }));
-    }
-    return this.modelsForProvider(this.st.snap.provider);
+  get availableModels(): ModelOption[] {
+    return this.loadedModels;
+  }
+
+  get availableNewAgentModels(): ModelOption[] {
+    return this.newAgentLoadedModels;
   }
 
   // mode + session controls
