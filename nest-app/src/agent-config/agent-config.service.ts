@@ -15,6 +15,40 @@ const DEFAULTS: ResolvedConfig = {
   agents:      [],
 };
 
+function trimOrUndefined(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
+}
+
+function positiveIntOrUndefined(value?: number): number | undefined {
+  return Number.isFinite(value) && (value as number) > 0 ? Math.round(value as number) : undefined;
+}
+
+function nonNegativeIntOrUndefined(value?: number): number | undefined {
+  return Number.isFinite(value) && (value as number) >= 0 ? Math.round(value as number) : undefined;
+}
+
+function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
+  return {
+    ...agent,
+    provider:         trimOrUndefined(agent.provider)?.toLowerCase(),
+    model:            trimOrUndefined(agent.model),
+    apiKey:           trimOrUndefined(agent.apiKey),
+    inputTokenLimit:  positiveIntOrUndefined(agent.inputTokenLimit),
+    outputTokenLimit: positiveIntOrUndefined(agent.outputTokenLimit),
+    tokenBudget:      nonNegativeIntOrUndefined(agent.tokenBudget),
+    inputTokensUsed:  nonNegativeIntOrUndefined(agent.inputTokensUsed),
+    outputTokensUsed: nonNegativeIntOrUndefined(agent.outputTokensUsed),
+  };
+}
+
+function sanitizePayload(data: AgentConfigPayload): AgentConfigPayload {
+  return {
+    memoryLimit: positiveIntOrUndefined(data.memoryLimit),
+    agents:      data.agents?.map(agent => sanitizeAgentEntry(agent)),
+  };
+}
+
 @Injectable()
 export class AgentConfigService {
   constructor(private readonly repo: AgentConfigRepository) {}
@@ -34,7 +68,7 @@ export class AgentConfigService {
   }
 
   async save(data: AgentConfigPayload): Promise<ResolvedConfig> {
-    const doc = await this.repo.save(data);
+    const doc = await this.repo.save(sanitizePayload(data));
     return {
       memoryLimit: doc.memoryLimit,
       agents:      doc.agents,

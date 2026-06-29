@@ -10,7 +10,7 @@ export class ApiError extends Error {
   }
 }
 import type {
-  AnalyticsRequest, AnalyticsResponse, ProviderResponse,
+  AnalyticsRequest, AnalyticsResponse,
   MetaResponse, SessionSummary, SessionDetail,
   SavedResultSummary, SavedResultDetail, MessageResult, ModeKey, MemoryItem,
   MemoryConfigResponse, UserSettingsResponse, AgentConfigResponse, AgentEntry,
@@ -19,10 +19,6 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly http = inject(HttpClient);
-
-  getProvider(): Promise<ProviderResponse> {
-    return this.req(this.http.get<ProviderResponse>('/api/provider'));
-  }
 
   getMeta(): Promise<MetaResponse> {
     return this.req(this.http.get<MetaResponse>('/api/meta'));

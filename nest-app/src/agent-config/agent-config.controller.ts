@@ -1,16 +1,13 @@
 import { Controller, Get, Put, Body } from '@nestjs/common';
-import { IsString, IsInt, IsOptional, IsArray, IsEnum, IsIn, MinLength, MaxLength, Min, ValidateNested } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsArray, IsEnum, MinLength, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AgentConfigService } from './agent-config.service';
-import { PROVIDERS } from '../ai/model';
 
 class AgentEntryDto {
   @IsEnum(['active', 'disabled', 'expired', 'idle'])
   status!: 'active' | 'disabled' | 'expired' | 'idle';
 
-  @IsString() @IsIn(Object.keys(PROVIDERS), {
-    message: `provider must be one of: ${Object.keys(PROVIDERS).join(', ')}`,
-  })
+  @IsString() @MinLength(1) @MaxLength(100)
   provider!: string;
 
   @IsString() @MinLength(1) @MaxLength(200) model!:   string;

@@ -115,13 +115,6 @@ export interface MemoryItem {
   createdAt:  string;
 }
 
-// ─── Provider ────────────────────────────────────────────────────────────────
-
-export interface ProviderResponse {
-  provider:      string;
-  hasGlobalKey:  boolean;
-}
-
 // ─── User Settings ────────────────────────────────────────────────────────────
 
 export interface UserSettingsResponse {
@@ -195,4 +188,3 @@ export interface InquiryResponse {
 }
 
 export type AnalyticsResponse = DashboardResponse | ReportResponse | InquiryResponse;
-

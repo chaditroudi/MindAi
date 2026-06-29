@@ -250,11 +250,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     const inputTokenLimit = this.coercePositiveInt(this.st.snap.inputTokenLimit, 4_000);
 
     if (!provider) {
-      this.st.patch({ keyRejected: true, keyErrorText: 'Please select a provider before saving.' });
+      this.st.patch({ keyRejected: true, keyErrorText: 'Please enter a provider before saving.' });
       return;
     }
     if (!model) {
-      this.st.patch({ keyRejected: true, keyErrorText: 'Please enter or select a model before saving.' });
+      this.st.patch({ keyRejected: true, keyErrorText: 'Please enter a model before saving.' });
       return;
     }
     if (!trimmed) {
