@@ -61,5 +61,4 @@ export function createAnalyticsAgent(
   });
 }
 
-// Falls back to AI_API_KEY / AI_MODEL / AI_PROVIDER env vars (see src/config.ts).
 export const analyticsAgent = createAnalyticsAgent();
