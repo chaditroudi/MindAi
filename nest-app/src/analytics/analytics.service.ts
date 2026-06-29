@@ -269,6 +269,13 @@ export class AnalyticsService {
           context = context.slice(drop);
           continue;
         }
+        if (isStructuredOutputUnsupportedError(err)) {
+          throw new BadRequestException(
+            'This model does not support structured outputs required by this app. ' +
+            'For Groq, use: llama-3.3-70b-versatile or llama-3.1-8b-instant. ' +
+            'Please update your model in Settings.',
+          );
+        }
         if (isModelNotFoundError(err)) {
           throw new BadRequestException(
             'Model not found or no longer supported. Please open Settings and select a valid model for your provider.',

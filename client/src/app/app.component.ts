@@ -328,36 +328,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   readonly PROVIDER_MODELS: Record<string, ModelSuggestion[]> = {
     groq: [
-      // ── Llama 4 ──
-      { value: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick 17B (recommended)' },
-      { value: 'meta-llama/llama-4-scout-17b-16e-instruct',     label: 'Llama 4 Scout 17B' },
-      // ── Llama 3.3 ──
-      { value: 'llama-3.3-70b-versatile',                       label: 'Llama 3.3 70B Versatile' },
-      { value: 'llama-3.3-70b-specdec',                         label: 'Llama 3.3 70B SpecDec (fast)' },
-      // ── Llama 3.1 ──
-      { value: 'llama-3.1-70b-versatile',                       label: 'Llama 3.1 70B Versatile' },
-      { value: 'llama-3.1-8b-instant',                          label: 'Llama 3.1 8B Instant (fast)' },
-      // ── Llama 3.2 ──
-      { value: 'llama-3.2-90b-vision-preview',                  label: 'Llama 3.2 90B Vision' },
-      { value: 'llama-3.2-11b-vision-preview',                  label: 'Llama 3.2 11B Vision' },
-      { value: 'llama-3.2-3b-preview',                          label: 'Llama 3.2 3B' },
-      { value: 'llama-3.2-1b-preview',                          label: 'Llama 3.2 1B' },
-      // ── Llama 3 ──
-      { value: 'llama3-70b-8192',                               label: 'Llama 3 70B' },
-      { value: 'llama3-8b-8192',                                label: 'Llama 3 8B' },
-      // ── DeepSeek ──
-      { value: 'deepseek-r1-distill-llama-70b',                 label: 'DeepSeek R1 Distill Llama 70B' },
-      { value: 'deepseek-r1-distill-qwen-32b',                  label: 'DeepSeek R1 Distill Qwen 32B' },
-      // ── Qwen ──
-      { value: 'qwen-qwq-32b',                                  label: 'Qwen QwQ 32B' },
-      { value: 'qwen-2.5-72b-instruct',                         label: 'Qwen 2.5 72B Instruct' },
-      { value: 'qwen-2.5-coder-32b-instruct',                   label: 'Qwen 2.5 Coder 32B' },
-      // ── Mixtral / Gemma ──
-      { value: 'mixtral-8x7b-32768',                            label: 'Mixtral 8x7B' },
-      { value: 'gemma2-9b-it',                                  label: 'Gemma 2 9B' },
-      // ── Compound ──
-      { value: 'compound-beta',                                  label: 'Compound Beta' },
-      { value: 'compound-beta-mini',                             label: 'Compound Beta Mini (fast)' },
+      // Only models confirmed to support json_schema structured outputs on Groq.
+      // Llama 4, SpecDec, Llama 3.2 vision, DeepSeek, Qwen do NOT support it.
+      { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile (recommended)' },
+      { value: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B Instant (fast)' },
+      { value: 'llama3-70b-8192',         label: 'Llama 3 70B' },
+      { value: 'llama3-8b-8192',          label: 'Llama 3 8B (fast)' },
+      { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
+      { value: 'gemma2-9b-it',            label: 'Gemma 2 9B' },
     ],
     openai: [
       // ── GPT-4.1 ──
