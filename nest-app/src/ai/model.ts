@@ -1,4 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 import { Agent } from '@mastra/core/agent';
@@ -111,24 +113,29 @@ export function resolveModel(
 
   switch (provider) {
     case 'anthropic':
+      // Uses Anthropic's native SDK — different API format from OpenAI
       return createAnthropic({ apiKey: key })(userModel);
     case 'google':
+      // Uses Google's native SDK — hits generateContent, not chat/completions or responses
       return createGoogleGenerativeAI({ apiKey: key, baseURL })(userModel);
     case 'groq':
+      // Groq SDK handles its own endpoint correctly
       return createGroq({ apiKey: key, baseURL })(userModel);
     case 'openai':
-      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(userModel);
     case 'mistral':
     case 'together':
     case 'perplexity':
-      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(userModel);
+      // .chat() forces Chat Completions endpoint (/chat/completions)
+      // Without it, @ai-sdk/openai v2 defaults to the Responses API (/responses)
+      // which these providers do not support.
+      return createOpenAI({ apiKey: key, baseURL }).chat(userModel);
     default:
       if (!baseURL) {
         throw new Error(
-          `Unsupported provider "${provider}". Supported providers: ${Object.keys(PROVIDERS).join(', ')}.`,
+          `Unsupported provider "${provider}". Supported: ${Object.keys(PROVIDERS).join(', ')}.`,
         );
       }
-      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(userModel);
+      return createOpenAI({ apiKey: key, baseURL }).chat(userModel);
   }
 }
 
