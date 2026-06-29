@@ -15,6 +15,45 @@ export interface AggregationResult {
 
 const FORBIDDEN_STAGES = new Set(['$function', '$merge', '$out', '$where', '$eval']);
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizePipelineStage(
+  stage: unknown,
+  index: number,
+): { stage: Record<string, unknown>; strippedKeys: string[] } {
+  if (!isPlainRecord(stage)) {
+    throw new Error(`Pipeline stage ${index + 1} must be a plain object.`);
+  }
+
+  const keys = Object.keys(stage);
+  if (!keys.length) {
+    throw new Error(`Pipeline stage ${index + 1} must not be empty.`);
+  }
+
+  const operatorKeys = keys.filter(key => key.startsWith('$'));
+  if (!operatorKeys.length) {
+    throw new Error(
+      `Pipeline stage ${index + 1} must include exactly one MongoDB operator key starting with "$". ` +
+      `Found keys: ${keys.join(', ')}.`,
+    );
+  }
+
+  if (operatorKeys.length > 1) {
+    throw new Error(
+      `Pipeline stage ${index + 1} must contain exactly one MongoDB operator key. ` +
+      `Found operators: ${operatorKeys.join(', ')}.`,
+    );
+  }
+
+  const op = operatorKeys[0];
+  return {
+    stage:        { [op]: stage[op] },
+    strippedKeys: keys.filter(key => key !== op),
+  };
+}
+
 function patchConvert(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(patchConvert);
   if (value !== null && typeof value === 'object') {
@@ -73,12 +112,20 @@ function resolvePipeline(plan: TaskPlan, sources: DataSource[]): { pipeline: Rec
   }
   const collection = source?.collection ?? plan.query.sourceName!;
 
-  for (const stage of plan.pipeline) {
+  const normalizedPipeline = plan.pipeline.map((stage, index) => {
+    const normalized = normalizePipelineStage(stage, index);
+    if (normalized.strippedKeys.length) {
+      log('pipeline', `stage ${index + 1}: stripped non-operator keys [${normalized.strippedKeys.join(', ')}]`);
+    }
+    return normalized.stage;
+  });
+
+  for (const stage of normalizedPipeline) {
     const op = Object.keys(stage)[0];
     if (op && FORBIDDEN_STAGES.has(op)) throw new Error(`Pipeline stage "${op}" is not permitted`);
   }
 
-  return { pipeline: plan.pipeline, collection };
+  return { pipeline: normalizedPipeline, collection };
 }
 
 async function runPipeline(pipeline: Record<string, unknown>[], collection: string): Promise<Record<string, unknown>[]> {
@@ -124,6 +171,7 @@ export async function aggregate(
   if (!validated) return { plan, rows: [] };
 
   const { pipeline, collection } = validated;
+  plan.pipeline = pipeline;
   const rows = await runPipeline(patchConvert(pipeline) as typeof pipeline, collection);
   const durationMs = Date.now() - t0;
 

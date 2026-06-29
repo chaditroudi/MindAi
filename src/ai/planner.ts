@@ -10,6 +10,33 @@ import type { DataSource, TaskPlan, IntentKind } from '../types/index.js';
 
 const MAX_TOKENS = Number(process.env.PLANNER_MAX_TOKENS ?? 900);
 
+const pipelineStageSchema = z.record(z.unknown()).superRefine((stage, ctx) => {
+  const keys = Object.keys(stage);
+  if (!keys.length) {
+    ctx.addIssue({
+      code:    z.ZodIssueCode.custom,
+      message: 'Each pipeline stage must be a non-empty object.',
+    });
+    return;
+  }
+
+  const operatorKeys = keys.filter(key => key.startsWith('$'));
+  if (!operatorKeys.length) {
+    ctx.addIssue({
+      code:    z.ZodIssueCode.custom,
+      message: 'Each pipeline stage must include exactly one MongoDB operator key starting with "$".',
+    });
+    return;
+  }
+
+  if (operatorKeys.length > 1) {
+    ctx.addIssue({
+      code:    z.ZodIssueCode.custom,
+      message: `Each pipeline stage must contain exactly one MongoDB operator key. Found: ${operatorKeys.join(', ')}.`,
+    });
+  }
+});
+
 function buildPlanSchema(intent: IntentKind) {
   const base = z.object({
     needsData: z.boolean(),
@@ -17,7 +44,7 @@ function buildPlanSchema(intent: IntentKind) {
       sourceName: z.string().optional(),
       limit:      z.number().optional(),
     }),
-    pipeline: z.array(z.record(z.unknown())).default([]),
+    pipeline: z.array(pipelineStageSchema).default([]),
   });
 
   if (intent === 'dashboard') {
