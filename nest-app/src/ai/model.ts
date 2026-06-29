@@ -1,13 +1,85 @@
-import { createOpenAI }              from '@ai-sdk/openai';
-import { createGroq }                from '@ai-sdk/groq';
-import { createAnthropic }           from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI }  from '@ai-sdk/google';
-import type { LanguageModel }        from 'ai';
-import { wrapLanguageModel }         from 'ai';
-import { Agent }                     from '@mastra/core/agent';
+import { createOpenAI } from '@ai-sdk/openai';
+import type { LanguageModel } from 'ai';
+import { Agent } from '@mastra/core/agent';
 
-export type AgentRole  = 'supervisor' | 'writer' | 'chart' | 'memory';
-export type AIProvider = 'groq' | 'openai' | 'anthropic' | 'google';
+export type AgentRole = 'supervisor' | 'writer' | 'chart' | 'memory';
+
+// ── Provider registry ──────────────────────────────────────────────────────────
+// To add a new provider: one entry here, nothing else to change.
+// Every provider that exposes an OpenAI-compatible endpoint works out of the box.
+
+export interface ProviderConfig {
+  baseURL:  string;
+  defaults: Record<AgentRole, string>;
+}
+
+export const PROVIDERS: Record<string, ProviderConfig> = {
+  groq: {
+    baseURL:  'https://api.groq.com/openai/v1',
+    defaults: {
+      supervisor: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+      chart:      'meta-llama/llama-4-maverick-17b-128e-instruct',
+      writer:     'llama-3.3-70b-specdec',
+      memory:     'llama-3.1-8b-instant',
+    },
+  },
+  openai: {
+    baseURL:  'https://api.openai.com/v1',
+    defaults: {
+      supervisor: 'gpt-4.1',
+      chart:      'gpt-4.1',
+      writer:     'gpt-4.1-mini',
+      memory:     'gpt-4.1-mini',
+    },
+  },
+  google: {
+    baseURL:  'https://generativelanguage.googleapis.com/v1beta/openai',
+    defaults: {
+      supervisor: 'gemini-2.5-flash',
+      chart:      'gemini-2.5-flash',
+      writer:     'gemini-2.5-flash',
+      memory:     'gemini-2.5-flash-lite-preview',
+    },
+  },
+  anthropic: {
+    baseURL:  'https://api.anthropic.com/v1',
+    defaults: {
+      supervisor: 'claude-sonnet-4-6',
+      chart:      'claude-sonnet-4-6',
+      writer:     'claude-haiku-4-5-20251001',
+      memory:     'claude-haiku-4-5-20251001',
+    },
+  },
+  mistral: {
+    baseURL:  'https://api.mistral.ai/v1',
+    defaults: {
+      supervisor: 'mistral-large-latest',
+      chart:      'mistral-large-latest',
+      writer:     'mistral-small-latest',
+      memory:     'mistral-small-latest',
+    },
+  },
+  together: {
+    baseURL:  'https://api.together.xyz/v1',
+    defaults: {
+      supervisor: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+      chart:      'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+      writer:     'meta-llama/Llama-3.1-8B-Instruct-Turbo',
+      memory:     'meta-llama/Llama-3.1-8B-Instruct-Turbo',
+    },
+  },
+  perplexity: {
+    baseURL:  'https://api.perplexity.ai',
+    defaults: {
+      supervisor: 'llama-3.1-sonar-large-128k-online',
+      chart:      'llama-3.1-sonar-large-128k-online',
+      writer:     'llama-3.1-sonar-small-128k-online',
+      memory:     'llama-3.1-sonar-small-128k-online',
+    },
+  },
+};
+
+// ── Role → env key for optional model name overrides ─────────────────────────
 
 const ROLE_ENV_KEYS: Record<AgentRole, string> = {
   supervisor: 'SUPERVISOR_MODEL',
@@ -23,73 +95,36 @@ const TIMEOUT_ENV_KEYS: Record<AgentRole, string> = {
   memory:     'WRITER_TIMEOUT_MS',
 };
 
-const PROVIDER_DEFAULTS: Record<AIProvider, Record<AgentRole, string>> = {
-  groq: {
-    supervisor: 'meta-llama/llama-4-maverick-17b-128e-instruct',
-    chart:      'meta-llama/llama-4-maverick-17b-128e-instruct',
-    writer:     'llama-3.3-70b-specdec',
-    memory:     'llama-3.1-8b-instant',
-  },
-  openai: {
-    supervisor: 'gpt-4.1',
-    chart:      'gpt-4.1',
-    writer:     'gpt-4.1-mini',
-    memory:     'gpt-4.1-mini',
-  },
-  anthropic: {
-    supervisor: 'claude-sonnet-4-6',
-    chart:      'claude-sonnet-4-6',
-    writer:     'claude-haiku-4-5-20251001',
-    memory:     'claude-haiku-4-5-20251001',
-  },
-  google: {
-    supervisor: 'gemini-2.5-flash',
-    chart:      'gemini-2.5-flash',
-    writer:     'gemini-2.5-flash',
-    memory:     'gemini-2.5-flash-lite-preview',
-  },
-};
+// ── Provider detection from API key prefix ────────────────────────────────────
 
-export function detectProvider(apiKey: string): AIProvider {
+export function detectProvider(apiKey: string): string {
   if (apiKey.startsWith('sk-ant-')) return 'anthropic';
   if (apiKey.startsWith('AIza'))   return 'google';
   if (apiKey.startsWith('sk-'))    return 'openai';
   return 'groq';
 }
 
-export function resolveModel(role: AgentRole, apiKey?: string, userModel?: string, userProvider?: string): LanguageModel {
-  const key      = apiKey ?? process.env['GROQ_API_KEY'] ?? process.env['OPENAI_API_KEY'] ?? '';
-  const provider = (userProvider as AIProvider | undefined) ?? detectProvider(key);
-  const model    = userModel ?? process.env[ROLE_ENV_KEYS[role]]?.trim() ?? PROVIDER_DEFAULTS[provider][role];
+// ── Single model resolver — one createOpenAI call for every provider ──────────
 
-  switch (provider) {
-    case 'anthropic':
-      return createAnthropic({ apiKey: key })(model);
-    case 'google':
-      return createGoogleGenerativeAI({ apiKey: key })(model);
-    case 'openai':
-      return createOpenAI({ apiKey: key }).chat(model);
-    case 'groq':
-      return wrapLanguageModel({
-        model: createGroq({ apiKey: key })(model),
-        middleware: {
-          transformParams: async ({ params }) => ({
-            ...params,
-            providerOptions: {
-              ...params.providerOptions,
-              groq: { ...params.providerOptions?.['groq'], structuredOutputs: false },
-            },
-          }),
-        },
-      });
-    default:
-      // OpenAI-compatible fallback — covers Mistral, Together AI, Perplexity, etc.
-      // Set PROVIDER_BASE_URL env var for providers that need a custom endpoint.
-      return createOpenAI({
-        apiKey:  key,
-        baseURL: process.env[`${provider.toUpperCase()}_BASE_URL`],
-      }).chat(model);
-  }
+export function resolveModel(
+  role:          AgentRole,
+  apiKey?:       string,
+  userModel?:    string,
+  userProvider?: string,
+): LanguageModel {
+  const key      = apiKey ?? process.env['GROQ_API_KEY'] ?? process.env['OPENAI_API_KEY'] ?? '';
+  const provider = userProvider ?? detectProvider(key);
+  const cfg      = PROVIDERS[provider];
+  const model    = userModel
+    ?? process.env[ROLE_ENV_KEYS[role]]?.trim()
+    ?? cfg?.defaults[role]
+    ?? 'gpt-4o-mini';
+
+  return createOpenAI({
+    apiKey:        key,
+    baseURL:       cfg?.baseURL,
+    compatibility: 'compatible',
+  })(model);
 }
 
 export function freshSignal(role: AgentRole): AbortSignal {
@@ -97,11 +132,11 @@ export function freshSignal(role: AgentRole): AbortSignal {
   return AbortSignal.timeout(ms);
 }
 
-export function createSkillAgent( 
-  role: AgentRole,
-  instructions: string,
-  apiKey?: string,
-  userModel?: string,
+export function createSkillAgent(
+  role:          AgentRole,
+  instructions:  string,
+  apiKey?:       string,
+  userModel?:    string,
   userProvider?: string,
 ): Agent {
   return new Agent({
