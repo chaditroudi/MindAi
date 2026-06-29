@@ -16,7 +16,8 @@ const analyticsInputSchema = z.object({
 export const analyticsRouter = Router();
 
 analyticsRouter.get('/provider', (_req, res) => {
-  res.json({ provider: 'groq' });
+  // Provider is determined per-user from their saved API key — no server-level default.
+  res.json({ provider: '', hasGlobalKey: false });
 });
 
 analyticsRouter.post('/analytics', loadSession, saveSession, async (req, res) => {
