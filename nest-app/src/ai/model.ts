@@ -121,9 +121,8 @@ export function resolveModel(
     ?? 'gpt-4o-mini';
 
   return createOpenAI({
-    apiKey:        key,
-    baseURL:       cfg?.baseURL,
-    compatibility: 'compatible',
+    apiKey:   key,
+    baseURL:  cfg?.baseURL,
   })(model);
 }
 

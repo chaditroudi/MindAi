@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { UserSettingsRepository } from './user-settings.repository';
 import type { UserSettingsDocument } from './user-settings.repository';
-import { detectProvider } from '../ai/model';
+import { detectProvider, PROVIDERS } from '../ai/model';
 
 export interface UserSettingsDto {
   apiKey:           string;
@@ -18,122 +18,35 @@ export interface ValidationResult {
 
 const TIMEOUT_MS = 8_000;
 
-// ── Per-provider validation ────────────────────────────────────────────────────
+// ── Generic validator ──────────────────────────────────────────────────────────
+// Uses the PROVIDERS registry from model.ts — same baseURL, no duplication.
+// Every provider that exposes GET /models (all OpenAI-compatible ones) works here.
 
-// ── Shared helpers ─────────────────────────────────────────────────────────────
+async function validateApiKey(apiKey: string, provider: string): Promise<void> {
+  const cfg = PROVIDERS[provider];
+  if (!cfg) return; // unknown provider → skip, first real request surfaces errors
 
-function isAuthError(status: number): boolean {
-  return status === 400 || status === 401 || status === 403;
-}
-
-function modelInList(model: string, ids: string[]): boolean {
-  if (!ids.length) return true; // empty list → skip check (e.g. rate-limited list endpoint)
-  const needle = model.toLowerCase();
-  return ids.some(id => id.toLowerCase() === needle || id.toLowerCase().includes(needle));
-}
-
-// ── Per-provider validators ────────────────────────────────────────────────────
-
-async function validateGroq(apiKey: string, model: string): Promise<void> {
   let res: Response;
   try {
-    res = await fetch('https://api.groq.com/openai/v1/models', {
+    res = await fetch(`${cfg.baseURL}/models`, {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal:  AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
-    throw new HttpException('Cannot reach Groq. Check your network connection.', HttpStatus.BAD_GATEWAY);
+    throw new HttpException(
+      `Cannot reach ${provider}. Check your network connection.`,
+      HttpStatus.BAD_GATEWAY,
+    );
   }
-  if (isAuthError(res.status)) {
-    throw new BadRequestException('Invalid Groq API key. Get yours at console.groq.com/keys');
+
+  if (res.status === 401 || res.status === 403) {
+    throw new BadRequestException(`Invalid ${provider} API key.`);
   }
-  if (res.status === 429) return; // rate-limited → key is valid
-  if (!res.ok) throw new HttpException(`Groq returned ${res.status}. Try again later.`, HttpStatus.BAD_GATEWAY);
-  const body = await res.json() as { data: { id: string }[] };
-  const ids  = body.data?.map((m: { id: string }) => m.id) ?? [];
-  if (!modelInList(model, ids)) {
-    throw new BadRequestException(`Model "${model}" not found on Groq. Available: ${ids.slice(0, 5).join(', ')}…`);
-  }
+  // 429 = rate-limited but key is valid → allow save
+  // other non-OK = provider endpoint temporarily down → don't block save
 }
 
-async function validateOpenAI(apiKey: string, model: string): Promise<void> {
-  let res: Response;
-  try {
-    res = await fetch('https://api.openai.com/v1/models', {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      signal:  AbortSignal.timeout(TIMEOUT_MS),
-    });
-  } catch {
-    throw new HttpException('Cannot reach OpenAI. Check your network connection.', HttpStatus.BAD_GATEWAY);
-  }
-  if (isAuthError(res.status)) {
-    throw new BadRequestException('Invalid OpenAI API key. Get yours at platform.openai.com/api-keys');
-  }
-  if (res.status === 429) return; // rate-limited → key is valid
-  if (!res.ok) throw new HttpException(`OpenAI returned ${res.status}. Try again later.`, HttpStatus.BAD_GATEWAY);
-  const body = await res.json() as { data: { id: string }[] };
-  const ids  = body.data?.map((m: { id: string }) => m.id) ?? [];
-  if (!modelInList(model, ids)) {
-    throw new BadRequestException(`Model "${model}" not available on your OpenAI account.`);
-  }
-}
-
-async function validateAnthropic(apiKey: string, model: string): Promise<void> {
-  let res: Response;
-  try {
-    res = await fetch('https://api.anthropic.com/v1/models', {
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      signal:  AbortSignal.timeout(TIMEOUT_MS),
-    });
-  } catch {
-    throw new HttpException('Cannot reach Anthropic. Check your network connection.', HttpStatus.BAD_GATEWAY);
-  }
-  if (isAuthError(res.status)) {
-    throw new BadRequestException('Invalid Anthropic API key. Get yours at console.anthropic.com');
-  }
-  if (res.status === 429) return; // rate-limited → key is valid
-  if (!res.ok) throw new HttpException(`Anthropic returned ${res.status}. Try again later.`, HttpStatus.BAD_GATEWAY);
-  const body = await res.json() as { data: { id: string }[] };
-  const ids  = body.data?.map((m: { id: string }) => m.id) ?? [];
-  if (!modelInList(model, ids)) {
-    throw new BadRequestException(`Model "${model}" not found on Anthropic. Check the model ID.`);
-  }
-}
-
-async function validateGoogle(apiKey: string, model: string): Promise<void> {
-  let res: Response;
-  try {
-    res = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
-      headers: { 'x-goog-api-key': apiKey },
-      signal:  AbortSignal.timeout(TIMEOUT_MS),
-    });
-  } catch {
-    throw new HttpException('Cannot reach Google AI. Check your network connection.', HttpStatus.BAD_GATEWAY);
-  }
-  if (isAuthError(res.status)) {
-    throw new BadRequestException('Invalid Google AI API key. Get yours at aistudio.google.com/apikey');
-  }
-  if (res.status === 429) return; // quota exhausted → key is valid, just rate-limited
-  if (!res.ok) throw new HttpException(`Google AI returned ${res.status}. Try again later.`, HttpStatus.BAD_GATEWAY);
-  const body  = await res.json() as { models: { name: string }[] };
-  const names = body.models?.map((m: { name: string }) => m.name.split('/').pop() ?? m.name) ?? [];
-  if (!modelInList(model, names)) {
-    throw new BadRequestException(`Model "${model}" not found on Google AI. Check the model ID.`);
-  }
-}
-
-// ── Main service ───────────────────────────────────────────────────────────────
-
-// Registry — add a new entry here to support a new provider's key validation.
-// Providers not in this map are auto-detected from the key prefix; if still
-// unknown, validation is skipped and the first real request surfaces errors.
-type Validator = (apiKey: string, model: string) => Promise<void>;
-const VALIDATORS: Record<string, Validator> = {
-  groq:      validateGroq,
-  openai:    validateOpenAI,
-  anthropic: validateAnthropic,
-  google:    validateGoogle,
-};
+// ── Service ────────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class UserSettingsService {
@@ -141,10 +54,10 @@ export class UserSettingsService {
 
   async validate(dto: UserSettingsDto): Promise<ValidationResult> {
     const { apiKey, provider, model } = dto;
-    // If the provider string isn't in the registry, fall back to auto-detecting
-    // it from the API key prefix (AIza → google, sk-ant- → anthropic, etc.)
-    const effective = VALIDATORS[provider] ? provider : detectProvider(apiKey);
-    await VALIDATORS[effective]?.(apiKey, model);
+    // Resolve effective provider: use the user's string if it's in the registry,
+    // otherwise auto-detect from the API key prefix (AIza→google, sk-ant-→anthropic, etc.)
+    const effective = PROVIDERS[provider] ? provider : detectProvider(apiKey);
+    await validateApiKey(apiKey, effective);
     return { ok: true, provider, model };
   }
 
