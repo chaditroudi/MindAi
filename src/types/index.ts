@@ -26,9 +26,6 @@ export interface DataSourceJoin {
   as:           string;
 }
 
-// Pre-built visualization suggestions stored in the source definition.
-// The chart builder can consult these before asking the LLM, and the planner
-// can use the bundled pipeline to avoid a round-trip aggregation decision.
 export interface SuggestedChart {
   title:        string;
   description?: string;

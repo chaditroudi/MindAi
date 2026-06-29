@@ -16,8 +16,6 @@ const analyticsInputSchema = z.object({
   prompt: z.string().min(1).max(1000),
 });
 
-// Factory: creates an agent with per-request credentials so each user's
-// model/provider/API key is used both for the supervisor and all tool calls.
 export function createAnalyticsAgent(
   apiKey?:   string,
   model?:    string,
@@ -63,6 +61,5 @@ export function createAnalyticsAgent(
   });
 }
 
-// System-level singleton — used by the Mastra server when no user context is available.
 // Falls back to AI_API_KEY / AI_MODEL / AI_PROVIDER env vars (see src/config.ts).
 export const analyticsAgent = createAnalyticsAgent();
