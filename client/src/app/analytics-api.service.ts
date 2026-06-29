@@ -37,7 +37,7 @@ export class AnalyticsApiService {
     return this.req(this.http.post<{ ok: boolean; provider: string; model: string }>('/api/settings/validate', dto));
   }
 
-  saveSettings(userId: string, dto: { apiKey: string; provider: string; model: string; inputTokenLimit?: number }): Promise<{ ok: boolean; provider: string; model: string }> {
+  saveSettings(userId: string, dto: { apiKey: string; provider: string; model: string; inputTokenLimit?: number; supervisorModel?: string; chartModel?: string; writerModel?: string; memoryModel?: string }): Promise<{ ok: boolean; provider: string; model: string }> {
     const headers = new HttpHeaders({ 'X-User-Id': userId });
     return this.req(this.http.post<{ ok: boolean; provider: string; model: string }>('/api/settings', dto, { headers }));
   }

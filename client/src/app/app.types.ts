@@ -132,6 +132,10 @@ export interface UserSettingsResponse {
   inputTokenLimit?:  number;
   inputTokensUsed?:  number;
   outputTokensUsed?: number;
+  supervisorModel?:  string;
+  chartModel?:       string;
+  writerModel?:      string;
+  memoryModel?:      string;
 }
 
 // ─── Memory config ────────────────────────────────────────────────────────────

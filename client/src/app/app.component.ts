@@ -75,6 +75,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   testError  = '';
   modalKey   = '';
 
+  // Per-role model overrides (Option A: same key/provider, different model per agent)
+  supervisorModel = '';
+  chartModel      = '';
+  writerModel     = '';
+  memoryModel     = '';
+
   // Agent config editing state
   configSaving = false;
   configError  = '';
@@ -207,6 +213,10 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           selectedModel:   res.model           ?? '',
           inputTokenLimit: res.inputTokenLimit ?? 4_000,
         });
+        this.supervisorModel = res.supervisorModel ?? '';
+        this.chartModel      = res.chartModel      ?? '';
+        this.writerModel     = res.writerModel     ?? '';
+        this.memoryModel     = res.memoryModel     ?? '';
       } else {
         this.st.patch({ hasKey: false, showKeyModal: true });
       }
@@ -235,7 +245,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
 
     try {
-      await this.api.saveSettings(this.st.snap.userId, { apiKey: trimmed, provider, model, inputTokenLimit });
+      await this.api.saveSettings(this.st.snap.userId, {
+        apiKey: trimmed, provider, model, inputTokenLimit,
+        supervisorModel: this.supervisorModel.trim() || undefined,
+        chartModel:      this.chartModel.trim()      || undefined,
+        writerModel:     this.writerModel.trim()      || undefined,
+        memoryModel:     this.memoryModel.trim()      || undefined,
+      });
       this.st.patch({
         hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
         provider, selectedModel: model, inputTokenLimit,
