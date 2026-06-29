@@ -286,44 +286,21 @@ export class PipelineService {
       const content = stage[op] as Record<string, unknown> | undefined;
       if (!op || !content) continue;
 
-      switch (op) {
-        case '$match':
-        case '$sort':
-          for (const k of Object.keys(content)) {
-            if (!k.startsWith('$')) addBad(k.split('.')[0]);
-          }
-          walkRefs(content);
-          break;
-
-        case '$group':
-          walkRefs(content);
-          for (const k of Object.keys(content)) {
-            if (k !== '_id') computed.add(k);
-          }
-          break;
-
-        case '$addFields':
-        case '$set':
-          walkRefs(content);
-          for (const k of Object.keys(content)) computed.add(k);
-          break;
-
-        case '$project':
-          walkRefs(content);
-          for (const k of Object.keys(content)) {
-            if (k !== '_id') computed.add(k);
-          }
-          break;
-
-        case '$lookup':
-          if (typeof content['localField'] === 'string') {
-            addBad((content['localField'] as string).split('.')[0]);
-          }
-          if (typeof content['as'] === 'string') computed.add(content['as'] as string);
-          break;
-
-        default:
-          walkRefs(content);
+      const behavior = STAGE_BEHAVIORS[op];
+      if (!behavior) {
+        walkRefs(content);
+      } else {
+        if (behavior.validateKeys) {
+          for (const k of Object.keys(content)) if (!k.startsWith('$')) addBad(k.split('.')[0]);
+        }
+        if (behavior.walkValues)  walkRefs(content);
+        if (behavior.computeKeys) {
+          for (const k of Object.keys(content)) if (!behavior.skipIdKey || k !== '_id') computed.add(k);
+        }
+        if (behavior.special === 'lookup') {
+          if (typeof content['localField'] === 'string') addBad((content['localField'] as string).split('.')[0]);
+          if (typeof content['as'] === 'string')         computed.add(content['as'] as string);
+        }
       }
     }
 
@@ -460,7 +437,7 @@ export class PipelineService {
     if (chart.widgets?.length && !context.length) {
       this.cache.setCached(DASHBOARD_FULL_INTENT, prompt, chart).catch(() => undefined);
     }
-    return dispatched;
+    return dispatched as ExecuteResult<DashboardSpec | InquiryResult>;
   }
 
   async executeReport(
