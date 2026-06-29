@@ -9,7 +9,7 @@ metadata:
   author: mind-platform
   version: "1.0.0"
   category: data-ai
-  tags: ["writer", "report", "inquiry", "groq", "mastra", "multilingual"]
+  tags: ["writer", "report", "inquiry", "multi-provider", "mastra", "multilingual"]
 ---
 
 # Writer Skill

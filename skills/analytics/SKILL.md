@@ -2,19 +2,19 @@
 name: analytics
 description: >-
   Mind Platform analytics orchestrator. Routes each intent through a two-step
-  skill chain: aggregate data then generate output. Uses Groq-backed planning
-  and writing models with deterministic execution in code.
+  skill chain: aggregate data then generate output. Provider, model, and API key
+  are resolved dynamically from user settings — no provider is hardcoded.
 license: Apache-2.0
 metadata:
   author: mind-platform
   version: "1.0.0"
   category: data-ai
-  tags: ["analytics", "mongodb", "mastra", "groq", "dashboard", "report"]
+  tags: ["analytics", "mongodb", "mastra", "multi-provider", "dashboard", "report"]
 ---
 
 # Mind Platform Analytics
 
-**Model:** `resolveModel('supervisor')` — `src/ai/model.ts`
+**Model:** Dynamic — `resolveModel('supervisor', apiKey, model, provider)` with user-configured credentials
 **Implementation:** `src/session/agent.ts`
 **Runtime Prompt:** `## Runtime Prompt` in this file
 
