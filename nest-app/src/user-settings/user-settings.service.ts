@@ -152,6 +152,11 @@ export class UserSettingsService {
     return this.repo.findByUser(userId);
   }
 
+  async incrementUsage(userId: string, inputTokens: number, outputTokens: number): Promise<void> {
+    if (inputTokens <= 0 && outputTokens <= 0) return;
+    await this.repo.incrementUsage(userId, inputTokens, outputTokens);
+  }
+
   async deleteByUser(userId: string): Promise<void> {
     await this.repo.deleteByUser(userId);
   }

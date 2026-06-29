@@ -11,8 +11,11 @@ export class UserSettings {
   @Prop({ required: true })                            provider!: string;
   @Prop({ required: true })                            model!:    string;
 
-  // How many input tokens the user's personal key allows per request
   @Prop({ min: 1, default: 4_000 }) inputTokenLimit?: number;
+
+  // Lifetime accumulated usage for this user's personal key
+  @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
+  @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
 }
 
 export type UserSettingsDocument = HydratedDocument<UserSettings>;
@@ -36,6 +39,13 @@ export class UserSettingsRepository {
 
   async findByUser(userId: string): Promise<UserSettingsDocument | null> {
     return this.model.findOne({ userId }).lean() as Promise<UserSettingsDocument | null>;
+  }
+
+  async incrementUsage(userId: string, inputTokens: number, outputTokens: number): Promise<void> {
+    await this.model.updateOne(
+      { userId },
+      { $inc: { inputTokensUsed: inputTokens, outputTokensUsed: outputTokens } },
+    );
   }
 
   async deleteByUser(userId: string): Promise<void> {
