@@ -235,6 +235,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.chartModel      = res.chartModel      ?? '';
         this.writerModel     = res.writerModel     ?? '';
         this.memoryModel     = res.memoryModel     ?? '';
+        void this.loadModels();
       } else {
         this.st.patch({ hasKey: false, showKeyModal: true });
       }
@@ -364,16 +365,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   async loadNewAgentModels(): Promise<void> {
     const provider = this.effectiveProvider(this.newAgent.provider);
-    const apiKey   = this.newAgent.apiKey.trim();
-    if (!provider || !apiKey) {
-      this.newAgentModelsError = 'Enter the agent provider and API key first, then click Load models.';
+    if (!provider) {
+      this.newAgentModelsError = 'Select a provider first.';
       return;
     }
-
     this.newAgentModelsLoading = true;
     this.newAgentModelsError   = '';
     try {
-      this.newAgentLoadedModels = await this.fetchModels(provider, apiKey);
+      this.newAgentLoadedModels = await this.fetchModels(provider);
     } catch (err) {
       this.newAgentModelsError  = err instanceof Error ? err.message : 'Failed to load models.';
       this.newAgentLoadedModels = [];
@@ -384,15 +383,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   async loadModels(): Promise<void> {
     const provider = this.effectiveProvider(this.st.snap.provider);
-    const apiKey   = this.modalKey.trim();
-    if (!provider || !apiKey) {
-      this.modelsError = 'Enter your API key first, then click Load models.';
-      return;
-    }
+    if (!provider) return;
     this.modelsLoading = true;
     this.modelsError   = '';
     try {
-      this.loadedModels = await this.fetchModels(provider, apiKey);
+      this.loadedModels = await this.fetchModels(provider);
     } catch (err) {
       this.modelsError  = err instanceof Error ? err.message : 'Failed to load models.';
       this.loadedModels = [];
@@ -747,8 +742,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : fallback;
   }
 
-  private async fetchModels(provider: string, apiKey: string): Promise<ModelOption[]> {
-    const res  = await this.api.listModels({ provider, apiKey });
+  private async fetchModels(provider: string): Promise<ModelOption[]> {
+    const res  = await this.api.listModels({ provider });
     const seen = new Set<string>();
     return res.models
       .map(model => ({
