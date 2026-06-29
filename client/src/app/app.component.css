@@ -460,7 +460,8 @@
   align-items: center;
   gap: 0.5rem;
 }
-.result-timing { font-size: 0.72rem; color: #9ca3af; }
+.result-timing  { font-size: 0.72rem; color: #9ca3af; }
+.result-tokens  { font-size: 0.72rem; color: #9ca3af; padding: 0.1rem 0.45rem; background: #1f2937; border-radius: 9999px; }
 
 .widget-grid {
   display: grid;
