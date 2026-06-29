@@ -787,7 +787,7 @@
         [disabled]="!s.provider">
         <option value="">— select a model —</option>
         @if (isUnlistedModel(s.provider, s.selectedModel)) {
-          <option [value]="s.selectedModel ?? ''">{{ s.selectedModel }} ⚠ not in list</option>
+          <option [value]="s.selectedModel">{{ s.selectedModel }} ⚠ not in list</option>
         }
         @for (m of modelsForProvider(s.provider); track m.value) {
           <option [value]="m.value">{{ m.label }}</option>
