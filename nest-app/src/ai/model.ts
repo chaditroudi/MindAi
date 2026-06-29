@@ -66,12 +66,12 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
     case 'google':
       return createGoogleGenerativeAI({ apiKey: key })(model);
     case 'openai':
-      return createOpenAI({ apiKey: key })(model);
+      return createOpenAI({ apiKey: key }).chat(model);
     default:
       return createOpenAI({
         baseURL: 'https://api.groq.com/openai/v1',
         apiKey:  key,
-      })(model);
+      }).chat(model);
   }
 }
 
