@@ -1,5 +1,5 @@
 import { log, logTrace }                    from '../common/logger/app.logger';
-import { createSkillAgent, freshSignal }    from './model';
+import { createSkillAgent, freshSignal, skillProviderOptions } from './model';
 import type { TokenUsage }                  from './token';
 import { buildChartPrompt }          from '../prompts';
 import type { DashboardSpec, SkillKind, ChartHint, DataSource } from '../types';
@@ -75,6 +75,7 @@ export async function runChart(
         structuredOutput: { schema: dashboardSchema },
         modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 1 },
         abortSignal:      freshSignal('chart'),
+        providerOptions:  skillProviderOptions(apiKey, userProvider),
       },
     );
     plan     = result.object as LlmDashboard;

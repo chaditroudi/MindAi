@@ -195,14 +195,24 @@ export function createSkillAgent(
   userModel?:    string,
   userProvider?: string,
 ): Agent {
-  const prov = normalizeProvider(userProvider) ?? detectProvider(apiKey?.trim() ?? '');
   return new Agent({
     id:           role,
     name:         role,
     instructions,
     model:        resolveModel(role, apiKey, userModel, userProvider),
-    // Groq's json_schema strict mode rejects open schemas (z.record/additionalProperties).
-    // json_object mode is fully compatible and Zod validates the structure client-side.
-    providerOptions: prov === 'groq' ? { groq: { structuredOutputs: false } } : undefined,
   });
+}
+
+/**
+ * Returns provider-specific options for agent.generate() calls.
+ * Groq's json_schema strict mode rejects open schemas (z.record / additionalProperties).
+ * Setting structuredOutputs:false uses json_object mode instead — valid JSON is still
+ * required and Zod validates the shape on our side.
+ */
+export function skillProviderOptions(
+  apiKey?:       string,
+  userProvider?: string,
+): Record<string, unknown> | undefined {
+  const prov = normalizeProvider(userProvider) ?? detectProvider(apiKey?.trim() ?? '');
+  return prov === 'groq' ? { groq: { structuredOutputs: false } } : undefined;
 }

@@ -1,7 +1,7 @@
 import type { CoreMessage } from 'ai';
 import type { TokenUsage } from './token';
 import { z } from 'zod';
-import { createSkillAgent, freshSignal } from './model';
+import { createSkillAgent, freshSignal, skillProviderOptions } from './model';
 import { interpolateTemplate, readMarkdownSection, skillFile } from './skill-prompt';
 import { normalizeToken } from '../sources/sources-cache';
 import { log } from '../common/logger/app.logger';
@@ -188,6 +188,7 @@ export async function runSupervisorPlan({
       structuredOutput: { schema: buildPlanSchema(intent) },
       modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 1 },
       abortSignal:      freshSignal('supervisor'),
+      providerOptions:  skillProviderOptions(apiKey, userProvider),
     },
   );
 
