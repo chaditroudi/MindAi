@@ -19,7 +19,7 @@ export interface ChartDefinition {
   requiresXY?:         boolean;
   requiresValue?:      boolean;
 }
-
+  
 interface SkillConfig {
   aggregations: string[];
   layouts:      string[];
