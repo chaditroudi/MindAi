@@ -9,18 +9,18 @@ import type { DashboardSpec } from '../types/index.js';
 
 const CACHE_INTENT = 'report:full';
 
-
 export type ReportResult = {
   reportSections: { heading: string; body: string }[];
   chart?: DashboardSpec;
 };
 
 export async function executeReport(
-  prompt:  string,
-  context: CoreMessage[] = [],
-  apiKey?: string,
+  prompt:    string,
+  context:   CoreMessage[] = [],
+  apiKey?:   string,
+  model?:    string,
+  provider?: string,
 ): Promise<ReportResult> {
-  // Return cached result for the same prompt — avoids burning API quota on retries
   if (!context.length) {
     const cached = await getCached<ReportResult>(CACHE_INTENT, prompt);
     if (cached) {
@@ -29,7 +29,7 @@ export async function executeReport(
     }
   }
 
-  const { plan, rows } = await aggregate(prompt, 'report', context, apiKey);
+  const { plan, rows } = await aggregate(prompt, 'report', context, apiKey, model, provider);
 
   if (!plan.skills.includes('report')) {
     return { reportSections: [{ heading: 'No Data', body: 'The request could not be answered from the available sources.' }] };
@@ -49,13 +49,13 @@ export async function executeReport(
     );
     const chartFallback = { layout: 'analytical' as const, title: prompt, summary: '', widgets: [] };
 
-    const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey });
+    const reportResult = await runReportSkill({ rows, prompt, withChart: true, apiKey, model, provider });
     log('report', `report done | sections: ${reportResult.reportSections.length} — generating chart`);
-    const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
+    const chartResult = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, model, provider)
       .catch(() => chartFallback);
     result = { ...reportResult, ...(chartResult.widgets.length ? { chart: chartResult } : {}) };
   } else {
-    result = await runReportSkill({ rows, prompt, apiKey });
+    result = await runReportSkill({ rows, prompt, apiKey, model, provider });
     log('report', `done | sections: ${result.reportSections.length}`);
   }
 
