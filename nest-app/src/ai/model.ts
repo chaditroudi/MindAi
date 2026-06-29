@@ -15,7 +15,7 @@ type ProviderName = keyof typeof PROVIDERS;
 export const PROVIDERS: Record<string, string> = {
   groq:       'https://api.groq.com/openai/v1',
   openai:     'https://api.openai.com/v1',
-  google:     'https://generativelanguage.googleapis.com/v1beta/openai',
+  google:     'https://generativelanguage.googleapis.com/v1beta',
   anthropic:  'https://api.anthropic.com/v1',
   mistral:    'https://api.mistral.ai/v1',
   together:   'https://api.together.xyz/v1',
