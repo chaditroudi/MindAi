@@ -42,15 +42,23 @@ userKeyRouter.post('/key', async (req, res) => {
     const { apiKey, model, provider: dtoProvider } = saveSchema.parse(req.body);
     const key = apiKey.trim();
 
-    // Provider must be explicitly supplied or auto-detected from key prefix — no groq default.
+    // Provider must be explicitly supplied or auto-detected from key prefix — no silent default.
     const resolvedProvider = dtoProvider?.trim() || resolveProvider(key)?.name;
     if (!resolvedProvider) {
       res.status(400).json({ error: 'Could not detect provider from key. Please select your provider manually.' });
       return;
     }
 
+    const baseURL = PROVIDERS[resolvedProvider];
+    if (!baseURL) {
+      res.status(400).json({
+        error: `Unknown provider "${resolvedProvider}". Supported: ${Object.keys(PROVIDERS).join(', ')}.`,
+      });
+      return;
+    }
+
     const detected = resolveProvider(key);
-    const verifyUrl = detected?.url ?? `${PROVIDERS[resolvedProvider]}/models`;
+    const verifyUrl = detected?.url ?? `${baseURL}/models`;
     const status = await pingKey(key, verifyUrl);
 
     if (status === 'invalid') {
