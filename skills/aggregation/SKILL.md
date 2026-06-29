@@ -199,11 +199,14 @@ HOW to join (strict order):
      Use preserveNullAndEmptyArrays: true when the FK field is optional.
   5. Reference joined fields with dot-notation: "$<as>.<fieldName>"
      Example: after joining clients as "client" → use "$client.country"
-  6. In the final $project, suppress both _id fields:
-       { "$project": { "_id": 0, "<as>._id": 0, ... } }
+  6. Remove the joined _id with a $unset stage placed BEFORE $project — do NOT
+     exclude it inside $project (MongoDB forbids mixing exclusion + inclusion):
+       { "$unset": "<as>._id" }
+     Then the final $project lists only the fields you WANT (never exclude joined _id there):
+       { "$project": { "_id": 0, "label": "...", "value": "..." } }
 
-EXAMPLE — "total budget per client country":
-  query.sourceName = "projects"   ← has the clientId foreign key
+EXAMPLE A — grouped result (no $unset needed — $group replaces all raw fields):
+  query.sourceName = "projects"
   pipeline:
     { "$match": { "budget": { "$ne": null } } }
     { "$lookup": { "from": "clients", "localField": "clientId", "foreignField": "_id", "as": "client" } }
@@ -212,6 +215,16 @@ EXAMPLE — "total budget per client country":
     { "$project": { "_id": 0, "label": "$_id", "value": "$totalBudget" } }
     { "$sort": { "value": -1 } }
     { "$limit": 20 }
+
+EXAMPLE B — raw list with joined fields ($unset REQUIRED before $project):
+  query.sourceName = "projects"
+  pipeline:
+    { "$lookup": { "from": "clients", "localField": "clientId", "foreignField": "_id", "as": "client" } }
+    { "$unwind": { "path": "$client", "preserveNullAndEmptyArrays": true } }
+    { "$unset": "client._id" }
+    { "$project": { "_id": 0, "title": 1, "budget": 1, "client.name": 1, "client.country": 1 } }
+    { "$sort": { "budget": -1 } }
+    { "$limit": 50 }
 
 ══════════════════════════════════════════════════════════
 LIMITS & PERFORMANCE

@@ -146,6 +146,11 @@ export class PipelineService {
             hint = `MongoDB aggregation error: "${msg}". When converting integer/string fields to dates, always use $convert with onError: null and onNull: null, e.g. { $convert: { input: "$field", to: "date", onError: null, onNull: null } }.`;
             continue;
           }
+          if (lower.includes('exclusion') && lower.includes('inclusion projection')) {
+            hint = `MongoDB aggregation error: "${msg}". In a $project that includes fields (field: 1), you CANNOT also exclude nested fields like "<join>._id": 0 — MongoDB forbids mixing exclusion and inclusion except for the root "_id". Instead, add a separate $unset stage BEFORE $project to remove the joined _id: { "$unset": "<joinAlias>._id" }. Then $project only lists the fields you want (never exclude joined _id there).`;
+            this.logger.warn(`retrying after MongoDB projection mix error`);
+            continue;
+          }
           if (
             lower.includes('only supports date') ||
             lower.includes('arguments to $date') ||
