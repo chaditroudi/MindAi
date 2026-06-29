@@ -23,12 +23,12 @@ const TIMEOUT_MS = 8_000;
 // Every provider that exposes GET /models (all OpenAI-compatible ones) works here.
 
 async function validateApiKey(apiKey: string, provider: string): Promise<void> {
-  const cfg = PROVIDERS[provider];
-  if (!cfg) return; // unknown provider → skip, first real request surfaces errors
+  const baseURL = PROVIDERS[provider];
+  if (!baseURL) return; // unknown provider → skip, first real request surfaces errors
 
   let res: Response;
   try {
-    res = await fetch(`${cfg.baseURL}/models`, {
+    res = await fetch(`${baseURL}/models`, {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal:  AbortSignal.timeout(TIMEOUT_MS),
     });
