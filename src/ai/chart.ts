@@ -496,7 +496,7 @@ export async function runChart(
   const planStart = Date.now();
   try {
     const { object } = await generateObject({
-      model:       resolveModel('chart', apiKey),
+      model:       resolveModel('chart', apiKey, model, provider),
       abortSignal: freshSignal('chart'),
       temperature: 0,
       maxTokens:   MAX_TOKENS,

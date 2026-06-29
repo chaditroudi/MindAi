@@ -46,13 +46,15 @@ async function checkCache(
 }
 
 async function buildPlan(
-  prompt:  string,
-  intent:  IntentKind,
-  sources: DataSource[],
-  context: CoreMessage[],
-  apiKey?: string,
+  prompt:    string,
+  intent:    IntentKind,
+  sources:   DataSource[],
+  context:   CoreMessage[],
+  apiKey?:   string,
+  model?:    string,
+  provider?: string,
 ): Promise<TaskPlan> {
-  const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey });
+  const plan = await runSupervisorPlan({ prompt, intent, sources, context, apiKey, model, provider });
   log('pipeline', `plan built | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`);
   logTrace('pipeline', `plan pipeline`, plan.pipeline);
   return plan;
