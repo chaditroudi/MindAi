@@ -4,10 +4,6 @@ import { config } from '../config.js';
 
 export type AgentRole = 'supervisor' | 'writer' | 'chart';
 
-// ── Provider registry ──────────────────────────────────────────────────────────
-// Maps provider slug → OpenAI-compatible base URL.
-// Model and provider come from user settings — no defaults, no hardcoding.
-// To add a provider: one line here, nothing else changes.
 
 export const PROVIDERS: Record<string, string> = {
   groq:       'https://api.groq.com/openai/v1',

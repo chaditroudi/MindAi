@@ -33,13 +33,13 @@ const reportSectionsSchema = z.object({
 
 export type InquirySummary = z.infer<typeof summarySchema>;
 export type ReportSections = z.infer<typeof reportSectionsSchema>;
-export interface WriterInput { prompt: string; rows: unknown[]; withChart?: boolean; apiKey?: string }
+export interface WriterInput { prompt: string; rows: unknown[]; withChart?: boolean; apiKey?: string; model?: string; provider?: string; }
 
-export async function runInquirySkill({ prompt, rows, apiKey }: WriterInput): Promise<InquirySummary> {
+export async function runInquirySkill({ prompt, rows, apiKey, model, provider }: WriterInput): Promise<InquirySummary> {
   const t0 = Date.now();
   log('writer:inquiry', `rows: ${rows.length} | maxRows: ${INQUIRY_MAX_ROWS} | maxTokens: ${INQUIRY_MAX_TOKENS}`);
   const { object } = await generateObject({
-    model: resolveModel('writer', apiKey),
+    model: resolveModel('writer', apiKey, model, provider),
     abortSignal: freshSignal('writer'),
     temperature: 0,
     maxRetries: 1,

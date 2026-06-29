@@ -47,18 +47,22 @@ export async function runSupervisorPlan({
   sources,
   context = [],
   apiKey,
+  model,
+  provider,
 }: {
-  prompt:   string;
-  intent:   IntentKind;
-  sources:  DataSource[];
-  context?: CoreMessage[];
-  apiKey?:  string;
+  prompt:    string;
+  intent:    IntentKind;
+  sources:   DataSource[];
+  context?:  CoreMessage[];
+  apiKey?:   string;
+  model?:    string;
+  provider?: string;
 }): Promise<TaskPlan> {
   const start = Date.now();
   log('planner', `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length} | prompt: "${prompt}"`);
 
   const { object } = await generateObject({
-    model:       resolveModel('supervisor', apiKey),
+    model:       resolveModel('supervisor', apiKey, model, provider),
     abortSignal: freshSignal('supervisor'),
     schema:      buildPlanSchema(intent),
     mode:        'json',
