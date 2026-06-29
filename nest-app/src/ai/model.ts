@@ -1,7 +1,7 @@
 import { createOpenAI }              from '@ai-sdk/openai';
 import { createAnthropic }           from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI }  from '@ai-sdk/google';
-import type { LanguageModelV1 }      from 'ai';
+import type { LanguageModelV2 }      from 'ai';
 import { Agent }                     from '@mastra/core/agent';
 
 export type AgentRole  = 'supervisor' | 'writer' | 'chart' | 'memory';
@@ -55,7 +55,7 @@ export function detectProvider(apiKey: string): AIProvider {
   return 'groq';
 }
 
-export function resolveModel(role: AgentRole, apiKey?: string, userModel?: string, userProvider?: string): LanguageModelV1 {
+export function resolveModel(role: AgentRole, apiKey?: string, userModel?: string, userProvider?: string): LanguageModelV2 {
   const key      = apiKey ?? process.env['GROQ_API_KEY'] ?? process.env['OPENAI_API_KEY'] ?? '';
   const provider = (userProvider as AIProvider | undefined) ?? detectProvider(key);
   const model    = userModel ?? process.env[ROLE_ENV_KEYS[role]]?.trim() ?? PROVIDER_DEFAULTS[provider][role];
