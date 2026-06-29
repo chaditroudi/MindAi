@@ -9,11 +9,13 @@ const {
   MONGODB_SERVER_SELECTION_TIMEOUT_MS,
   MONGODB_CONNECT_RETRIES,
   MONGODB_PIPELINE_TIMEOUT_MS,
-  GROQ_API_KEY,
+  AI_API_KEY,
+  GROQ_API_KEY,   // kept for backwards compatibility — prefer AI_API_KEY
+  AI_MODEL,
+  AI_PROVIDER,
   SUPERVISOR_TIMEOUT_MS,
   CHART_TIMEOUT_MS,
   WRITER_TIMEOUT_MS,
-  GROQ_MODEL,
 } = process.env;
 
 const positiveNumber = (value: string | undefined, fallback: number) => {
@@ -38,14 +40,13 @@ export const config = {
   },
 
   llm: {
-    groqApiKey: GROQ_API_KEY,
+    apiKey:   AI_API_KEY ?? GROQ_API_KEY, // system-level fallback when user has no key configured
+    model:    AI_MODEL,
+    provider: AI_PROVIDER,
     timeouts: {
       supervisor: positiveNumber(SUPERVISOR_TIMEOUT_MS, 15_000),
       chart:      positiveNumber(CHART_TIMEOUT_MS,      20_000),
       writer:     positiveNumber(WRITER_TIMEOUT_MS,     45_000),
-    },
-    models: {
-      groqDefault: GROQ_MODEL ?? 'llama-3.3-70b-versatile',
     },
   },
 } as const;
