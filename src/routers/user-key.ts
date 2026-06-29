@@ -25,10 +25,11 @@ async function pingKey(apiKey: string, url: string): Promise<'valid' | 'invalid'
   }
 }
 
-function resolveProvider(key: string): { name: string; url: string } {
-  // gsk_ is Groq's own key prefix; all others use prefix detection from the PROVIDERS registry
-  const provider = key.startsWith('gsk_') ? 'groq' : detectProvider(key);
-  const baseURL  = PROVIDERS[provider] ?? PROVIDERS.groq;
+function resolveProvider(key: string): { name: string; url: string } | null {
+  const provider = detectProvider(key);
+  if (!provider) return null;
+  const baseURL = PROVIDERS[provider];
+  if (!baseURL) return null;
   return { name: provider, url: `${baseURL}/models` };
 }
 
@@ -41,19 +42,26 @@ userKeyRouter.post('/key', async (req, res) => {
     const { apiKey, model, provider: dtoProvider } = saveSchema.parse(req.body);
     const key = apiKey.trim();
 
+    // Provider must be explicitly supplied or auto-detected from key prefix — no groq default.
+    const resolvedProvider = dtoProvider?.trim() || resolveProvider(key)?.name;
+    if (!resolvedProvider) {
+      res.status(400).json({ error: 'Could not detect provider from key. Please select your provider manually.' });
+      return;
+    }
+
     const detected = resolveProvider(key);
-    const status   = await pingKey(key, detected.url);
+    const verifyUrl = detected?.url ?? `${PROVIDERS[resolvedProvider]}/models`;
+    const status = await pingKey(key, verifyUrl);
 
     if (status === 'invalid') {
-      res.status(400).json({ error: `This ${detected.name} API key was rejected — it may be incorrect or revoked.` });
+      res.status(400).json({ error: `This ${resolvedProvider} API key was rejected — it may be incorrect or revoked.` });
       return;
     }
     if (status === 'unreachable') {
-      res.status(502).json({ error: `Could not reach ${detected.name} to verify the key. Please check your network connection.` });
+      res.status(502).json({ error: `Could not reach ${resolvedProvider} to verify the key. Please check your network connection.` });
       return;
     }
 
-    const resolvedProvider = dtoProvider?.trim() || detected.name;
     await saveUserKey(userId, { apiKey: key, model: model?.trim(), provider: resolvedProvider });
     res.json({ ok: true, provider: resolvedProvider });
   } catch (err) {

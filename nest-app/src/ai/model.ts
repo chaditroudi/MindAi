@@ -92,7 +92,15 @@ export function resolveModel(
 ): LanguageModel {
   const key      = apiKey?.trim() ?? '';
   const provider = normalizeProvider(userProvider) ?? detectProvider(key);
-  const baseURL  = PROVIDERS[provider];
+
+  if (!provider) {
+    throw new Error(
+      `No provider configured for role "${role}". ` +
+      `Please select a provider in Settings.`,
+    );
+  }
+
+  const baseURL = PROVIDERS[provider];
 
   if (!userModel) {
     throw new Error(
@@ -103,24 +111,24 @@ export function resolveModel(
 
   switch (provider) {
     case 'anthropic':
-      return createAnthropic({ apiKey: key, baseURL })(userModel);
+      return createAnthropic({ apiKey: key })(userModel);
     case 'google':
       return createGoogleGenerativeAI({ apiKey: key, baseURL })(userModel);
     case 'groq':
       return createGroq({ apiKey: key, baseURL })(userModel);
     case 'openai':
-      return createOpenAI({ apiKey: key, baseURL })(userModel);
+      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(userModel);
     case 'mistral':
     case 'together':
     case 'perplexity':
-      return createOpenAI({ apiKey: key, baseURL }).chat(userModel);
+      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(userModel);
     default:
       if (!baseURL) {
         throw new Error(
           `Unsupported provider "${provider}". Supported providers: ${Object.keys(PROVIDERS).join(', ')}.`,
         );
       }
-      return createOpenAI({ apiKey: key, baseURL }).chat(userModel);
+      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(userModel);
   }
 }
 
