@@ -112,8 +112,12 @@ function isProviderRateLimitError(err: unknown): boolean {
 }
 
 function extractRetryDelay(err: unknown): string | null {
-  const match = /try again in\s+([^.]+(?:\.\d+s)?)/i.exec(getErrorMessage(err));
-  return match?.[1]?.trim() ?? null;
+  // Handles Groq "try again in 30s", Google "Please retry in 45.15s", OpenAI "Try again in 60s"
+  const match = /(?:try\s+again|retry)\s+in\s+([\d.]+)\s*s/i.exec(getErrorMessage(err));
+  if (!match) return null;
+  const secs = parseFloat(match[1]);
+  if (isNaN(secs)) return null;
+  return secs < 60 ? `${Math.ceil(secs)}s` : `${Math.ceil(secs / 60)}m`;
 }
 
 function isContextLengthError(err: unknown): boolean {
