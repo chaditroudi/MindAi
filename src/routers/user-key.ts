@@ -38,23 +38,24 @@ userKeyRouter.post('/key', async (req, res) => {
     const userId = (req.headers['x-user-id'] as string | undefined)?.trim();
     if (!userId) { res.status(401).json({ error: 'User ID missing.' }); return; }
 
-    const { apiKey } = saveSchema.parse(req.body);
+    const { apiKey, model, provider: dtoProvider } = saveSchema.parse(req.body);
     const key = apiKey.trim();
 
-    const provider = resolveProvider(key);
-    const status   = await pingKey(key, provider.url);
+    const detected = resolveProvider(key);
+    const status   = await pingKey(key, detected.url);
 
     if (status === 'invalid') {
-      res.status(400).json({ error: `This ${provider.name} API key was rejected — it may be incorrect or revoked.` });
+      res.status(400).json({ error: `This ${detected.name} API key was rejected — it may be incorrect or revoked.` });
       return;
     }
     if (status === 'unreachable') {
-      res.status(502).json({ error: `Could not reach ${provider.name} to verify the key. Please check your network connection.` });
+      res.status(502).json({ error: `Could not reach ${detected.name} to verify the key. Please check your network connection.` });
       return;
     }
 
-    await saveUserKey(userId, key);
-    res.json({ ok: true, provider: provider.name });
+    const resolvedProvider = dtoProvider?.trim() || detected.name;
+    await saveUserKey(userId, { apiKey: key, model: model?.trim(), provider: resolvedProvider });
+    res.json({ ok: true, provider: resolvedProvider });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid request' });
   }
