@@ -75,6 +75,10 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   testError  = '';
   modalKey   = '';
 
+  loadedModels:  { id: string; label: string }[] = [];
+  modelsLoading  = false;
+  modelsError    = '';
+
   // Per-role model overrides (Option A: same key/provider, different model per agent)
   supervisorModel = '';
   chartModel      = '';

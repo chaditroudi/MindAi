@@ -33,6 +33,10 @@ export class AnalyticsApiService {
     return this.req(this.http.get<UserSettingsResponse>('/api/settings', { headers }));
   }
 
+  listModels(dto: { provider: string; apiKey: string }): Promise<{ models: { id: string; label: string }[] }> {
+    return this.req(this.http.post<{ models: { id: string; label: string }[] }>('/api/settings/models', dto));
+  }
+
   validateSettings(dto: { apiKey: string; provider: string; model: string }): Promise<{ ok: boolean; provider: string; model: string }> {
     return this.req(this.http.post<{ ok: boolean; provider: string; model: string }>('/api/settings/validate', dto));
   }

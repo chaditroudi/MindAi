@@ -27,6 +27,16 @@ class SaveSettingsDto {
 export class UserSettingsController {
   constructor(private readonly service: UserSettingsService) {}
 
+  @Post('models')
+  async listModels(@Body() body: { provider: string; apiKey: string }) {
+    const provider = (body.provider ?? '').trim().toLowerCase();
+    const apiKey   = (body.apiKey   ?? '').trim();
+    if (!provider || !apiKey) throw new BadRequestException('provider and apiKey are required.');
+    if (!PROVIDERS[provider])  throw new BadRequestException(`Unknown provider "${provider}".`);
+    const models = await fetchProviderModels(provider, apiKey);
+    return { models };
+  }
+
   @Post('validate')
   async validate(@Body() dto: SaveSettingsDto) {
     return this.service.validate(dto);
