@@ -889,14 +889,12 @@
       </div>
 
       <label class="key-modal-label">Model</label>
-      <input class="key-modal-input" type="text" list="agent-model-suggestions"
-        placeholder="e.g. gemini-2.5-pro"
-        [(ngModel)]="newAgent.model" />
-      <datalist id="agent-model-suggestions">
+      <select class="key-modal-input" [(ngModel)]="newAgent.model" [disabled]="!newAgent.provider">
+        <option value="">— select a model —</option>
         @for (m of modelsForProvider(newAgent.provider); track m.value) {
           <option [value]="m.value">{{ m.label }}</option>
         }
-      </datalist>
+      </select>
 
       <label class="key-modal-label">API Key</label>
       <input class="key-modal-input" type="password"
