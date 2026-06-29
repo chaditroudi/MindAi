@@ -84,15 +84,15 @@ export function repairWidgetPlan(raw: LlmWidget, profile: RowProfile, _rows: Dat
         plan,
         field as keyof WidgetPlan,
         resolveFieldName(
-          (plan as Record<string, unknown>)[field] as string | undefined,
+          (plan as unknown as Record<string, unknown>)[field] as string | undefined,
           profile,
-          roles,
+          roles as FieldKind[],
           collectExcludes(plan, field),
         ),
       );
     }
     for (const f of def.clearFields ?? []) {
-      (plan as Record<string, unknown>)[f] = undefined;
+      (plan as unknown as Record<string, unknown>)[f] = undefined;
     }
   } else {
     repairSpecial(plan, profile);
