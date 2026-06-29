@@ -1,6 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModelV1 } from 'ai';
-import { config } from '../config.js';
 
 export type AgentRole = 'supervisor' | 'writer' | 'chart';
 
@@ -57,6 +56,9 @@ export function resolveModel(
   return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(resolvedModel);
 }
 
-export function freshSignal(role: AgentRole): AbortSignal {
-  return AbortSignal.timeout(config.llm.timeouts[role]);
+export function freshSignal(_role: AgentRole, timeoutMs?: number): AbortSignal | undefined {
+  const ms = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? Math.round(timeoutMs)
+    : undefined;
+  return ms ? AbortSignal.timeout(ms) : undefined;
 }

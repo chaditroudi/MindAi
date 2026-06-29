@@ -24,13 +24,6 @@ export const PROVIDERS: Record<string, string> = {
   perplexity: 'https://api.perplexity.ai',
 };
 
-const TIMEOUT_ENV_KEYS: Record<AgentRole, string> = {
-  supervisor: 'SUPERVISOR_TIMEOUT_MS',
-  chart:      'CHART_TIMEOUT_MS',
-  writer:     'WRITER_TIMEOUT_MS',
-  memory:     'WRITER_TIMEOUT_MS',
-};
-
 // ── Provider detection from API key prefix ────────────────────────────────────
 
 export function detectProviderFromApiKey(apiKey: string): ProviderName | null {
@@ -191,9 +184,11 @@ export function resolveModel(
   }
 }
 
-export function freshSignal(role: AgentRole): AbortSignal {
-  const ms = Number(process.env[TIMEOUT_ENV_KEYS[role]]) || 15_000;
-  return AbortSignal.timeout(ms);
+export function freshSignal(_role: AgentRole, timeoutMs?: number): AbortSignal | undefined {
+  const ms = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? Math.round(timeoutMs)
+    : undefined;
+  return ms ? AbortSignal.timeout(ms) : undefined;
 }
 
 export function createSkillAgent(

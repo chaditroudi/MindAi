@@ -19,12 +19,4 @@ export default () => ({
     connectRetries:           positiveInt(process.env['MONGODB_CONNECT_RETRIES'], 1),
     pipelineTimeoutMs:        positiveInt(process.env['MONGODB_PIPELINE_TIMEOUT_MS'], 30_000),
   },
-  llm: {
-    // Provider, model, and API key come from each user's saved settings — not from server env.
-    timeouts: {
-      supervisor: positiveInt(process.env['SUPERVISOR_TIMEOUT_MS'], 8_000),
-      chart:      positiveInt(process.env['CHART_TIMEOUT_MS'],      8_000),
-      writer:     positiveInt(process.env['WRITER_TIMEOUT_MS'],     8_000),
-    },
-  },
 });

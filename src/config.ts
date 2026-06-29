@@ -9,9 +9,6 @@ const {
   MONGODB_SERVER_SELECTION_TIMEOUT_MS,
   MONGODB_CONNECT_RETRIES,
   MONGODB_PIPELINE_TIMEOUT_MS,
-  SUPERVISOR_TIMEOUT_MS,
-  CHART_TIMEOUT_MS,
-  WRITER_TIMEOUT_MS,
 } = process.env;
 
 const positiveNumber = (value: string | undefined, fallback: number) => {
@@ -33,13 +30,5 @@ export const config = {
     serverSelectionTimeoutMs: positiveNumber(MONGODB_SERVER_SELECTION_TIMEOUT_MS, 8_000),
     connectRetries:           positiveNumber(MONGODB_CONNECT_RETRIES, 1),
     pipelineTimeoutMs:        positiveNumber(MONGODB_PIPELINE_TIMEOUT_MS, 30_000),
-  },
-
-  llm: {
-    timeouts: {
-      supervisor: positiveNumber(SUPERVISOR_TIMEOUT_MS, 15_000),
-      chart:      positiveNumber(CHART_TIMEOUT_MS,      20_000),
-      writer:     positiveNumber(WRITER_TIMEOUT_MS,     45_000),
-    },
   },
 } as const;
