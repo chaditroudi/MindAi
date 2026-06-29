@@ -131,7 +131,6 @@ function isContextLengthError(err: unknown): boolean {
   );
 }
 
-// ── Service ────────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class AnalyticsService {
@@ -144,7 +143,6 @@ export class AnalyticsService {
     private readonly agentConfig:  AgentConfigService,
   ) {}
 
-  // ── Intent dispatch ──────────────────────────────────────────────────────────
 
   private async executeByIntent(
     intent:        string | undefined,
