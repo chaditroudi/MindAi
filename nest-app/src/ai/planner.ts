@@ -130,6 +130,7 @@ function buildPlanSchema(intent: IntentKind) {
     query: z.object({
       sourceName: z.string().optional(),
       limit:      z.number().optional(),
+      pipeline:   z.array(z.record(z.unknown())).optional(), // model sometimes nests pipeline here
     }),
     pipeline: z.array(z.record(z.unknown())).default([]),
   });
@@ -217,11 +218,21 @@ function finalizeTaskPlan({
     normalizeToken(s.name) === token || normalizeToken(s.collection) === token,
   );
 
+  // The model sometimes puts pipeline inside query (per old docs) instead of at root level.
+  // Hoist it to root so resolvePipeline can find it.
+  const queryPipeline = (plan.query as { pipeline?: Record<string, unknown>[] }).pipeline;
+  const pipeline = plan.pipeline?.length ? plan.pipeline : (queryPipeline ?? []);
+
+  if (!plan.pipeline?.length && queryPipeline?.length) {
+    log('planner', `pipeline hoisted from query.pipeline (${queryPipeline.length} stages)`);
+  }
+
   return {
     ...plan,
+    pipeline,
     query: {
-      ...plan.query,
       sourceName: source?.name ?? plan.query.sourceName,
+      limit:      plan.query.limit,
     },
     skills: deriveExecutionSkills(plan, intent),
   };
