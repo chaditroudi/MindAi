@@ -139,6 +139,15 @@ function extractRetryDelay(err: unknown): string | null {
   return secs < 60 ? `${Math.ceil(secs)}s` : `${Math.ceil(secs / 60)}m`;
 }
 
+function isStructuredOutputUnsupportedError(err: unknown): boolean {
+  const msg = getErrorMessage(err).toLowerCase();
+  return (
+    msg.includes('json_schema') ||
+    (msg.includes('response format') && msg.includes('not support')) ||
+    (msg.includes('structured output') && msg.includes('not support'))
+  );
+}
+
 function isModelNotFoundError(err: unknown): boolean {
   const msg = getErrorMessage(err).toLowerCase();
   // Do NOT rely on status 404 alone — other errors can return 404.
