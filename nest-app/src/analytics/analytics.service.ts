@@ -133,6 +133,19 @@ function extractRetryDelay(err: unknown): string | null {
   return secs < 60 ? `${Math.ceil(secs)}s` : `${Math.ceil(secs / 60)}m`;
 }
 
+function isModelNotFoundError(err: unknown): boolean {
+  const msg    = getErrorMessage(err).toLowerCase();
+  const status = getErrorStatus(err);
+  return (
+    status === 404 ||
+    msg.includes('is not found for api version') ||
+    msg.includes('is not supported for generatecontent') ||
+    msg.includes('model not found') ||
+    msg.includes('does not exist') ||
+    msg.includes('no such model')
+  );
+}
+
 function isContextLengthError(err: unknown): boolean {
   const msg = getErrorMessage(err).toLowerCase();
   return (
