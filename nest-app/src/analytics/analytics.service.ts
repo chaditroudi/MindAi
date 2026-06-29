@@ -198,7 +198,7 @@ export class AnalyticsService {
     for (;;) {
       try {
         const executed = await this.executeByIntent(intent, prompt, context, {
-          apiKey: access.apiKey, model: access.model, provider: access.provider, maxTokens: access.outputTokenLimit,
+          apiKey: access.apiKey, model: access.model, provider: access.provider, maxTokens: access.inputTokenLimit,
         });
         result       = executed.result;
         inputTokens  = executed.usage.inputTokens;
@@ -244,7 +244,7 @@ export class AnalyticsService {
     return this.buildResponse({
       result, prompt, apiKey: access.apiKey, sessionId,
       displayIntent, userId: req.userId, durationMs,
-      inputTokens, outputTokens, outputTokenLimit: access.outputTokenLimit,
+      inputTokens, outputTokens, outputTokenLimit: access.inputTokenLimit,
       agentApiKey: access.agentApiKey,
       model: access.model, provider: access.provider,
     });
@@ -366,10 +366,10 @@ export class AnalyticsService {
     const { result, prompt, apiKey, sessionId, displayIntent, userId,
             durationMs, inputTokens, outputTokens, outputTokenLimit, agentApiKey, model, provider } = params;
 
-    const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens > outputTokenLimit;
+    const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
     const tokenWarning = tokenLimitExceeded
-      ? `This response used ${outputTokens} tokens, exceeding your configured limit of ${outputTokenLimit}. ` +
-        `Do you wish to continue? Further requests may also exceed this limit.`
+      ? `Response reached your configured token limit (${outputTokens}/${outputTokenLimit}). ` +
+        `The answer may be incomplete. Do you wish to continue with a higher limit?`
       : undefined;
     const type          = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
