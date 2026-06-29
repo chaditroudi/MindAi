@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { UserSettingsRepository } from './user-settings.repository';
 import type { UserSettingsDocument } from './user-settings.repository';
+import { detectProvider } from '../ai/model';
 
 export interface UserSettingsDto {
   apiKey:           string;
