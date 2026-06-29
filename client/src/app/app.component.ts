@@ -77,10 +77,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   loadedModels: ModelOption[] = [];
   modelsLoading = false;
   modelsError   = '';
+  private modelsRequestId = 0;
 
   newAgentLoadedModels: ModelOption[] = [];
   newAgentModelsLoading = false;
   newAgentModelsError   = '';
+  private newAgentModelsRequestId = 0;
 
   // Per-role model overrides (Option A: same key/provider, different model per agent)
   supervisorModel = '';
