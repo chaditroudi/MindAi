@@ -20,8 +20,6 @@ export class AnalyticsController {
 
   @Get('provider')
   getProvider() {
-    // Provider, model, and API key are always per-user (saved in user settings).
-    // No server-level global key exists.
     return { provider: '', hasGlobalKey: false };
   }
 
