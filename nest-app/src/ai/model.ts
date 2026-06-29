@@ -69,7 +69,7 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
       return createGoogleGenerativeAI({ apiKey: key })(model);
     case 'openai':
       return createOpenAI({ apiKey: key }).chat(model);
-    default:
+    case 'groq':
       return wrapLanguageModel({
         model: createGroq({ apiKey: key })(model),
         middleware: {
@@ -82,6 +82,13 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
           }),
         },
       });
+    default:
+      // OpenAI-compatible fallback — covers Mistral, Together AI, Perplexity, etc.
+      // Set PROVIDER_BASE_URL env var for providers that need a custom endpoint.
+      return createOpenAI({
+        apiKey:  key,
+        baseURL: process.env[`${provider.toUpperCase()}_BASE_URL`],
+      }).chat(model);
   }
 }
 

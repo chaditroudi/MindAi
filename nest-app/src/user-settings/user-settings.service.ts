@@ -124,23 +124,27 @@ async function validateGoogle(apiKey: string, model: string): Promise<void> {
 
 // ── Main service ───────────────────────────────────────────────────────────────
 
+// Registry — add a new entry here to support a new provider's key validation.
+// Providers not in this map are auto-detected from the key prefix; if still
+// unknown, validation is skipped and the first real request surfaces errors.
+type Validator = (apiKey: string, model: string) => Promise<void>;
+const VALIDATORS: Record<string, Validator> = {
+  groq:      validateGroq,
+  openai:    validateOpenAI,
+  anthropic: validateAnthropic,
+  google:    validateGoogle,
+};
+
 @Injectable()
 export class UserSettingsService {
   constructor(private readonly repo: UserSettingsRepository) {}
 
   async validate(dto: UserSettingsDto): Promise<ValidationResult> {
     const { apiKey, provider, model } = dto;
-
-    switch (provider) {
-      case 'groq':      await validateGroq(apiKey, model);      break;
-      case 'openai':    await validateOpenAI(apiKey, model);    break;
-      case 'anthropic': await validateAnthropic(apiKey, model); break;
-      case 'google':    await validateGoogle(apiKey, model);    break;
-      default:
-        // Unknown provider — skip validation, first real request will surface errors
-        break;
-    }
-
+    // If the provider string isn't in the registry, fall back to auto-detecting
+    // it from the API key prefix (AIza → google, sk-ant- → anthropic, etc.)
+    const effective = VALIDATORS[provider] ? provider : detectProvider(apiKey);
+    await VALIDATORS[effective]?.(apiKey, model);
     return { ok: true, provider, model };
   }
 
