@@ -9,9 +9,11 @@ import type { DashboardSpec } from '../types/index.js';
 const FULL_CACHE_INTENT = 'dashboard:full';
 
 export async function executeDashboard(
-  prompt:  string,
-  context: CoreMessage[] = [],
-  apiKey?: string,
+  prompt:    string,
+  context:   CoreMessage[] = [],
+  apiKey?:   string,
+  model?:    string,
+  provider?: string,
 ): Promise<DashboardSpec> {
   if (context.length === 0) {
     const cached = await getCached<DashboardSpec>(FULL_CACHE_INTENT, prompt);
@@ -21,7 +23,7 @@ export async function executeDashboard(
     }
   }
 
-  const { plan, rows } = await aggregate(prompt, 'dashboard', context, apiKey);
+  const { plan, rows } = await aggregate(prompt, 'dashboard', context, apiKey, model, provider);
 
   if (!plan.skills.includes('chart')) {
     throw new Error('Planner did not produce a chart execution path for this request.');
@@ -33,7 +35,7 @@ export async function executeDashboard(
   const source = getSources().find(s =>
     s.name === plan.query.sourceName || s.collection === plan.query.sourceName,
   );
-  const chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey)
+  const chart = await runChart(rows, prompt, plan.strategy, plan.chartHint, source, apiKey, model, provider)
     .catch((): DashboardSpec => ({ layout: 'analytical', title: prompt, summary: 'Chart could not be generated.', widgets: [] }));
 
   if (chart.widgets.length && context.length === 0) {

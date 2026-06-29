@@ -105,10 +105,12 @@ function flushResults(
 
 
 export async function aggregate(
-  prompt:  string,
-  intent:  IntentKind,
-  context: CoreMessage[] = [],
-  apiKey?: string,
+  prompt:    string,
+  intent:    IntentKind,
+  context:   CoreMessage[] = [],
+  apiKey?:   string,
+  model?:    string,
+  provider?: string,
 ): Promise<AggregationResult> {
   const t0      = Date.now();
   const sources = getSources();
@@ -116,7 +118,7 @@ export async function aggregate(
   const cached = await checkCache(intent, prompt, context);
   if (cached) return cached;
 
-  const plan = await buildPlan(prompt, intent, sources, context, apiKey);
+  const plan = await buildPlan(prompt, intent, sources, context, apiKey, model, provider);
 
   const validated = resolvePipeline(plan, sources);
   if (!validated) return { plan, rows: [] };
