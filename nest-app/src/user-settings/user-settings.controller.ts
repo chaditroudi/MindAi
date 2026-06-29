@@ -42,11 +42,13 @@ export class UserSettingsController {
     const settings = await this.service.findByUser(userId);
     if (!settings) return { configured: false };
     return {
-      configured:      true,
-      provider:        settings.provider,
-      model:           settings.model,
-      keyPreview:      `${settings.apiKey.slice(0, 6)}...${settings.apiKey.slice(-4)}`,
-      inputTokenLimit: settings.inputTokenLimit ?? 4_000,
+      configured:       true,
+      provider:         settings.provider,
+      model:            settings.model,
+      keyPreview:       `${settings.apiKey.slice(0, 6)}...${settings.apiKey.slice(-4)}`,
+      inputTokenLimit:  settings.inputTokenLimit ?? 4_000,
+      inputTokensUsed:  settings.inputTokensUsed  ?? 0,
+      outputTokensUsed: settings.outputTokensUsed ?? 0,
     };
   }
 

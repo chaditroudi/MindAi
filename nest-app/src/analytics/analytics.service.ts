@@ -399,19 +399,20 @@ export class AnalyticsService {
   }
 
   private async maybeExtractMemory(params: {
-    type:      ResolvedType;
-    prompt:    string;
-    result:    unknown;
-    userId:    string;
-    sessionId: string;
-    apiKey:    string;
-    model?:    string;
-    provider?: string;
+    type:          ResolvedType;
+    prompt:        string;
+    result:        unknown;
+    userId:        string;
+    sessionId:     string;
+    apiKey:        string;
+    agentApiKey?:  string;
+    model?:        string;
+    provider?:     string;
   }): Promise<void> {
     const summary = this.buildResponseSummary(params.type, params.prompt, params.result);
     if (summary.length <= MIN_SUMMARY_LENGTH_FOR_MEMORY) return;
     try {
-      await this.memory.extractAndSave(
+      const { inputTokens, outputTokens } = await this.memory.extractAndSave(
         params.userId,
         params.sessionId,
         params.prompt,
@@ -420,6 +421,12 @@ export class AnalyticsService {
         params.model,
         params.provider,
       );
+      // Credit memory tokens against whichever budget is active
+      if (params.agentApiKey) {
+        void this.agentConfig.trackUsage(params.agentApiKey, inputTokens, outputTokens);
+      } else {
+        void this.userSettings.incrementUsage(params.userId, inputTokens, outputTokens);
+      }
     } catch (err) {
       this.logger.warn(`memory.extractAndSave failed: ${err}`);
     }

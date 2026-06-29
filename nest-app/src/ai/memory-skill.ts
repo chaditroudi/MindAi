@@ -30,7 +30,7 @@ export async function extractMemories(
   userModel?: string,
   userProvider?: string,
   maxTokens?: number,
-): Promise<ExtractedMemory[]> {
+): Promise<{ memories: ExtractedMemory[]; inputTokens: number; outputTokens: number }> {
   try {
     const agent  = createSkillAgent('memory', SKILL_PROMPT, apiKey, userModel, userProvider);
     const result = await agent.generate(
@@ -41,11 +41,13 @@ export async function extractMemories(
         abortSignal:      freshSignal('memory'),
       },
     );
-    const object = result.object as z.infer<typeof extractionSchema>;
-    log('memory-skill', `extracted ${object.memories.length} item(s) | in:${result.usage.inputTokens ?? 0} out:${result.usage.outputTokens ?? 0}`);
-    return object.memories as ExtractedMemory[];
+    const object       = result.object as z.infer<typeof extractionSchema>;
+    const inputTokens  = result.usage.inputTokens  ?? 0;
+    const outputTokens = result.usage.outputTokens ?? 0;
+    log('memory-skill', `extracted ${object.memories.length} item(s) | in:${inputTokens} out:${outputTokens}`);
+    return { memories: object.memories as ExtractedMemory[], inputTokens, outputTokens };
   } catch (err) {
     log('memory-skill', `extraction failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
-    return [];
+    return { memories: [], inputTokens: 0, outputTokens: 0 };
   }
 }
