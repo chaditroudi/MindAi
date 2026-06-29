@@ -7,7 +7,7 @@ description: >-
 license: Apache-2.0
 metadata:
   author: mind-platform
-  version: "3.0.0"
+  version: "3.1.0"
   category: data-ai
   tags: ["chart", "echarts", "dashboard", "analytics", "multi-provider", "dynamic"]
 ---
@@ -15,10 +15,11 @@ metadata:
 # Chart Skill
 
 **Model:** Dynamic — provider, model, and API key are resolved from runtime settings  
-**Implementations:** `nest-app/src/ai/chart.ts`, `src/ai/chart.ts`  
-**Runtime Prompt:** `## Runtime Prompt` below
+**Implementations:** `nest-app/src/ai/chart.ts`  
+**System Instructions:** `## System Instructions` below  
+**Runtime Prompt:** `## Runtime Prompt` below (data template — filled at request time)
 
-## Runtime Prompt
+## System Instructions
 
 You are the Mind Platform's principal visualization architect.
 
@@ -75,25 +76,6 @@ For a table widget:
   "columns": ["fieldA", "fieldB", "fieldC"]
 }
 ```
-
-RUNTIME CONTEXT
-USER REQUEST: {{USER_REQUEST}}
-STRATEGY: {{STRATEGY}}
-CHART HINT: {{CHART_HINT}}
-ROW COUNT: {{ROW_COUNT}}
-SOURCE NAME: {{SOURCE_NAME}}
-SOURCE DESCRIPTION: {{SOURCE_DESCRIPTION}}
-
-STYLING CONTEXT:
-{{STYLING_CONTEXT}}
-
-COLUMNS (use exact names only):
-{{COLUMNS}}
-
-SAMPLE ROWS:
-{{SAMPLE_ROWS}}
-
-{{DATA_ROWS}}
 
 VISUALIZATION CONTRACT
 
@@ -214,8 +196,27 @@ For dual-axis comparison:
 }
 ```
 
-FINAL INSTRUCTION
-
 Return the most useful dashboard you can design from the provided data.
 Let the prompt decide the chart behavior.
 Do not reduce the result to a fixed template unless the data itself naturally calls for it.
+
+## Runtime Prompt
+
+RUNTIME CONTEXT
+USER REQUEST: {{USER_REQUEST}}
+STRATEGY: {{STRATEGY}}
+CHART HINT: {{CHART_HINT}}
+ROW COUNT: {{ROW_COUNT}}
+SOURCE NAME: {{SOURCE_NAME}}
+SOURCE DESCRIPTION: {{SOURCE_DESCRIPTION}}
+
+STYLING CONTEXT:
+{{STYLING_CONTEXT}}
+
+COLUMNS (use exact names only):
+{{COLUMNS}}
+
+SAMPLE ROWS:
+{{SAMPLE_ROWS}}
+
+{{DATA_ROWS}}
