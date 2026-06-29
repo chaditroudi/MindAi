@@ -8,7 +8,7 @@ metadata:
   author: mind-platform
   version: "1.0.0"
   category: data-ai
-  tags: ["inquiry", "qa", "groq", "mastra", "multilingual"]
+  tags: ["inquiry", "qa", "multi-provider", "mastra", "multilingual"]
 ---
 
 # Inquiry Skill

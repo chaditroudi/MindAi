@@ -9,12 +9,12 @@ metadata:
   author: mind-platform
   version: "1.0.0"
   category: data-ai
-  tags: ["report", "analytics", "groq", "mastra", "multilingual"]
+  tags: ["report", "analytics", "multi-provider", "mastra", "multilingual"]
 ---
 
 # Report Skill
 
-  **Model:** `resolveModel('writer')` — `src/ai/model.ts`
+**Model:** Dynamic — `resolveModel('writer', apiKey, model, provider)` with user-configured credentials
 **Implementation:** `src/ai/writer.ts` → `runReportSkill`
 **Runtime Prompt:** `## Runtime Prompt` in this file
 
