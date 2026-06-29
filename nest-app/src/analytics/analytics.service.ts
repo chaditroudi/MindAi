@@ -278,6 +278,7 @@ export class AnalyticsService {
       inputTokens, outputTokens, outputTokenLimit: access.maxTokens,
       agentApiKey: access.agentApiKey,
       model: access.model, provider: access.provider,
+      memoryModel: access.memoryModel,
     });
   }
 
