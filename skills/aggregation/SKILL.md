@@ -19,7 +19,7 @@ metadata:
     - aggregation
     - pipeline
     - planner
-    - groq
+    - multi-provider
     - mastra
     - multilingual
     - charts
@@ -27,7 +27,7 @@ metadata:
 
 # Aggregation Skill
 
-**Model:** `resolveModel('supervisor')` — `src/ai/model.ts`
+**Model:** Dynamic — `resolveModel('supervisor', apiKey, model, provider)` with user-configured credentials
 **Implementation:** `src/ai/planner.ts` + `src/features/pipeline.ts`
 **Runtime Prompt Base:** `## Runtime Prompt` in this file
 **Runtime Prompt Dashboard:** `## Runtime Prompt Dashboard` in this file
@@ -393,14 +393,17 @@ prompt → pipeline translation happens.
 
 ```typescript
 runAggregation(
-  prompt:   string,
-  intent:   'dashboard' | 'report' | 'general_question',
-  context?: CoreMessage[],
+  prompt:    string,
+  intent:    'dashboard' | 'report' | 'general_question',
+  context?:  CoreMessage[],
+  apiKey?:   string,
+  model?:    string,
+  provider?: string,
 ): Promise<{ plan: TaskPlan; rows: Record<string, unknown>[] }>
 ```
 
 The function: builds the runtime prompt (base + the intent-specific section) with the
-live schema injected → calls `resolveModel('supervisor')` → parses & validates the
+live schema injected → calls `resolveModel('supervisor', apiKey, model, provider)` → parses & validates the
 TaskPlan → runs the safety gate → executes the pipeline → caches → returns.
 
 ## Skill Chain
