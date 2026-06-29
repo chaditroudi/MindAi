@@ -5,9 +5,9 @@ import { config } from '../config.js';
 export type AgentRole = 'supervisor' | 'writer' | 'chart';
 
 const ROLE_DEFAULTS: Record<AgentRole, string> = {
-  supervisor: 'llama-3.3-70b-versatile', // needs actual reasoning for plan building
-  chart:      'llama-3.3-70b-versatile',    // just picking field names, 8b is plenty
-  writer:     'llama-3.3-70b-versatile',    // 8b is fine for summarization
+  supervisor: 'llama-3.3-70b-versatile', 
+  chart:      'llama-3.3-70b-versatile',    
+  writer:     'llama-3.3-70b-versatile',   
 };
 
 export function resolveModel(role: AgentRole, apiKey?: string): LanguageModelV1 {
