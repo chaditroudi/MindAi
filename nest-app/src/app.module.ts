@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
@@ -25,6 +26,7 @@ const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
