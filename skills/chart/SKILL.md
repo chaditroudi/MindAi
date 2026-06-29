@@ -10,12 +10,12 @@ metadata:
   author: mind-platform
   version: "2.1.0"
   category: data-ai
-  tags: ["chart", "echarts", "groq", "dashboard", "hybrid", "analytics"]
+  tags: ["chart", "echarts", "multi-provider", "dashboard", "hybrid", "analytics"]
 ---
 
 # Chart Skill
 
-**Model:** `resolveModel('chart')` — `src/ai/model.ts`  
+**Model:** Dynamic — `resolveModel('chart', apiKey, model, provider)` with user-configured credentials
 **Implementation:** `src/ai/chart.ts`  
 **Runtime Prompt:** `## Runtime Prompt` section below  
 **Config (types, aggregations, layouts):** `## Chart Config` section below

@@ -9,7 +9,7 @@ metadata:
   author: mind-platform
   version: "2.0.0"
   category: data-ai
-  tags: ["memory", "session", "context", "analytics", "groq", "mongodb"]
+  tags: ["memory", "session", "context", "analytics", "multi-provider", "mongodb"]
 ---
 
 # Memory Skill

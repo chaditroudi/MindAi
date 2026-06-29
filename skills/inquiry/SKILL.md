@@ -13,7 +13,7 @@ metadata:
 
 # Inquiry Skill
 
-**Model:** `resolveModel('writer')` — `src/ai/model.ts`
+**Model:** Dynamic — `resolveModel('writer', apiKey, model, provider)` with user-configured credentials
 **Implementation:** `src/ai/writer.ts` → `runInquirySkill`
 **Runtime Prompt:** `## Runtime Prompt` in this file
 
