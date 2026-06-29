@@ -60,6 +60,10 @@ function repairSpecial(plan: WidgetPlan, profile: RowProfile): void {
       // x and y must be *different* categoricals — same uniqueness problem as scatter.
       patchPlanField(plan, 'xField',     resolveFieldName(plan.xField,     profile, ['categorical', 'temporal'], [plan.yField     ?? '', plan.valueField ?? '']));
       patchPlanField(plan, 'yField',     resolveFieldName(plan.yField,     profile, ['categorical', 'temporal'], [plan.xField     ?? '', plan.valueField ?? '']));
+      if (plan.xField && plan.xField === plan.yField) {
+        const alt = pickFields(profile, ['categorical', 'temporal'], [plan.xField, plan.valueField ?? ''], 1)[0];
+        if (alt) { log('chart:fix', `heatmap xField===yField="${plan.xField}" — forcing yField="${alt}"`); plan.yField = alt; }
+      }
       patchPlanField(plan, 'valueField', resolveFieldName(plan.valueField, profile, ['numeric'],                 [plan.xField     ?? '', plan.yField ?? '']));
       break;
     case 'radar_chart':
