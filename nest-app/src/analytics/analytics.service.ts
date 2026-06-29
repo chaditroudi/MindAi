@@ -195,8 +195,9 @@ export class AnalyticsService {
     let context      = memoryContext;
     for (;;) {
       try {
-        const executed = await this.executeByIntent(intent, prompt, context,
-          access.apiKey, access.model, access.provider, access.outputTokenLimit);
+        const executed = await this.executeByIntent(intent, prompt, context, {
+          apiKey: access.apiKey, model: access.model, provider: access.provider, maxTokens: access.outputTokenLimit,
+        });
         result       = executed.result;
         inputTokens  = executed.usage.inputTokens;
         outputTokens = executed.usage.outputTokens;
