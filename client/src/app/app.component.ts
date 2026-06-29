@@ -425,8 +425,40 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   onProviderChange(provider: string): void {
     this.st.patch({ provider, selectedModel: '' });
-    this.testStatus = 'idle';
-    this.testError  = '';
+    this.loadedModels = [];
+    this.modelsError  = '';
+    this.testStatus   = 'idle';
+    this.testError    = '';
+  }
+
+  async loadModels(): Promise<void> {
+    const provider = this.effectiveProvider(this.st.snap.provider);
+    const apiKey   = this.modalKey.trim();
+    if (!provider || !apiKey) {
+      this.modelsError = 'Enter your API key first, then click Load models.';
+      return;
+    }
+    this.modelsLoading = true;
+    this.modelsError   = '';
+    try {
+      const res = await this.api.listModels({ provider, apiKey });
+      this.loadedModels = res.models;
+      if (res.models.length && !res.models.find(m => m.id === this.st.snap.selectedModel)) {
+        this.st.patch({ selectedModel: '' });
+      }
+    } catch (err) {
+      this.modelsError  = err instanceof Error ? err.message : 'Failed to load models.';
+      this.loadedModels = [];
+    } finally {
+      this.modelsLoading = false;
+    }
+  }
+
+  get availableModels(): { value: string; label: string }[] {
+    if (this.loadedModels.length) {
+      return this.loadedModels.map(m => ({ value: m.id, label: m.label }));
+    }
+    return this.modelsForProvider(this.st.snap.provider);
   }
 
   // mode + session controls
