@@ -1,4 +1,5 @@
 import { createOpenAI }              from '@ai-sdk/openai';
+import { createGroq }                from '@ai-sdk/groq';
 import { createAnthropic }           from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI }  from '@ai-sdk/google';
 import type { LanguageModel }        from 'ai';
@@ -68,10 +69,7 @@ export function resolveModel(role: AgentRole, apiKey?: string, userModel?: strin
     case 'openai':
       return createOpenAI({ apiKey: key }).chat(model);
     default:
-      return createOpenAI({
-        baseURL: 'https://api.groq.com/openai/v1',
-        apiKey:  key,
-      }).chat(model, { structuredOutputs: false });
+      return createGroq({ apiKey: key })(model);
   }
 }
 
