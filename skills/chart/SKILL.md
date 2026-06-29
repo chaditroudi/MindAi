@@ -30,6 +30,9 @@ Your job is to pick the best chart types and map data fields to chart axes.
 TypeScript renderers convert your field mapping into valid ECharts options automatically.
 You do NOT need to output ECharts code — output field names and chart type only.
 
+OUTPUT — emit ONLY this JSON (no prose, no markdown):
+{"layout":"analytical|executive|operational","summary":"<one sentence>","widgets":[{"type":"<chart_type>","title":"...","labelField":"...","valueField":"..."}]}
+
 USER REQUEST: "{{USER_REQUEST}}"
 STRATEGY: {{STRATEGY}}
 CHART HINT: {{CHART_HINT}}
@@ -270,6 +273,54 @@ Use `custom` when you need an ECharts feature that no standard renderer covers
 | `startYear`, `year`, `date` | temporal | `xField` (line/area — ensure ASC sort) |
 | `duration`, `delay` | number | `valueField` or `yField` (scatter vs budget) |
 | `lat`, `lng` | geo | Do not chart — exclude from mappings |
+
+---
+
+### Step 8 — Output Format (REQUIRED)
+
+Emit EXACTLY this JSON structure — no prose, no markdown fences. All three top-level keys are required:
+
+```
+{
+  "layout":  "analytical" | "executive" | "operational",
+  "summary": "<one sentence describing what the dashboard shows>",
+  "widgets": [ <one or more widget objects> ]
+}
+```
+
+Each widget object:
+```
+{
+  "type":        "<chart type from Step 2>",
+  "title":       "<short action-oriented title>",
+  "insight":     "<one analytical observation>",
+  "labelField":  "<exact column name>",   // bars, donuts, funnels
+  "valueField":  "<exact column name>",   // numeric measure
+  "xField":      "<exact column name>",   // time/continuous axis
+  "yField":      "<exact column name>",   // scatter secondary axis
+  "seriesField": "<exact column name>",   // grouping
+  "agg":         "sum" | "avg" | "count" | "min" | "max" | "none",
+  "sortDesc":    true | false,
+  "topN":        <integer>
+}
+```
+
+Minimal valid example:
+```json
+{
+  "layout": "operational",
+  "summary": "Distribution of projects by current status.",
+  "widgets": [
+    {
+      "type": "donut_chart",
+      "title": "Projects by Status",
+      "insight": "Active projects represent the largest share at 54%.",
+      "labelField": "label",
+      "valueField": "value"
+    }
+  ]
+}
+```
 
 ## Chart Config
 
