@@ -324,7 +324,7 @@
                 </svg>
               </div>
               <h2>Connect your AI provider to get started</h2>
-              <p>Choose a provider — <strong>Groq</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, or <strong>Google Gemini</strong> — then select a model and enter your API key. Your key is verified and stored securely.</p>
+              <p>Choose or type a provider and model — for example <strong>Groq</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, or <strong>Google Gemini</strong>. You can also enter any other supported provider manually.</p>
               <button class="unlock-btn" (click)="st.patch({ showKeyModal: true })">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
@@ -771,23 +771,29 @@
       }
 
       <label class="key-modal-label">Provider</label>
-      <select class="key-modal-input"
-        [ngModel]="s.provider || 'groq'"
-        (ngModelChange)="st.patch({ provider: $event, selectedModel: '' }); testStatus = 'idle'">
-        <option value="groq">Groq</option>
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic</option>
-        <option value="google">Google Gemini</option>
-      </select>
+      <input class="key-modal-input" type="text" list="provider-suggestions"
+        [ngModel]="s.provider"
+        placeholder="e.g. google, groq, openai"
+        (ngModelChange)="onProviderChange($event)" />
+      <datalist id="provider-suggestions">
+        @for (provider of PROVIDER_SUGGESTIONS; track provider.value) {
+          <option [value]="provider.value">{{ provider.label }}</option>
+        }
+      </datalist>
 
-      <label class="key-modal-label">Model</label>
-      <select class="key-modal-input"
-        [ngModel]="s.selectedModel || modelsForProvider(s.provider || 'groq')[0]?.value"
-        (ngModelChange)="st.patch({ selectedModel: $event })">
-        @for (m of modelsForProvider(s.provider || 'groq'); track m.value) {
+      <label class="key-modal-label">
+        Model
+        <span class="key-modal-label-hint">— choose a suggestion or type any model id</span>
+      </label>
+      <input class="key-modal-input" type="text" list="settings-model-suggestions"
+        [ngModel]="s.selectedModel"
+        placeholder="e.g. gemini-2.5-pro"
+        (ngModelChange)="st.patch({ selectedModel: $event }); testStatus = 'idle'; testError = ''" />
+      <datalist id="settings-model-suggestions">
+        @for (m of modelsForProvider(s.provider); track m.value) {
           <option [value]="m.value">{{ m.label }}</option>
         }
-      </select>
+      </datalist>
 
       <label class="key-modal-label">
         Input token limit
@@ -803,7 +809,7 @@
 
       <label class="key-modal-label">API Key</label>
       <input type="password" class="key-modal-input"
-        [placeholder]="(s.provider || 'groq') === 'openai' ? 'sk-…' : (s.provider || 'groq') === 'anthropic' ? 'sk-ant-…' : (s.provider || 'groq') === 'google' ? 'AIza…' : 'gsk_…'"
+        [placeholder]="apiKeyPlaceholder(s.provider)"
         [(ngModel)]="modalKey"
         (input)="testStatus = 'idle'; testError = ''"
         (keydown.enter)="saveApiKey()" />
@@ -811,7 +817,7 @@
       @if (testStatus !== 'idle') {
         <div class="key-modal-test-result" [class.ok]="testStatus === 'ok'" [class.error]="testStatus === 'error'" [class.testing]="testStatus === 'testing'">
           @if (testStatus === 'testing') { Validating… }
-          @if (testStatus === 'ok')      { Key is valid — {{ s.provider || 'groq' }} / {{ s.selectedModel }} confirmed. }
+          @if (testStatus === 'ok')      { Key is valid — {{ effectiveProvider(s.provider) }} / {{ effectiveModel(s.provider, s.selectedModel) }} confirmed. }
           @if (testStatus === 'error')   { {{ testError }} }
         </div>
       }
@@ -846,12 +852,14 @@
       <div class="agent-modal-row">
         <div class="agent-modal-col">
           <label class="key-modal-label">Provider</label>
-          <select class="key-modal-input" [(ngModel)]="newAgent.provider">
-            <option value="groq">Groq</option>
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-            <option value="google">Google Gemini</option>
-          </select>
+          <input class="key-modal-input" type="text" list="agent-provider-suggestions"
+            placeholder="e.g. google, groq, openai"
+            [(ngModel)]="newAgent.provider" />
+          <datalist id="agent-provider-suggestions">
+            @for (provider of PROVIDER_SUGGESTIONS; track provider.value) {
+              <option [value]="provider.value">{{ provider.label }}</option>
+            }
+          </datalist>
         </div>
         <div class="agent-modal-col">
           <label class="key-modal-label">Status</label>
@@ -864,13 +872,18 @@
       </div>
 
       <label class="key-modal-label">Model</label>
-      <input class="key-modal-input" type="text"
-        placeholder="e.g. llama-3.3-70b-versatile"
+      <input class="key-modal-input" type="text" list="agent-model-suggestions"
+        placeholder="e.g. gemini-2.5-pro"
         [(ngModel)]="newAgent.model" />
+      <datalist id="agent-model-suggestions">
+        @for (m of modelsForProvider(newAgent.provider); track m.value) {
+          <option [value]="m.value">{{ m.label }}</option>
+        }
+      </datalist>
 
       <label class="key-modal-label">API Key</label>
       <input class="key-modal-input" type="password"
-        placeholder="gsk_… / sk-… / sk-ant-…"
+        [placeholder]="apiKeyPlaceholder(newAgent.provider)"
         [(ngModel)]="newAgent.apiKey" />
 
       <div class="agent-modal-row">

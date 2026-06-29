@@ -273,7 +273,17 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  readonly PROVIDER_MODELS: Record<string, { value: string; label: string }[]> = {
+  readonly PROVIDER_SUGGESTIONS: ProviderSuggestion[] = [
+    { value: 'groq',       label: 'Groq' },
+    { value: 'openai',     label: 'OpenAI' },
+    { value: 'anthropic',  label: 'Anthropic' },
+    { value: 'google',     label: 'Google Gemini' },
+    { value: 'mistral',    label: 'Mistral' },
+    { value: 'together',   label: 'Together AI' },
+    { value: 'perplexity', label: 'Perplexity' },
+  ];
+
+  readonly PROVIDER_MODELS: Record<string, ModelSuggestion[]> = {
     groq: [
       // ── Llama 4 ──
       { value: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick 17B (recommended)' },
@@ -358,8 +368,41 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     ],
   };
 
-  modelsForProvider(provider: string): { value: string; label: string }[] {
-    return this.PROVIDER_MODELS[provider] ?? [];
+  normalizeProvider(provider: string | null | undefined): string {
+    return (provider ?? '').trim().toLowerCase();
+  }
+
+  effectiveProvider(provider: string | null | undefined): string {
+    return this.normalizeProvider(provider) || 'groq';
+  }
+
+  defaultModelForProvider(provider: string | null | undefined): string {
+    return this.modelsForProvider(provider)[0]?.value ?? '';
+  }
+
+  effectiveModel(provider: string | null | undefined, model: string | null | undefined): string {
+    const trimmed = (model ?? '').trim();
+    return trimmed || this.defaultModelForProvider(provider);
+  }
+
+  modelsForProvider(provider: string | null | undefined): ModelSuggestion[] {
+    return this.PROVIDER_MODELS[this.normalizeProvider(provider)] ?? [];
+  }
+
+  apiKeyPlaceholder(provider: string | null | undefined): string {
+    switch (this.normalizeProvider(provider)) {
+      case 'openai':    return 'sk-...';
+      case 'anthropic': return 'sk-ant-...';
+      case 'google':    return 'AIza...';
+      case 'groq':      return 'gsk_...';
+      default:          return 'Paste your provider API key';
+    }
+  }
+
+  onProviderChange(provider: string): void {
+    this.st.patch({ provider, selectedModel: '' });
+    this.testStatus = 'idle';
+    this.testError  = '';
   }
 
   // mode + session controls
