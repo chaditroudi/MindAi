@@ -1,5 +1,4 @@
-import type { WidgetType } from '../ai/chart.js';
-export type { WidgetType };
+export type WidgetType = string;
 
 export type FieldType =
   | 'string' | 'number' | 'integer' | 'boolean'

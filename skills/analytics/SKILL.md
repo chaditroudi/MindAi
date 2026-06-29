@@ -190,8 +190,7 @@ Router / session agent  (this skill — intent routing)
 | Skill | SKILL.md | Implementation |
 |---|---|---|
 | aggregation | [skills/aggregation](../aggregation/SKILL.md) | `src/ai/planner.ts` + `src/features/pipeline.ts` |
-| chart | [skills/chart](../chart/SKILL.md) | `src/ai/chart-builder.ts` + `src/ai/chart-renderer.ts` |
+| chart | [skills/chart](../chart/SKILL.md) | `nest-app/src/ai/chart.ts` and `src/ai/chart.ts` |
 | inquiry | [skills/inquiry](../inquiry/SKILL.md) | `src/features/inquiry.ts` + `src/ai/writer.ts` |
 | report | [skills/report](../report/SKILL.md) | `src/features/report.ts` + `src/ai/writer.ts` |
 | writer | [skills/writer](../writer/SKILL.md) | `src/ai/writer.ts` (shared base, docs only) |
-
