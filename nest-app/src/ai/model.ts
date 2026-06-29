@@ -1,18 +1,22 @@
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 import { Agent } from '@mastra/core/agent';
 
 export type AgentRole = 'supervisor' | 'writer' | 'chart' | 'memory';
 
+type ProviderName = keyof typeof PROVIDERS;
+
 // ── Provider registry ──────────────────────────────────────────────────────────
-// Maps provider slug → OpenAI-compatible base URL.
+// Maps provider slug → provider API base URL.
 // Model names come entirely from the user's UI (settings / agent config) — no defaults here.
-// To add a provider: one line below, nothing else to change.
 
 export const PROVIDERS: Record<string, string> = {
   groq:       'https://api.groq.com/openai/v1',
   openai:     'https://api.openai.com/v1',
-  google:     'https://generativelanguage.googleapis.com/v1beta/openai',
+  google:     'https://generativelanguage.googleapis.com/v1beta',
   anthropic:  'https://api.anthropic.com/v1',
   mistral:    'https://api.mistral.ai/v1',
   together:   'https://api.together.xyz/v1',
@@ -28,11 +32,56 @@ const TIMEOUT_ENV_KEYS: Record<AgentRole, string> = {
 
 // ── Provider detection from API key prefix ────────────────────────────────────
 
-export function detectProvider(apiKey: string): string {
+export function detectProviderFromApiKey(apiKey: string): ProviderName | null {
+  if (apiKey.startsWith('gsk_'))    return 'groq';
   if (apiKey.startsWith('sk-ant-')) return 'anthropic';
-  if (apiKey.startsWith('AIza'))   return 'google';
-  if (apiKey.startsWith('sk-'))    return 'openai';
+  if (apiKey.startsWith('AIza'))    return 'google';
+  if (apiKey.startsWith('sk-'))     return 'openai';
+  return null;
+}
+
+export function detectProvider(apiKey: string): string {
+  const detected = detectProviderFromApiKey(apiKey);
+  if (detected) return detected;
   return 'groq';
+}
+
+function normalizeProvider(provider?: string): string | undefined {
+  const normalized = provider?.trim().toLowerCase();
+  return normalized || undefined;
+}
+
+export function buildProviderValidationRequest(
+  provider: string,
+  apiKey: string,
+): { url: string; headers: Record<string, string> } | null {
+  const normalized = normalizeProvider(provider);
+  if (!normalized) return null;
+
+  const baseURL = PROVIDERS[normalized];
+  if (!baseURL) return null;
+
+  if (normalized === 'google') {
+    return {
+      url:     `${baseURL}/models`,
+      headers: { 'x-goog-api-key': apiKey },
+    };
+  }
+
+  if (normalized === 'anthropic') {
+    return {
+      url: `${baseURL}/models`,
+      headers: {
+        'anthropic-version': '2023-06-01',
+        'x-api-key':         apiKey,
+      },
+    };
+  }
+
+  return {
+    url:     `${baseURL}/models`,
+    headers: { Authorization: `Bearer ${apiKey}` },
+  };
 }
 
 // ── Model resolver ────────────────────────────────────────────────────────────
@@ -43,8 +92,8 @@ export function resolveModel(
   userModel?:    string,
   userProvider?: string,
 ): LanguageModel {
-  const key      = apiKey ?? '';
-  const provider = userProvider ?? detectProvider(key);
+  const key      = apiKey?.trim() ?? '';
+  const provider = normalizeProvider(userProvider) ?? detectProvider(key);
   const baseURL  = PROVIDERS[provider];
 
   if (!userModel) {
@@ -54,7 +103,27 @@ export function resolveModel(
     );
   }
 
-  return createOpenAI({ apiKey: key, baseURL })(userModel);
+  switch (provider) {
+    case 'anthropic':
+      return createAnthropic({ apiKey: key, baseURL })(userModel);
+    case 'google':
+      return createGoogleGenerativeAI({ apiKey: key, baseURL })(userModel);
+    case 'groq':
+      return createGroq({ apiKey: key, baseURL })(userModel);
+    case 'openai':
+      return createOpenAI({ apiKey: key, baseURL })(userModel);
+    case 'mistral':
+    case 'together':
+    case 'perplexity':
+      return createOpenAI({ apiKey: key, baseURL }).chat(userModel);
+    default:
+      if (!baseURL) {
+        throw new Error(
+          `Unsupported provider "${provider}". Supported providers: ${Object.keys(PROVIDERS).join(', ')}.`,
+        );
+      }
+      return createOpenAI({ apiKey: key, baseURL }).chat(userModel);
+  }
 }
 
 export function freshSignal(role: AgentRole): AbortSignal {

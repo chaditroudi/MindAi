@@ -3,7 +3,7 @@ import {
   HttpException, HttpStatus,
 } from '@nestjs/common';
 import { IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
-import { PROVIDERS, detectProvider } from '../ai/model';
+import { PROVIDERS, buildProviderValidationRequest, detectProviderFromApiKey } from '../ai/model';
 
 class VerifyKeyDto {
   @IsString() @MinLength(1) @MaxLength(500)
@@ -27,16 +27,18 @@ const MODEL_URLS: Record<string, string> = Object.fromEntries(
 const ALLOWED_VERIFY_URLS = new Set(Object.values(MODEL_URLS));
 
 function autoDetect(key: string): { name: string; url: string } | null {
-  // gsk_ is Groq's key prefix; all others via detectProvider()
-  const provider = key.startsWith('gsk_') ? 'groq' : detectProvider(key);
+  const provider = detectProviderFromApiKey(key);
+  if (!provider) return null;
   const url = MODEL_URLS[provider];
   return url ? { name: provider, url } : null;
 }
 
-async function pingKey(apiKey: string, url: string): Promise<'valid' | 'invalid' | 'unreachable'> {
+async function pingKey(apiKey: string, provider: string, url: string): Promise<'valid' | 'invalid' | 'unreachable'> {
+  const request = buildProviderValidationRequest(provider, apiKey);
+  const headers = request?.headers ?? { Authorization: `Bearer ${apiKey}` };
   try {
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers,
       signal: AbortSignal.timeout(8_000),
     });
     if (res.status === 200 || res.status === 429) return 'valid'; // 429 = rate-limited but key is valid
@@ -86,7 +88,7 @@ export class UserKeysController {
         }
       }
 
-      const status = await pingKey(key, url);
+      const status = await pingKey(key, name, url);
 
       if (status === 'invalid') {
         throw new BadRequestException(

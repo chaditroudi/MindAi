@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { UserSettingsRepository } from './user-settings.repository';
 import type { UserSettingsDocument } from './user-settings.repository';
-import { detectProvider, PROVIDERS } from '../ai/model';
+import { buildProviderValidationRequest, detectProviderFromApiKey, PROVIDERS } from '../ai/model';
 
 export interface UserSettingsDto {
   apiKey:           string;
@@ -23,13 +23,13 @@ const TIMEOUT_MS = 8_000;
 // Every provider that exposes GET /models (all OpenAI-compatible ones) works here.
 
 async function validateApiKey(apiKey: string, provider: string): Promise<void> {
-  const baseURL = PROVIDERS[provider];
-  if (!baseURL) return; // unknown provider → skip, first real request surfaces errors
+  const request = buildProviderValidationRequest(provider, apiKey);
+  if (!request) return; // unknown provider → skip, first real request surfaces errors
 
   let res: Response;
   try {
-    res = await fetch(`${baseURL}/models`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+    res = await fetch(request.url, {
+      headers: request.headers,
       signal:  AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
@@ -54,11 +54,14 @@ export class UserSettingsService {
 
   async validate(dto: UserSettingsDto): Promise<ValidationResult> {
     const { apiKey, provider, model } = dto;
+    const providerKey = provider.trim().toLowerCase();
     // Resolve effective provider: use the user's string if it's in the registry,
     // otherwise auto-detect from the API key prefix (AIza→google, sk-ant-→anthropic, etc.)
-    const effective = PROVIDERS[provider] ? provider : detectProvider(apiKey);
+    const effective = PROVIDERS[providerKey]
+      ? providerKey
+      : (detectProviderFromApiKey(apiKey) ?? providerKey);
     await validateApiKey(apiKey, effective);
-    return { ok: true, provider, model };
+    return { ok: true, provider: providerKey, model };
   }
 
   async save(userId: string, dto: UserSettingsDto): Promise<void> {
