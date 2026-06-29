@@ -218,9 +218,21 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async saveApiKey(): Promise<void> {
     const trimmed         = this.modalKey.trim();
     const provider        = this.effectiveProvider(this.st.snap.provider);
-    const model           = this.effectiveModel(provider, this.st.snap.selectedModel);
+    const model           = (this.st.snap.selectedModel ?? '').trim();
     const inputTokenLimit = this.st.snap.inputTokenLimit || 4_000;
-    if (!trimmed || !model) return;
+
+    if (!provider) {
+      this.st.patch({ keyRejected: true, keyErrorText: 'Please select a provider before saving.' });
+      return;
+    }
+    if (!model) {
+      this.st.patch({ keyRejected: true, keyErrorText: 'Please enter or select a model before saving.' });
+      return;
+    }
+    if (!trimmed) {
+      this.st.patch({ keyRejected: true, keyErrorText: 'Please enter your API key before saving.' });
+      return;
+    }
 
     try {
       await this.api.saveSettings(this.st.snap.userId, { apiKey: trimmed, provider, model, inputTokenLimit });
@@ -260,8 +272,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async testConnection(): Promise<void> {
     const trimmed  = this.modalKey.trim();
     const provider = this.effectiveProvider(this.st.snap.provider);
-    const model    = this.effectiveModel(provider, this.st.snap.selectedModel);
-    if (!trimmed || !model) return;
+    const model    = (this.st.snap.selectedModel ?? '').trim();
+    if (!trimmed || !provider || !model) return;
     this.testStatus = 'testing';
     this.testError  = '';
     try {
@@ -380,9 +392,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return this.modelsForProvider(provider)[0]?.value ?? '';
   }
 
-  effectiveModel(provider: string | null | undefined, model: string | null | undefined): string {
-    const trimmed = (model ?? '').trim();
-    return trimmed || this.defaultModelForProvider(provider);
+  effectiveModel(_provider: string | null | undefined, model: string | null | undefined): string {
+    return (model ?? '').trim();
   }
 
   modelsForProvider(provider: string | null | undefined): ModelSuggestion[] {
