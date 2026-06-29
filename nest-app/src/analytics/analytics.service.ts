@@ -18,12 +18,11 @@ import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-c
 import type { ExecuteResult, LlmOpts } from './pipeline.service';
 
 interface AccessResult {
-  apiKey:           string;
-  model?:           string;
-  provider?:        string;
-  inputTokenLimit:  number;
-  outputTokenLimit: number;
-  agentApiKey?:     string;
+  apiKey:       string;
+  model?:       string;
+  provider?:    string;
+  maxTokens:    number;    // max output tokens sent to LLM; warning fires when response hits this cap
+  agentApiKey?: string;
 }
 import {
   sessionExists,
@@ -198,7 +197,7 @@ export class AnalyticsService {
     for (;;) {
       try {
         const executed = await this.executeByIntent(intent, prompt, context, {
-          apiKey: access.apiKey, model: access.model, provider: access.provider, maxTokens: access.inputTokenLimit,
+          apiKey: access.apiKey, model: access.model, provider: access.provider, maxTokens: access.maxTokens,
         });
         result       = executed.result;
         inputTokens  = executed.usage.inputTokens;
@@ -244,7 +243,7 @@ export class AnalyticsService {
     return this.buildResponse({
       result, prompt, apiKey: access.apiKey, sessionId,
       displayIntent, userId: req.userId, durationMs,
-      inputTokens, outputTokens, outputTokenLimit: access.inputTokenLimit,
+      inputTokens, outputTokens, outputTokenLimit: access.maxTokens,
       agentApiKey: access.agentApiKey,
       model: access.model, provider: access.provider,
     });
