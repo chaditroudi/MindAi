@@ -81,6 +81,21 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   writerModel     = '';
   memoryModel     = '';
 
+  readonly ROLE_MODEL_OPTIONS = [
+    { key: 'supervisor', label: 'Supervisor (planner)' },
+    { key: 'chart',      label: 'Chart builder' },
+    { key: 'writer',     label: 'Writer (report/inquiry)' },
+    { key: 'memory',     label: 'Memory extractor' },
+  ] as const;
+
+  getRoleModel(role: 'supervisor' | 'chart' | 'writer' | 'memory'): string {
+    return this[`${role}Model` as 'supervisorModel' | 'chartModel' | 'writerModel' | 'memoryModel'];
+  }
+
+  setRoleModel(role: 'supervisor' | 'chart' | 'writer' | 'memory', value: string): void {
+    (this as Record<string, unknown>)[`${role}Model`] = value;
+  }
+
   // Agent config editing state
   configSaving = false;
   configError  = '';

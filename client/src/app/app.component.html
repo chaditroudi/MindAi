@@ -807,6 +807,26 @@
         }
       </select>
 
+      <!-- Per-role model overrides -->
+      <details class="key-modal-role-section">
+        <summary class="key-modal-label" style="cursor:pointer;user-select:none;">
+          Per-role models <span class="key-modal-label-hint">— optional: use a different model for each agent role</span>
+        </summary>
+        <div class="key-modal-role-grid">
+          @for (role of ROLE_MODEL_OPTIONS; track role.key) {
+            <label class="key-modal-label key-modal-role-label">{{ role.label }}</label>
+            <select class="key-modal-input key-modal-role-select"
+              [ngModel]="getRoleModel(role.key)"
+              (ngModelChange)="setRoleModel(role.key, $event)">
+              <option value="">Same as default ({{ s.selectedModel || '—' }})</option>
+              @for (m of modelsForProvider(s.provider); track m.value) {
+                <option [value]="m.value">{{ m.label }}</option>
+              }
+            </select>
+          }
+        </div>
+      </details>
+
       <label class="key-modal-label">API Key</label>
       <input type="password" class="key-modal-input"
         [placeholder]="apiKeyPlaceholder(s.provider)"
