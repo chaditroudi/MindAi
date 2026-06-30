@@ -617,7 +617,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         if (hasActive) {
           this.st.patch({ hasKey: true });
         } else {
-          // No connection at all — open Config tab so user can add one
+          // No connection at all — open the add modal directly
+          this.showAddAgent    = true;
+          this.agentTestStatus = 'idle';
           this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
         }
       }
@@ -696,12 +698,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   private createEmptyAgent(): AgentEntry {
     return {
-      status:           'idle',
+      status:           'active',
       provider:         '',
       model:            '',
       apiKey:           '',
-      inputTokenLimit:  4_000,
-      outputTokenLimit: 2_000,
+      inputTokenLimit:  8_000,
+      outputTokenLimit: 4_000,
       tokenBudget:      0,
       inputTokensUsed:  0,
       outputTokensUsed: 0,
