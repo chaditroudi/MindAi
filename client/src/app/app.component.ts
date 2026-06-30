@@ -562,6 +562,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           role:               'assistant',
           prompt:             pendingPrompt,
           intent:             'report',
+          inputTokens:        (dashData.inputTokens ?? 0) + (reportData.inputTokens ?? 0),
+          outputTokens:       (dashData.outputTokens ?? 0) + (reportData.outputTokens ?? 0),
           tokenLimitExceeded: dashData.tokenLimitExceeded || reportData.tokenLimitExceeded,
           tokenWarning:       dashData.tokenWarning ?? reportData.tokenWarning,
           result: {
