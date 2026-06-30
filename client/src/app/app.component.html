@@ -863,29 +863,17 @@
         </svg>
       </div>
       <h2 class="key-modal-title">Add AI connection</h2>
-      <p class="key-modal-desc">Provider, model and API key for this connection. Set budget to 0 for unlimited.</p>
+      <p class="key-modal-desc">Provider, model and API key. Status is set automatically based on your key's health.</p>
 
-      <div class="agent-modal-row">
-        <div class="agent-modal-col">
-          <label class="key-modal-label">Provider</label>
-          <select class="key-modal-input"
-            [ngModel]="newAgent.provider"
-            (ngModelChange)="onNewAgentProviderChange($event)">
-            <option value="">Select a provider</option>
-            @for (provider of providerOptions; track provider.id) {
-              <option [value]="provider.id">{{ provider.label }} ({{ provider.id }})</option>
-            }
-          </select>
-        </div>
-        <div class="agent-modal-col">
-          <label class="key-modal-label">Status</label>
-          <select class="key-modal-input" [(ngModel)]="newAgent.status">
-            @for (st of STATUS_OPTIONS; track st) {
-              <option [value]="st">{{ st }}</option>
-            }
-          </select>
-        </div>
-      </div>
+      <label class="key-modal-label">Provider</label>
+      <select class="key-modal-input"
+        [ngModel]="newAgent.provider"
+        (ngModelChange)="onNewAgentProviderChange($event)">
+        <option value="">Select a provider</option>
+        @for (provider of providerOptions; track provider.id) {
+          <option [value]="provider.id">{{ provider.label }} ({{ provider.id }})</option>
+        }
+      </select>
 
       <label class="key-modal-label">Model</label>
       <select class="key-modal-input"
