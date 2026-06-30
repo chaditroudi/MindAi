@@ -270,8 +270,9 @@ export function createSkillAgent(
  * Setting structuredOutputs:false uses json_object mode instead — valid JSON is still
  * required and Zod validates the shape on our side.
  */
-// Providers that accept only role:"system" (not the newer OpenAI-specific "developer" role).
-const SYSTEM_ROLE_ONLY = new Set(['mistral', 'together', 'perplexity', 'groq', 'google', 'anthropic']);
+// OpenAI-compat providers (via createOpenAI) that only accept role:"system",
+// not the newer OpenAI-specific role:"developer".
+const OPENAI_COMPAT_SYSTEM_ROLE = new Set(['mistral', 'together', 'perplexity']);
 
 export function skillProviderOptions(
   apiKey?:       string,
@@ -289,7 +290,7 @@ export function skillProviderOptions(
   // Mistral, Together, Perplexity (and other OpenAI-compat providers) only accept
   // role:"system". The @ai-sdk/openai v2 provider defaults to role:"developer" for
   // some models, which these providers reject with 422 Unprocessable Entity.
-  if (SYSTEM_ROLE_ONLY.has(prov)) opts['openai'] = { systemMessageMode: 'system' };
+  if (OPENAI_COMPAT_SYSTEM_ROLE.has(prov)) opts['openai'] = { systemMessageMode: 'system' };
 
   return Object.keys(opts).length ? opts : undefined;
 }
