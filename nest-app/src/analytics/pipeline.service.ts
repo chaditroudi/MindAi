@@ -335,7 +335,7 @@ export class PipelineService {
   }
 
   private validatePipelineFields(pipeline: Row[], source: DataSource): void {
-    const known    = new Set(['_id', ...source.fields.map(f => f.name)]);
+    const known    = new Set(['_id', ...source.fields.filter(f => !f.name.startsWith('$')).map(f => f.name)]);
     const computed = new Set<string>();
     const bad:       string[] = [];
 
