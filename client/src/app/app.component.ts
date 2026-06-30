@@ -84,27 +84,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   newAgentModelsError   = '';
   private newAgentModelsRequestId = 0;
 
-  // Per-role model overrides (Option A: same key/provider, different model per agent)
-  supervisorModel = '';
-  chartModel      = '';
-  writerModel     = '';
-  memoryModel     = '';
-
-  readonly ROLE_MODEL_OPTIONS = [
-    { key: 'supervisor', label: 'Supervisor (planner)' },
-    { key: 'chart',      label: 'Chart builder' },
-    { key: 'writer',     label: 'Writer (report/inquiry)' },
-    { key: 'memory',     label: 'Memory extractor' },
-  ] as const;
-
-  getRoleModel(role: 'supervisor' | 'chart' | 'writer' | 'memory'): string {
-    return this[`${role}Model` as 'supervisorModel' | 'chartModel' | 'writerModel' | 'memoryModel'];
-  }
-
-  setRoleModel(role: 'supervisor' | 'chart' | 'writer' | 'memory', value: string): void {
-    (this as Record<string, unknown>)[`${role}Model`] = value;
-  }
-
   // Agent config editing state
   configSaving = false;
   configError  = '';
@@ -233,10 +212,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           selectedModel:   this.effectiveModel(res.model),
           inputTokenLimit: this.coercePositiveInt(res.inputTokenLimit, 4_000),
         });
-        this.supervisorModel = res.supervisorModel ?? '';
-        this.chartModel      = res.chartModel      ?? '';
-        this.writerModel     = res.writerModel     ?? '';
-        this.memoryModel     = res.memoryModel     ?? '';
         void this.loadModels();
       } else {
         this.st.patch({ hasKey: false, showKeyModal: true });
@@ -268,10 +243,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     try {
       await this.api.saveSettings(this.st.snap.userId, {
         apiKey: trimmed, provider, model, inputTokenLimit,
-        supervisorModel: this.supervisorModel.trim() || undefined,
-        chartModel:      this.chartModel.trim()      || undefined,
-        writerModel:     this.writerModel.trim()      || undefined,
-        memoryModel:     this.memoryModel.trim()      || undefined,
       });
       this.st.patch({
         hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
