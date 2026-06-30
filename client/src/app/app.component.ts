@@ -474,6 +474,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
     } catch (err) {
       this.st.patch({ messages: this.st.snap.messages.filter(m => m.messageId !== tempId) });
+      // Always refresh agent status after a failed call — backend may have marked agents expired/idle
+      void this.loadAgentConfig();
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
       } else if (err instanceof ApiError && err.code === 'NO_ACTIVE_CONNECTION') {
