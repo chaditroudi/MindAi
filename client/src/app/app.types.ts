@@ -124,7 +124,8 @@ export interface UserSettingsResponse {
   provider?:         string;
   model?:            string;
   keyPreview?:       string;
-  inputTokenLimit?:  number;
+  responseTokenLimit?: number;
+  inputTokenLimit?:    number;
   inputTokensUsed?:  number;
   outputTokensUsed?: number;
 }

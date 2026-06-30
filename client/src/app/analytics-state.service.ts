@@ -46,7 +46,7 @@ export interface AppState {
   showKeyModal:    boolean;
   provider:        string;
   selectedModel:   string;
-  inputTokenLimit: number;
+  responseTokenLimit: number;
 }
 
 const INITIAL: AppState = {
@@ -80,7 +80,7 @@ const INITIAL: AppState = {
   showKeyModal:    false,
   provider:        '',
   selectedModel:   '',
-  inputTokenLimit: 4_000,
+  responseTokenLimit: 4_000,
 };
 
 @Injectable({ providedIn: 'root' })
