@@ -294,14 +294,17 @@ export async function runChart(
   const t0 = Date.now();
 
   const agent = createSkillAgent('chart', CHART_INSTRUCTIONS, apiKey, userModel, userProvider);
-  const result = await agent.generate(
-    [{ role: 'user', content: buildChartPrompt(rows, prompt, strategy, chartHint, source) }],
-    {
-      structuredOutput: { schema: dashboardSchema },
-      modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 1 },
-      abortSignal:      freshSignal('chart'),
-      providerOptions:  skillProviderOptions(apiKey, userProvider),
-    },
+  const result = await withRateLimitRetry(
+    () => agent.generate(
+      [{ role: 'user', content: buildChartPrompt(rows, prompt, strategy, chartHint, source) }],
+      {
+        structuredOutput: { schema: dashboardSchema },
+        modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 0 },
+        abortSignal:      freshSignal('chart'),
+        providerOptions:  skillProviderOptions(apiKey, userProvider),
+      },
+    ),
+    'chart',
   );
 
   const plan = result.object as LlmDashboard;

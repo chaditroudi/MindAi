@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createSkillAgent, freshSignal, skillProviderOptions } from './model';
+import { createSkillAgent, freshSignal, skillProviderOptions, withRateLimitRetry } from './model';
 import { readMarkdownSection, skillFile } from './skill-prompt';
 import { log, logTrace } from '../common/logger/app.logger';
 import { buildInquiryMessage, buildReportMessage } from '../prompts';
@@ -45,14 +45,17 @@ export async function runInquirySkill({ prompt, rows, apiKey, userModel, userPro
   log('writer:inquiry', `rows: ${rows.length} | maxRows: ${INQUIRY_MAX_ROWS} | maxTokens: ${limit}`);
 
   const agent  = createSkillAgent('writer', INQUIRY_INSTRUCTIONS, apiKey, userModel, userProvider);
-  const result = await agent.generate(
-    [{ role: 'user', content: buildInquiryMessage(prompt, rows, INQUIRY_MAX_ROWS, WRITER_MAX_CHARS) }],
-    {
-      structuredOutput: { schema: summarySchema },
-      modelSettings:    { maxOutputTokens: limit, temperature: 0, maxRetries: 1 },
-      abortSignal:      freshSignal('writer'),
-      providerOptions:  skillProviderOptions(apiKey, userProvider),
-    },
+  const result = await withRateLimitRetry(
+    () => agent.generate(
+      [{ role: 'user', content: buildInquiryMessage(prompt, rows, INQUIRY_MAX_ROWS, WRITER_MAX_CHARS) }],
+      {
+        structuredOutput: { schema: summarySchema },
+        modelSettings:    { maxOutputTokens: limit, temperature: 0, maxRetries: 0 },
+        abortSignal:      freshSignal('writer'),
+        providerOptions:  skillProviderOptions(apiKey, userProvider),
+      },
+    ),
+    'inquiry',
   );
 
   const object = result.object as InquirySummary;
@@ -69,14 +72,17 @@ export async function runReportSkill({ prompt, rows, withChart, apiKey, userMode
   log('writer:report', `rows: ${rows.length} | maxTokens: ${limit} | withChart: ${withChart ?? false}`);
 
   const agent  = createSkillAgent('writer', REPORT_INSTRUCTIONS, apiKey, userModel, userProvider);
-  const result = await agent.generate(
-    [{ role: 'user', content: buildReportMessage(prompt, rows, WRITER_MAX_CHARS, withChart) }],
-    {
-      structuredOutput: { schema: reportSectionsSchema },
-      modelSettings:    { maxOutputTokens: limit, temperature: 0, maxRetries: 1 },
-      abortSignal:      freshSignal('writer'),
-      providerOptions:  skillProviderOptions(apiKey, userProvider),
-    },
+  const result = await withRateLimitRetry(
+    () => agent.generate(
+      [{ role: 'user', content: buildReportMessage(prompt, rows, WRITER_MAX_CHARS, withChart) }],
+      {
+        structuredOutput: { schema: reportSectionsSchema },
+        modelSettings:    { maxOutputTokens: limit, temperature: 0, maxRetries: 0 },
+        abortSignal:      freshSignal('writer'),
+        providerOptions:  skillProviderOptions(apiKey, userProvider),
+      },
+    ),
+    'report',
   );
 
   const object = result.object as ReportSections;
