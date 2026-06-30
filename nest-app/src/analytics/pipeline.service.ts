@@ -448,7 +448,7 @@ export class PipelineService {
     if (plan.skills.includes('report') && rows.length) {
       const withChart = plan.skills.includes('chart') && rows.length >= 2;
       const { result: rep, usage: repUsage } = await runReportSkill({
-        rows, prompt, withChart, apiKey, userModel: writerModel, userProvider, maxTokens,
+        rows, prompt, withChart, apiKey, userModel, userProvider, maxTokens,
       });
       this.logger.log(`report done | sections: ${rep.reportSections.length}${withChart ? ' — generating chart' : ''}`);
 
@@ -468,7 +468,7 @@ export class PipelineService {
     // Inquiry
     if (plan.skills.includes('inquiry') && rows.length) {
       this.logger.log(`inquiry | rows: ${rows.length}`);
-      const { result, usage } = await runInquirySkill({ rows, prompt, apiKey, userModel: writerModel, userProvider, maxTokens });
+      const { result, usage } = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
       this.logger.log('inquiry done');
       return { result, usage: addUsage(aggUsage, usage) };
     }
