@@ -98,6 +98,11 @@ export class UserSettingsService {
     return this.repo.findByUser(userId);
   }
 
+  async patchTokenLimit(userId: string, inputTokenLimit: number): Promise<{ ok: boolean }> {
+    const ok = await this.repo.patchTokenLimit(userId, inputTokenLimit);
+    return { ok };
+  }
+
   async incrementUsage(userId: string, inputTokens: number, outputTokens: number): Promise<void> {
     if (inputTokens <= 0 && outputTokens <= 0) return;
     await this.repo.incrementUsage(userId, inputTokens, outputTokens);

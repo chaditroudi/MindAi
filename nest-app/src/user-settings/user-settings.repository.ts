@@ -51,6 +51,11 @@ export class UserSettingsRepository {
     return this.model.findOne({ userId }).lean() as Promise<UserSettingsDocument | null>;
   }
 
+  async patchTokenLimit(userId: string, inputTokenLimit: number): Promise<boolean> {
+    const result = await this.model.updateOne({ userId }, { $set: { inputTokenLimit } });
+    return result.matchedCount > 0;
+  }
+
   async incrementUsage(userId: string, inputTokens: number, outputTokens: number): Promise<void> {
     await this.model.updateOne(
       { userId },
