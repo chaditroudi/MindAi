@@ -4,7 +4,11 @@ import { firstValueFrom, Observable, throwError, TimeoutError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 
 export class ApiError extends Error {
-  constructor(message: string, readonly code: string) {
+  constructor(
+    message: string,
+    readonly code: string,
+    readonly data?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = 'ApiError';
   }
@@ -130,8 +134,9 @@ export class AnalyticsApiService {
               : typeof error.error?.message === 'string'
                 ? error.error.message
                 : error.message;
-            const code    = typeof error.error?.code  === 'string' ? error.error.code  : undefined;
-            return throwError(() => code ? new ApiError(message, code) : new Error(message));
+            const code    = typeof error.error?.code === 'string' ? error.error.code : undefined;
+            const data    = code && typeof error.error === 'object' ? error.error as Record<string, unknown> : undefined;
+            return throwError(() => code ? new ApiError(message, code, data) : new Error(message));
           }
           if (error instanceof Error) return throwError(() => error);
           return throwError(() => new Error('An unexpected error occurred.'));

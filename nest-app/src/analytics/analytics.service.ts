@@ -181,26 +181,18 @@ function isContextLengthError(err: unknown): boolean {
   );
 }
 
-// Fires when the model hit maxOutputTokens mid-JSON: the structured output is
-// incomplete, so Mastra / Zod throws a parse or validation error.
-// We distinguish this from genuine schema mismatches by requiring that the
-// error is NOT a provider "unsupported format" rejection.
+// Fires when the model hit maxOutputTokens mid-JSON: the response is cut off,
+// producing invalid JSON that Mastra / JSON.parse cannot complete.
+// Only matches definitive parse errors — not generic Zod schema mismatches.
 function isTruncatedOutputError(err: unknown): boolean {
   if (isStructuredOutputUnsupportedError(err)) return false;
   const msg = getErrorMessage(err).toLowerCase();
   return (
-    msg.includes('json') && (
-      msg.includes('parse') ||
-      msg.includes('invalid json') ||
-      msg.includes('unexpected end') ||
-      msg.includes('unexpected token') ||
-      msg.includes('unterminated')
-    )
-  ) || (
-    // Zod / structured-output validation failure on a likely-truncated object
-    (msg.includes('validation') || msg.includes('zod') || msg.includes('invalid_type')) &&
-    !msg.includes('does not support') &&
-    !msg.includes('json_schema')
+    msg.includes('unexpected end of json') ||
+    msg.includes('unterminated string') ||
+    msg.includes('invalid json') ||
+    (msg.includes('json') && msg.includes('parse')) ||
+    (msg.includes('syntaxerror') && (msg.includes('unexpected end') || msg.includes('unexpected token')))
   );
 }
 
@@ -326,10 +318,16 @@ export class AnalyticsService {
           );
         }
         if (isTruncatedOutputError(err)) {
-          const limit = access.maxTokens;
-          throw new BadRequestException(
-            `Your token limit (${limit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish. ` +
-            `Open Settings, increase your token limit, and try again.`,
+          const currentLimit   = access.maxTokens;
+          const suggestedLimit = Math.min(32_000, Math.max(8_000, currentLimit * 2));
+          throw new HttpException(
+            {
+              error:         `Your token limit (${currentLimit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish.`,
+              code:          ERROR_CODES.TOKEN_LIMIT_TOO_LOW,
+              currentLimit,
+              suggestedLimit,
+            },
+            HttpStatus.UNPROCESSABLE_ENTITY,
           );
         }
         throw err;
