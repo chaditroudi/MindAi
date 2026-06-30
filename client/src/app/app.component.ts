@@ -476,17 +476,26 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ messages: this.st.snap.messages.filter(m => m.messageId !== tempId) });
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
-      } else if (err instanceof ApiError && err.code === 'TOKEN_LIMIT_TOO_LOW') {
-        const currentLimit   = Number(err.data?.['currentLimit'])   || this.st.snap.responseTokenLimit;
-        const suggestedLimit = Number(err.data?.['suggestedLimit']) || Math.min(32_000, currentLimit * 2);
+      } else if (err instanceof ApiError && (err.code === 'TOKEN_LIMIT_TOO_LOW' || err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW')) {
         this.st.patch({
           phase: 'idle',
-          pendingTokenConfirm: { prompt: prompt.trim(), intent, currentLimit, suggestedLimit },
+          pendingTokenConfirm: this.buildTokenConfirm(err, prompt.trim(), intent),
         });
       } else {
         this.st.setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
       }
     }
+  }
+
+  private buildTokenConfirm(
+    err: ApiError, prompt: string, intent: ModeKey,
+  ): { prompt: string; intent: ModeKey; currentLimit: number; suggestedLimit: number; kind: 'input' | 'output'; agentApiKey?: string } {
+    const kind: 'input' | 'output' = err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW' ? 'input' : 'output';
+    const fallback        = kind === 'output' ? this.st.snap.responseTokenLimit : 8_000;
+    const currentLimit    = Number(err.data?.['currentLimit'])   || fallback;
+    const suggestedLimit  = Number(err.data?.['suggestedLimit']) || Math.min(32_000, currentLimit * 2);
+    const agentApiKey     = typeof err.data?.['agentApiKey'] === 'string' ? err.data['agentApiKey'] as string : undefined;
+    return { prompt, intent, currentLimit, suggestedLimit, kind, agentApiKey };
   }
 
   async chooseReportFormat(choice: 'report' | 'chart' | 'both'): Promise<void> {
@@ -543,12 +552,10 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       }
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
-      } else if (err instanceof ApiError && err.code === 'TOKEN_LIMIT_TOO_LOW') {
-        const currentLimit   = Number(err.data?.['currentLimit'])   || this.st.snap.responseTokenLimit;
-        const suggestedLimit = Number(err.data?.['suggestedLimit']) || Math.min(32_000, currentLimit * 2);
+      } else if (err instanceof ApiError && (err.code === 'TOKEN_LIMIT_TOO_LOW' || err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW')) {
         this.st.patch({
           phase: 'idle',
-          pendingTokenConfirm: { prompt: pendingPrompt, intent: 'report', currentLimit, suggestedLimit },
+          pendingTokenConfirm: this.buildTokenConfirm(err, pendingPrompt, 'report'),
         });
       } else {
         this.st.setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
@@ -797,9 +804,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     const conf = this.st.snap.pendingTokenConfirm;
     if (!conf) return;
     this.st.patch({ pendingTokenConfirm: null });
-    const ok = await this.applyResponseTokenLimit(conf.suggestedLimit);
+    const ok = conf.agentApiKey
+      ? await this.applyAgentTokenLimit(conf.agentApiKey, conf.kind, conf.suggestedLimit)
+      : await this.applyResponseTokenLimit(conf.suggestedLimit);
     if (!ok) {
-      this.st.setError('Could not update the response token limit. Please adjust it manually in Settings and retry.');
+      this.st.setError(`Could not update the ${conf.kind} token limit. Please adjust it manually in Config and retry.`);
       return;
     }
     if (conf.intent === 'report') {
@@ -822,6 +831,25 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     try {
       await this.api.updateResponseTokenLimit(userId, limit);
       this.st.patch({ responseTokenLimit: limit });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      this.tokenLimitSaving = false;
+    }
+  }
+
+  private async applyAgentTokenLimit(agentApiKey: string, kind: 'input' | 'output', limit: number): Promise<boolean> {
+    this.tokenLimitSaving = true;
+    try {
+      await this.api.updateAgentTokenLimit(agentApiKey, kind, limit);
+      const field = kind === 'input' ? 'inputTokenLimit' : 'outputTokenLimit';
+      const cfg   = this.st.snap.agentConfig;
+      if (cfg) {
+        const agents = cfg.agents.map(a => a.apiKey === agentApiKey ? { ...a, [field]: limit } : a);
+        this.st.patch({ agentConfig: { ...cfg, agents } });
+        this.agentDraft = agents.map(a => this.sanitizeAgent(a));
+      }
       return true;
     } catch {
       return false;
