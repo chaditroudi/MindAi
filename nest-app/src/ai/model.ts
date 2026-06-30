@@ -225,22 +225,20 @@ export function resolveModel(
     case 'groq':
       return createGroq({ apiKey: key, baseURL })(model);
     case 'openai':
-      // .chat() forces Chat Completions endpoint (/chat/completions)
-      // Without it, @ai-sdk/openai v2 defaults to the Responses API (/responses)
-      return createOpenAI({ apiKey: key, baseURL }).chat(model);
     case 'mistral':
     case 'together':
     case 'perplexity':
-      // compatibility:'compatible' keeps role:"system" instead of the OpenAI-only
-      // role:"developer" that strict mode emits — Mistral/Together/Perplexity reject it.
-      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(model);
+      // .chat() forces Chat Completions endpoint (/chat/completions)
+      // Without it, @ai-sdk/openai v2 defaults to the Responses API (/responses)
+      // which these providers do not support.
+      return createOpenAI({ apiKey: key, baseURL }).chat(model);
     default:
       if (!baseURL) {
         throw new Error(
           `Unsupported provider "${provider}". Supported: ${Object.keys(PROVIDERS).join(', ')}.`,
         );
       }
-      return createOpenAI({ apiKey: key, baseURL, compatibility: 'compatible' }).chat(model);
+      return createOpenAI({ apiKey: key, baseURL }).chat(model);
   }
 }
 
@@ -272,11 +270,26 @@ export function createSkillAgent(
  * Setting structuredOutputs:false uses json_object mode instead — valid JSON is still
  * required and Zod validates the shape on our side.
  */
+// Providers that accept only role:"system" (not the newer OpenAI-specific "developer" role).
+const SYSTEM_ROLE_ONLY = new Set(['mistral', 'together', 'perplexity', 'groq', 'google', 'anthropic']);
+
 export function skillProviderOptions(
   apiKey?:       string,
   userProvider?: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   const prov = normalizeProvider(userProvider) ?? detectProvider(apiKey?.trim() ?? '');
-  return prov === 'groq' ? { groq: { structuredOutputs: false } } : undefined;
+  if (!prov) return undefined;
+
+  const opts: Record<string, unknown> = {};
+
+  // Groq's json_schema strict mode rejects open schemas — use json_object mode instead.
+  if (prov === 'groq') opts['groq'] = { structuredOutputs: false };
+
+  // Mistral, Together, Perplexity (and other OpenAI-compat providers) only accept
+  // role:"system". The @ai-sdk/openai v2 provider defaults to role:"developer" for
+  // some models, which these providers reject with 422 Unprocessable Entity.
+  if (SYSTEM_ROLE_ONLY.has(prov)) opts['openai'] = { systemMessageMode: 'system' };
+
+  return Object.keys(opts).length ? opts : undefined;
 }
