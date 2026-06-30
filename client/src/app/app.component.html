@@ -659,9 +659,13 @@
                 </svg>
               </div>
               <div class="token-confirm-body">
-                <p class="token-confirm-title">Response token limit too low</p>
+                <p class="token-confirm-title">{{ conf.kind === 'input' ? 'Input' : 'Response' }} token limit too low</p>
                 <p class="token-confirm-desc">
-                  Your current response limit is <strong>{{ conf.currentLimit | number }} tokens</strong>, but this response needs more to complete.
+                  @if (conf.kind === 'input') {
+                    Your prompt needs more than this connection's input limit (<strong>{{ conf.currentLimit | number }} tokens</strong>).
+                  } @else {
+                    Your current response limit is <strong>{{ conf.currentLimit | number }} tokens</strong>, but this response needs more to complete.
+                  }
                   Would you like to increase it to <strong>{{ conf.suggestedLimit | number }} tokens</strong> and retry?
                 </p>
                 <div class="token-confirm-actions">
