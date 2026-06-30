@@ -42,6 +42,16 @@ export interface LlmOpts {
   maxTokens?: number;
 }
 
+const PLANNER_MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
+const CHART_MAX_TOKENS   = Number(process.env['CHART_MAX_TOKENS'] ?? 2_000);
+const INQUIRY_MAX_TOKENS = Number(process.env['INQUIRY_MAX_TOKENS'] ?? 400);
+
+function clampStageTokens(limit: number | undefined, fallback: number): number | undefined {
+  if (!Number.isFinite(fallback) || fallback <= 0) return limit;
+  if (!Number.isFinite(limit) || (limit as number) <= 0) return fallback;
+  return Math.min(Math.round(limit as number), Math.round(fallback));
+}
+
 export interface AggregationResult {
   plan:  TaskPlan;
   rows:  Row[];
@@ -170,10 +180,11 @@ export class PipelineService {
     const { apiKey, model: userModel, provider: userProvider, maxTokens } = opts;
     let hint:         string | undefined;
     let plannerUsage: TokenUsage = zeroUsage();
+    const plannerMaxTokens = clampStageTokens(maxTokens, PLANNER_MAX_TOKENS);
 
     for (let attempt = 0; attempt < 2; attempt++) {
       const { plan, usage } = await runSupervisorPlan({
-        prompt, intent, sources, context, apiKey, userModel, userProvider, hint, maxTokens,
+        prompt, intent, sources, context, apiKey, userModel, userProvider, hint, maxTokens: plannerMaxTokens,
       });
       plannerUsage = addUsage(plannerUsage, usage);
       this.logger.log(
@@ -431,12 +442,14 @@ export class PipelineService {
   ): Promise<ExecuteResult<DashboardSpec | ReportResult | InquiryResult>> {
     const { apiKey, model: userModel, provider: userProvider, maxTokens } = opts;
     const source = this.resolveSource(plan.query.sourceName);
+    const chartMaxTokens   = clampStageTokens(maxTokens, CHART_MAX_TOKENS);
+    const inquiryMaxTokens = clampStageTokens(maxTokens, INQUIRY_MAX_TOKENS);
 
     // Chart-only (dashboard intent, or auto-routed without a report narrative)
     if (plan.skills.includes('chart') && !plan.skills.includes('report')) {
       if (!rows.length) throw new Error('No data found. Try rephrasing your question or checking the data source.');
       const { result: chart, usage } = await runChart(
-        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens,
+        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, chartMaxTokens,
       );
       if (chart.widgets.length) {
         this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart }).catch(() => undefined);
@@ -456,7 +469,7 @@ export class PipelineService {
 
       const fallback = { layout: 'operational' as const, title: prompt, summary: '', widgets: [] };
       const { result: chart, usage: chartUsage } = await runChart(
-        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens,
+        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, chartMaxTokens,
       ).catch(err => {
         this.logger.warn(`chart failed (non-fatal): ${err}`);
         return { result: fallback, usage: zeroUsage() };
@@ -468,7 +481,9 @@ export class PipelineService {
     // Inquiry
     if (plan.skills.includes('inquiry') && rows.length) {
       this.logger.log(`inquiry | rows: ${rows.length}`);
-      const { result, usage } = await runInquirySkill({ rows, prompt, apiKey, userModel, userProvider, maxTokens });
+      const { result, usage } = await runInquirySkill({
+        rows, prompt, apiKey, userModel, userProvider, maxTokens: inquiryMaxTokens,
+      });
       this.logger.log('inquiry done');
       return { result, usage: addUsage(aggUsage, usage) };
     }
