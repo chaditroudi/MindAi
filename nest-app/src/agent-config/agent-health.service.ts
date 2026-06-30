@@ -93,14 +93,14 @@ export class AgentHealthService {
         signal:  AbortSignal.timeout(PROBE_TIMEOUT_MS),
       });
 
-      if (res.status === 401 || res.status === 403) return false; // invalid key
+      if (res.status === 401 || res.status === 403) return false; // definitive auth failure
 
       if (res.status === 429) {
         const body = await res.text().catch(() => '');
-        return !isQuotaExhausted(body);
+        return !isQuotaExhausted(body); // false only if quota is permanently exhausted
       }
 
-      if (!res.ok) return false;
+      if (!res.ok) return true; // 404, 500, etc — model-list may fail but key still works
 
       if (!model?.trim()) return true;
 
@@ -113,9 +113,9 @@ export class AgentHealthService {
       const requested = normalizeModelId(model);
       const found = availableModels.some(id => normalizeModelId(id) === requested);
       if (!found) {
-        this.logger.warn(`agent model unavailable: ${provider}/${model}`);
+        this.logger.warn(`agent model not in list: ${provider}/${model} — treating as healthy`);
       }
-      return found;
+      return true; // model-list check is best-effort; real failures surface on generation
     } catch {
       return true;
     }
