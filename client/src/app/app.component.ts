@@ -825,8 +825,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.setError('Could not update the response token limit. Please adjust it manually in Settings and retry.');
       return;
     }
-    this.st.patch({ prompt: conf.prompt, intent: conf.intent });
-    await this.run();
+    if (conf.intent === 'report') {
+      // Bypass the format picker — the user already chose their format before the token error.
+      this.st.patch({ pendingPrompt: conf.prompt, pendingSuggestion: false });
+      await this.chooseReportFormat('report');
+    } else {
+      this.st.patch({ prompt: conf.prompt, intent: conf.intent });
+      await this.run();
+    }
   }
 
   dismissTokenConfirm(): void {
