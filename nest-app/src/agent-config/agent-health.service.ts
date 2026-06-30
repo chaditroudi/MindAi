@@ -16,6 +16,35 @@ function isQuotaExhausted(body: string): boolean {
   return QUOTA_EXHAUSTED_PATTERNS.some(p => lower.includes(p));
 }
 
+function normalizeModelId(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function extractProviderModelIds(provider: string, body: unknown): string[] {
+  const normalized = provider.trim().toLowerCase();
+
+  if (normalized === 'google') {
+    type GoogleModel = { name?: string; supportedGenerationMethods?: string[] };
+    const models = (body as { models?: GoogleModel[] })?.models ?? [];
+    return models
+      .filter(model => model.supportedGenerationMethods?.includes('generateContent'))
+      .map(model => (model.name ?? '').replace(/^models\//, ''))
+      .filter(Boolean);
+  }
+
+  if (normalized === 'anthropic') {
+    type AnthropicModel = { id?: string };
+    const models = (body as { data?: AnthropicModel[] })?.data ?? [];
+    return models.map(model => model.id ?? '').filter(Boolean);
+  }
+
+  type OpenAiCompatModel = { id?: string };
+  const models: OpenAiCompatModel[] =
+    (body as { data?: OpenAiCompatModel[] })?.data
+    ?? (Array.isArray(body) ? (body as OpenAiCompatModel[]) : []);
+  return models.map(model => model.id ?? '').filter(Boolean);
+}
+
 @Injectable()
 export class AgentHealthService {
   private readonly logger = new Logger(AgentHealthService.name);
@@ -30,7 +59,7 @@ export class AgentHealthService {
     for (const agent of config.agents) {
       if (agent.status === 'disabled') continue;
 
-      const healthy    = await this.probeProvider(agent.provider, agent.apiKey);
+      const healthy    = await this.probeProvider(agent.provider, agent.apiKey, agent.model);
       const newStatus: AgentStatus = healthy ? 'active' : 'expired';
 
       if (agent.status !== newStatus) {
@@ -48,13 +77,13 @@ export class AgentHealthService {
     const agent  = config?.agents.find(a => a.apiKey === agentApiKey);
     if (!agent) return 'idle';
 
-    const healthy    = await this.probeProvider(agent.provider, agent.apiKey);
+    const healthy    = await this.probeProvider(agent.provider, agent.apiKey, agent.model);
     const newStatus: AgentStatus = healthy ? 'active' : 'expired';
     await this.repo.updateAgentStatus(agentApiKey, newStatus);
     return newStatus;
   }
 
-  private async probeProvider(provider: string, apiKey: string): Promise<boolean> {
+  private async probeProvider(provider: string, apiKey: string, model?: string): Promise<boolean> {
     const request = buildProviderValidationRequest(provider, apiKey);
     if (!request) return true; // unknown provider — optimistic, let real request surface errors
 
@@ -71,7 +100,22 @@ export class AgentHealthService {
         return !isQuotaExhausted(body);
       }
 
-      return res.ok;
+      if (!res.ok) return false;
+
+      if (!model?.trim()) return true;
+
+      const payload = await res.json().catch(() => null);
+      if (!payload) return true;
+
+      const availableModels = extractProviderModelIds(provider, payload);
+      if (!availableModels.length) return true;
+
+      const requested = normalizeModelId(model);
+      const found = availableModels.some(id => normalizeModelId(id) === requested);
+      if (!found) {
+        this.logger.warn(`agent model unavailable: ${provider}/${model}`);
+      }
+      return found;
     } catch {
       return true;
     }
