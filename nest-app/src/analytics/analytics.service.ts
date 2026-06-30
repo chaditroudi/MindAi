@@ -18,15 +18,11 @@ import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-c
 import type { ExecuteResult, LlmOpts } from './pipeline.service';
 
 interface AccessResult {
-  apiKey:            string;
-  model?:            string;
-  provider?:         string;
-  maxTokens:         number;
-  agentApiKey?:      string;
-  supervisorModel?:  string;
-  chartModel?:       string;
-  writerModel?:      string;
-  memoryModel?:      string;
+  apiKey:       string;
+  model?:       string;
+  provider?:    string;
+  maxTokens:    number;
+  agentApiKey?: string;
 }
 import {
   sessionExists,
