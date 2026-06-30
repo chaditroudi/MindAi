@@ -486,6 +486,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     // For report intent, pause and ask the user which format they want.
     if (intent === 'report') {
       const tempId = `temp-${Date.now()}`;
+      this.pendingReportTempId = tempId;
       this.st.patch({
         pendingSuggestion: true,
         pendingPrompt:     prompt.trim(),
@@ -553,6 +554,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async chooseReportFormat(choice: 'report' | 'chart' | 'both'): Promise<void> {
     const { pendingPrompt, sessionId, userId, hasKey } = this.st.snap;
     if (!hasKey) { this.st.patch({ showKeyModal: true }); return; }
+    const reportTempId = this.pendingReportTempId;
+    this.pendingReportTempId = null;
     this.st.patch({ pendingSuggestion: false });
     this.timerStart = Date.now();
     this.st.patch({ phase: 'loading' });
@@ -565,8 +568,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         ]);
         const durationMs = Date.now() - this.timerStart;
         const combined: ConversationMessage = {
-          messageId: reportData.messageId,
-          role:      'assistant',
+          messageId:          reportData.messageId,
+          role:               'assistant',
+          prompt:             pendingPrompt,
+          intent:             'report',
+          tokenLimitExceeded: dashData.tokenLimitExceeded || reportData.tokenLimitExceeded,
+          tokenWarning:       dashData.tokenWarning ?? reportData.tokenWarning,
           result: {
             type:           'report+chart',
             dashboardSpec:  (dashData as DashboardResponse).chart,
@@ -591,8 +598,18 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       }
       void this.loadSessions();
     } catch (err) {
+      if (reportTempId) {
+        this.st.patch({ messages: this.st.snap.messages.filter(m => m.messageId !== reportTempId) });
+      }
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
+      } else if (err instanceof ApiError && err.code === 'TOKEN_LIMIT_TOO_LOW') {
+        const currentLimit   = Number(err.data?.['currentLimit'])   || this.st.snap.inputTokenLimit;
+        const suggestedLimit = Number(err.data?.['suggestedLimit']) || Math.min(32_000, currentLimit * 2);
+        this.st.patch({
+          phase: 'idle',
+          pendingTokenConfirm: { prompt: pendingPrompt, intent: 'report', currentLimit, suggestedLimit },
+        });
       } else {
         this.st.setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
       }
@@ -806,7 +823,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     const conf = this.st.snap.pendingTokenConfirm;
     if (!conf) return;
     this.st.patch({ pendingTokenConfirm: null });
-    await this.applyTokenLimit(conf.suggestedLimit);
+    const ok = await this.applyTokenLimit(conf.suggestedLimit);
+    if (!ok) {
+      this.st.setError('Could not update token limit. Please adjust it manually in Settings and retry.');
+      return;
+    }
     this.st.patch({ prompt: conf.prompt, intent: conf.intent });
     await this.run();
   }
@@ -815,14 +836,18 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.st.patch({ pendingTokenConfirm: null, phase: 'idle' });
   }
 
-  private async applyTokenLimit(limit: number): Promise<void> {
+  private async applyTokenLimit(limit: number): Promise<boolean> {
     const { userId } = this.st.snap;
     this.tokenLimitSaving = true;
     try {
       await this.api.updateTokenLimit(userId, limit);
       this.st.patch({ inputTokenLimit: limit });
-    } catch { /* non-critical */ }
-    finally { this.tokenLimitSaving = false; }
+      return true;
+    } catch {
+      return false;
+    } finally {
+      this.tokenLimitSaving = false;
+    }
   }
 
   // Used by the warning banner on already-truncated results
