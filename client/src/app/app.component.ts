@@ -526,6 +526,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           outputTokens:       (dashData.outputTokens ?? 0) + (reportData.outputTokens ?? 0),
           tokenLimitExceeded: dashData.tokenLimitExceeded || reportData.tokenLimitExceeded,
           tokenWarning:       dashData.tokenWarning ?? reportData.tokenWarning,
+          inputTokenWarning:  dashData.inputTokenWarning ?? reportData.inputTokenWarning,
           result: {
             type:           'report+chart',
             dashboardSpec:  (dashData as DashboardResponse).chart,

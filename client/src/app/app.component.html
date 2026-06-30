@@ -457,6 +457,19 @@
                       </div>
                     </div>
                   }
+                  @if (msg.inputTokenWarning) {
+                    <div class="token-warning token-warning--info">
+                      <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      <span class="token-warning-text">{{ msg.inputTokenWarning }}</span>
+                      <div class="token-warning-actions">
+                        <button class="token-warning-btn token-warning-btn--primary" (click)="openConfigAgents()">
+                          Open Config
+                        </button>
+                      </div>
+                    </div>
+                  }
                   <div class="result-footer">
                     <span class="result-timing">{{ msg.result.durationMs | number }}ms</span>
                     @if (msg.inputTokens) {
@@ -496,6 +509,19 @@
                         </button>
                         <button class="token-warning-btn" (click)="maximizeResponseTokenLimit()" [disabled]="tokenLimitSaving">
                           {{ tokenLimitSaving ? 'Saving…' : 'Maximize only' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  @if (msg.inputTokenWarning) {
+                    <div class="token-warning token-warning--info">
+                      <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      <span class="token-warning-text">{{ msg.inputTokenWarning }}</span>
+                      <div class="token-warning-actions">
+                        <button class="token-warning-btn token-warning-btn--primary" (click)="openConfigAgents()">
+                          Open Config
                         </button>
                       </div>
                     </div>
@@ -593,6 +619,19 @@
                       </div>
                     </div>
                   }
+                  @if (msg.inputTokenWarning) {
+                    <div class="token-warning token-warning--info">
+                      <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      <span class="token-warning-text">{{ msg.inputTokenWarning }}</span>
+                      <div class="token-warning-actions">
+                        <button class="token-warning-btn token-warning-btn--primary" (click)="openConfigAgents()">
+                          Open Config
+                        </button>
+                      </div>
+                    </div>
+                  }
                   <div class="result-footer">
                     <span class="result-timing">{{ msg.result.durationMs | number }}ms</span>
                     @if (msg.inputTokens) {
@@ -626,6 +665,19 @@
                         </button>
                         <button class="token-warning-btn" (click)="maximizeResponseTokenLimit()" [disabled]="tokenLimitSaving">
                           {{ tokenLimitSaving ? 'Saving…' : 'Maximize only' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  @if (msg.inputTokenWarning) {
+                    <div class="token-warning token-warning--info">
+                      <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      <span class="token-warning-text">{{ msg.inputTokenWarning }}</span>
+                      <div class="token-warning-actions">
+                        <button class="token-warning-btn token-warning-btn--primary" (click)="openConfigAgents()">
+                          Open Config
                         </button>
                       </div>
                     </div>
