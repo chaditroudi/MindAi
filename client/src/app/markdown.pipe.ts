@@ -17,7 +17,6 @@ export class MarkdownPipe implements PipeTransform {
     let paraLines: string[] = [];
 
     const flushPara = () => {
-      
       if (!paraLines.length) return;
       out.push(`<p>${this.bold(paraLines.join(' '))}</p>`);
       paraLines = [];
@@ -48,7 +47,14 @@ export class MarkdownPipe implements PipeTransform {
     return out.join('');
   }
 
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   private bold(text: string): string {
-    return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return this.escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   }
 }
