@@ -10,7 +10,6 @@ export class MarkdownPipe implements PipeTransform {
   }
 
   private toHtml(text: string): string {
-    // Normalize: split inline "• item • item" into separate lines
     const normalized = text.replace(/([^\n])\s*•\s+/g, '$1\n• ');
     const lines = normalized.split('\n');
     const out: string[] = [];
