@@ -243,25 +243,16 @@ export function resolveModel(
 
   switch (provider) {
     case 'anthropic':
-      // Uses Anthropic's native SDK — different API format from OpenAI
       return createAnthropic({ apiKey: key })(model);
     case 'google':
-      // Uses Google's native SDK — hits generateContent, not chat/completions or responses
       return createGoogleGenerativeAI({ apiKey: key, baseURL })(model);
     case 'groq':
       return createGroq({ apiKey: key, baseURL })(model);
     case 'openai':
-      // .chat() forces Chat Completions endpoint (/chat/completions)
-      // Without it, @ai-sdk/openai v2 defaults to the Responses API (/responses)
       return createOpenAI({ apiKey: key, baseURL }).chat(model);
     case 'mistral':
     case 'together':
     case 'perplexity':
-      // @ai-sdk/openai v2 has no compatibility flag — it determines systemMessageMode
-      // from the model ID. Any non-GPT model ID is classified as a "reasoning model"
-      // and gets role:"developer" instead of role:"system". Mistral/Together/Perplexity
-      // only accept role:"system" and reject "developer" with 422.
-      // Fix: custom fetch that rewrites role:"developer" → role:"system" in the body.
       return createOpenAI({ apiKey: key, baseURL, fetch: openAICompatFetch }).chat(model);
     default:
       if (!baseURL) {
