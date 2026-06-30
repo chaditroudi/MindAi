@@ -34,16 +34,12 @@ function patchConvert(value: unknown): unknown {
 type Row              = Record<string, unknown>;
 type ResolvedPipeline = { pipeline: Row[]; collection: string };
 
-// Bundles the four LLM call parameters that were previously repeated in every signature.
+// Bundles the LLM call parameters shared across all skill dispatches.
 export interface LlmOpts {
-  apiKey?:          string;
-  model?:           string;
-  provider?:        string;
-  maxTokens?:       number;
-  // per-role model overrides — same provider/key, different model per agent role
-  supervisorModel?: string;
-  chartModel?:      string;
-  writerModel?:     string;
+  apiKey?:    string;
+  model?:     string;
+  provider?:  string;
+  maxTokens?: number;
 }
 
 export interface AggregationResult {
@@ -172,13 +168,12 @@ export class PipelineService {
     opts:    LlmOpts,
   ): Promise<{ plan: TaskPlan; rows: Row[]; collection?: string; usage: TokenUsage }> {
     const { apiKey, model: userModel, provider: userProvider, maxTokens } = opts;
-    const plannerModel = opts.supervisorModel ?? userModel;
     let hint:         string | undefined;
     let plannerUsage: TokenUsage = zeroUsage();
 
     for (let attempt = 0; attempt < 2; attempt++) {
       const { plan, usage } = await runSupervisorPlan({
-        prompt, intent, sources, context, apiKey, userModel: plannerModel, userProvider, hint, maxTokens,
+        prompt, intent, sources, context, apiKey, userModel, userProvider, hint, maxTokens,
       });
       plannerUsage = addUsage(plannerUsage, usage);
       this.logger.log(
@@ -435,15 +430,13 @@ export class PipelineService {
     opts:     LlmOpts,
   ): Promise<ExecuteResult<DashboardSpec | ReportResult | InquiryResult>> {
     const { apiKey, model: userModel, provider: userProvider, maxTokens } = opts;
-    const chartModel  = opts.chartModel  ?? userModel;
-    const writerModel = opts.writerModel ?? userModel;
     const source = this.resolveSource(plan.query.sourceName);
 
     // Chart-only (dashboard intent, or auto-routed without a report narrative)
     if (plan.skills.includes('chart') && !plan.skills.includes('report')) {
       if (!rows.length) throw new Error('No data found. Try rephrasing your question or checking the data source.');
       const { result: chart, usage } = await runChart(
-        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, chartModel, userProvider, maxTokens,
+        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens,
       );
       if (chart.widgets.length) {
         this.chartRepo.save({ prompt, sourceName: source?.name ?? '', dashboard: chart }).catch(() => undefined);
@@ -463,7 +456,7 @@ export class PipelineService {
 
       const fallback = { layout: 'operational' as const, title: prompt, summary: '', widgets: [] };
       const { result: chart, usage: chartUsage } = await runChart(
-        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, chartModel, userProvider, maxTokens,
+        rows, prompt, plan.strategy, plan.chartHint, source, apiKey, userModel, userProvider, maxTokens,
       ).catch(err => {
         this.logger.warn(`chart failed (non-fatal): ${err}`);
         return { result: fallback, usage: zeroUsage() };
