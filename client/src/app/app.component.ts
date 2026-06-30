@@ -556,6 +556,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       if (reportTempId) {
         this.st.patch({ messages: this.st.snap.messages.filter(m => m.messageId !== reportTempId) });
       }
+      void this.loadAgentConfig();
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
       } else if (err instanceof ApiError && err.code === 'NO_ACTIVE_CONNECTION') {
