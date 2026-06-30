@@ -18,8 +18,8 @@ export class AgentEntry {
   @Prop({ required: true }) apiKey!:   string;
 
   // Per-request limits (like ChatGPT context window + response cap)
-  @Prop({ min: 1, default: 4_000  }) inputTokenLimit!:  number;
-  @Prop({ min: 1, default: 2_000  }) outputTokenLimit!: number;
+  @Prop({ min: 1, default: 8_000  }) inputTokenLimit!:  number;
+  @Prop({ min: 1, default: 4_000  }) outputTokenLimit!: number;
 
   // Accumulated usage tracked after every request
   @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
