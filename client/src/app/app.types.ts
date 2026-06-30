@@ -106,7 +106,7 @@ export interface SessionDetail {
 
 // ─── Long-term memory ────────────────────────────────────────────────────────
 
-export type MemoryType = 'goal' | 'insight' | 'preference' | 'context' | 'decision';
+export type MemoryType = 'goal' | 'insight' | 'preference' | 'context' | 'decision' | 'entity' | 'correction';
 
 export interface MemoryItem {
   _id:        string;

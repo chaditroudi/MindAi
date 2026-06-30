@@ -930,6 +930,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       preference: '⭐',
       context:    '📌',
       decision:   '✅',
+      entity:     '🏷️',
+      correction: '✏️',
     };
     return icons[type] ?? '🧠';
   }
@@ -941,6 +943,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       preference: 'memory-preference',
       context:    'memory-context',
       decision:   'memory-decision',
+      entity:     'memory-entity',
+      correction: 'memory-correction',
     };
     return colors[type] ?? '';
   }
