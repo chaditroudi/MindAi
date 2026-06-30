@@ -29,14 +29,10 @@ export class UserSettingsRepository {
   ) {}
 
   async save(userId: string, data: {
-    apiKey:            string;
-    provider:          string;
-    model:             string;
-    inputTokenLimit?:  number;
-    supervisorModel?:  string;
-    chartModel?:       string;
-    writerModel?:      string;
-    memoryModel?:      string;
+    apiKey:           string;
+    provider:         string;
+    model:            string;
+    inputTokenLimit?: number;
   }): Promise<void> {
     await this.model.replaceOne({ userId }, { userId, ...data }, { upsert: true });
   }
