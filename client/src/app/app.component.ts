@@ -143,9 +143,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private readonly api    = inject(AnalyticsApiService);
   private readonly charts = inject(ChartRenderService);
 
-  testStatus: 'idle' | 'testing' | 'ok' | 'error' = 'idle';
-  testError  = '';
-  modalKey   = '';
+  // Agent connection test state
+  agentTestStatus: 'idle' | 'testing' | 'ok' | 'error' = 'idle';
+  agentTestError = '';
 
   // Agent config editing state
   configSaving = false;
@@ -271,91 +271,41 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       const res = await this.api.getSettings(userId);
       if (res.configured) {
         this.st.patch({
-          hasKey: true, showKeyModal: false,
-          provider:        this.normalizeProvider(res.provider),
-          selectedModel:   this.effectiveModel(res.model),
+          hasKey:             true,
+          provider:           this.normalizeProvider(res.provider),
+          selectedModel:      this.effectiveModel(res.model),
           responseTokenLimit: this.coercePositiveInt(
             res.responseTokenLimit ?? res.inputTokenLimit,
             4_000,
           ),
         });
-      } else {
-        this.st.patch({ hasKey: false, showKeyModal: true });
       }
-    } catch {
-      this.st.patch({ hasKey: false, showKeyModal: true });
-    }
-  }
-
-  async saveApiKey(): Promise<void> {
-    const trimmed         = this.modalKey.trim();
-    const provider        = this.effectiveProvider(this.st.snap.provider);
-    const model           = this.effectiveModel(this.st.snap.selectedModel);
-    const responseTokenLimit = this.coercePositiveInt(this.st.snap.responseTokenLimit, 4_000);
-
-    if (!provider) {
-      this.st.patch({ keyRejected: true, keyErrorText: 'Please enter a provider before saving.' });
-      return;
-    }
-    if (!model) {
-      this.st.patch({ keyRejected: true, keyErrorText: 'Please enter a model before saving.' });
-      return;
-    }
-    if (!trimmed) {
-      this.st.patch({ keyRejected: true, keyErrorText: 'Please enter your API key before saving.' });
-      return;
-    }
-
-    try {
-      await this.api.saveSettings(this.st.snap.userId, {
-        apiKey: trimmed, provider, model, responseTokenLimit,
-      });
-      this.st.patch({
-        hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
-        provider, selectedModel: model, responseTokenLimit,
-      });
-      this.modalKey = '';
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save settings. Please try again.';
-      this.st.patch({ keyRejected: true, keyErrorText: message });
-    }
+      // hasKey via agents is resolved in loadAgentConfig()
+    } catch { /* non-critical */ }
   }
 
   handleInvalidKey(): void {
     void this.api.deleteSettings(this.st.snap.userId).catch(() => undefined);
-    this.st.patch({
-      hasKey: false,
-      keyRejected: true,
-      keyErrorText: 'Your API key was rejected or revoked. Please enter a new one.',
-      showKeyModal: true,
-      phase: 'idle',
-      provider: '',
-      selectedModel: '',
-    });
-    this.modalKey = '';
+    this.st.patch({ hasKey: false, phase: 'idle', provider: '', selectedModel: '' });
+    this.openConfigAgents();
   }
 
-  clearApiKey(): void {
-    void this.api.deleteSettings(this.st.snap.userId).catch(() => undefined);
-    this.st.patch({ hasKey: false, showKeyModal: true, provider: '', selectedModel: '' });
-    this.modalKey   = '';
-    this.testStatus = 'idle';
-    this.testError  = '';
+  openConfigAgents(): void {
+    this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
+    void this.loadAgentConfig();
   }
 
-  async testConnection(): Promise<void> {
-    const trimmed  = this.modalKey.trim();
-    const provider = this.effectiveProvider(this.st.snap.provider);
-    const model    = this.effectiveModel(this.st.snap.selectedModel);
-    if (!trimmed || !provider || !model) return;
-    this.testStatus = 'testing';
-    this.testError  = '';
+  async testAgentConnection(): Promise<void> {
+    const { provider, model, apiKey } = this.newAgent;
+    if (!apiKey || !provider || !model) return;
+    this.agentTestStatus = 'testing';
+    this.agentTestError  = '';
     try {
-      await this.api.validateSettings({ apiKey: trimmed, provider, model });
-      this.testStatus = 'ok';
+      await this.api.validateSettings({ apiKey, provider, model });
+      this.agentTestStatus = 'ok';
     } catch (err) {
-      this.testStatus = 'error';
-      this.testError  = err instanceof Error ? err.message : 'Validation failed. Please try again.';
+      this.agentTestStatus = 'error';
+      this.agentTestError  = err instanceof Error ? err.message : 'Validation failed. Please try again.';
     }
   }
 
@@ -663,6 +613,16 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ agentConfig: cfg });
       this.agentDraft       = cfg.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(cfg.memoryLimit, 50);
+      // If no personal key was found, check if any active agent exists
+      if (!this.st.snap.hasKey) {
+        const hasActive = cfg.agents.some(a => a.status === 'active');
+        if (hasActive) {
+          this.st.patch({ hasKey: true });
+        } else {
+          // No connection at all — open Config tab so user can add one
+          this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
+        }
+      }
     } catch { /* non-critical */ }
   }
 
