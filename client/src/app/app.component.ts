@@ -274,7 +274,10 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           hasKey: true, showKeyModal: false,
           provider:        this.normalizeProvider(res.provider),
           selectedModel:   this.effectiveModel(res.model),
-          inputTokenLimit: this.coercePositiveInt(res.inputTokenLimit, 4_000),
+          responseTokenLimit: this.coercePositiveInt(
+            res.responseTokenLimit ?? res.inputTokenLimit,
+            4_000,
+          ),
         });
       } else {
         this.st.patch({ hasKey: false, showKeyModal: true });
@@ -288,7 +291,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     const trimmed         = this.modalKey.trim();
     const provider        = this.effectiveProvider(this.st.snap.provider);
     const model           = this.effectiveModel(this.st.snap.selectedModel);
-    const inputTokenLimit = this.coercePositiveInt(this.st.snap.inputTokenLimit, 4_000);
+    const responseTokenLimit = this.coercePositiveInt(this.st.snap.responseTokenLimit, 4_000);
 
     if (!provider) {
       this.st.patch({ keyRejected: true, keyErrorText: 'Please enter a provider before saving.' });
@@ -305,11 +308,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
     try {
       await this.api.saveSettings(this.st.snap.userId, {
-        apiKey: trimmed, provider, model, inputTokenLimit,
+        apiKey: trimmed, provider, model, responseTokenLimit,
       });
       this.st.patch({
         hasKey: true, keyRejected: false, keyErrorText: '', showKeyModal: false,
-        provider, selectedModel: model, inputTokenLimit,
+        provider, selectedModel: model, responseTokenLimit,
       });
       this.modalKey = '';
     } catch (err) {
@@ -384,8 +387,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.testError  = '';
   }
 
-  onUserTokenLimitChange(value: number | string): void {
-    this.st.patch({ inputTokenLimit: this.coercePositiveInt(value, 4_000) });
+  onResponseTokenLimitChange(value: number | string): void {
+    this.st.patch({ responseTokenLimit: this.coercePositiveInt(value, 4_000) });
   }
 
   onNewAgentProviderChange(provider: string): void {
@@ -526,7 +529,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
       } else if (err instanceof ApiError && err.code === 'TOKEN_LIMIT_TOO_LOW') {
-        const currentLimit   = Number(err.data?.['currentLimit'])   || this.st.snap.inputTokenLimit;
+        const currentLimit   = Number(err.data?.['currentLimit'])   || this.st.snap.responseTokenLimit;
         const suggestedLimit = Number(err.data?.['suggestedLimit']) || Math.min(32_000, currentLimit * 2);
         this.st.patch({
           phase: 'idle',
@@ -591,7 +594,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
       } else if (err instanceof ApiError && err.code === 'TOKEN_LIMIT_TOO_LOW') {
-        const currentLimit   = Number(err.data?.['currentLimit'])   || this.st.snap.inputTokenLimit;
+        const currentLimit   = Number(err.data?.['currentLimit'])   || this.st.snap.responseTokenLimit;
         const suggestedLimit = Number(err.data?.['suggestedLimit']) || Math.min(32_000, currentLimit * 2);
         this.st.patch({
           phase: 'idle',
@@ -815,9 +818,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     const conf = this.st.snap.pendingTokenConfirm;
     if (!conf) return;
     this.st.patch({ pendingTokenConfirm: null });
-    const ok = await this.applyTokenLimit(conf.suggestedLimit);
+    const ok = await this.applyResponseTokenLimit(conf.suggestedLimit);
     if (!ok) {
-      this.st.setError('Could not update token limit. Please adjust it manually in Settings and retry.');
+      this.st.setError('Could not update the response token limit. Please adjust it manually in Settings and retry.');
       return;
     }
     this.st.patch({ prompt: conf.prompt, intent: conf.intent });
@@ -828,12 +831,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.st.patch({ pendingTokenConfirm: null, phase: 'idle' });
   }
 
-  private async applyTokenLimit(limit: number): Promise<boolean> {
+  private async applyResponseTokenLimit(limit: number): Promise<boolean> {
     const { userId } = this.st.snap;
     this.tokenLimitSaving = true;
     try {
-      await this.api.updateTokenLimit(userId, limit);
-      this.st.patch({ inputTokenLimit: limit });
+      await this.api.updateResponseTokenLimit(userId, limit);
+      this.st.patch({ responseTokenLimit: limit });
       return true;
     } catch {
       return false;
@@ -844,16 +847,16 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   // Used by the warning banner on already-truncated results
   maximizedLimit(): number {
-    return Math.min(32_000, Math.max(8_000, this.st.snap.inputTokenLimit * 2));
+    return Math.min(32_000, Math.max(8_000, this.st.snap.responseTokenLimit * 2));
   }
 
-  async maximizeTokenLimit(): Promise<void> {
-    await this.applyTokenLimit(this.maximizedLimit());
+  async maximizeResponseTokenLimit(): Promise<void> {
+    await this.applyResponseTokenLimit(this.maximizedLimit());
   }
 
   async retryWithMaxTokens(msg: ConversationMessage): Promise<void> {
     if (this.st.snap.phase === 'loading') return;
-    const ok = await this.applyTokenLimit(this.maximizedLimit());
+    const ok = await this.applyResponseTokenLimit(this.maximizedLimit());
     if (!ok || !msg.prompt || !msg.intent) return;
     if (msg.intent === 'report') {
       // Bypass the format picker — retry directly as the same format
