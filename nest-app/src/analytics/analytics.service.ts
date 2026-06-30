@@ -356,18 +356,13 @@ export class AnalyticsService {
     userProvider:    string | undefined,
     agentCfg:        ResolvedConfig,
     userTokenLimit?: number,
-    roleModels?:     { supervisorModel?: string; chartModel?: string; writerModel?: string; memoryModel?: string },
   ): AccessResult {
     if (userKey) {
       return {
-        apiKey:          userKey,
-        model:           userModel,
-        provider:        userProvider,
-        maxTokens:       userTokenLimit ?? 4_000,
-        supervisorModel: roleModels?.supervisorModel,
-        chartModel:      roleModels?.chartModel,
-        writerModel:     roleModels?.writerModel,
-        memoryModel:     roleModels?.memoryModel,
+        apiKey:    userKey,
+        model:     userModel,
+        provider:  userProvider,
+        maxTokens: userTokenLimit ?? 4_000,
       };
     }
 
@@ -475,10 +470,9 @@ export class AnalyticsService {
     agentApiKey?:       string;
     model?:             string;
     provider?:          string;
-    memoryModel?:       string;
   }): AnalyticsResponse {
     const { result, prompt, apiKey, sessionId, displayIntent, userId,
-            durationMs, inputTokens, outputTokens, outputTokenLimit, agentApiKey, model, provider, memoryModel } = params;
+            durationMs, inputTokens, outputTokens, outputTokenLimit, agentApiKey, model, provider } = params;
 
     const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
     const tokenWarning = tokenLimitExceeded
@@ -497,7 +491,7 @@ export class AnalyticsService {
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model: memoryModel ?? model, provider });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model, provider });
 
     const tokenFields = tokenLimitExceeded ? { tokenLimitExceeded, tokenWarning } : {};
 
