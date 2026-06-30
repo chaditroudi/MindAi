@@ -634,9 +634,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   addAgentToList(): void {
     const agent = this.sanitizeAgent(this.newAgent);
     if (!agent.provider || !agent.model || !agent.apiKey) return;
-    this.agentDraft           = [...this.agentDraft, agent];
-    this.newAgent             = this.createEmptyAgent();
-    this.showAddAgent = false;
+    this.agentDraft      = [...this.agentDraft, agent];
+    this.newAgent        = this.createEmptyAgent();
+    this.showAddAgent    = false;
+    this.agentTestStatus = 'idle';
+    // Auto-save so the connection is active immediately
+    void this.saveAgentConfig().then(() => {
+      if (agent.status === 'active') this.st.patch({ hasKey: true });
+    });
   }
 
   removeAgent(index: number): void {

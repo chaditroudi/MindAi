@@ -17,6 +17,7 @@ export class MarkdownPipe implements PipeTransform {
     let paraLines: string[] = [];
 
     const flushPara = () => {
+      
       if (!paraLines.length) return;
       out.push(`<p>${this.bold(paraLines.join(' '))}</p>`);
       paraLines = [];
