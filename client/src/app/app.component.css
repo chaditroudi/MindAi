@@ -643,6 +643,11 @@
 .token-warning-btn--primary { background: #f59e0b; border-color: #f59e0b; color: #fff; }
 .token-warning-btn--primary:hover:not(:disabled) { background: #d97706; border-color: #d97706; }
 .token-warning-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.token-warning--info { background: #eff6ff; border-color: #bfdbfe; }
+.token-warning--info .token-warning-icon { color: #2563eb; }
+.token-warning--info .token-warning-text  { color: #1e40af; }
+.token-warning--info .token-warning-btn--primary { background: #2563eb; border-color: #2563eb; }
+.token-warning--info .token-warning-btn--primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
 
 /* ── Composer ──────────────────────────────────────────────────────────────── */
 .composer-shell { padding: 0 1.25rem 0.9rem; flex-shrink: 0; }
