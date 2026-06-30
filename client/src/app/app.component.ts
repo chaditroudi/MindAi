@@ -476,6 +476,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ messages: this.st.snap.messages.filter(m => m.messageId !== tempId) });
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
+      } else if (err instanceof ApiError && err.code === 'NO_ACTIVE_CONNECTION') {
+        this.st.patch({ phase: 'idle' });
+        this.openConfigAgents();
       } else if (err instanceof ApiError && (err.code === 'TOKEN_LIMIT_TOO_LOW' || err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW')) {
         this.st.patch({
           phase: 'idle',
@@ -552,6 +555,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       }
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
+      } else if (err instanceof ApiError && err.code === 'NO_ACTIVE_CONNECTION') {
+        this.st.patch({ phase: 'idle' });
+        this.openConfigAgents();
       } else if (err instanceof ApiError && (err.code === 'TOKEN_LIMIT_TOO_LOW' || err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW')) {
         this.st.patch({
           phase: 'idle',
