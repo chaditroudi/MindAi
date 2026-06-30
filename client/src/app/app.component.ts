@@ -683,19 +683,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     { label: '500',          value: 500 },
   ];
 
-  agentTotalUsed(agent: AgentEntry): number {
-    return agent.inputTokensUsed + agent.outputTokensUsed;
-  }
-
-  agentUsagePct(agent: AgentEntry): number {
-    if (!agent.tokenBudget) return 0;
-    return Math.min(100, Math.round((this.agentTotalUsed(agent) / agent.tokenBudget) * 100));
-  }
-
-  agentCreditsLeft(agent: AgentEntry): number {
-    return Math.max(0, agent.tokenBudget - this.agentTotalUsed(agent));
-  }
-
   private createEmptyAgent(): AgentEntry {
     return {
       status:           'active',
@@ -704,7 +691,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       apiKey:           '',
       inputTokenLimit:  8_000,
       outputTokenLimit: 4_000,
-      tokenBudget:      0,
       inputTokensUsed:  0,
       outputTokensUsed: 0,
     };

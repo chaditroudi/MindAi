@@ -384,16 +384,8 @@ export class AnalyticsService {
       };
     }
 
-    // Pick the best active agent: unlimited budget first, then most budget remaining
-    const active = agentCfg.agents
-      .filter(a => a.status === 'active')
-      .sort((a, b) => {
-        if (a.tokenBudget === 0) return -1;
-        if (b.tokenBudget === 0) return 1;
-        const aLeft = a.tokenBudget - a.inputTokensUsed - a.outputTokensUsed;
-        const bLeft = b.tokenBudget - b.inputTokensUsed - b.outputTokensUsed;
-        return bLeft - aLeft;
-      })[0];
+    // Pick the first active agent
+    const active = agentCfg.agents.find(a => a.status === 'active');
 
     if (active?.apiKey) {
       return {

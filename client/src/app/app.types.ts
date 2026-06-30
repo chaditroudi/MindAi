@@ -147,7 +147,6 @@ export interface AgentEntry {
   apiKey:           string;
   inputTokenLimit:  number;  // max tokens user can send per request
   outputTokenLimit: number;  // max tokens AI can generate per request
-  tokenBudget:      number;  // total credit balance (0 = unlimited)
   inputTokensUsed:  number;  // accumulated input tokens consumed
   outputTokensUsed: number;  // accumulated output tokens consumed
 }

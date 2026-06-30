@@ -16,7 +16,6 @@ class AgentEntryDto {
 
   @IsOptional() @IsInt() @Min(1) inputTokenLimit?:  number;
   @IsOptional() @IsInt() @Min(1) outputTokenLimit?: number;
-  @IsOptional() @IsInt() @Min(0) tokenBudget?:      number;
   @IsOptional() @IsInt() @Min(0) inputTokensUsed?:  number;
   @IsOptional() @IsInt() @Min(0) outputTokensUsed?: number;
 }

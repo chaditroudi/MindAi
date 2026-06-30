@@ -207,31 +207,10 @@
                   <span class="config-agent-meta-item">Out: <strong>{{ agent.outputTokenLimit.toLocaleString() }}</strong></span>
                 </div>
 
-                @if (agent.tokenBudget > 0) {
-                  <div class="config-usage">
-                    <div class="config-usage-bar">
-                      <div class="config-usage-fill"
-                        [style.width.%]="agentUsagePct(agent)"
-                        [class.config-usage-fill--warn]="agentUsagePct(agent) >= 80"
-                        [class.config-usage-fill--over]="agentUsagePct(agent) >= 100">
-                      </div>
-                    </div>
-                    <div class="config-usage-breakdown">
-                      <span>{{ agentTotalUsed(agent).toLocaleString() }} / {{ agent.tokenBudget.toLocaleString() }} credits</span>
-                      <span>{{ agentCreditsLeft(agent).toLocaleString() }} left</span>
-                    </div>
-                    <div class="config-usage-detail">
-                      <span>↑ {{ agent.inputTokensUsed.toLocaleString() }} input</span>
-                      <span>↓ {{ agent.outputTokensUsed.toLocaleString() }} output</span>
-                    </div>
-                  </div>
-                } @else {
-                  <div class="config-usage-detail">
-                    <span>↑ {{ agent.inputTokensUsed.toLocaleString() }} input</span>
-                    <span>↓ {{ agent.outputTokensUsed.toLocaleString() }} output</span>
-                    <span class="config-usage-label--dim">· unlimited</span>
-                  </div>
-                }
+                <div class="config-usage-detail">
+                  <span>↑ {{ agent.inputTokensUsed.toLocaleString() }} input</span>
+                  <span>↓ {{ agent.outputTokensUsed.toLocaleString() }} output</span>
+                </div>
               </div>
             }
           </section>
@@ -954,14 +933,6 @@
             [(ngModel)]="newAgent.outputTokenLimit" />
         </div>
       </div>
-
-      <label class="key-modal-label">
-        Credit budget
-        <span class="key-modal-label-hint">total tokens · 0 = unlimited</span>
-      </label>
-      <input class="key-modal-input" type="number" min="0"
-        placeholder="e.g. 500000 or 0 for unlimited"
-        [(ngModel)]="newAgent.tokenBudget" />
 
       @if (agentTestStatus !== 'idle') {
         <div class="key-modal-test-result" [class.ok]="agentTestStatus === 'ok'" [class.error]="agentTestStatus === 'error'" [class.testing]="agentTestStatus === 'testing'">
