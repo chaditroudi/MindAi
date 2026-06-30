@@ -534,6 +534,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ messages: this.st.snap.messages.filter(m => m.messageId !== tempId) });
       if (err instanceof ApiError && err.code === 'INVALID_API_KEY') {
         this.handleInvalidKey();
+      } else if (err instanceof ApiError && err.code === 'TOKEN_LIMIT_TOO_LOW') {
+        const currentLimit   = Number(err.data?.['currentLimit'])   || this.st.snap.inputTokenLimit;
+        const suggestedLimit = Number(err.data?.['suggestedLimit']) || Math.min(32_000, currentLimit * 2);
+        this.st.patch({
+          phase: 'idle',
+          pendingTokenConfirm: { prompt: prompt.trim(), intent, currentLimit, suggestedLimit },
+        });
       } else {
         this.st.setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
       }

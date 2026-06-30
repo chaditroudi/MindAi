@@ -30,6 +30,14 @@ export interface AppState {
   pendingSuggestion: boolean;
   pendingPrompt:     string;
 
+  // Token limit confirmation
+  pendingTokenConfirm: {
+    prompt:         string;
+    intent:         ModeKey;
+    currentLimit:   number;
+    suggestedLimit: number;
+  } | null;
+
   // API key (stored in MongoDB; userId is the local reference)
   userId:          string;
   hasKey:          boolean;
@@ -61,8 +69,9 @@ const INITIAL: AppState = {
   memoryExtractionEnabled: true,
   agentConfig:             null,
 
-  pendingSuggestion: false,
-  pendingPrompt:     '',
+  pendingSuggestion:   false,
+  pendingPrompt:       '',
+  pendingTokenConfirm: null,
 
   userId:          '',
   hasKey:          false,
@@ -97,6 +106,6 @@ export class AnalyticsStateService {
   }
 
   newSession(): void {
-    this.patch({ sessionId: null, messages: [], phase: 'idle', prompt: '', errorText: '', pendingSuggestion: false, pendingPrompt: '' });
+    this.patch({ sessionId: null, messages: [], phase: 'idle', prompt: '', errorText: '', pendingSuggestion: false, pendingPrompt: '', pendingTokenConfirm: null });
   }
 }
