@@ -324,7 +324,7 @@
                 </svg>
               </div>
               <h2>Connect your AI provider to get started</h2>
-              <p>Choose or type a provider and model — for example <strong>Groq</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, or <strong>Google Gemini</strong>. You can also enter any other supported provider manually.</p>
+              <p>Choose your provider and model from the built-in list — for example <strong>Groq</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, or <strong>Google Gemini</strong>.</p>
               <button class="unlock-btn" (click)="st.patch({ showKeyModal: true })">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
@@ -851,43 +851,29 @@
 
       <label class="key-modal-label">
         Provider
-        <span class="key-modal-label-hint">— type the provider id you want to use, such as openai, google, or groq</span>
+        <span class="key-modal-label-hint">— choose a provider from the built-in list</span>
       </label>
-      <input class="key-modal-input"
-        type="text"
-        autocomplete="off"
-        spellcheck="false"
+      <select class="key-modal-input"
         [ngModel]="s.provider"
-        (ngModelChange)="onProviderChange($event)"
-        placeholder="e.g. openai, google, groq" />
+        (ngModelChange)="onProviderChange($event)">
+        <option value="">Select a provider</option>
+        @for (provider of providerOptions; track provider.id) {
+          <option [value]="provider.id">{{ provider.label }} ({{ provider.id }})</option>
+        }
+      </select>
 
-      <label class="key-modal-label">
-        Model
-        <button class="key-modal-load-btn" type="button"
-          [disabled]="modelsLoading || !s.provider"
-          (click)="loadModels()">
-          {{ modelsLoading ? 'Loading…' : 'Refresh models' }}
-        </button>
-      </label>
-      @if (modelsError) {
-        <p class="key-modal-error" style="margin:0 0 6px">{{ modelsError }}</p>
-      }
-      <input class="key-modal-input"
-        type="text"
-        autocomplete="off"
-        spellcheck="false"
+      <label class="key-modal-label">Model</label>
+      <select class="key-modal-input"
         [ngModel]="s.selectedModel"
         (ngModelChange)="onSettingsModelChange($event)"
-        [disabled]="!s.provider"
-        [attr.list]="availableModels.length ? 'settings-model-options' : null"
-        placeholder="Select or type a model id" />
-      <datalist id="settings-model-options">
+        [disabled]="!s.provider">
+        <option value="">Select a model</option>
         @for (m of availableModels; track m.id) {
-          <option [value]="m.id">{{ m.label }}</option>
+          <option [value]="m.id">{{ m.label }} · {{ providerLabel(s.provider) }}</option>
         }
-      </datalist>
-      @if (loadedModels.length) {
-        <p class="key-modal-label-hint" style="margin:2px 0 8px">{{ loadedModels.length }} models available for {{ s.provider }}</p>
+      </select>
+      @if (availableModels.length) {
+        <p class="key-modal-label-hint" style="margin:2px 0 8px">{{ availableModels.length }} models available for {{ providerLabel(s.provider) }}</p>
       } @else {
         <p class="key-modal-label-hint" style="margin:2px 0 8px">Select a provider to see available models.</p>
       }
@@ -949,13 +935,14 @@
       <div class="agent-modal-row">
         <div class="agent-modal-col">
           <label class="key-modal-label">Provider</label>
-          <input class="key-modal-input"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
+          <select class="key-modal-input"
             [ngModel]="newAgent.provider"
-            (ngModelChange)="onNewAgentProviderChange($event)"
-            placeholder="e.g. openai, google, groq" />
+            (ngModelChange)="onNewAgentProviderChange($event)">
+            <option value="">Select a provider</option>
+            @for (provider of providerOptions; track provider.id) {
+              <option [value]="provider.id">{{ provider.label }} ({{ provider.id }})</option>
+            }
+          </select>
         </div>
         <div class="agent-modal-col">
           <label class="key-modal-label">Status</label>
@@ -967,32 +954,19 @@
         </div>
       </div>
 
-      <label class="key-modal-label">
-        Model
-        <button class="key-modal-load-btn" type="button"
-          [disabled]="newAgentModelsLoading || !newAgent.provider"
-          (click)="loadNewAgentModels()">
-          {{ newAgentModelsLoading ? 'Loading…' : 'Refresh models' }}
-        </button>
-      </label>
-      @if (newAgentModelsError) {
-        <p class="key-modal-error" style="margin:0 0 6px">{{ newAgentModelsError }}</p>
-      }
-      <input class="key-modal-input"
-        type="text"
-        autocomplete="off"
-        spellcheck="false"
+      <label class="key-modal-label">Model</label>
+      <select class="key-modal-input"
         [(ngModel)]="newAgent.model"
-        [disabled]="!newAgent.provider"
-        [attr.list]="availableNewAgentModels.length ? 'agent-model-options' : null"
-        placeholder="Type a model id or load available models" />
-      <datalist id="agent-model-options">
+        [disabled]="!newAgent.provider">
+        <option value="">Select a model</option>
         @for (m of availableNewAgentModels; track m.id) {
-          <option [value]="m.id">{{ m.label }}</option>
+          <option [value]="m.id">{{ m.label }} · {{ providerLabel(newAgent.provider) }}</option>
         }
-      </datalist>
-      @if (newAgentLoadedModels.length) {
-        <p class="key-modal-label-hint" style="margin:2px 0 8px">{{ newAgentLoadedModels.length }} models loaded for this agent</p>
+      </select>
+      @if (availableNewAgentModels.length) {
+        <p class="key-modal-label-hint" style="margin:2px 0 8px">{{ availableNewAgentModels.length }} models available for {{ providerLabel(newAgent.provider) }}</p>
+      } @else {
+        <p class="key-modal-label-hint" style="margin:2px 0 8px">Select a provider to choose a model.</p>
       }
 
       <label class="key-modal-label">API Key</label>

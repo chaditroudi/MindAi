@@ -54,7 +54,80 @@ const WIDGET_TYPE_LABELS: Record<string, string> = {
 };
 
 type WidgetDisplayKind = 'chart' | 'kpi' | 'table' | 'unknown';
+type ProviderId =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'groq'
+  | 'mistral'
+  | 'together'
+  | 'perplexity';
 type ModelOption = { id: string; label: string };
+type ProviderOption = { id: ProviderId; label: string };
+
+const STATIC_PROVIDER_OPTIONS: ProviderOption[] = [
+  { id: 'openai',     label: 'OpenAI' },
+  { id: 'anthropic',  label: 'Anthropic' },
+  { id: 'google',     label: 'Google Gemini' },
+  { id: 'groq',       label: 'Groq' },
+  { id: 'mistral',    label: 'Mistral' },
+  { id: 'together',   label: 'Together AI' },
+  { id: 'perplexity', label: 'Perplexity' },
+];
+
+const STATIC_MODELS_BY_PROVIDER: Record<ProviderId, ModelOption[]> = {
+  openai: [
+    { id: 'gpt-4o',      label: 'GPT-4o' },
+    { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { id: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { id: 'o1',          label: 'o1' },
+    { id: 'o1-mini',     label: 'o1 Mini' },
+    { id: 'o3',          label: 'o3' },
+    { id: 'o3-mini',     label: 'o3 Mini' },
+  ],
+  anthropic: [
+    { id: 'claude-opus-4-8',            label: 'Claude Opus 4.8' },
+    { id: 'claude-sonnet-4-6',          label: 'Claude Sonnet 4.6' },
+    { id: 'claude-haiku-4-5-20251001',  label: 'Claude Haiku 4.5' },
+    { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { id: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku' },
+    { id: 'claude-3-opus-20240229',     label: 'Claude 3 Opus' },
+  ],
+  google: [
+    { id: 'gemini-2.5-pro',   label: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { id: 'gemini-1.5-pro',   label: 'Gemini 1.5 Pro' },
+    { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+  ],
+  groq: [
+    { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile' },
+    { id: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B Versatile' },
+    { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B Instant' },
+    { id: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
+    { id: 'gemma2-9b-it',            label: 'Gemma 2 9B' },
+  ],
+  mistral: [
+    { id: 'mistral-large-latest',  label: 'Mistral Large' },
+    { id: 'mistral-medium-latest', label: 'Mistral Medium' },
+    { id: 'mistral-small-latest',  label: 'Mistral Small' },
+    { id: 'codestral-latest',      label: 'Codestral' },
+    { id: 'open-mistral-nemo',     label: 'Mistral Nemo' },
+  ],
+  together: [
+    { id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', label: 'Llama 3.3 70B Turbo' },
+    { id: 'meta-llama/Llama-3.1-70B-Instruct-Turbo', label: 'Llama 3.1 70B Turbo' },
+    { id: 'meta-llama/Llama-3.1-8B-Instruct-Turbo',  label: 'Llama 3.1 8B Turbo' },
+    { id: 'mistralai/Mixtral-8x7B-Instruct-v0.1',    label: 'Mixtral 8x7B' },
+    { id: 'Qwen/Qwen2.5-72B-Instruct-Turbo',         label: 'Qwen 2.5 72B Turbo' },
+  ],
+  perplexity: [
+    { id: 'sonar-pro',           label: 'Sonar Pro' },
+    { id: 'sonar',               label: 'Sonar' },
+    { id: 'sonar-reasoning-pro', label: 'Sonar Reasoning Pro' },
+    { id: 'sonar-reasoning',     label: 'Sonar Reasoning' },
+  ],
+};
 
 @Component({
   selector:    'app-root',
@@ -74,16 +147,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   testError  = '';
   modalKey   = '';
 
-  loadedModels: ModelOption[] = [];
-  modelsLoading = false;
-  modelsError   = '';
-  private modelsRequestId = 0;
-
-  newAgentLoadedModels: ModelOption[] = [];
-  newAgentModelsLoading = false;
-  newAgentModelsError   = '';
-  private newAgentModelsRequestId = 0;
-
   // Agent config editing state
   configSaving = false;
   configError  = '';
@@ -99,6 +162,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   readonly state$   = this.st.state$;
   readonly modeMeta = MODE_META;
   readonly modes    = ['dashboard', 'report', 'inquiry'] as const;
+  readonly providerOptions = STATIC_PROVIDER_OPTIONS;
 
   readonly elapsed$ = this.st.phase$.pipe(
     switchMap(phase =>
@@ -212,7 +276,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           selectedModel:   this.effectiveModel(res.model),
           inputTokenLimit: this.coercePositiveInt(res.inputTokenLimit, 4_000),
         });
-        void this.loadModels();
       } else {
         this.st.patch({ hasKey: false, showKeyModal: true });
       }
@@ -311,11 +374,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   onProviderChange(provider: string): void {
     this.st.patch({ provider: this.normalizeProvider(provider), selectedModel: '' });
-    this.loadedModels = [];
-    this.modelsError  = '';
     this.testStatus   = 'idle';
     this.testError    = '';
-    if (provider.trim()) void this.loadModels();
   }
 
   onSettingsModelChange(model: string): void {
@@ -329,60 +389,16 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   onNewAgentProviderChange(provider: string): void {
-    this.newAgent.provider    = this.normalizeProvider(provider);
-    this.newAgent.model       = '';
-    this.newAgentLoadedModels = [];
-    this.newAgentModelsError  = '';
-    if (provider.trim()) void this.loadNewAgentModels();
-  }
-
-  async loadNewAgentModels(): Promise<void> {
-    const provider = this.effectiveProvider(this.newAgent.provider);
-    if (!provider) {
-      this.newAgentModelsError = 'Select a provider first.';
-      return;
-    }
-    const requestId = ++this.newAgentModelsRequestId;
-    this.newAgentModelsLoading = true;
-    this.newAgentModelsError   = '';
-    try {
-      const models = await this.fetchModels(provider);
-      if (requestId !== this.newAgentModelsRequestId) return; // superseded by a newer request
-      this.newAgentLoadedModels = models;
-    } catch (err) {
-      if (requestId !== this.newAgentModelsRequestId) return;
-      this.newAgentModelsError  = err instanceof Error ? err.message : 'Failed to load models.';
-      this.newAgentLoadedModels = [];
-    } finally {
-      if (requestId === this.newAgentModelsRequestId) this.newAgentModelsLoading = false;
-    }
-  }
-
-  async loadModels(): Promise<void> {
-    const provider = this.effectiveProvider(this.st.snap.provider);
-    if (!provider) return;
-    const requestId = ++this.modelsRequestId;
-    this.modelsLoading = true;
-    this.modelsError   = '';
-    try {
-      const models = await this.fetchModels(provider);
-      if (requestId !== this.modelsRequestId) return; // superseded by a newer request
-      this.loadedModels = models;
-    } catch (err) {
-      if (requestId !== this.modelsRequestId) return;
-      this.modelsError  = err instanceof Error ? err.message : 'Failed to load models.';
-      this.loadedModels = [];
-    } finally {
-      if (requestId === this.modelsRequestId) this.modelsLoading = false;
-    }
+    this.newAgent.provider = this.normalizeProvider(provider);
+    this.newAgent.model    = '';
   }
 
   get availableModels(): ModelOption[] {
-    return this.loadedModels;
+    return this.modelsForProvider(this.st.snap.provider, this.st.snap.selectedModel);
   }
 
   get availableNewAgentModels(): ModelOption[] {
-    return this.newAgentLoadedModels;
+    return this.modelsForProvider(this.newAgent.provider, this.newAgent.model);
   }
 
   // mode + session controls
@@ -655,8 +671,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (!agent.provider || !agent.model || !agent.apiKey) return;
     this.agentDraft           = [...this.agentDraft, agent];
     this.newAgent             = this.createEmptyAgent();
-    this.newAgentLoadedModels = [];
-    this.newAgentModelsError  = '';
     this.showAddAgent = false;
   }
 
@@ -750,19 +764,17 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : fallback;
   }
 
-  private async fetchModels(provider: string): Promise<ModelOption[]> {
-    const res  = await this.api.listModels({ provider });
-    const seen = new Set<string>();
-    return res.models
-      .map(model => ({
-        id:    model.id.trim(),
-        label: (model.label ?? model.id).trim(),
-      }))
-      .filter(model => {
-        if (!model.id || seen.has(model.id)) return false;
-        seen.add(model.id);
-        return true;
-      });
+  providerLabel(provider: string | null | undefined): string {
+    const normalized = this.normalizeProvider(provider);
+    return this.providerOptions.find(option => option.id === normalized)?.label ?? normalized;
+  }
+
+  private modelsForProvider(provider: string | null | undefined, currentModel?: string | null): ModelOption[] {
+    const normalized = this.normalizeProvider(provider) as ProviderId;
+    const baseModels = STATIC_MODELS_BY_PROVIDER[normalized] ?? [];
+    const current    = this.effectiveModel(currentModel);
+    if (!current || baseModels.some(model => model.id === current)) return baseModels;
+    return [...baseModels, { id: current, label: `${current} (Current)` }];
   }
 
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
