@@ -38,14 +38,11 @@ export interface AppState {
     suggestedLimit: number;
   } | null;
 
-  // API key (stored in MongoDB; userId is the local reference)
-  userId:          string;
-  hasKey:          boolean;
-  keyRejected:     boolean;
-  keyErrorText:    string;
-  showKeyModal:    boolean;
-  provider:        string;
-  selectedModel:   string;
+  // AI connection
+  userId:             string;
+  hasKey:             boolean;
+  provider:           string;
+  selectedModel:      string;
   responseTokenLimit: number;
 }
 
@@ -73,13 +70,10 @@ const INITIAL: AppState = {
   pendingPrompt:       '',
   pendingTokenConfirm: null,
 
-  userId:          '',
-  hasKey:          false,
-  keyRejected:     false,
-  keyErrorText:    '',
-  showKeyModal:    false,
-  provider:        '',
-  selectedModel:   '',
+  userId:             '',
+  hasKey:             false,
+  provider:           '',
+  selectedModel:      '',
   responseTokenLimit: 4_000,
 };
 
