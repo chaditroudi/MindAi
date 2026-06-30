@@ -70,7 +70,7 @@ const STATIC_PROVIDER_OPTIONS: ProviderOption[] = [
   { id: 'anthropic',  label: 'Anthropic' },
   { id: 'google',     label: 'Google Gemini' },
   { id: 'groq',       label: 'Groq' },
-  { id: 'mistral',    label: 'Mistral' },
+  { id: 'mistral',    label: 'Mistral' },in
   { id: 'together',   label: 'Together AI' },
   { id: 'perplexity', label: 'Perplexity' },
 ];
