@@ -62,8 +62,8 @@ export interface MessageResult {
 // ─── Conversation messages ────────────────────────────────────────────────────
 
 export interface ConversationMessage {
-  messageId:          string;
-  role:               'user' | 'assistant';
+  messageId:           string;
+  role:                'user' | 'assistant';
   prompt?:            string;
   intent?:            ModeKey;
   result?:            MessageResult;
