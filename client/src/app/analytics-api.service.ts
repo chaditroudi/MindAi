@@ -42,6 +42,11 @@ export class AnalyticsApiService {
     return this.req(this.http.post<{ ok: boolean; provider: string; model: string }>('/api/settings', dto, { headers }));
   }
 
+  updateTokenLimit(userId: string, inputTokenLimit: number): Promise<{ ok: boolean }> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.patch<{ ok: boolean }>('/api/settings/token-limit', { inputTokenLimit }, { headers }));
+  }
+
   deleteSettings(userId: string): Promise<{ ok: boolean }> {
     const headers = new HttpHeaders({ 'X-User-Id': userId });
     return this.req(this.http.delete<{ ok: boolean }>('/api/settings', { headers }));

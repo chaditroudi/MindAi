@@ -62,14 +62,16 @@ export interface MessageResult {
 // ─── Conversation messages ────────────────────────────────────────────────────
 
 export interface ConversationMessage {
-  messageId:    string;
-  role:         'user' | 'assistant';
-  prompt?:      string;
-  intent?:      ModeKey;
-  result?:      MessageResult;
-  createdAt?:   string;
-  inputTokens?: number;
-  outputTokens?: number;
+  messageId:          string;
+  role:               'user' | 'assistant';
+  prompt?:            string;
+  intent?:            ModeKey;
+  result?:            MessageResult;
+  createdAt?:         string;
+  inputTokens?:       number;
+  outputTokens?:      number;
+  tokenLimitExceeded?: boolean;
+  tokenWarning?:       string;
 }
 
 // ─── Saved results ────────────────────────────────────────────────────────────
@@ -161,30 +163,36 @@ export interface AgentConfigResponse {
 // ─── API responses ────────────────────────────────────────────────────────────
 
 export interface DashboardResponse {
-  intent:       'dashboard';
-  chart:        DashboardSpec;
-  sessionId:    string;
-  messageId:    string;
-  inputTokens:  number;
-  outputTokens: number;
+  intent:              'dashboard';
+  chart:               DashboardSpec;
+  sessionId:           string;
+  messageId:           string;
+  inputTokens:         number;
+  outputTokens:        number;
+  tokenLimitExceeded?: boolean;
+  tokenWarning?:       string;
 }
 
 export interface ReportResponse {
-  intent:          'report';
-  reportSections?: ReportSection[];
-  sessionId:       string;
-  messageId:       string;
-  inputTokens:     number;
-  outputTokens:    number;
+  intent:              'report';
+  reportSections?:     ReportSection[];
+  sessionId:           string;
+  messageId:           string;
+  inputTokens:         number;
+  outputTokens:        number;
+  tokenLimitExceeded?: boolean;
+  tokenWarning?:       string;
 }
 
 export interface InquiryResponse {
-  intent:       'general_question' | 'inquiry';
-  summary?:     string;
-  sessionId:    string;
-  messageId:    string;
-  inputTokens:  number;
-  outputTokens: number;
+  intent:              'general_question' | 'inquiry';
+  summary?:            string;
+  sessionId:           string;
+  messageId:           string;
+  inputTokens:         number;
+  outputTokens:        number;
+  tokenLimitExceeded?: boolean;
+  tokenWarning?:       string;
 }
 
 export type AnalyticsResponse = DashboardResponse | ReportResponse | InquiryResponse;

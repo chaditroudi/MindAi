@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Headers, BadRequestException } from '@nestjs/common';
 import { IsString, IsInt, IsOptional, Min, Max, MinLength, MaxLength } from 'class-validator';
 import { UserSettingsService } from './user-settings.service';
 import { requireUserId } from '../common/helpers/user-id';
@@ -67,6 +67,19 @@ export class UserSettingsController {
       writerModel:      settings.writerModel,
       memoryModel:      settings.memoryModel,
     };
+  }
+
+  @Patch('token-limit')
+  async patchTokenLimit(
+    @Body() body: { inputTokenLimit: number },
+    @Headers('x-user-id') rawUserId: string,
+  ) {
+    const userId = requireUserId(rawUserId);
+    const limit  = Number(body.inputTokenLimit);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 128_000) {
+      throw new BadRequestException('inputTokenLimit must be an integer between 1 and 128000.');
+    }
+    return this.service.patchTokenLimit(userId, limit);
   }
 
   @Delete()
