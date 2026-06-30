@@ -180,6 +180,32 @@ export async function fetchProviderModels(
     .map(m => ({ id: m.id, label: m.id }));
 }
 
+// ── OpenAI-compat fetch interceptor ──────────────────────────────────────────
+// @ai-sdk/openai v2 derives systemMessageMode from the model ID: any non-GPT
+// model name is classified as a "reasoning model" and gets role:"developer".
+// Mistral, Together, Perplexity reject that with 422. This fetch wrapper converts
+// role:"developer" → role:"system" in the serialised request body before sending.
+
+async function openAICompatFetch(
+  input:   RequestInfo | URL,
+  init?:   RequestInit,
+): Promise<Response> {
+  if (init?.body && typeof init.body === 'string') {
+    try {
+      const body = JSON.parse(init.body) as Record<string, unknown>;
+      if (Array.isArray(body['messages'])) {
+        body['messages'] = (body['messages'] as Array<Record<string, unknown>>).map(m =>
+          m['role'] === 'developer' ? { ...m, role: 'system' } : m,
+        );
+        init = { ...init, body: JSON.stringify(body) };
+      }
+    } catch {
+      // body not JSON — pass through unchanged
+    }
+  }
+  return fetch(input as Parameters<typeof fetch>[0], init);
+}
+
 // ── Model resolver ────────────────────────────────────────────────────────────
 
 export function resolveModel(
