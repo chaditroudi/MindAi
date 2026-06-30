@@ -69,6 +69,7 @@ const ERROR_CODES = {
   LLM_RATE_LIMIT:            'LLM_RATE_LIMIT',
   TOKEN_LIMIT_TOO_LOW:       'TOKEN_LIMIT_TOO_LOW',
   INPUT_TOKEN_LIMIT_TOO_LOW: 'INPUT_TOKEN_LIMIT_TOO_LOW',
+  NO_ACTIVE_CONNECTION:      'NO_ACTIVE_CONNECTION',
 } as const;
 
 const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
@@ -411,8 +412,12 @@ export class AnalyticsService {
         agentApiKey:      active.apiKey,
       };
     }
-    throw new UnauthorizedException(
-      'No API key configured. Add one in Settings or configure an active agent in Agent Config.',
+    throw Object.assign(
+      new UnauthorizedException(
+        'No active AI connection. Your agent may be expired, disabled, or quota-exhausted. ' +
+        'Open Config to re-enable it or add a new connection.',
+      ),
+      { code: ERROR_CODES.NO_ACTIVE_CONNECTION },
     );
   }
 
