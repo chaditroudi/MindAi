@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { log, logTrace } from '../common/logger/app.logger';
-import { createSkillAgent, freshSignal, skillProviderOptions } from './model';
+import { createSkillAgent, freshSignal, skillProviderOptions, withRateLimitRetry } from './model';
 import { readMarkdownSection, skillFile } from './skill-prompt';
 import type { TokenUsage } from './token';
 import { buildChartPrompt } from '../prompts';

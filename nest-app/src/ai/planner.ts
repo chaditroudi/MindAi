@@ -1,7 +1,7 @@
 import type { CoreMessage } from 'ai';
 import type { TokenUsage } from './token';
 import { z } from 'zod';
-import { createSkillAgent, freshSignal, skillProviderOptions } from './model';
+import { createSkillAgent, freshSignal, skillProviderOptions, withRateLimitRetry } from './model';
 import { interpolateTemplate, readMarkdownSection, skillFile } from './skill-prompt';
 import { normalizeToken } from '../sources/sources-cache';
 import { log } from '../common/logger/app.logger';
@@ -209,14 +209,17 @@ export async function runSupervisorPlan({
     : JSON.stringify({ prompt, intent });
 
   const agent  = createSkillAgent('supervisor', buildPlannerPrompt(intent, sources), apiKey, userModel, userProvider);
-  const result = await agent.generate(
-    [...context, { role: 'user', content: userContent }],
-    {
-      structuredOutput: { schema: buildPlanSchema(intent) },
-      modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 1 },
-      abortSignal:      freshSignal('supervisor'),
-      providerOptions:  skillProviderOptions(apiKey, userProvider),
-    },
+  const result = await withRateLimitRetry(
+    () => agent.generate(
+      [...context, { role: 'user', content: userContent }],
+      {
+        structuredOutput: { schema: buildPlanSchema(intent) },
+        modelSettings:    { maxOutputTokens: maxTokens ?? MAX_TOKENS, temperature: 0, maxRetries: 0 },
+        abortSignal:      freshSignal('supervisor'),
+        providerOptions:  skillProviderOptions(apiKey, userProvider),
+      },
+    ),
+    'planner',
   );
 
   const object = result.object as TaskPlan & { strategy?: string; chartHint?: string };

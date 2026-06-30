@@ -264,6 +264,58 @@ export function resolveModel(
   }
 }
 
+// ── Rate-limit retry wrapper ──────────────────────────────────────────────────
+// Mastra's built-in p-retry doesn't honour the `retry-after` header on 429s,
+// so we set maxRetries:0 in every agent.generate() call and handle retries here.
+
+function isRateLimitError(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'statusCode' in err &&
+    (err as { statusCode: number }).statusCode === 429
+  );
+}
+
+function rateLimitDelayMs(err: unknown): number {
+  if (typeof err === 'object' && err !== null) {
+    const headers = (err as Record<string, unknown>)['responseHeaders'] as Record<string, string> | undefined;
+    if (headers) {
+      const ra = headers['retry-after'];
+      if (ra) {
+        const secs = parseFloat(ra);
+        if (Number.isFinite(secs) && secs > 0) return Math.ceil(secs * 1000) + 500;
+      }
+      const reset = headers['x-ratelimit-reset-tokens'];
+      if (reset) {
+        const m = reset.match(/^([\d.]+)s$/);
+        if (m) return Math.ceil(parseFloat(m[1]) * 1000) + 500;
+      }
+    }
+  }
+  return 5_000;
+}
+
+export async function withRateLimitRetry<T>(
+  fn:          () => Promise<T>,
+  label:       string,
+  maxRetries = 3,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (!isRateLimitError(err) || attempt === maxRetries) throw err;
+      const waitMs = rateLimitDelayMs(err);
+      console.warn(`[${label}] rate limit — waiting ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise<void>(resolve => setTimeout(resolve, waitMs));
+    }
+  }
+  throw lastError;
+}
+
 export function freshSignal(_role: AgentRole, timeoutMs?: number): AbortSignal | undefined {
   const ms = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0
     ? Math.round(timeoutMs)
