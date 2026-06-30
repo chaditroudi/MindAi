@@ -21,9 +21,6 @@ export class AgentEntry {
   @Prop({ min: 1, default: 4_000  }) inputTokenLimit!:  number;
   @Prop({ min: 1, default: 2_000  }) outputTokenLimit!: number;
 
-  // Credit balance — total tokens this agent is allowed to consume (0 = unlimited)
-  @Prop({ min: 0, default: 0 }) tokenBudget!: number;
-
   // Accumulated usage tracked after every request
   @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
   @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
@@ -93,19 +90,5 @@ export class AgentConfigRepository {
       },
     ).lean() as AgentConfigDocument | null;
 
-    if (!doc) return;
-
-    // Auto-expire the agent if it has exceeded its budget
-    const agent = doc.agents.find(a => a.apiKey === agentApiKey);
-    if (agent && agent.tokenBudget > 0) {
-      const totalUsed = agent.inputTokensUsed + agent.outputTokensUsed;
-      if (totalUsed >= agent.tokenBudget) {
-        await this.model.updateOne(
-          {},
-          { $set: { 'agents.$[agent].status': 'expired' } },
-          { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
-        );
-      }
-    }
   }
 }

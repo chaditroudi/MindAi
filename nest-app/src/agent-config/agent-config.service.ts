@@ -36,7 +36,6 @@ function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
     apiKey:           trimOrUndefined(agent.apiKey),
     inputTokenLimit:  positiveIntOrUndefined(agent.inputTokenLimit),
     outputTokenLimit: positiveIntOrUndefined(agent.outputTokenLimit),
-    tokenBudget:      nonNegativeIntOrUndefined(agent.tokenBudget),
     inputTokensUsed:  nonNegativeIntOrUndefined(agent.inputTokensUsed),
     outputTokensUsed: nonNegativeIntOrUndefined(agent.outputTokensUsed),
   };
