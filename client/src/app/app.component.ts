@@ -327,14 +327,10 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   onProviderChange(provider: string): void {
     this.st.patch({ provider: this.normalizeProvider(provider), selectedModel: '' });
-    this.testStatus   = 'idle';
-    this.testError    = '';
   }
 
   onSettingsModelChange(model: string): void {
     this.st.patch({ selectedModel: model });
-    this.testStatus = 'idle';
-    this.testError  = '';
   }
 
   onResponseTokenLimitChange(value: number | string): void {
@@ -421,7 +417,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   async run(): Promise<void> {
     const { prompt, intent, phase, sessionId, userId, hasKey } = this.st.snap;
     if (!prompt.trim() || phase === 'loading') return;
-    if (!hasKey) { this.st.patch({ showKeyModal: true }); return; }
+    if (!hasKey) { this.openConfigAgents(); return; }
 
     // For report intent, pause and ask the user which format they want.
     if (intent === 'report') {
@@ -493,7 +489,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   async chooseReportFormat(choice: 'report' | 'chart' | 'both'): Promise<void> {
     const { pendingPrompt, sessionId, userId, hasKey } = this.st.snap;
-    if (!hasKey) { this.st.patch({ showKeyModal: true }); return; }
+    if (!hasKey) { this.openConfigAgents(); return; }
     const reportTempId = this.pendingReportTempId;
     this.pendingReportTempId = null;
     this.st.patch({ pendingSuggestion: false });
