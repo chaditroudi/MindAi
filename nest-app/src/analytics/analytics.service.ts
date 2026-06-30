@@ -377,7 +377,9 @@ export class AnalyticsService {
     return this.buildResponse({
       result, prompt, apiKey: access.apiKey, sessionId,
       displayIntent, userId: req.userId, durationMs,
-      inputTokens, outputTokens, outputTokenLimit: access.maxTokens,
+      inputTokens, outputTokens,
+      outputTokenLimit: access.maxTokens,
+      inputTokenLimit:  access.inputTokenLimit,
       agentApiKey: access.agentApiKey,
       model: access.model, provider: access.provider,
     });
@@ -530,12 +532,13 @@ export class AnalyticsService {
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
     void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model, provider });
 
-    const tokenFields = tokenLimitExceeded ? { tokenLimitExceeded, tokenWarning } : {};
+    const tokenFields      = tokenLimitExceeded  ? { tokenLimitExceeded, tokenWarning }  : {};
+    const inputTokenFields = inputLimitExceeded  ? { inputTokenWarning }                  : {};
 
     if (type === 'dashboard') {
-      return { intent: 'dashboard', chart: result, sessionId, messageId, inputTokens, outputTokens, ...tokenFields };
+      return { intent: 'dashboard', chart: result, sessionId, messageId, inputTokens, outputTokens, ...tokenFields, ...inputTokenFields };
     }
-    return { intent: type, ...(result as object), sessionId, messageId, inputTokens, outputTokens, ...tokenFields };
+    return { intent: type, ...(result as object), sessionId, messageId, inputTokens, outputTokens, ...tokenFields, ...inputTokenFields };
   }
 
   private async persistTurn(params: {

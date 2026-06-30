@@ -781,6 +781,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       outputTokens:       data.outputTokens,
       tokenLimitExceeded: data.tokenLimitExceeded,
       tokenWarning:       data.tokenWarning,
+      inputTokenWarning:  data.inputTokenWarning,
     };
 
     if (data.intent === 'dashboard' && 'chart' in data) {
