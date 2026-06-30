@@ -557,6 +557,60 @@
 .retry-btn { padding: 0.5rem 1.1rem; border: none; border-radius: 0.45rem; background: #111827; color: #fff; font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: background 120ms; }
 .retry-btn:hover { background: #1f2937; }
 
+/* ── Token limit confirmation card ────────────────────────────────────────── */
+.token-confirm-card {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  margin: 0.5rem 0 0.75rem;
+  padding: 1rem 1.1rem;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 0.6rem;
+  animation: fade-up 200ms ease both;
+}
+.token-confirm-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: #b45309;
+}
+.token-confirm-body { flex: 1; min-width: 0; }
+.token-confirm-title {
+  margin: 0 0 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #92400e;
+}
+.token-confirm-desc {
+  margin: 0 0 0.75rem;
+  font-size: 0.83rem;
+  color: #78350f;
+  line-height: 1.55;
+}
+.token-confirm-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.token-confirm-btn {
+  padding: 0.4rem 1rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 0.4rem;
+  border: 1px solid #fcd34d;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms;
+}
+.token-confirm-btn--yes {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #fff;
+}
+.token-confirm-btn--yes:hover:not(:disabled) { background: #d97706; border-color: #d97706; }
+.token-confirm-btn--no {
+  background: #fff;
+  color: #92400e;
+}
+.token-confirm-btn--no:hover:not(:disabled) { background: #fef3c7; }
+.token-confirm-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* ── Token warning banner ──────────────────────────────────────────────────── */
 .token-warning {
   display: flex;

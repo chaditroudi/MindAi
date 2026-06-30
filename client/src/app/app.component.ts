@@ -794,28 +794,44 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return { ...base, intent: 'inquiry', result: { type: 'inquiry', summary: (data as InquiryResponse).summary ?? '', durationMs } };
   }
 
-  // ── Token limit ──────────────────────────────────────────────────────────────
+  // ── Token limit confirmation ──────────────────────────────────────────────────
 
   tokenLimitSaving = false;
 
-  maximizedLimit(): number {
-    const current = this.st.snap.inputTokenLimit;
-    return Math.min(32_000, Math.max(8_000, current * 2));
+  async confirmMaximizeTokens(): Promise<void> {
+    const conf = this.st.snap.pendingTokenConfirm;
+    if (!conf) return;
+    this.st.patch({ pendingTokenConfirm: null });
+    await this.applyTokenLimit(conf.suggestedLimit);
+    this.st.patch({ prompt: conf.prompt, intent: conf.intent });
+    await this.run();
   }
 
-  async maximizeTokenLimit(): Promise<void> {
+  dismissTokenConfirm(): void {
+    this.st.patch({ pendingTokenConfirm: null, phase: 'idle' });
+  }
+
+  private async applyTokenLimit(limit: number): Promise<void> {
     const { userId } = this.st.snap;
-    const newLimit = this.maximizedLimit();
     this.tokenLimitSaving = true;
     try {
-      await this.api.updateTokenLimit(userId, newLimit);
-      this.st.patch({ inputTokenLimit: newLimit });
-    } catch { /* non-critical — state already reflects the intent */ }
+      await this.api.updateTokenLimit(userId, limit);
+      this.st.patch({ inputTokenLimit: limit });
+    } catch { /* non-critical */ }
     finally { this.tokenLimitSaving = false; }
   }
 
+  // Used by the warning banner on already-truncated results
+  maximizedLimit(): number {
+    return Math.min(32_000, Math.max(8_000, this.st.snap.inputTokenLimit * 2));
+  }
+
+  async maximizeTokenLimit(): Promise<void> {
+    await this.applyTokenLimit(this.maximizedLimit());
+  }
+
   async retryWithMaxTokens(msg: ConversationMessage): Promise<void> {
-    await this.maximizeTokenLimit();
+    await this.applyTokenLimit(this.maximizedLimit());
     if (msg.prompt && msg.intent) {
       this.st.patch({ prompt: msg.prompt, intent: msg.intent });
       await this.run();
