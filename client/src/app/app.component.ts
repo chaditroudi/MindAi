@@ -440,10 +440,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
       this.st.patch({
         sessionId,
-        messages: messages as ConversationMessage[],
-        phase: 'idle',
-        errorText: '',
-        prompt: lastUserMsg?.prompt ?? this.st.snap.prompt,
+        messages:            messages as ConversationMessage[],
+        phase:               'idle',
+        errorText:           '',
+        prompt:              lastUserMsg?.prompt ?? this.st.snap.prompt,
+        pendingSuggestion:   false,
+        pendingPrompt:       '',
+        pendingTokenConfirm: null,
       });
     } catch (err) {
       this.st.patch({
@@ -797,6 +800,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   // ── Token limit confirmation ──────────────────────────────────────────────────
 
   tokenLimitSaving = false;
+  private pendingReportTempId: string | null = null;
 
   async confirmMaximizeTokens(): Promise<void> {
     const conf = this.st.snap.pendingTokenConfirm;
