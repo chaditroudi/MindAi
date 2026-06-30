@@ -862,6 +862,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     await this.applyResponseTokenLimit(this.maximizedLimit());
   }
 
+  async applyResponseTokenLimitFromConfig(): Promise<void> {
+    const ok = await this.applyResponseTokenLimit(this.st.snap.responseTokenLimit);
+    if (!ok) this.st.setError('Could not update the output token limit. Please try again.');
+  }
+
   async retryWithMaxTokens(msg: ConversationMessage): Promise<void> {
     if (this.st.snap.phase === 'loading') return;
     const ok = await this.applyResponseTokenLimit(this.maximizedLimit());

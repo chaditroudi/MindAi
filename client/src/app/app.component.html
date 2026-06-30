@@ -142,6 +142,24 @@
         <div class="config-panel">
 
           <section class="config-section">
+            <h4 class="config-section-title">AI Settings</h4>
+            <div class="config-field">
+              <label class="config-label">Output token limit</label>
+              <div class="config-token-row">
+                <input class="config-input config-token-input"
+                  type="number" min="1" max="128000" step="1"
+                  [ngModel]="s.responseTokenLimit || 4000"
+                  (ngModelChange)="onResponseTokenLimitChange($event)" />
+                <button class="config-token-apply-btn"
+                  [disabled]="tokenLimitSaving"
+                  (click)="applyResponseTokenLimitFromConfig()">
+                  {{ tokenLimitSaving ? '…' : 'Apply' }}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="config-section">
             <h4 class="config-section-title">Memory</h4>
             <div class="config-field">
               <label class="config-label">Memory limit (items)</label>
