@@ -67,9 +67,13 @@ export class CacheService {
 
   async setCached<T>(intent: string, prompt: string, result: T): Promise<void> {
     const key = this.cacheKey(intent, prompt);
-    await this.model.replaceOne(
+    await this.model.updateOne(
       { key },
-      { key, prompt: prompt.trim(), intent, result, createdAt: new Date(), hitCount: 0, lastHitAt: new Date() },
+      {
+        // Only set createdAt on first insert so the TTL index clock is never reset
+        $setOnInsert: { key, createdAt: new Date() },
+        $set:         { prompt: prompt.trim(), intent, result, hitCount: 0, lastHitAt: new Date() },
+      },
       { upsert: true },
     );
     this.logger.log(`CACHE SAVE | key: ${key} | intent: ${intent}`);

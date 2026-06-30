@@ -860,8 +860,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   async retryWithMaxTokens(msg: ConversationMessage): Promise<void> {
-    await this.applyTokenLimit(this.maximizedLimit());
-    if (msg.prompt && msg.intent) {
+    if (this.st.snap.phase === 'loading') return;
+    const ok = await this.applyTokenLimit(this.maximizedLimit());
+    if (!ok || !msg.prompt || !msg.intent) return;
+    if (msg.intent === 'report') {
+      // Bypass the format picker — retry directly as the same format
+      this.st.patch({ pendingPrompt: msg.prompt, pendingSuggestion: false });
+      await this.chooseReportFormat('report');
+    } else {
       this.st.patch({ prompt: msg.prompt, intent: msg.intent });
       await this.run();
     }
