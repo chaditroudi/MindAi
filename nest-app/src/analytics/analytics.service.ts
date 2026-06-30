@@ -193,16 +193,17 @@ function isContextLengthError(err: unknown): boolean {
 
 // Fires when the model hit maxOutputTokens mid-JSON: the response is cut off,
 // producing invalid JSON that Mastra / JSON.parse cannot complete.
-// Only matches definitive parse errors — not generic Zod schema mismatches.
+// Matches only definitive truncation indicators — not generic Zod schema mismatches
+// such as "Failed to parse JSON response: invalid type at ..." which contain "json"+"parse"
+// but are caused by schema shape errors, not by a truncated stream.
 function isTruncatedOutputError(err: unknown): boolean {
   if (isStructuredOutputUnsupportedError(err)) return false;
   const msg = getErrorMessage(err).toLowerCase();
   return (
     msg.includes('unexpected end of json') ||
     msg.includes('unterminated string') ||
-    msg.includes('invalid json') ||
-    (msg.includes('json') && msg.includes('parse')) ||
-    (msg.includes('syntaxerror') && (msg.includes('unexpected end') || msg.includes('unexpected token')))
+    (msg.includes('syntaxerror') && (msg.includes('unexpected end') || msg.includes('unexpected token'))) ||
+    (msg.includes('invalid json') && (msg.includes('unexpected') || msg.includes('unterminated')))
   );
 }
 
