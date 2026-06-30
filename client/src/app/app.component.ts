@@ -769,11 +769,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
     const base = {
-      messageId:    data.messageId,
-      role:         'assistant' as const,
+      messageId:          data.messageId,
+      role:               'assistant' as const,
       prompt,
-      inputTokens:  data.inputTokens,
-      outputTokens: data.outputTokens,
+      inputTokens:        data.inputTokens,
+      outputTokens:       data.outputTokens,
+      tokenLimitExceeded: data.tokenLimitExceeded,
+      tokenWarning:       data.tokenWarning,
     };
 
     if (data.intent === 'dashboard' && 'chart' in data) {
@@ -783,6 +785,34 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       return { ...base, intent: 'report', result: { type: 'report', reportSections: (data as ReportResponse).reportSections ?? [], durationMs } };
     }
     return { ...base, intent: 'inquiry', result: { type: 'inquiry', summary: (data as InquiryResponse).summary ?? '', durationMs } };
+  }
+
+  // ── Token limit ──────────────────────────────────────────────────────────────
+
+  tokenLimitSaving = false;
+
+  maximizedLimit(): number {
+    const current = this.st.snap.inputTokenLimit;
+    return Math.min(32_000, Math.max(8_000, current * 2));
+  }
+
+  async maximizeTokenLimit(): Promise<void> {
+    const { userId } = this.st.snap;
+    const newLimit = this.maximizedLimit();
+    this.tokenLimitSaving = true;
+    try {
+      await this.api.updateTokenLimit(userId, newLimit);
+      this.st.patch({ inputTokenLimit: newLimit });
+    } catch { /* non-critical — state already reflects the intent */ }
+    finally { this.tokenLimitSaving = false; }
+  }
+
+  async retryWithMaxTokens(msg: ConversationMessage): Promise<void> {
+    await this.maximizeTokenLimit();
+    if (msg.prompt && msg.intent) {
+      this.st.patch({ prompt: msg.prompt, intent: msg.intent });
+      await this.run();
+    }
   }
 
   private async loadSessions(): Promise<void> {
