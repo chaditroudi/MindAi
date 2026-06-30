@@ -250,8 +250,13 @@ export class AnalyticsService {
       );
     }
 
-    const access = this.resolveAccess(userKey, userModel, userProvider, agentCfg,
-      settings?.inputTokenLimit);
+    const access = this.resolveAccess(
+      userKey,
+      userModel,
+      userProvider,
+      agentCfg,
+      settings?.responseTokenLimit ?? settings?.inputTokenLimit,
+    );
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
     const memoryContext = await this.buildMemoryContext(
@@ -319,7 +324,7 @@ export class AnalyticsService {
           const suggestedLimit = Math.min(32_000, Math.max(8_000, currentLimit * 2));
           throw new HttpException(
             {
-              error:         `Your token limit (${currentLimit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish.`,
+              error:         `Your response token limit (${currentLimit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish.`,
               code:          ERROR_CODES.TOKEN_LIMIT_TOO_LOW,
               currentLimit,
               suggestedLimit,
@@ -476,7 +481,7 @@ export class AnalyticsService {
 
     const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
     const tokenWarning = tokenLimitExceeded
-      ? `Response reached your configured token limit (${outputTokens}/${outputTokenLimit}). ` +
+      ? `Response reached your configured response token limit (${outputTokens}/${outputTokenLimit}). ` +
         `The answer may be incomplete. Do you wish to continue with a higher limit?`
       : undefined;
     const type          = this.resolveType(result);

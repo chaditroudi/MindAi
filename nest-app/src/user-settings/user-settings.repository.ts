@@ -11,7 +11,8 @@ export class UserSettings {
   @Prop({ required: true })                            provider!: string;
   @Prop({ required: true })                            model!:    string;
 
-  @Prop({ min: 1, default: 4_000 }) inputTokenLimit?: number;
+  @Prop({ min: 1, default: 4_000 }) responseTokenLimit?: number;
+  @Prop({ min: 1 }) inputTokenLimit?: number;
 
   // Lifetime accumulated usage for this user's personal key
   @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
@@ -29,10 +30,11 @@ export class UserSettingsRepository {
   ) {}
 
   async save(userId: string, data: {
-    apiKey:           string;
-    provider:         string;
-    model:            string;
-    inputTokenLimit?: number;
+    apiKey:              string;
+    provider:            string;
+    model:               string;
+    responseTokenLimit?: number;
+    inputTokenLimit?:    number;
   }): Promise<void> {
     await this.model.replaceOne({ userId }, { userId, ...data }, { upsert: true });
   }
@@ -41,8 +43,11 @@ export class UserSettingsRepository {
     return this.model.findOne({ userId }).lean() as Promise<UserSettingsDocument | null>;
   }
 
-  async patchTokenLimit(userId: string, inputTokenLimit: number): Promise<boolean> {
-    const result = await this.model.updateOne({ userId }, { $set: { inputTokenLimit } });
+  async patchTokenLimit(userId: string, responseTokenLimit: number): Promise<boolean> {
+    const result = await this.model.updateOne(
+      { userId },
+      { $set: { responseTokenLimit, inputTokenLimit: responseTokenLimit } },
+    );
     return result.matchedCount > 0;
   }
 

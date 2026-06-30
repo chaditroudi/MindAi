@@ -4,10 +4,11 @@ import type { UserSettingsDocument } from './user-settings.repository';
 import { buildProviderValidationRequest, PROVIDERS } from '../ai/model';
 
 export interface UserSettingsDto {
-  apiKey:           string;
-  provider:         string;
-  model:            string;
-  inputTokenLimit?: number;
+  apiKey:              string;
+  provider:            string;
+  model:               string;
+  responseTokenLimit?: number;
+  inputTokenLimit?:    number;
 }
 
 export interface ValidationResult {
@@ -48,11 +49,13 @@ async function validateApiKey(apiKey: string, provider: string): Promise<void> {
 
 
 function sanitizeSettings(dto: UserSettingsDto): UserSettingsDto {
+  const responseTokenLimit = dto.responseTokenLimit ?? dto.inputTokenLimit;
   return {
-    apiKey:          dto.apiKey.trim(),
-    provider:        dto.provider.trim().toLowerCase(),
-    model:           dto.model.trim(),
-    inputTokenLimit: dto.inputTokenLimit,
+    apiKey:             dto.apiKey.trim(),
+    provider:           dto.provider.trim().toLowerCase(),
+    model:              dto.model.trim(),
+    responseTokenLimit,
+    inputTokenLimit:    responseTokenLimit,
   };
 }
 
@@ -86,8 +89,8 @@ export class UserSettingsService {
     return this.repo.findByUser(userId);
   }
 
-  async patchTokenLimit(userId: string, inputTokenLimit: number): Promise<{ ok: boolean }> {
-    const ok = await this.repo.patchTokenLimit(userId, inputTokenLimit);
+  async patchTokenLimit(userId: string, responseTokenLimit: number): Promise<{ ok: boolean }> {
+    const ok = await this.repo.patchTokenLimit(userId, responseTokenLimit);
     return { ok };
   }
 

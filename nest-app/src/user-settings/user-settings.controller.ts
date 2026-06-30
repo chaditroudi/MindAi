@@ -15,6 +15,9 @@ class SaveSettingsDto {
   model!: string;
 
   @IsOptional() @IsInt() @Min(1) @Max(128_000)
+  responseTokenLimit?: number;
+
+  @IsOptional() @IsInt() @Min(1) @Max(128_000)
   inputTokenLimit?: number;
 }
 
@@ -54,7 +57,8 @@ export class UserSettingsController {
       provider:         settings.provider,
       model:            settings.model,
       keyPreview:       `${settings.apiKey.slice(0, 6)}...${settings.apiKey.slice(-4)}`,
-      inputTokenLimit:  settings.inputTokenLimit ?? 4_000,
+      responseTokenLimit: settings.responseTokenLimit ?? settings.inputTokenLimit ?? 4_000,
+      inputTokenLimit:    settings.responseTokenLimit ?? settings.inputTokenLimit ?? 4_000,
       inputTokensUsed:  settings.inputTokensUsed  ?? 0,
       outputTokensUsed: settings.outputTokensUsed ?? 0,
     };
@@ -62,13 +66,13 @@ export class UserSettingsController {
 
   @Patch('token-limit')
   async patchTokenLimit(
-    @Body() body: { inputTokenLimit: number },
+    @Body() body: { responseTokenLimit?: number; inputTokenLimit?: number },
     @Headers('x-user-id') rawUserId: string,
   ) {
     const userId = requireUserId(rawUserId);
-    const limit  = Number(body.inputTokenLimit);
+    const limit  = Number(body.responseTokenLimit ?? body.inputTokenLimit);
     if (!Number.isInteger(limit) || limit < 1 || limit > 128_000) {
-      throw new BadRequestException('inputTokenLimit must be an integer between 1 and 128000.');
+      throw new BadRequestException('responseTokenLimit must be an integer between 1 and 128000.');
     }
     return this.service.patchTokenLimit(userId, limit);
   }
