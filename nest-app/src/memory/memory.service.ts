@@ -7,8 +7,10 @@ export class MemoryService {
   private readonly logger = new Logger(MemoryService.name);
 
   // Defaults to true; set MEMORY_EXTRACTION_ENABLED=false to disable at startup.
-  private extractionEnabled: boolean =
-    process.env['MEMORY_EXTRACTION_ENABLED']?.toLowerCase() !== 'false';
+  private extractionEnabled: boolean = (() => {
+    const v = process.env['MEMORY_EXTRACTION_ENABLED']?.toLowerCase().trim();
+    return v !== 'false' && v !== '0' && v !== 'no';
+  })();
 
   constructor(private readonly repo: MemoryRepository) {}
 

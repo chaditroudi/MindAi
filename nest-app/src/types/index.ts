@@ -78,7 +78,6 @@ export interface ReportSection {
 export type ChartHint = string;
 
 export interface TaskQuery {
-  sourceId?:   string;
   sourceName?: string;
   limit?:      number;
 }
