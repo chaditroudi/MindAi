@@ -1319,6 +1319,27 @@
 }
 .config-input:focus { border-color: #6b7280; }
 
+.config-token-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.config-token-input { flex: 1; width: auto; }
+.config-token-apply-btn {
+  flex-shrink: 0;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.config-token-apply-btn:hover:not(:disabled) { background: #e5e7eb; }
+.config-token-apply-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .config-add-btn {
   font-size: 0.75rem;
   padding: 0.2rem 0.55rem;
