@@ -10,7 +10,6 @@ import type { CoreMessage } from 'ai';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
-import { getSources } from '../sources/sources-cache';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';

@@ -704,7 +704,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       apiKey:           agent.apiKey.trim(),
       inputTokenLimit:  this.coercePositiveInt(agent.inputTokenLimit, 4_000),
       outputTokenLimit: this.coercePositiveInt(agent.outputTokenLimit, 2_000),
-      tokenBudget:      this.coerceNonNegativeInt(agent.tokenBudget),
       inputTokensUsed:  this.coerceNonNegativeInt(agent.inputTokensUsed),
       outputTokensUsed: this.coerceNonNegativeInt(agent.outputTokensUsed),
     };
