@@ -654,6 +654,33 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     );
   }
 
+  async saveAgentCard(index: number): Promise<void> {
+    this.configSaving = true;
+    this.configError  = '';
+    try {
+      const saved = await this.api.saveAgentConfig({
+        memoryLimit: this.coercePositiveInt(this.memoryLimitDraft, 50),
+        agents:      this.agentDraft.map(agent => this.sanitizeAgent(agent)),
+      });
+      this.st.patch({ agentConfig: saved });
+      this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
+      this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
+      const hasActive = this.agentDraft.some(a => a.status === 'active');
+      this.st.patch({ hasKey: hasActive });
+    } catch (err) {
+      this.configError = err instanceof Error ? err.message : 'Failed to save.';
+    } finally {
+      this.configSaving = false;
+    }
+  }
+
+  async retryAgent(index: number): Promise<void> {
+    this.agentDraft = this.agentDraft.map((a, i) =>
+      i === index ? { ...a, status: 'active' as AgentStatus } : a,
+    );
+    await this.saveAgentCard(index);
+  }
+
   async saveAgentConfig(): Promise<void> {
     this.configSaving = true;
     this.configError  = '';

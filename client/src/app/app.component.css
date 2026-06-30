@@ -1445,20 +1445,96 @@
   color: #6b7280;
 }
 .config-usage-label--dim { color: #9ca3af; }
-.config-status-select {
+/* ── Agent status badge ─────────────────────────────────────────────────────── */
+.agent-status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.agent-status-dot--active   { background: #16a34a; }
+.agent-status-dot--idle     { background: #d97706; }
+.agent-status-dot--disabled { background: #9ca3af; }
+.agent-status-dot--expired  { background: #dc2626; }
+
+.agent-status-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.agent-status-label--active   { color: #15803d; }
+.agent-status-label--idle     { color: #b45309; }
+.agent-status-label--disabled { color: #6b7280; }
+.agent-status-label--expired  { color: #b91c1c; }
+
+/* ── Agent status action row ─────────────────────────────────────────────────── */
+.agent-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+.agent-status-hint {
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+.agent-action-btn {
+  font-size: 0.7rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 0.3rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  transition: opacity 120ms;
+}
+.agent-action-btn--primary { background: #2563eb; color: #fff; border-color: #1d4ed8; }
+.agent-action-btn--primary:hover { opacity: 0.85; }
+.agent-action-btn--muted   { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
+.agent-action-btn--muted:hover   { background: #e5e7eb; }
+
+/* ── Editable limits row ────────────────────────────────────────────────────── */
+.config-agent-limits {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+  flex-wrap: wrap;
+}
+.agent-limit-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.72rem;
-  padding: 0.2rem 0.35rem;
+  color: #6b7280;
+}
+.agent-limit-input {
+  width: 5.5rem;
+  font-size: 0.72rem;
+  padding: 0.18rem 0.35rem;
   border: 1px solid #d1d5db;
   border-radius: 0.3rem;
   background: #f9fafb;
-  color: #374151;
-  cursor: pointer;
+  color: #111827;
   font: inherit;
 }
-.config-status--active  { border-color: #16a34a; color: #15803d; background: #f0fdf4; }
-.config-status--idle    { border-color: #d1d5db; color: #6b7280; }
-.config-status--disabled { border-color: #f87171; color: #b91c1c; background: #fef2f2; }
-.config-status--expired { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
+.agent-limit-input:focus { outline: none; border-color: #6366f1; }
+.agent-save-btn {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.3rem;
+  border: 1px solid #6366f1;
+  background: #6366f1;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  margin-left: auto;
+  transition: opacity 120ms;
+}
+.agent-save-btn:hover:not(:disabled) { opacity: 0.85; }
+.agent-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .config-remove-btn {
   display: flex;
