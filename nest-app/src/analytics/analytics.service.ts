@@ -403,11 +403,12 @@ export class AnalyticsService {
   }
 
   private resolveAccess(
-    userKey:         string | null,
-    userModel:       string | undefined,
-    userProvider:    string | undefined,
-    agentCfg:        ResolvedConfig,
-    userTokenLimit?: number,
+    userKey:          string | null,
+    userModel:        string | undefined,
+    userProvider:     string | undefined,
+    agentCfg:         ResolvedConfig,
+    userTokenLimit?:  number,
+    excludeApiKeys:   string[] = [],
   ): AccessResult {
     if (userKey) {
       return {
@@ -418,8 +419,10 @@ export class AnalyticsService {
       };
     }
 
-    // Pick the first active agent
-    const active = agentCfg.agents.find(a => a.status === 'active');
+    // Pick the first active agent not already tried
+    const active = agentCfg.agents.find(
+      a => a.status === 'active' && !excludeApiKeys.includes(a.apiKey),
+    );
 
     if (active?.apiKey) {
       return {
