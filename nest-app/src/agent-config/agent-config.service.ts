@@ -3,6 +3,7 @@ import {
   AgentConfigRepository,
   type AgentConfigPayload,
   type AgentEntry,
+  type AgentStatus,
 } from './agent-config.repository';
 
 export interface ResolvedConfig {
@@ -77,5 +78,9 @@ export class AgentConfigService {
   async trackUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
     if (inputTokens <= 0 && outputTokens <= 0) return;
     await this.repo.incrementUsage(agentApiKey, inputTokens, outputTokens);
+  }
+
+  async updateStatus(agentApiKey: string, status: AgentStatus): Promise<void> {
+    await this.repo.updateAgentStatus(agentApiKey, status);
   }
 }

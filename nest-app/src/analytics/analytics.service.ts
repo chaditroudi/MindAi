@@ -308,19 +308,25 @@ export class AnalyticsService {
           );
         }
         if (isModelNotFoundError(err)) {
+          if (access.agentApiKey) void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
           throw new BadRequestException(
             'Model not found or no longer supported. Please open Settings and select a valid model for your provider.',
           );
         }
         if (isInvalidKeyError(err)) {
+          if (access.agentApiKey) void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
           throw Object.assign(
             new UnauthorizedException('Invalid API key. Please update it in Settings or Agent Config.'),
             { code: ERROR_CODES.INVALID_API_KEY },
           );
         }
         if (isProviderRateLimitError(err)) {
+          const exhausted = isFreeTierExhausted(err);
+          if (access.agentApiKey) {
+            void this.agentConfig.updateStatus(access.agentApiKey, exhausted ? 'expired' : 'idle');
+          }
           const retryIn = extractRetryDelay(err);
-          const msg = isFreeTierExhausted(err)
+          const msg = exhausted
             ? `The current quota for ${access.provider ?? 'this provider'} is exhausted. ` +
               'Try another model, use a different key, or enable billing for this provider account.'
             : retryIn
