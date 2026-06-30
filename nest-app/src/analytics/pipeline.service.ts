@@ -304,10 +304,11 @@ export class PipelineService {
     const source = sources.find(
       s => normalizeToken(s.name) === token || normalizeToken(s.collection) === token,
     );
-    if (!source?.collection && !plan.query.sourceName) {
-      throw new Error('Cannot resolve collection: no source name and no matching data source');
+    if (!source?.collection) {
+      const hint = plan.query.sourceName ? ` matching "${plan.query.sourceName}"` : '';
+      throw new Error(`No registered data source${hint}. Only registered sources may be queried.`);
     }
-    const collection = source?.collection ?? plan.query.sourceName!;
+    const collection = source.collection;;
 
     const normalizedPipeline = plan.pipeline.map((stage, index) => {
       const normalized = normalizePipelineStage(stage, index);
