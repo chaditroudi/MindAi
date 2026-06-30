@@ -74,6 +74,18 @@ export class AgentConfigRepository {
     );
   }
 
+  async updateTokenLimit(
+    agentApiKey: string,
+    field: 'inputTokenLimit' | 'outputTokenLimit',
+    value: number,
+  ): Promise<void> {
+    await this.model.updateOne(
+      {},
+      { $set: { [`agents.$[agent].${field}`]: value } },
+      { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+    );
+  }
+
   async incrementUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
     // Atomically increment both counters for the matching agent
     const doc = await this.model.findOneAndUpdate(

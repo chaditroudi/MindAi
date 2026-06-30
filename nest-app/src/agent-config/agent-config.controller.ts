@@ -1,5 +1,5 @@
-import { Controller, Get, Put, Body } from '@nestjs/common';
-import { IsString, IsInt, IsOptional, IsArray, IsEnum, MinLength, MaxLength, Min, ValidateNested } from 'class-validator';
+import { Controller, Get, Put, Patch, Body } from '@nestjs/common';
+import { IsString, IsInt, IsOptional, IsArray, IsEnum, IsIn, MinLength, MaxLength, Min, Max, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AgentConfigService } from './agent-config.service';
 import { AgentHealthService } from './agent-health.service';
@@ -27,6 +27,17 @@ class SaveAgentConfigDto {
   agents?: AgentEntryDto[];
 }
 
+class UpdateTokenLimitDto {
+  @IsString() @MinLength(1) @MaxLength(500)
+  apiKey!: string;
+
+  @IsIn(['input', 'output'])
+  field!: 'input' | 'output';
+
+  @IsInt() @Min(1) @Max(128_000)
+  value!: number;
+}
+
 @Controller('api/agent-config')
 export class AgentConfigController {
   constructor(
@@ -48,5 +59,12 @@ export class AgentConfigController {
         .map(agent => this.health.probeAndUpdateAgent(agent.apiKey)),
     );
     return this.service.getConfig();
+  }
+
+  @Patch('token-limit')
+  async updateTokenLimit(@Body() dto: UpdateTokenLimitDto) {
+    const field = dto.field === 'input' ? 'inputTokenLimit' : 'outputTokenLimit';
+    await this.service.updateTokenLimit(dto.apiKey, field, dto.value);
+    return { ok: true };
   }
 }

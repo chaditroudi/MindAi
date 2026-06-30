@@ -65,9 +65,10 @@ export interface AnalyticsResponse {
 // ── Error classification ───────────────────────────────────────────────────────
 
 const ERROR_CODES = {
-  INVALID_API_KEY:    'INVALID_API_KEY',
-  LLM_RATE_LIMIT:     'LLM_RATE_LIMIT',
-  TOKEN_LIMIT_TOO_LOW: 'TOKEN_LIMIT_TOO_LOW',
+  INVALID_API_KEY:           'INVALID_API_KEY',
+  LLM_RATE_LIMIT:            'LLM_RATE_LIMIT',
+  TOKEN_LIMIT_TOO_LOW:       'TOKEN_LIMIT_TOO_LOW',
+  INPUT_TOKEN_LIMIT_TOO_LOW: 'INPUT_TOKEN_LIMIT_TOO_LOW',
 } as const;
 
 const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;

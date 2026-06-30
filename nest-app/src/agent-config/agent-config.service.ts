@@ -83,4 +83,12 @@ export class AgentConfigService {
   async updateStatus(agentApiKey: string, status: AgentStatus): Promise<void> {
     await this.repo.updateAgentStatus(agentApiKey, status);
   }
+
+  async updateTokenLimit(
+    agentApiKey: string,
+    field: 'inputTokenLimit' | 'outputTokenLimit',
+    value: number,
+  ): Promise<void> {
+    await this.repo.updateTokenLimit(agentApiKey, field, value);
+  }
 }
