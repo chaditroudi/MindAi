@@ -250,15 +250,8 @@ export class AnalyticsService {
       );
     }
 
-    const roleModels = {
-      supervisorModel: settings?.supervisorModel?.trim() || undefined,
-      chartModel:      settings?.chartModel?.trim()      || undefined,
-      writerModel:     settings?.writerModel?.trim()     || undefined,
-      memoryModel:     settings?.memoryModel?.trim()     || undefined,
-    };
-
     const access = this.resolveAccess(userKey, userModel, userProvider, agentCfg,
-      settings?.inputTokenLimit, roleModels);
+      settings?.inputTokenLimit);
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
     const memoryContext = await this.buildMemoryContext(
@@ -275,13 +268,10 @@ export class AnalyticsService {
     for (;;) {
       try {
         const executed = await this.executeByIntent(intent, prompt, context, {
-          apiKey:          access.apiKey,
-          model:           access.model,
-          provider:        access.provider,
-          maxTokens:       access.maxTokens,
-          supervisorModel: access.supervisorModel,
-          chartModel:      access.chartModel,
-          writerModel:     access.writerModel,
+          apiKey:    access.apiKey,
+          model:     access.model,
+          provider:  access.provider,
+          maxTokens: access.maxTokens,
         });
         result       = executed.result;
         inputTokens  = executed.usage.inputTokens;
@@ -357,7 +347,6 @@ export class AnalyticsService {
       inputTokens, outputTokens, outputTokenLimit: access.maxTokens,
       agentApiKey: access.agentApiKey,
       model: access.model, provider: access.provider,
-      memoryModel: access.memoryModel,
     });
   }
 
