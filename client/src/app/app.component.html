@@ -418,7 +418,7 @@
                       </article>
                     }
                   </div>
-                  @if (msg.tokenLimitExceeded) {
+                  @if (shouldShowTokenWarning(msg)) {
                     <div class="token-warning">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -426,10 +426,10 @@
                       <span class="token-warning-text">Your token limit ({{ st.snap.inputTokenLimit | number }} tokens) was reached — this response may be incomplete.</span>
                       <div class="token-warning-actions">
                         <button class="token-warning-btn token-warning-btn--primary" (click)="retryWithMaxTokens(msg)" [disabled]="tokenLimitSaving || st.snap.phase === 'loading'">
-                          Retry with {{ maximizedLimit() | number }} tokens
+                          Yes, maximize &amp; retry
                         </button>
-                        <button class="token-warning-btn" (click)="maximizeTokenLimit()" [disabled]="tokenLimitSaving">
-                          {{ tokenLimitSaving ? 'Saving…' : 'Maximize only' }}
+                        <button class="token-warning-btn" (click)="dismissTokenWarning(msg)" [disabled]="st.snap.phase === 'loading'">
+                          No, keep {{ st.snap.inputTokenLimit | number }} tokens
                         </button>
                       </div>
                     </div>
@@ -461,7 +461,7 @@
                       </article>
                     }
                   </div>
-                  @if (msg.tokenLimitExceeded) {
+                  @if (shouldShowTokenWarning(msg)) {
                     <div class="token-warning">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -469,10 +469,10 @@
                       <span class="token-warning-text">Your token limit ({{ st.snap.inputTokenLimit | number }} tokens) was reached — this response may be incomplete.</span>
                       <div class="token-warning-actions">
                         <button class="token-warning-btn token-warning-btn--primary" (click)="retryWithMaxTokens(msg)" [disabled]="tokenLimitSaving || st.snap.phase === 'loading'">
-                          Retry with {{ maximizedLimit() | number }} tokens
+                          Yes, maximize &amp; retry
                         </button>
-                        <button class="token-warning-btn" (click)="maximizeTokenLimit()" [disabled]="tokenLimitSaving">
-                          {{ tokenLimitSaving ? 'Saving…' : 'Maximize only' }}
+                        <button class="token-warning-btn" (click)="dismissTokenWarning(msg)" [disabled]="st.snap.phase === 'loading'">
+                          No, keep {{ st.snap.inputTokenLimit | number }} tokens
                         </button>
                       </div>
                     </div>
@@ -568,7 +568,7 @@
                   <div class="answer-card">
                     <p>{{ msg.result.summary }}</p>
                   </div>
-                  @if (msg.tokenLimitExceeded) {
+                  @if (shouldShowTokenWarning(msg)) {
                     <div class="token-warning">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -576,10 +576,10 @@
                       <span class="token-warning-text">Your token limit ({{ st.snap.inputTokenLimit | number }} tokens) was reached — this response may be incomplete.</span>
                       <div class="token-warning-actions">
                         <button class="token-warning-btn token-warning-btn--primary" (click)="retryWithMaxTokens(msg)" [disabled]="tokenLimitSaving || st.snap.phase === 'loading'">
-                          Retry with {{ maximizedLimit() | number }} tokens
+                          Yes, maximize &amp; retry
                         </button>
-                        <button class="token-warning-btn" (click)="maximizeTokenLimit()" [disabled]="tokenLimitSaving">
-                          {{ tokenLimitSaving ? 'Saving…' : 'Maximize only' }}
+                        <button class="token-warning-btn" (click)="dismissTokenWarning(msg)" [disabled]="st.snap.phase === 'loading'">
+                          No, keep {{ st.snap.inputTokenLimit | number }} tokens
                         </button>
                       </div>
                     </div>
