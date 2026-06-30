@@ -497,17 +497,24 @@ export class AnalyticsService {
     inputTokens:        number;
     outputTokens:       number;
     outputTokenLimit?:  number;
+    inputTokenLimit?:   number;
     agentApiKey?:       string;
     model?:             string;
     provider?:          string;
   }): AnalyticsResponse {
     const { result, prompt, apiKey, sessionId, displayIntent, userId,
-            durationMs, inputTokens, outputTokens, outputTokenLimit, agentApiKey, model, provider } = params;
+            durationMs, inputTokens, outputTokens, outputTokenLimit, inputTokenLimit, agentApiKey, model, provider } = params;
 
     const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
     const tokenWarning = tokenLimitExceeded
       ? `Response reached your configured response token limit (${outputTokens}/${outputTokenLimit}). ` +
         `The answer may be incomplete. Do you wish to continue with a higher limit?`
+      : undefined;
+
+    const inputLimitExceeded = inputTokenLimit !== undefined && inputTokens > inputTokenLimit;
+    const inputTokenWarning  = inputLimitExceeded
+      ? `This request used ${inputTokens.toLocaleString()} input tokens, but your connection's input limit is set to ${inputTokenLimit.toLocaleString()}. ` +
+        `Raise the In limit on your agent card to avoid queries being blocked.`
       : undefined;
     const type          = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);

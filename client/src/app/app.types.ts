@@ -168,6 +168,7 @@ export interface DashboardResponse {
   outputTokens:        number;
   tokenLimitExceeded?: boolean;
   tokenWarning?:       string;
+  inputTokenWarning?:  string;
 }
 
 export interface ReportResponse {
@@ -179,6 +180,7 @@ export interface ReportResponse {
   outputTokens:        number;
   tokenLimitExceeded?: boolean;
   tokenWarning?:       string;
+  inputTokenWarning?:  string;
 }
 
 export interface InquiryResponse {
@@ -190,6 +192,7 @@ export interface InquiryResponse {
   outputTokens:        number;
   tokenLimitExceeded?: boolean;
   tokenWarning?:       string;
+  inputTokenWarning?:  string;
 }
 
 export type AnalyticsResponse = DashboardResponse | ReportResponse | InquiryResponse;
