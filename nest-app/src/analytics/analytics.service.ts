@@ -18,11 +18,12 @@ import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-c
 import type { ExecuteResult, LlmOpts } from './pipeline.service';
 
 interface AccessResult {
-  apiKey:       string;
-  model?:       string;
-  provider?:    string;
-  maxTokens:    number;
-  agentApiKey?: string;
+  apiKey:           string;
+  model?:           string;
+  provider?:        string;
+  maxTokens:        number;
+  inputTokenLimit?: number;
+  agentApiKey?:     string;
 }
 import {
   sessionExists,
@@ -258,6 +259,18 @@ export class AnalyticsService {
       settings?.responseTokenLimit ?? settings?.inputTokenLimit,
     );
 
+    // Enforce input token limit (agent connections only; personal key has no cap)
+    if (access.inputTokenLimit) {
+      const estimatedTokens = Math.ceil(prompt.length / 4);
+      if (estimatedTokens > access.inputTokenLimit) {
+        throw new BadRequestException(
+          `Your prompt is too long (~${estimatedTokens.toLocaleString()} tokens). ` +
+          `This connection's input limit is ${access.inputTokenLimit.toLocaleString()} tokens. ` +
+          `Shorten your prompt or raise the input limit in Config.`,
+        );
+      }
+    }
+
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
     const memoryContext = await this.buildMemoryContext(
       req.userId, sessionId, prompt,
@@ -384,11 +397,12 @@ export class AnalyticsService {
 
     if (active?.apiKey) {
       return {
-        apiKey:      active.apiKey,
-        model:       active.model,
-        provider:    active.provider,
-        maxTokens:   active.outputTokenLimit,
-        agentApiKey: active.apiKey,
+        apiKey:           active.apiKey,
+        model:            active.model,
+        provider:         active.provider,
+        maxTokens:        active.outputTokenLimit,
+        inputTokenLimit:  active.inputTokenLimit,
+        agentApiKey:      active.apiKey,
       };
     }
     throw new UnauthorizedException(
