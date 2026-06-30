@@ -263,10 +263,17 @@ export class AnalyticsService {
     if (access.inputTokenLimit) {
       const estimatedTokens = Math.ceil(prompt.length / 4);
       if (estimatedTokens > access.inputTokenLimit) {
-        throw new BadRequestException(
-          `Your prompt is too long (~${estimatedTokens.toLocaleString()} tokens). ` +
-          `This connection's input limit is ${access.inputTokenLimit.toLocaleString()} tokens. ` +
-          `Shorten your prompt or raise the input limit in Config.`,
+        const currentLimit   = access.inputTokenLimit;
+        const suggestedLimit = Math.min(128_000, Math.max(estimatedTokens, currentLimit * 2));
+        throw new HttpException(
+          {
+            error:         `Your prompt is too long (~${estimatedTokens.toLocaleString()} tokens) for this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
+            code:          ERROR_CODES.INPUT_TOKEN_LIMIT_TOO_LOW,
+            currentLimit,
+            suggestedLimit,
+            agentApiKey:   access.agentApiKey,
+          },
+          HttpStatus.UNPROCESSABLE_ENTITY,
         );
       }
     }
@@ -347,6 +354,7 @@ export class AnalyticsService {
               code:          ERROR_CODES.TOKEN_LIMIT_TOO_LOW,
               currentLimit,
               suggestedLimit,
+              agentApiKey:   access.agentApiKey,
             },
             HttpStatus.UNPROCESSABLE_ENTITY,
           );

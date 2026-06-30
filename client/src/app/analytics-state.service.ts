@@ -36,6 +36,8 @@ export interface AppState {
     intent:         ModeKey;
     currentLimit:   number;
     suggestedLimit: number;
+    kind:           'input' | 'output';
+    agentApiKey?:   string;
   } | null;
 
   // AI connection
