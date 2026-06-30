@@ -252,33 +252,6 @@ export class AnalyticsService {
       );
     }
 
-    const access = this.resolveAccess(
-      userKey,
-      userModel,
-      userProvider,
-      agentCfg,
-      settings?.responseTokenLimit ?? settings?.inputTokenLimit,
-    );
-
-    // Enforce input token limit (agent connections only; personal key has no cap)
-    if (access.inputTokenLimit) {
-      const estimatedTokens = Math.ceil(prompt.length / 4);
-      if (estimatedTokens > access.inputTokenLimit) {
-        const currentLimit   = access.inputTokenLimit;
-        const suggestedLimit = Math.min(128_000, Math.max(estimatedTokens, currentLimit * 2));
-        throw new HttpException(
-          {
-            error:         `Your prompt is too long (~${estimatedTokens.toLocaleString()} tokens) for this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
-            code:          ERROR_CODES.INPUT_TOKEN_LIMIT_TOO_LOW,
-            currentLimit,
-            suggestedLimit,
-            agentApiKey:   access.agentApiKey,
-          },
-          HttpStatus.UNPROCESSABLE_ENTITY,
-        );
-      }
-    }
-
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
     const memoryContext = await this.buildMemoryContext(
       req.userId, sessionId, prompt,
@@ -287,72 +260,29 @@ export class AnalyticsService {
     this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
     const t0 = Date.now();
 
+    const triedAgentKeys: string[] = [];
+    let access!: AccessResult;
     let result: unknown;
     let inputTokens  = 0;
     let outputTokens = 0;
-    let context      = memoryContext;
-    for (;;) {
-      try {
-        const executed = await this.executeByIntent(intent, prompt, context, {
-          apiKey:    access.apiKey,
-          model:     access.model,
-          provider:  access.provider,
-          maxTokens: access.maxTokens,
-        });
-        result       = executed.result;
-        inputTokens  = executed.usage.inputTokens;
-        outputTokens = executed.usage.outputTokens;
-        break;
-      } catch (err) {
-        if (isContextLengthError(err) && context.length > 0) {
-          const drop = Math.max(1, Math.ceil(context.length / 2));
-          this.logger.warn(`context too long — dropping oldest ${drop} message(s) and retrying`);
-          context = context.slice(drop);
-          continue;
-        }
-        if (isStructuredOutputUnsupportedError(err)) {
-          throw new BadRequestException(
-            'This model does not support structured outputs required by this app. ' +
-            'Please choose a model that supports structured or JSON outputs for this provider, then try again.',
-          );
-        }
-        if (isModelNotFoundError(err)) {
-          if (access.agentApiKey) void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
-          throw new BadRequestException(
-            'Model not found or no longer supported. Please open Settings and select a valid model for your provider.',
-          );
-        }
-        if (isInvalidKeyError(err)) {
-          if (access.agentApiKey) void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
-          throw Object.assign(
-            new UnauthorizedException('Invalid API key. Please update it in Settings or Agent Config.'),
-            { code: ERROR_CODES.INVALID_API_KEY },
-          );
-        }
-        if (isProviderRateLimitError(err)) {
-          const exhausted = isFreeTierExhausted(err);
-          if (access.agentApiKey) {
-            void this.agentConfig.updateStatus(access.agentApiKey, exhausted ? 'expired' : 'idle');
-          }
-          const retryIn = extractRetryDelay(err);
-          const msg = exhausted
-            ? `The current quota for ${access.provider ?? 'this provider'} is exhausted. ` +
-              'Try another model, use a different key, or enable billing for this provider account.'
-            : retryIn
-              ? `Rate limit reached. Try again in ${retryIn}.`
-              : 'Rate limit reached. Please try again in a moment.';
-          throw Object.assign(
-            new HttpException({ error: msg }, HttpStatus.TOO_MANY_REQUESTS),
-            { code: ERROR_CODES.LLM_RATE_LIMIT },
-          );
-        }
-        if (isTruncatedOutputError(err)) {
-          const currentLimit   = access.maxTokens;
-          const suggestedLimit = Math.min(32_000, Math.max(8_000, currentLimit * 2));
+
+    agentLoop: for (;;) {
+      access = this.resolveAccess(
+        userKey, userModel, userProvider, agentCfg,
+        settings?.responseTokenLimit ?? settings?.inputTokenLimit,
+        triedAgentKeys,
+      );
+
+      // Enforce input token limit (agent connections only; personal key has no cap)
+      if (access.inputTokenLimit) {
+        const estimatedTokens = Math.ceil(prompt.length / 4);
+        if (estimatedTokens > access.inputTokenLimit) {
+          const currentLimit   = access.inputTokenLimit;
+          const suggestedLimit = Math.min(128_000, Math.max(estimatedTokens, currentLimit * 2));
           throw new HttpException(
             {
-              error:         `Your response token limit (${currentLimit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish.`,
-              code:          ERROR_CODES.TOKEN_LIMIT_TOO_LOW,
+              error:         `Your prompt is too long (~${estimatedTokens.toLocaleString()} tokens) for this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
+              code:          ERROR_CODES.INPUT_TOKEN_LIMIT_TOO_LOW,
               currentLimit,
               suggestedLimit,
               agentApiKey:   access.agentApiKey,
@@ -360,7 +290,94 @@ export class AnalyticsService {
             HttpStatus.UNPROCESSABLE_ENTITY,
           );
         }
-        throw err;
+      }
+
+      let context = memoryContext;
+      for (;;) {
+        try {
+          const executed = await this.executeByIntent(intent, prompt, context, {
+            apiKey:    access.apiKey,
+            model:     access.model,
+            provider:  access.provider,
+            maxTokens: access.maxTokens,
+          });
+          result       = executed.result;
+          inputTokens  = executed.usage.inputTokens;
+          outputTokens = executed.usage.outputTokens;
+          break agentLoop;
+        } catch (err) {
+          if (isContextLengthError(err) && context.length > 0) {
+            const drop = Math.max(1, Math.ceil(context.length / 2));
+            this.logger.warn(`context too long — dropping oldest ${drop} message(s) and retrying`);
+            context = context.slice(drop);
+            continue;
+          }
+          if (isStructuredOutputUnsupportedError(err)) {
+            throw new BadRequestException(
+              'This model does not support structured outputs required by this app. ' +
+              'Please choose a model that supports structured or JSON outputs for this provider, then try again.',
+            );
+          }
+          if (isModelNotFoundError(err)) {
+            if (access.agentApiKey) {
+              void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
+              triedAgentKeys.push(access.agentApiKey);
+              this.logger.warn(`agent [${access.provider}/${access.model}] model not found — trying next agent`);
+              continue agentLoop;
+            }
+            throw new BadRequestException(
+              'Model not found or no longer supported. Please open Settings and select a valid model for your provider.',
+            );
+          }
+          if (isInvalidKeyError(err)) {
+            if (access.agentApiKey) {
+              void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
+              triedAgentKeys.push(access.agentApiKey);
+              this.logger.warn(`agent [${access.provider}/${access.model}] invalid key — trying next agent`);
+              continue agentLoop;
+            }
+            throw Object.assign(
+              new UnauthorizedException('Invalid API key. Please update it in Settings or Agent Config.'),
+              { code: ERROR_CODES.INVALID_API_KEY },
+            );
+          }
+          if (isProviderRateLimitError(err)) {
+            const exhausted = isFreeTierExhausted(err);
+            if (access.agentApiKey) {
+              void this.agentConfig.updateStatus(access.agentApiKey, exhausted ? 'expired' : 'idle');
+              triedAgentKeys.push(access.agentApiKey);
+              this.logger.warn(`agent [${access.provider}/${access.model}] rate-limited — trying next agent`);
+              continue agentLoop;
+            }
+            // Personal key — no failover possible
+            const retryIn = extractRetryDelay(err);
+            const msg = exhausted
+              ? `The current quota for ${access.provider ?? 'this provider'} is exhausted. ` +
+                'Try another model, use a different key, or enable billing for this provider account.'
+              : retryIn
+                ? `Rate limit reached. Try again in ${retryIn}.`
+                : 'Rate limit reached. Please try again in a moment.';
+            throw Object.assign(
+              new HttpException({ error: msg }, HttpStatus.TOO_MANY_REQUESTS),
+              { code: ERROR_CODES.LLM_RATE_LIMIT },
+            );
+          }
+          if (isTruncatedOutputError(err)) {
+            const currentLimit   = access.maxTokens;
+            const suggestedLimit = Math.min(32_000, Math.max(8_000, currentLimit * 2));
+            throw new HttpException(
+              {
+                error:         `Your response token limit (${currentLimit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish.`,
+                code:          ERROR_CODES.TOKEN_LIMIT_TOO_LOW,
+                currentLimit,
+                suggestedLimit,
+                agentApiKey:   access.agentApiKey,
+              },
+              HttpStatus.UNPROCESSABLE_ENTITY,
+            );
+          }
+          throw err;
+        }
       }
     }
 
