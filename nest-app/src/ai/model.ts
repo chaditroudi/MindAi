@@ -277,6 +277,14 @@ function isRateLimitError(err: unknown): boolean {
   );
 }
 
+function isLongTermLimit(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const headers = (err as Record<string, unknown>)['responseHeaders'] as Record<string, string> | undefined;
+  if (headers?.['x-should-retry'] === 'false') return true;
+  const waitMs = rateLimitDelayMs(err);
+  return waitMs > MAX_RETRY_WAIT_MS;
+}
+
 // Waits longer than this are daily/weekly quota exhaustions — surface immediately.
 const MAX_RETRY_WAIT_MS = 60_000;
 
@@ -311,9 +319,9 @@ export async function withRateLimitRetry<T>(
     } catch (err) {
       lastError = err;
       if (!isRateLimitError(err) || attempt === maxRetries) throw err;
+      // Daily/long-term quota — x-should-retry:false or very long wait. Surface immediately.
+      if (isLongTermLimit(err)) throw err;
       const waitMs = rateLimitDelayMs(err);
-      // Daily quota exhaustion — throw immediately so the caller can surface the right message.
-      if (waitMs > MAX_RETRY_WAIT_MS) throw err;
       console.warn(`[${label}] rate limit — waiting ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
       await new Promise<void>(resolve => setTimeout(resolve, waitMs));
     }
