@@ -28,14 +28,12 @@
 
     <div class="topbar-right">
       <span class="status-badge"><span class="status-dot"></span>{{ s.provider ? (s.provider | titlecase) : 'AI' }}{{ s.selectedModel ? ' · ' + s.selectedModel : '' }}</span>
-      @if (s.hasKey) {
-        <button class="key-btn" title="Change API key" (click)="st.patch({ showKeyModal: true })">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-          </svg>
-          API Key
-        </button>
-      }
+      <button class="key-btn" title="Manage AI connections" (click)="openConfigAgents()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+        </svg>
+        AI Key
+      </button>
       <span class="phase-badge" [ngClass]="'phase-badge--' + s.phase">
         @switch (s.phase) {
           @case ('idle')    { <span>Ready</span> }
@@ -173,8 +171,8 @@
 
           <section class="config-section">
             <div class="config-section-head">
-              <h4 class="config-section-title">Agents</h4>
-              <button class="config-add-btn" (click)="showAddAgent = true">+ Add</button>
+              <h4 class="config-section-title">AI Connections</h4>
+              <button class="config-add-btn" (click)="showAddAgent = true; agentTestStatus = 'idle'">+ Add</button>
             </div>
 
             @if (!agentDraft.length) {
@@ -760,8 +758,8 @@
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
             <span>AI features locked — </span>
-            <button class="composer-lock-link" (click)="st.patch({ showKeyModal: true })">add your API key</button>
-            <span> to start.</span>
+            <button class="composer-lock-link" (click)="openConfigAgents()">add an AI connection</button>
+            <span> in Config to start.</span>
           </div>
         }
         <div class="composer" [class.composer--loading]="s.phase === 'loading'" [class.composer--locked]="!s.hasKey">
@@ -876,92 +874,7 @@
   </div>
 }
 
-<!-- ── API Key Modal ──────────────────────────────────────────────────────── -->
-@if (s.showKeyModal) {
-  <div class="key-modal-backdrop" (click)="s.hasKey && st.patch({ showKeyModal: false })">
-    <div class="key-modal" (click)="$event.stopPropagation()">
-      <div class="key-modal-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-        </svg>
-      </div>
-      <h2 class="key-modal-title">Connect your AI provider</h2>
-      @if (s.keyRejected) {
-        <p class="key-modal-error">{{ s.keyErrorText || 'That key was rejected — it may be invalid or expired. Please enter a new one.' }}</p>
-      }
-
-      <label class="key-modal-label">
-        Provider
-        <span class="key-modal-label-hint">— choose a provider from the built-in list</span>
-      </label>
-      <select class="key-modal-input"
-        [ngModel]="s.provider"
-        (ngModelChange)="onProviderChange($event)">
-        <option value="">Select a provider</option>
-        @for (provider of providerOptions; track provider.id) {
-          <option [value]="provider.id">{{ provider.label }} ({{ provider.id }})</option>
-        }
-      </select>
-
-      <label class="key-modal-label">Model</label>
-      <select class="key-modal-input"
-        [ngModel]="s.selectedModel"
-        (ngModelChange)="onSettingsModelChange($event)"
-        [disabled]="!s.provider">
-        <option value="">Select a model</option>
-        @for (m of availableModels; track m.id) {
-          <option [value]="m.id">{{ m.label }} · {{ providerLabel(s.provider) }}</option>
-        }
-      </select>
-      @if (availableModels.length) {
-        <p class="key-modal-label-hint" style="margin:2px 0 8px">{{ availableModels.length }} models available for {{ providerLabel(s.provider) }}</p>
-      } @else {
-        <p class="key-modal-label-hint" style="margin:2px 0 8px">Select a provider to see available models.</p>
-      }
-
-      <label class="key-modal-label">
-        Output token limit
-        <span class="key-modal-label-hint">— max tokens the AI can generate per response (default: 4 000)</span>
-      </label>
-      <input class="key-modal-input"
-        type="number"
-        min="1"
-        max="128000"
-        step="1"
-        [ngModel]="s.responseTokenLimit || 4000"
-        (ngModelChange)="onResponseTokenLimitChange($event)" />
-
-      <label class="key-modal-label">API Key</label>
-      <input type="password" class="key-modal-input"
-        [placeholder]="apiKeyPlaceholder()"
-        [(ngModel)]="modalKey"
-        (input)="testStatus = 'idle'; testError = ''"
-        (keydown.enter)="saveApiKey()" />
-
-      @if (testStatus !== 'idle') {
-        <div class="key-modal-test-result" [class.ok]="testStatus === 'ok'" [class.error]="testStatus === 'error'" [class.testing]="testStatus === 'testing'">
-          @if (testStatus === 'testing') { Validating… }
-          @if (testStatus === 'ok')      { Key is valid — {{ effectiveProvider(s.provider) }} / {{ effectiveModel(s.selectedModel) }} confirmed. }
-          @if (testStatus === 'error')   { {{ testError }} }
-        </div>
-      }
-
-      <div class="key-modal-actions">
-        @if (s.hasKey) {
-          <button class="key-modal-secondary" (click)="st.patch({ showKeyModal: false })">Cancel</button>
-          <button class="key-modal-danger" (click)="clearApiKey()">Remove key</button>
-        }
-        <button class="key-modal-secondary" [disabled]="testStatus === 'testing'"
-          (click)="testConnection()">
-          {{ testStatus === 'testing' ? 'Testing…' : 'Test connection' }}
-        </button>
-        <button class="key-modal-primary" (click)="saveApiKey()">Save & continue</button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- ── Add Agent Modal ────────────────────────────────────────────────────── -->
+<!-- ── Add AI Connection Modal ───────────────────────────────────────────── -->
 @if (showAddAgent) {
   <div class="key-modal-backdrop" (click)="showAddAgent = false">
     <div class="key-modal agent-modal" (click)="$event.stopPropagation()">
@@ -970,8 +883,8 @@
           <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
         </svg>
       </div>
-      <h2 class="key-modal-title">Add AI agent</h2>
-      <p class="key-modal-desc">This agent's key and credits are shared across all users of this workspace.</p>
+      <h2 class="key-modal-title">Add AI connection</h2>
+      <p class="key-modal-desc">Provider, model and API key for this connection. Set budget to 0 for unlimited.</p>
 
       <div class="agent-modal-row">
         <div class="agent-modal-col">
@@ -1050,12 +963,23 @@
         placeholder="e.g. 500000 or 0 for unlimited"
         [(ngModel)]="newAgent.tokenBudget" />
 
+      @if (agentTestStatus !== 'idle') {
+        <div class="key-modal-test-result" [class.ok]="agentTestStatus === 'ok'" [class.error]="agentTestStatus === 'error'" [class.testing]="agentTestStatus === 'testing'">
+          @if (agentTestStatus === 'testing') { Validating… }
+          @if (agentTestStatus === 'ok')      { Key valid — {{ newAgent.provider }} / {{ newAgent.model }} confirmed. }
+          @if (agentTestStatus === 'error')   { {{ agentTestError }} }
+        </div>
+      }
       <div class="key-modal-actions">
-        <button class="key-modal-secondary" (click)="showAddAgent = false">Cancel</button>
+        <button class="key-modal-secondary" (click)="showAddAgent = false; agentTestStatus = 'idle'">Cancel</button>
+        <button class="key-modal-secondary" [disabled]="agentTestStatus === 'testing' || !newAgent.apiKey || !newAgent.model"
+          (click)="testAgentConnection()">
+          {{ agentTestStatus === 'testing' ? 'Testing…' : 'Test connection' }}
+        </button>
         <button class="key-modal-primary"
           [disabled]="!newAgent.model || !newAgent.apiKey"
           (click)="addAgentToList()">
-          Add agent
+          Add connection
         </button>
       </div>
     </div>
