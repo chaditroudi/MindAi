@@ -180,6 +180,29 @@ function isContextLengthError(err: unknown): boolean {
   );
 }
 
+// Fires when the model hit maxOutputTokens mid-JSON: the structured output is
+// incomplete, so Mastra / Zod throws a parse or validation error.
+// We distinguish this from genuine schema mismatches by requiring that the
+// error is NOT a provider "unsupported format" rejection.
+function isTruncatedOutputError(err: unknown): boolean {
+  if (isStructuredOutputUnsupportedError(err)) return false;
+  const msg = getErrorMessage(err).toLowerCase();
+  return (
+    msg.includes('json') && (
+      msg.includes('parse') ||
+      msg.includes('invalid json') ||
+      msg.includes('unexpected end') ||
+      msg.includes('unexpected token') ||
+      msg.includes('unterminated')
+    )
+  ) || (
+    // Zod / structured-output validation failure on a likely-truncated object
+    (msg.includes('validation') || msg.includes('zod') || msg.includes('invalid_type')) &&
+    !msg.includes('does not support') &&
+    !msg.includes('json_schema')
+  );
+}
+
 
 @Injectable()
 export class AnalyticsService {
@@ -299,6 +322,13 @@ export class AnalyticsService {
           throw Object.assign(
             new HttpException({ error: msg }, HttpStatus.TOO_MANY_REQUESTS),
             { code: ERROR_CODES.LLM_RATE_LIMIT },
+          );
+        }
+        if (isTruncatedOutputError(err)) {
+          const limit = access.maxTokens;
+          throw new BadRequestException(
+            `Your token limit (${limit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish. ` +
+            `Open Settings, increase your token limit, and try again.`,
           );
         }
         throw err;
