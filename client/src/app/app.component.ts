@@ -801,6 +801,15 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   tokenLimitSaving = false;
   private pendingReportTempId: string | null = null;
+  private readonly dismissedTokenWarnings = new Set<string>();
+
+  shouldShowTokenWarning(msg: ConversationMessage): boolean {
+    return !!msg.tokenLimitExceeded && !this.dismissedTokenWarnings.has(msg.messageId);
+  }
+
+  dismissTokenWarning(msg: ConversationMessage): void {
+    this.dismissedTokenWarnings.add(msg.messageId);
+  }
 
   async confirmMaximizeTokens(): Promise<void> {
     const conf = this.st.snap.pendingTokenConfirm;
