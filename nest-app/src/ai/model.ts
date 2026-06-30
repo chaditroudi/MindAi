@@ -277,6 +277,9 @@ function isRateLimitError(err: unknown): boolean {
   );
 }
 
+// Waits longer than this are daily/weekly quota exhaustions — surface immediately.
+const MAX_RETRY_WAIT_MS = 60_000;
+
 function rateLimitDelayMs(err: unknown): number {
   if (typeof err === 'object' && err !== null) {
     const headers = (err as Record<string, unknown>)['responseHeaders'] as Record<string, string> | undefined;
@@ -309,6 +312,8 @@ export async function withRateLimitRetry<T>(
       lastError = err;
       if (!isRateLimitError(err) || attempt === maxRetries) throw err;
       const waitMs = rateLimitDelayMs(err);
+      // Daily quota exhaustion — throw immediately so the caller can surface the right message.
+      if (waitMs > MAX_RETRY_WAIT_MS) throw err;
       console.warn(`[${label}] rate limit — waiting ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
       await new Promise<void>(resolve => setTimeout(resolve, waitMs));
     }

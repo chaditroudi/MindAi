@@ -126,17 +126,27 @@ function isFreeTierExhausted(err: unknown): boolean {
     msg.includes('free tier') ||
     (msg.includes('limit: 0') && msg.includes('quota')) ||
     (msg.includes('resource_exhausted') && msg.includes('per_day')) ||
-    (msg.includes('resource_exhausted') && msg.includes('daily'))
+    (msg.includes('resource_exhausted') && msg.includes('daily')) ||
+    // Groq TPD exhaustion: "Rate limit reached... on tokens per day (TPD): Limit 100000"
+    (msg.includes('tokens per day') && msg.includes('limit'))
   );
 }
 
 function extractRetryDelay(err: unknown): string | null {
-  // Handles Groq "try again in 30s", Google "Please retry in 45.15s", OpenAI "Try again in 60s"
-  const match = /(?:try\s+again|retry)\s+in\s+([\d.]+)\s*s/i.exec(getErrorMessage(err));
-  if (!match) return null;
-  const secs = parseFloat(match[1]);
-  if (isNaN(secs)) return null;
-  return secs < 60 ? `${Math.ceil(secs)}s` : `${Math.ceil(secs / 60)}m`;
+  const message = getErrorMessage(err);
+  // Bare seconds: "try again in 30s", "retry in 45.15s"
+  const secsMatch = /(?:try\s+again|retry)\s+in\s+([\d.]+)\s*s/i.exec(message);
+  if (secsMatch) {
+    const secs = parseFloat(secsMatch[1]);
+    if (!isNaN(secs)) return secs < 60 ? `${Math.ceil(secs)}s` : `${Math.ceil(secs / 60)}m`;
+  }
+  // Compound minutes+seconds: "try again in 21m17.856s" (Groq TPD format)
+  const compoundMatch = /(?:try\s+again|retry)\s+in\s+(\d+)m([\d.]+)s/i.exec(message);
+  if (compoundMatch) {
+    const totalMins = parseInt(compoundMatch[1], 10) + parseFloat(compoundMatch[2]) / 60;
+    return `${Math.ceil(totalMins)}m`;
+  }
+  return null;
 }
 
 function isStructuredOutputUnsupportedError(err: unknown): boolean {
