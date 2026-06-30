@@ -181,19 +181,16 @@
 
             @for (agent of agentDraft; track $index; let i = $index) {
               <div class="config-agent-card">
+
+                <!-- Header: provider / model / status / remove -->
                 <div class="config-agent-header">
                   <div class="config-agent-info">
                     <span class="config-agent-provider">{{ agent.provider }}</span>
                     <span class="config-agent-model">{{ agent.model }}</span>
                   </div>
                   <div class="config-agent-controls">
-                    <select class="config-status-select config-status--{{ agent.status }}"
-                      [ngModel]="agent.status"
-                      (ngModelChange)="setAgentStatus(i, $event)">
-                      @for (opt of STATUS_OPTIONS; track opt) {
-                        <option [value]="opt">{{ opt }}</option>
-                      }
-                    </select>
+                    <span class="agent-status-dot agent-status-dot--{{ agent.status }}"></span>
+                    <span class="agent-status-label agent-status-label--{{ agent.status }}">{{ agent.status }}</span>
                     <button class="config-remove-btn" (click)="removeAgent(i)" title="Remove">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M18 6L6 18M6 6l12 12"/>
@@ -202,15 +199,46 @@
                   </div>
                 </div>
 
-                <div class="config-agent-meta">
-                  <span class="config-agent-meta-item">In: <strong>{{ agent.inputTokenLimit.toLocaleString() }}</strong></span>
-                  <span class="config-agent-meta-item">Out: <strong>{{ agent.outputTokenLimit.toLocaleString() }}</strong></span>
+                <!-- Status actions -->
+                <div class="agent-status-actions">
+                  @if (agent.status === 'active') {
+                    <button class="agent-action-btn agent-action-btn--muted" (click)="setAgentStatus(i, 'disabled')">Disable</button>
+                  }
+                  @if (agent.status === 'disabled') {
+                    <button class="agent-action-btn agent-action-btn--primary" (click)="setAgentStatus(i, 'active'); saveAgentCard(i)">Enable</button>
+                  }
+                  @if (agent.status === 'expired') {
+                    <span class="agent-status-hint">Key invalid or quota exhausted —</span>
+                    <button class="agent-action-btn agent-action-btn--primary" (click)="retryAgent(i)">Retry</button>
+                  }
+                  @if (agent.status === 'idle') {
+                    <span class="agent-status-hint">Rate limited — auto-recovering…</span>
+                  }
                 </div>
 
-                <div class="config-usage-detail">
-                  <span>↑ {{ agent.inputTokensUsed.toLocaleString() }} input</span>
-                  <span>↓ {{ agent.outputTokensUsed.toLocaleString() }} output</span>
+                <!-- Editable limits -->
+                <div class="config-agent-limits">
+                  <label class="agent-limit-label">
+                    In
+                    <input class="agent-limit-input" type="number" min="1" max="128000"
+                      [(ngModel)]="agent.inputTokenLimit" />
+                  </label>
+                  <label class="agent-limit-label">
+                    Out
+                    <input class="agent-limit-input" type="number" min="1" max="128000"
+                      [(ngModel)]="agent.outputTokenLimit" />
+                  </label>
+                  <button class="agent-save-btn" (click)="saveAgentCard(i)" [disabled]="configSaving">
+                    {{ configSaving ? '…' : 'Save' }}
+                  </button>
                 </div>
+
+                <!-- Usage -->
+                <div class="config-usage-detail">
+                  <span>↑ {{ agent.inputTokensUsed.toLocaleString() }} input used</span>
+                  <span>↓ {{ agent.outputTokensUsed.toLocaleString() }} output used</span>
+                </div>
+
               </div>
             }
           </section>
