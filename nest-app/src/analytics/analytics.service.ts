@@ -274,26 +274,16 @@ export class AnalyticsService {
         triedAgentKeys,
       );
 
-      // Enforce input token limit (agent connections only; personal key has no cap)
-      if (access.inputTokenLimit) {
-        // Count prompt + already-built memory/session context
+      if (access.inputTokenLimit && access.lastInputTokens) {
         const promptTokens  = Math.ceil(prompt.length / 4);
         const contextTokens = memoryContext.reduce((sum, msg) => {
           const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
           return sum + Math.ceil(text.length / 4);
         }, 0);
-        // Fully dynamic: use actual input tokens consumed by the last successful
-        // request on this agent as the pipeline overhead estimate. On the first
-        // call ever (no history), overhead = 0 — the estimate is prompt + context
-        // only and the request is allowed through; the post-response inputTokenWarning
-        // will show the real usage so the user can adjust their limit.
-        const pipelineOverhead = access.lastInputTokens ?? 0;
-        const estimatedTokens  = promptTokens + contextTokens + pipelineOverhead;
+        const estimatedTokens = promptTokens + contextTokens + access.lastInputTokens;
 
         if (estimatedTokens > access.inputTokenLimit) {
           const currentLimit   = access.inputTokenLimit;
-          // Suggest 2× the dynamic estimate so the next attempt has headroom.
-          // No hardcoded minimum — the number scales with actual prompt + context + data size.
           const suggestedLimit = Math.min(128_000, estimatedTokens * 2);
           throw new HttpException(
             {
