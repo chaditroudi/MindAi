@@ -42,7 +42,6 @@ export class AgentConfig {
 export type AgentConfigDocument = HydratedDocument<AgentConfig>;
 export const AgentConfigSchema  = SchemaFactory.createForClass(AgentConfig);
 
-// ── Repository ─────────────────────────────────────────────────────────────────
 
 export interface AgentConfigPayload {
   memoryLimit?: number;
