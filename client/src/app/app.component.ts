@@ -776,6 +776,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return [...baseModels, { id: current, label: `${current} (Current)` }];
   }
 
+  private activeAgent(): AgentEntry | undefined {
+    return this.st.snap.agentConfig?.agents.find(a => a.status === 'active');
+  }
+
+  private effectiveOutputTokenLimit(): number {
+    return this.activeAgent()?.outputTokenLimit ?? this.st.snap.responseTokenLimit;
+  }
+
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
     const base = {
       messageId:          data.messageId,
@@ -786,6 +794,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       tokenLimitExceeded: data.tokenLimitExceeded,
       tokenWarning:       data.tokenWarning,
       inputTokenWarning:  data.inputTokenWarning,
+      outputTokenLimit:   this.effectiveOutputTokenLimit(),
     };
 
     if (data.intent === 'dashboard' && 'chart' in data) {
@@ -867,7 +876,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   // Used by the warning banner on already-truncated results
   maximizedLimit(): number {
-    return Math.min(32_000, Math.max(8_000, this.st.snap.responseTokenLimit * 2));
+    return Math.min(32_000, Math.max(8_000, this.effectiveOutputTokenLimit() * 2));
   }
 
   async maximizeResponseTokenLimit(): Promise<void> {
@@ -881,7 +890,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   async retryWithMaxTokens(msg: ConversationMessage): Promise<void> {
     if (this.st.snap.phase === 'loading') return;
-    const ok = await this.applyResponseTokenLimit(this.maximizedLimit());
+    const agent = this.activeAgent();
+    const newLimit = this.maximizedLimit();
+    const ok = agent
+      ? await this.applyAgentTokenLimit(agent.apiKey, 'output', newLimit)
+      : await this.applyResponseTokenLimit(newLimit);
     if (!ok || !msg.prompt || !msg.intent) return;
     if (msg.intent === 'report') {
       // Bypass the format picker — retry directly as the same format

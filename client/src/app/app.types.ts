@@ -73,6 +73,7 @@ export interface ConversationMessage {
   tokenLimitExceeded?: boolean;
   tokenWarning?:       string;
   inputTokenWarning?:  string;
+  outputTokenLimit?:   number;
 }
 
 // ─── Saved results ────────────────────────────────────────────────────────────
