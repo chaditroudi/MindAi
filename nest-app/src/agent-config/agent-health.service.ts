@@ -60,10 +60,11 @@ export class AgentHealthService {
     private readonly config: AgentConfigService,
   ) {}
 
-  @Cron('*/5 * * * *')
+  @Cron('* * * * *')
   async checkAllAgents(): Promise<void> {
     const config = await this.config.getConfig();
     if (!config?.agents?.length) return;
+    const previousCurrentAgentId = config.currentAgentId;
 
     for (const agent of config.agents) {
       if (agent.status === 'disabled') continue;
@@ -73,14 +74,33 @@ export class AgentHealthService {
       const nextStatus: AgentStatus = healthy ? 'active' : 'expired';
 
       if (agent.status !== nextStatus) {
+        const previousStatus = agent.status;
         await this.repo.updateRuntime(agent.id, {
           status: nextStatus,
           ...(nextStatus === 'active'
             ? { cooldownUntil: null, lastFailureReason: '' }
             : {}),
         });
-        this.logger.log(`agent [${agent.provider}/${agent.model}]: ${agent.status} → ${nextStatus}`);
+        agent.status = nextStatus;
+        if (nextStatus === 'active') {
+          agent.cooldownUntil = null;
+          agent.lastFailureReason = '';
+        }
+        this.logger.log(`agent [${agent.provider}/${agent.model}]: ${previousStatus} -> ${nextStatus}`);
       }
+    }
+
+    const nextCurrentAgentId = await this.config.syncCurrentAgent(config);
+    if (nextCurrentAgentId !== previousCurrentAgentId) {
+      const nextAgent = nextCurrentAgentId
+        ? config.agents.find(agent => agent.id === nextCurrentAgentId)
+        : null;
+      const previousAgent = previousCurrentAgentId
+        ? config.agents.find(agent => agent.id === previousCurrentAgentId)
+        : null;
+      const previousLabel = previousAgent ? `${previousAgent.provider}/${previousAgent.model}` : 'none';
+      const nextLabel = nextAgent ? `${nextAgent.provider}/${nextAgent.model}` : 'none';
+      this.logger.log(`current agent switched: ${previousLabel} -> ${nextLabel}`);
     }
   }
 
@@ -94,14 +114,22 @@ export class AgentHealthService {
     const nextStatus: AgentStatus = healthy ? 'active' : 'expired';
 
     if (agent.status !== nextStatus) {
+      const previousStatus = agent.status;
       await this.repo.updateRuntime(agent.id, {
         status: nextStatus,
         ...(nextStatus === 'active'
           ? { cooldownUntil: null, lastFailureReason: '' }
           : {}),
       });
-      this.logger.log(`agent [${agent.provider}/${agent.model}]: ${agent.status} → ${nextStatus}`);
+      this.logger.log(`agent [${agent.provider}/${agent.model}]: ${previousStatus} -> ${nextStatus}`);
     }
+
+    agent.status = nextStatus;
+    if (nextStatus === 'active') {
+      agent.cooldownUntil = null;
+      agent.lastFailureReason = '';
+    }
+    await this.config.syncCurrentAgent(config);
 
     return nextStatus;
   }

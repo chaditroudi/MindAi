@@ -541,13 +541,20 @@ export class AnalyticsService {
     const activeAgents = agentCfg.agents.filter(
       a => a.status === 'active' && !excludeAgentIds.includes(a.id),
     );
+    const orderedAgents = agentCfg.currentAgentId
+      ? [
+          ...activeAgents.filter(agent => agent.id === agentCfg.currentAgentId),
+          ...activeAgents.filter(agent => agent.id !== agentCfg.currentAgentId),
+        ]
+      : activeAgents;
+
     const active =
-      activeAgents.find(a =>
+      orderedAgents.find(a =>
         (!a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
         && (!a.memoryTokenLimit || a.memoryTokenLimit >= minimumMemoryTokens),
       )
-      ?? activeAgents.find(a => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
-      ?? activeAgents[0];
+      ?? orderedAgents.find(a => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
+      ?? orderedAgents[0];
 
     if (active?.apiKey) {
       return {
