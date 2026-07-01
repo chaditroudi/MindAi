@@ -282,8 +282,11 @@ export class AnalyticsService {
           return sum + Math.ceil(text.length / 4);
         }, 0);
         // System instructions + SQL query results injected by the pipeline.
-        // 5k is a realistic floor — real requests land between 5k–15k depending on dataset size.
-        const pipelineOverhead = 5_000;
+        // Overhead varies by intent: dashboard fetches data for many widgets,
+        // report builds multiple sections, inquiry answers a single focused question.
+        const pipelineOverhead = intent === 'dashboard' ? 10_000
+                               : intent === 'report'    ?  7_000
+                               :                           4_000; // inquiry / general
         const estimatedTokens  = promptTokens + contextTokens + pipelineOverhead;
 
         if (estimatedTokens > access.inputTokenLimit) {
