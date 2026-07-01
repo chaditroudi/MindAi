@@ -22,20 +22,20 @@ This report focuses on that current stack.
 
 ### Frontend
 
-- Angular standalone app bootstraps from [client/src/main.ts](/abs/path/client/src/main.ts) and mounts `AppComponent`.
-- Main UI orchestration lives in [client/src/app/app.component.ts](/abs/path/client/src/app/app.component.ts).
-- API calls are centralized in [client/src/app/analytics-api.service.ts](/abs/path/client/src/app/analytics-api.service.ts).
-- Local UI/session state is held in [client/src/app/analytics-state.service.ts](/abs/path/client/src/app/analytics-state.service.ts).
-- ECharts rendering is done by [client/src/app/chart-render.service.ts](/abs/path/client/src/app/chart-render.service.ts).
+- Angular standalone app bootstraps from `client/src/main.ts` and mounts `AppComponent`.
+- Main UI orchestration lives in `client/src/app/app.component.ts`.
+- API calls are centralized in `client/src/app/analytics-api.service.ts`.
+- Local UI/session state is held in `client/src/app/analytics-state.service.ts`.
+- ECharts rendering is done by `client/src/app/chart-render.service.ts`.
 
 ### Backend
 
-- Nest app starts in [nest-app/src/main.ts](/abs/path/nest-app/src/main.ts).
-- Top-level module wiring is in [nest-app/src/app.module.ts](/abs/path/nest-app/src/app.module.ts).
+- Nest app starts in `nest-app/src/main.ts`.
+- Top-level module wiring is in `nest-app/src/app.module.ts`.
 - Main business execution path is:
-  - [nest-app/src/analytics/analytics.controller.ts](/abs/path/nest-app/src/analytics/analytics.controller.ts)
-  - [nest-app/src/analytics/analytics.service.ts](/abs/path/nest-app/src/analytics/analytics.service.ts)
-  - [nest-app/src/analytics/pipeline.service.ts](/abs/path/nest-app/src/analytics/pipeline.service.ts)
+  - `nest-app/src/analytics/analytics.controller.ts`
+  - `nest-app/src/analytics/analytics.service.ts`
+  - `nest-app/src/analytics/pipeline.service.ts`
 
 ### Storage
 
@@ -49,7 +49,7 @@ This report focuses on that current stack.
   - `memory_items`
 - LibSQL/SQLite file:
   - `data/memory.db`
-  - Used by [nest-app/src/session/memory.ts](/abs/path/nest-app/src/session/memory.ts) for conversation threads/messages
+  - Used by `nest-app/src/session/memory.ts` for conversation threads/messages
 
 ---
 
@@ -57,7 +57,7 @@ This report focuses on that current stack.
 
 ### Backend startup
 
-At boot, [nest-app/src/main.ts](/abs/path/nest-app/src/main.ts) does the following:
+At boot, `nest-app/src/main.ts` does the following:
 
 1. Creates the Nest application.
 2. Installs `AppLogger`.
@@ -68,7 +68,7 @@ At boot, [nest-app/src/main.ts](/abs/path/nest-app/src/main.ts) does the followi
 
 ### Module composition
 
-[nest-app/src/app.module.ts](/abs/path/nest-app/src/app.module.ts) wires:
+`nest-app/src/app.module.ts` wires:
 
 - `ConfigModule`
 - `ScheduleModule`
@@ -90,7 +90,7 @@ It also:
 
 ### Health check
 
-[nest-app/src/app.controller.ts](/abs/path/nest-app/src/app.controller.ts) exposes `/health`:
+`nest-app/src/app.controller.ts` exposes `/health`:
 
 - pings MongoDB
 - checks whether at least one source is loaded
@@ -102,11 +102,11 @@ It also:
 
 ### Request ID
 
-[nest-app/src/common/middleware/request-id.middleware.ts](/abs/path/nest-app/src/common/middleware/request-id.middleware.ts) assigns a UUID to every request through `AsyncLocalStorage`.
+`nest-app/src/common/middleware/request-id.middleware.ts` assigns a UUID to every request through `AsyncLocalStorage`.
 
 ### Logging
 
-[nest-app/src/common/logger/app.logger.ts](/abs/path/nest-app/src/common/logger/app.logger.ts):
+`nest-app/src/common/logger/app.logger.ts`:
 
 - prefixes logs with timestamp
 - includes request ID when available
@@ -115,7 +115,7 @@ It also:
 
 ### API guard
 
-[nest-app/src/common/guards/api-key.guard.ts](/abs/path/nest-app/src/common/guards/api-key.guard.ts):
+`nest-app/src/common/guards/api-key.guard.ts`:
 
 - if `API_KEY` is not configured, requests are open
 - if `API_KEY` is configured, requests must send `x-api-key`
@@ -123,7 +123,7 @@ It also:
 
 ### Global exception shaping
 
-[nest-app/src/common/filters/all-exceptions.filter.ts](/abs/path/nest-app/src/common/filters/all-exceptions.filter.ts):
+`nest-app/src/common/filters/all-exceptions.filter.ts`:
 
 - normalizes errors to `{ error, code?, ...extraFields }`
 - preserves structured extra fields like:
@@ -139,7 +139,7 @@ This is important because the frontend token warning UI depends on those extra f
 
 ### App initialization
 
-`AppComponent.ngOnInit()` in [client/src/app/app.component.ts:176](/abs/path/client/src/app/app.component.ts:176) does this:
+`AppComponent.ngOnInit()` in `client/src/app/app.component.ts:176` does this:
 
 1. Creates or reuses `mind_user_id` in browser `localStorage`.
 2. Loads personal settings.
@@ -152,7 +152,7 @@ This is important because the frontend token warning UI depends on those extra f
 
 ### UI state model
 
-[client/src/app/analytics-state.service.ts](/abs/path/client/src/app/analytics-state.service.ts) stores:
+`client/src/app/analytics-state.service.ts` stores:
 
 - current mode: dashboard/report/inquiry
 - prompt text
@@ -174,7 +174,7 @@ The UI exposes three user-facing modes:
 - `Report`
 - `Inquiry`
 
-Mapped in [client/src/app/app.component.ts](/abs/path/client/src/app/app.component.ts) to backend intents:
+Mapped in `client/src/app/app.component.ts` to backend intents:
 
 - `dashboard -> dashboard`
 - `report -> report`
@@ -194,13 +194,13 @@ This is a frontend product behavior, not a backend requirement.
 ### Chart rendering
 
 The backend returns ECharts-compatible widget options.
-The frontend does not rebuild charts logically; it simply renders returned options via [client/src/app/chart-render.service.ts](/abs/path/client/src/app/chart-render.service.ts).
+The frontend does not rebuild charts logically; it simply renders returned options via `client/src/app/chart-render.service.ts`.
 
 ---
 
 ## 6. Frontend API Surface
 
-All client HTTP calls are centralized in [client/src/app/analytics-api.service.ts](/abs/path/client/src/app/analytics-api.service.ts).
+All client HTTP calls are centralized in `client/src/app/analytics-api.service.ts`.
 
 Important endpoints used by the UI:
 
@@ -235,7 +235,7 @@ The main runtime request is `POST /api/analytics`.
 
 ### Step 1: Controller entry
 
-[nest-app/src/analytics/analytics.controller.ts](/abs/path/nest-app/src/analytics/analytics.controller.ts):
+`nest-app/src/analytics/analytics.controller.ts`:
 
 - validates prompt length
 - reads `x-user-id`
@@ -243,7 +243,7 @@ The main runtime request is `POST /api/analytics`.
 
 ### Step 2: Load user and agent configuration
 
-[nest-app/src/analytics/analytics.service.ts:241](/abs/path/nest-app/src/analytics/analytics.service.ts:241):
+`nest-app/src/analytics/analytics.service.ts:241`:
 
 - loads personal user settings from `user_settings`
 - loads shared agent config from `agent_config`
@@ -259,13 +259,13 @@ The service:
 
 Code path:
 
-- `resolveSession()` at [analytics.service.ts:447](/abs/path/nest-app/src/analytics/analytics.service.ts:447)
-- `buildMemoryContext()` at [analytics.service.ts:492](/abs/path/nest-app/src/analytics/analytics.service.ts:492)
-- session store functions in [nest-app/src/session/memory.ts](/abs/path/nest-app/src/session/memory.ts)
+- `resolveSession()` at `analytics.service.ts:447`
+- `buildMemoryContext()` at `analytics.service.ts:492`
+- session store functions in `nest-app/src/session/memory.ts`
 
 ### Step 4: Resolve AI connection
 
-`resolveAccess()` at [analytics.service.ts:417](/abs/path/nest-app/src/analytics/analytics.service.ts:417):
+`resolveAccess()` at `analytics.service.ts:417`:
 
 - if a personal key exists, it wins
 - otherwise the backend picks an active agent
@@ -278,7 +278,7 @@ Connection source returned to the response is:
 
 ### Step 5: Input token preflight
 
-`estimateMinimumInputTokens()` at [analytics.service.ts:464](/abs/path/nest-app/src/analytics/analytics.service.ts:464):
+`estimateMinimumInputTokens()` at `analytics.service.ts:464`:
 
 - estimates prompt tokens
 - estimates memory-context tokens
@@ -332,7 +332,7 @@ The execution chain is:
 
 ### Skill files
 
-The runtime prompt definitions are read from `skills/.../SKILL.md` via [nest-app/src/ai/skill-prompt.ts](/abs/path/nest-app/src/ai/skill-prompt.ts).
+The runtime prompt definitions are read from `skills/.../SKILL.md` via `nest-app/src/ai/skill-prompt.ts`.
 
 That means skills are not hardcoded only in TypeScript; part of their behavior lives in Markdown prompts.
 
@@ -342,7 +342,7 @@ That means skills are not hardcoded only in TypeScript; part of their behavior l
 
 ### Planner entry
 
-[nest-app/src/ai/planner.ts:227](/abs/path/nest-app/src/ai/planner.ts:227) defines `runSupervisorPlan()`.
+`nest-app/src/ai/planner.ts:227` defines `runSupervisorPlan()`.
 
 It builds a structured plan containing:
 
@@ -355,7 +355,7 @@ It builds a structured plan containing:
 
 ### What the planner prompt contains
 
-`buildSchemaSection()` in [planner.ts](/abs/path/nest-app/src/ai/planner.ts):
+`buildSchemaSection()` in `planner.ts`:
 
 - enumerates every registered collection
 - lists exact fields, types, roles, enums, sample values
@@ -368,7 +368,7 @@ This is why planner quality depends heavily on source metadata quality.
 
 ### Planner retry behavior
 
-[nest-app/src/analytics/pipeline.service.ts:173](/abs/path/nest-app/src/analytics/pipeline.service.ts:173):
+`nest-app/src/analytics/pipeline.service.ts:173`:
 
 - planner gets up to 2 planning attempts
 - second attempt receives a corrective hint when the first plan fails field validation or Mongo execution
@@ -387,11 +387,11 @@ Corrective hints explicitly cover:
 
 ### Aggregate entry
 
-[nest-app/src/analytics/pipeline.service.ts:148](/abs/path/nest-app/src/analytics/pipeline.service.ts:148) is the core aggregation entry.
+`nest-app/src/analytics/pipeline.service.ts:148` is the core aggregation entry.
 
 ### Data source resolution
 
-It resolves `plan.query.sourceName` against the in-memory source registry from [nest-app/src/sources/sources-cache.ts](/abs/path/nest-app/src/sources/sources-cache.ts).
+It resolves `plan.query.sourceName` against the in-memory source registry from `nest-app/src/sources/sources-cache.ts`.
 
 ### Pipeline normalization
 
@@ -400,7 +400,7 @@ Non-operator decoration keys are stripped and warned on.
 
 ### Field validation
 
-[pipeline.service.ts:343](/abs/path/nest-app/src/analytics/pipeline.service.ts:343) validates referenced fields against the declared source schema.
+`pipeline.service.ts:343` validates referenced fields against the declared source schema.
 
 This is an important protection layer:
 
@@ -409,7 +409,7 @@ This is an important protection layer:
 
 ### Mongo execution
 
-[pipeline.service.ts:397](/abs/path/nest-app/src/analytics/pipeline.service.ts:397):
+`pipeline.service.ts:397`:
 
 - uses `db.collection(collection).aggregate(...)`
 - enables `allowDiskUse`
@@ -429,7 +429,7 @@ Current behavior is product-specific by intent:
 
 ### Entry
 
-[nest-app/src/analytics/pipeline.service.ts:499](/abs/path/nest-app/src/analytics/pipeline.service.ts:499)
+`nest-app/src/analytics/pipeline.service.ts:499`
 
 ### Flow
 
@@ -442,7 +442,7 @@ Current behavior is product-specific by intent:
 
 ### Chart skill
 
-[nest-app/src/ai/chart.ts:273](/abs/path/nest-app/src/ai/chart.ts:273):
+`nest-app/src/ai/chart.ts:273`:
 
 - asks LLM for structured dashboard/widget JSON
 - sanitizes the option object
@@ -459,7 +459,7 @@ The frontend then renders those ECharts options directly.
 
 ### Entry
 
-[nest-app/src/analytics/pipeline.service.ts:540](/abs/path/nest-app/src/analytics/pipeline.service.ts:540)
+`nest-app/src/analytics/pipeline.service.ts:540`
 
 ### Flow
 
@@ -474,7 +474,7 @@ The frontend then renders those ECharts options directly.
 
 ### Writer skill
 
-[nest-app/src/ai/writer.ts:69](/abs/path/nest-app/src/ai/writer.ts:69):
+`nest-app/src/ai/writer.ts:69`:
 
 - uses report runtime prompt from `skills/report/SKILL.md`
 - returns structured `reportSections`
@@ -486,7 +486,7 @@ The frontend then renders those ECharts options directly.
 
 ### Entry
 
-[nest-app/src/analytics/pipeline.service.ts:568](/abs/path/nest-app/src/analytics/pipeline.service.ts:568)
+`nest-app/src/analytics/pipeline.service.ts:568`
 
 ### Flow
 
@@ -497,7 +497,7 @@ The frontend then renders those ECharts options directly.
 
 ### Inquiry skill
 
-[nest-app/src/ai/writer.ts:42](/abs/path/nest-app/src/ai/writer.ts:42):
+`nest-app/src/ai/writer.ts:42`:
 
 - takes question + capped rows
 - returns one structured summary string
@@ -508,7 +508,7 @@ The frontend then renders those ECharts options directly.
 
 ### Source registry
 
-[nest-app/src/sources/sources.service.ts](/abs/path/nest-app/src/sources/sources.service.ts):
+`nest-app/src/sources/sources.service.ts`:
 
 - loads sources on module init
 - caches them in memory
@@ -516,7 +516,7 @@ The frontend then renders those ECharts options directly.
 
 ### Meta endpoint
 
-`GET /api/meta` in [nest-app/src/sources/sources.controller.ts](/abs/path/nest-app/src/sources/sources.controller.ts):
+`GET /api/meta` in `nest-app/src/sources/sources.controller.ts`:
 
 - generates prompt suggestions from currently loaded sources
 - these suggestions are dynamic, not hardcoded
@@ -531,7 +531,7 @@ This is how the frontend example chips are populated.
 
 Personal settings are stored in `user_settings` via:
 
-- [nest-app/src/user-settings/user-settings.repository.ts](/abs/path/nest-app/src/user-settings/user-settings.repository.ts)
+- `nest-app/src/user-settings/user-settings.repository.ts`
 
 Fields include:
 
@@ -545,7 +545,7 @@ Fields include:
 
 ### Validation
 
-[nest-app/src/user-settings/user-settings.service.ts:68](/abs/path/nest-app/src/user-settings/user-settings.service.ts:68):
+`nest-app/src/user-settings/user-settings.service.ts:68`:
 
 - normalizes provider/model/key
 - validates provider existence
@@ -553,7 +553,7 @@ Fields include:
 
 ### Model list behavior
 
-Current model dropdowns are **static curated lists** from [nest-app/src/ai/model.ts:31](/abs/path/nest-app/src/ai/model.ts:31), exposed by `POST /api/settings/models`.
+Current model dropdowns are **static curated lists** from `nest-app/src/ai/model.ts:31`, exposed by `POST /api/settings/models`.
 
 This means:
 
@@ -580,7 +580,7 @@ Each agent stores:
 - last successful request input size
 - status
 
-Schema: [nest-app/src/agent-config/agent-config.repository.ts](/abs/path/nest-app/src/agent-config/agent-config.repository.ts)
+Schema: `nest-app/src/agent-config/agent-config.repository.ts`
 
 ### Status meanings
 
@@ -591,7 +591,7 @@ Schema: [nest-app/src/agent-config/agent-config.repository.ts](/abs/path/nest-ap
 
 ### Selection logic
 
-[nest-app/src/analytics/analytics.service.ts:417](/abs/path/nest-app/src/analytics/analytics.service.ts:417):
+`nest-app/src/analytics/analytics.service.ts:417`:
 
 - personal key takes priority if present
 - otherwise backend filters active agents
@@ -600,7 +600,7 @@ Schema: [nest-app/src/agent-config/agent-config.repository.ts](/abs/path/nest-ap
 
 ### Save behavior
 
-`PUT /api/agent-config` in [agent-config.controller.ts:54](/abs/path/nest-app/src/agent-config/agent-config.controller.ts:54):
+`PUT /api/agent-config` in `agent-config.controller.ts:54`:
 
 1. saves the config document
 2. immediately probes every non-disabled saved agent
@@ -610,7 +610,7 @@ That immediate probe is why statuses may change right after save.
 
 ### Runtime failover
 
-During a request, [analytics.service.ts:241](/abs/path/nest-app/src/analytics/analytics.service.ts:241) can fail over between agents when:
+During a request, `analytics.service.ts:241` can fail over between agents when:
 
 - key is invalid -> mark `expired`, try next
 - model is not found -> mark `expired`, try next
@@ -627,7 +627,7 @@ If no agent remains, backend returns `NO_ACTIVE_CONNECTION`.
 
 ### Cron schedule
 
-[nest-app/src/agent-config/agent-health.service.ts:54](/abs/path/nest-app/src/agent-config/agent-health.service.ts:54)
+`nest-app/src/agent-config/agent-health.service.ts:54`
 
 Runs every 5 minutes:
 
@@ -687,7 +687,7 @@ Each agent stores:
 
 ### Input preflight
 
-[analytics.service.ts:264](/abs/path/nest-app/src/analytics/analytics.service.ts:264):
+`analytics.service.ts:264`:
 
 - estimates minimum request size from current prompt + memory context + base overhead
 - compares that against selected agent input limit
@@ -714,7 +714,7 @@ So the effective token allowance is:
 
 ### Post-call warnings
 
-[analytics.service.ts:538](/abs/path/nest-app/src/analytics/analytics.service.ts:538):
+`analytics.service.ts:538`:
 
 - if output tokens reached the configured output limit, response includes `tokenLimitExceeded` and `outputLimitWarning`
 - if actual input tokens exceeded input limit, response includes `inputLimitWarning`
@@ -748,7 +748,7 @@ If backend throws:
 
 Frontend builds a pending token confirmation card through:
 
-- `buildTokenConfirm()` in [client/src/app/app.component.ts:500](/abs/path/client/src/app/app.component.ts:500)
+- `buildTokenConfirm()` in `client/src/app/app.component.ts:500`
 
 ### Success-triggered token dialog
 
@@ -759,7 +759,7 @@ If the request succeeds but includes:
 
 Frontend uses:
 
-- `buildPostCallConfirm()` in [client/src/app/app.component.ts:515](/abs/path/client/src/app/app.component.ts:515)
+- `buildPostCallConfirm()` in `client/src/app/app.component.ts:515`
 
 ### User actions available now
 
@@ -773,8 +773,8 @@ Current token warning card supports:
 
 Application logic is in:
 
-- `confirmMaximizeTokens()` at [client/src/app/app.component.ts:874](/abs/path/client/src/app/app.component.ts:874)
-- `openConfigTab()` at [client/src/app/app.component.ts:690](/abs/path/client/src/app/app.component.ts:690)
+- `confirmMaximizeTokens()` at `client/src/app/app.component.ts:874`
+- `openConfigTab()` at `client/src/app/app.component.ts:690`
 
 ### Automatic limit application
 
@@ -796,7 +796,7 @@ The project uses **two memory layers**.
 
 ### Short-term conversation memory
 
-[nest-app/src/session/memory.ts](/abs/path/nest-app/src/session/memory.ts):
+`nest-app/src/session/memory.ts`:
 
 - stores sessions/threads/messages in LibSQL
 - keeps conversation continuity
@@ -813,18 +813,18 @@ Used functions:
 
 ### Long-term extracted memory
 
-[nest-app/src/memory/memory.service.ts](/abs/path/nest-app/src/memory/memory.service.ts):
+`nest-app/src/memory/memory.service.ts`:
 
 - retrieves relevant stored memory snippets before a request
 - optionally extracts new memory items after a response
 
 Extraction is done by:
 
-- [nest-app/src/ai/memory-skill.ts](/abs/path/nest-app/src/ai/memory-skill.ts)
+- `nest-app/src/ai/memory-skill.ts`
 
 Storage is in MongoDB:
 
-- [nest-app/src/memory/memory.repository.ts](/abs/path/nest-app/src/memory/memory.repository.ts)
+- `nest-app/src/memory/memory.repository.ts`
 
 ### Toggle behavior
 
@@ -842,7 +842,7 @@ Even when extraction is disabled:
 
 ### Prompt cache
 
-[nest-app/src/cache/cache.service.ts](/abs/path/nest-app/src/cache/cache.service.ts):
+`nest-app/src/cache/cache.service.ts`:
 
 - caches aggregation results by normalized prompt + intent hash
 - TTL is 7 days
@@ -871,7 +871,7 @@ These skip repeated LLM work for identical context-free prompts.
 
 ### Pipeline run history
 
-[nest-app/src/history/results-history.repository.ts](/abs/path/nest-app/src/history/results-history.repository.ts):
+`nest-app/src/history/results-history.repository.ts`:
 
 - stores executed prompt
 - intent
@@ -885,14 +885,14 @@ This is a technical execution history.
 
 ### Conversation history
 
-LibSQL session history in [nest-app/src/session/memory.ts](/abs/path/nest-app/src/session/memory.ts):
+LibSQL session history in `nest-app/src/session/memory.ts`:
 
 - stores user and assistant turns
 - powers the left “History” tab
 
 ### Saved results
 
-[nest-app/src/saved-results/saved-results.controller.ts](/abs/path/nest-app/src/saved-results/saved-results.controller.ts):
+`nest-app/src/saved-results/saved-results.controller.ts`:
 
 - lets users bookmark results they want to keep
 - saved items are user-scoped
@@ -939,7 +939,7 @@ Frontend reacts by:
 
 ### Supported providers
 
-Defined in [nest-app/src/ai/model.ts](/abs/path/nest-app/src/ai/model.ts):
+Defined in `nest-app/src/ai/model.ts`:
 
 - OpenAI
 - Anthropic
@@ -951,7 +951,7 @@ Defined in [nest-app/src/ai/model.ts](/abs/path/nest-app/src/ai/model.ts):
 
 ### Model resolution
 
-`resolveModel()` in [nest-app/src/ai/model.ts](/abs/path/nest-app/src/ai/model.ts):
+`resolveModel()` in `nest-app/src/ai/model.ts`:
 
 - requires API key
 - requires provider
@@ -960,7 +960,7 @@ Defined in [nest-app/src/ai/model.ts](/abs/path/nest-app/src/ai/model.ts):
 
 ### Provider-specific compatibility fixes
 
-[nest-app/src/ai/model.ts](/abs/path/nest-app/src/ai/model.ts) includes important runtime compatibility patches:
+`nest-app/src/ai/model.ts` includes important runtime compatibility patches:
 
 - OpenAI-compatible fetch wrapper rewrites `developer` role to `system` for some providers
 - `skillProviderOptions()` disables Groq strict structured output mode when needed
@@ -1049,9 +1049,9 @@ That is expected behavior, not necessarily a bug.
 
 The repo root still contains an older Express-based implementation under `src/`, documented by files like:
 
-- [README.md](/abs/path/README.md)
-- [HOW_IT_WORKS.md](/abs/path/HOW_IT_WORKS.md)
-- [src/server.ts](/abs/path/src/server.ts)
+- `README.md`
+- `HOW_IT_WORKS.md`
+- `src/server.ts`
 
 That layer is useful for historical reference, but the **current workflow in use now is the Nest app plus Angular client**.
 
@@ -1072,3 +1072,4 @@ The cleanest way to explain the current project is:
 7. **Token limits, health probes, and failover are product controls around the LLM layer.**
 
 If the team keeps those 7 ideas in mind, the rest of the codebase becomes much easier to navigate.
+
