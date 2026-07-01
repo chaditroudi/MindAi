@@ -9,6 +9,8 @@ export type AgentStatus = 'active' | 'disabled' | 'expired' | 'idle';
 
 @Schema({ _id: false })
 export class AgentEntry {
+  @Prop({ required: true }) id!: string;
+
   @Prop({ enum: ['active', 'disabled', 'expired', 'idle'], default: 'idle' })
   status!: AgentStatus;
 
@@ -73,27 +75,27 @@ export class AgentConfigRepository {
     ).lean() as Promise<AgentConfigDocument>;
   }
 
-  async updateAgentStatus(agentApiKey: string, status: AgentStatus): Promise<void> {
+  async updateAgentStatus(agentId: string, status: AgentStatus): Promise<void> {
     await this.model.updateOne(
       {},
       { $set: { 'agents.$[agent].status': status } },
-      { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+      { arrayFilters: [{ 'agent.id': agentId }] },
     );
   }
 
   async updateTokenLimit(
-    agentApiKey: string,
+    agentId: string,
     field: 'inputTokenLimit' | 'outputTokenLimit' | 'memoryTokenLimit',
     value: number,
   ): Promise<void> {
     await this.model.updateOne(
       {},
       { $set: { [`agents.$[agent].${field}`]: value } },
-      { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+      { arrayFilters: [{ 'agent.id': agentId }] },
     );
   }
 
-  async incrementUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
+  async incrementUsage(agentId: string, inputTokens: number, outputTokens: number): Promise<void> {
     await this.model.findOneAndUpdate(
       {},
       {
@@ -103,21 +105,21 @@ export class AgentConfigRepository {
         },
       },
       {
-        arrayFilters: [{ 'agent.apiKey': agentApiKey }],
+        arrayFilters: [{ 'agent.id': agentId }],
         new: true,
       },
     ).lean();
   }
 
-  async setLastInputTokens(agentApiKey: string, inputTokens: number): Promise<void> {
+  async setLastInputTokens(agentId: string, inputTokens: number): Promise<void> {
     await this.model.updateOne(
       {},
       { $set: { 'agents.$[agent].lastInputTokens': inputTokens } },
-      { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+      { arrayFilters: [{ 'agent.id': agentId }] },
     );
   }
 
-  async updateRuntime(agentApiKey: string, update: AgentRuntimeUpdate): Promise<void> {
+  async updateRuntime(agentId: string, update: AgentRuntimeUpdate): Promise<void> {
     const normalized = Object.fromEntries(
       Object.entries(update).filter(([, value]) => value !== undefined),
     );
@@ -130,7 +132,7 @@ export class AgentConfigRepository {
     await this.model.updateOne(
       {},
       { $set: setPayload },
-      { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+      { arrayFilters: [{ 'agent.id': agentId }] },
     );
   }
 }

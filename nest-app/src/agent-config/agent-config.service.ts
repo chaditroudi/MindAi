@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   AgentConfigRepository,
   type AgentConfigPayload,
@@ -33,6 +34,7 @@ function nonNegativeIntOrUndefined(value?: number): number | undefined {
 function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
   return {
     ...agent,
+    id:               trimOrUndefined(agent.id),
     provider:         trimOrUndefined(agent.provider)?.toLowerCase(),
     model:            trimOrUndefined(agent.model),
     apiKey:           trimOrUndefined(agent.apiKey),
@@ -54,6 +56,31 @@ function sanitizePayload(data: AgentConfigPayload): AgentConfigPayload {
   };
 }
 
+function ensureAgentIds(agents: Partial<AgentEntry>[] = []): {
+  agents: Partial<AgentEntry>[];
+  changed: boolean;
+} {
+  const seen = new Set<string>();
+  let changed = false;
+
+  const normalized = agents.map(rawAgent => {
+    const agent = sanitizeAgentEntry(rawAgent);
+    let id = agent.id;
+
+    if (!id || seen.has(id)) {
+      id = randomUUID();
+      changed = true;
+    }
+
+    if (id !== agent.id) changed = true;
+    seen.add(id);
+
+    return { ...agent, id };
+  });
+
+  return { agents: normalized, changed };
+}
+
 @Injectable()
 export class AgentConfigService {
   constructor(private readonly repo: AgentConfigRepository) {}
@@ -63,6 +90,7 @@ export class AgentConfigService {
     return {
       ...existing,
       ...incoming,
+      id: incoming.id ?? existing.id,
       inputTokensUsed: incoming.inputTokensUsed ?? existing.inputTokensUsed,
       outputTokensUsed: incoming.outputTokensUsed ?? existing.outputTokensUsed,
       memoryTokenLimit: incoming.memoryTokenLimit ?? existing.memoryTokenLimit,
@@ -75,6 +103,19 @@ export class AgentConfigService {
   async getConfig(): Promise<ResolvedConfig> {
     const doc = await this.repo.get();
     if (!doc) return { ...DEFAULTS };
+
+    const normalized = ensureAgentIds(doc.agents ?? []);
+    if (normalized.changed) {
+      const saved = await this.repo.save({
+        memoryLimit: doc.memoryLimit,
+        agents: normalized.agents,
+      });
+      return {
+        memoryLimit: saved.memoryLimit ?? DEFAULTS.memoryLimit,
+        agents: saved.agents ?? [],
+      };
+    }
+
     return {
       memoryLimit: doc.memoryLimit ?? DEFAULTS.memoryLimit,
       agents: doc.agents ?? [],
@@ -87,11 +128,17 @@ export class AgentConfigService {
   }
 
   async save(data: AgentConfigPayload): Promise<ResolvedConfig> {
-    const current = await this.repo.get();
-    const currentByApiKey = new Map((current?.agents ?? []).map(agent => [agent.apiKey, agent]));
+    const current = await this.getConfig();
+    const currentById = new Map(current.agents.map(agent => [agent.id, agent]));
+    const currentByApiKey = new Map(current.agents.map(agent => [agent.apiKey, agent]));
     const sanitized = sanitizePayload(data);
-    const mergedAgents = sanitized.agents?.map(agent =>
-      this.mergeRuntimeState(agent, agent.apiKey ? currentByApiKey.get(agent.apiKey) : undefined),
+    const normalizedIncoming = sanitized.agents ? ensureAgentIds(sanitized.agents).agents : undefined;
+    const mergedAgents = normalizedIncoming?.map(agent =>
+      this.mergeRuntimeState(
+        agent,
+        (agent.id ? currentById.get(agent.id) : undefined)
+        ?? (agent.apiKey ? currentByApiKey.get(agent.apiKey) : undefined),
+      ),
     );
 
     const doc = await this.repo.save({
@@ -104,28 +151,28 @@ export class AgentConfigService {
     };
   }
 
-  async trackUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
+  async trackUsage(agentId: string, inputTokens: number, outputTokens: number): Promise<void> {
     if (inputTokens <= 0 && outputTokens <= 0) return;
-    await this.repo.incrementUsage(agentApiKey, inputTokens, outputTokens);
+    await this.repo.incrementUsage(agentId, inputTokens, outputTokens);
   }
 
-  async updateLastInputTokens(agentApiKey: string, inputTokens: number): Promise<void> {
-    if (inputTokens > 0) await this.repo.setLastInputTokens(agentApiKey, inputTokens);
+  async updateLastInputTokens(agentId: string, inputTokens: number): Promise<void> {
+    if (inputTokens > 0) await this.repo.setLastInputTokens(agentId, inputTokens);
   }
 
-  async updateStatus(agentApiKey: string, status: AgentStatus): Promise<void> {
-    await this.repo.updateAgentStatus(agentApiKey, status);
+  async updateStatus(agentId: string, status: AgentStatus): Promise<void> {
+    await this.repo.updateAgentStatus(agentId, status);
   }
 
-  async updateRuntime(agentApiKey: string, update: AgentRuntimeUpdate): Promise<void> {
-    await this.repo.updateRuntime(agentApiKey, update);
+  async updateRuntime(agentId: string, update: AgentRuntimeUpdate): Promise<void> {
+    await this.repo.updateRuntime(agentId, update);
   }
 
   async updateTokenLimit(
-    agentApiKey: string,
+    agentId: string,
     field: 'inputTokenLimit' | 'outputTokenLimit' | 'memoryTokenLimit',
     value: number,
   ): Promise<void> {
-    await this.repo.updateTokenLimit(agentApiKey, field, value);
+    await this.repo.updateTokenLimit(agentId, field, value);
   }
 }
