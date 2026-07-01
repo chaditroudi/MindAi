@@ -26,6 +26,7 @@ class AgentEntryDto {
 
 class SaveAgentConfigDto {
   @IsOptional() @IsInt() @Min(1) memoryLimit?: number;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(100) currentAgentId?: string | null;
 
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => AgentEntryDto)
   agents?: AgentEntryDto[];
@@ -56,12 +57,8 @@ export class AgentConfigController {
 
   @Put()
   async save(@Body() dto: SaveAgentConfigDto) {
-    const saved = await this.service.save(dto);
-    await Promise.allSettled(
-      saved.agents
-        .filter(agent => agent.status !== 'disabled' && !!agent.apiKey && !!agent.id)
-        .map(agent => this.health.probeAndUpdateAgent(agent.id)),
-    );
+    await this.service.save(dto);
+    await this.health.checkAllAgents();
     return this.service.getConfig();
   }
 

@@ -37,6 +37,8 @@ export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 export class AgentConfig {
   @Prop({ min: 1, default: 50 }) memoryLimit!: number;
 
+  @Prop({ default: null }) currentAgentId!: string | null;
+
   @Prop({ type: [AgentEntrySchema], default: [] })
   agents!: AgentEntry[];
 }
@@ -47,6 +49,7 @@ export const AgentConfigSchema  = SchemaFactory.createForClass(AgentConfig);
 
 export interface AgentConfigPayload {
   memoryLimit?: number;
+  currentAgentId?: string | null;
   agents?: Partial<AgentEntry>[];
 }
 
@@ -73,6 +76,14 @@ export class AgentConfigRepository {
       { $set: data },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     ).lean() as Promise<AgentConfigDocument>;
+  }
+
+  async updateCurrentAgentId(currentAgentId: string | null): Promise<void> {
+    await this.model.updateOne(
+      {},
+      { $set: { currentAgentId } },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
   }
 
   async updateAgentStatus(agentId: string, status: AgentStatus): Promise<void> {
