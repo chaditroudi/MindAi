@@ -117,9 +117,6 @@ function isProviderRateLimitError(err: unknown): boolean {
 
 function isFreeTierExhausted(err: unknown): boolean {
   const msg = getErrorMessage(err).toLowerCase();
-  // Google uses RESOURCE_EXHAUSTED for both temporary RPM/TPM limits AND
-  // actual free-tier daily quota exhaustion. Only treat as exhausted when
-  // accompanied by free_tier / per_day / daily indicators — not on its own.
   return (
     msg.includes('free_tier') ||
     msg.includes('free tier') ||
@@ -150,9 +147,6 @@ function extractRetryDelay(err: unknown): string | null {
 
 function isStructuredOutputUnsupportedError(err: unknown): boolean {
   const msg = getErrorMessage(err).toLowerCase();
-  // Only match when the provider says the MODEL doesn't support the format.
-  // Do NOT match "json_schema validation failed" errors — those are schema
-  // compatibility issues, not a model limitation, and need a different message.
   return (
     msg.includes('does not support response format') ||
     (msg.includes('not support') && msg.includes('json_schema')) ||
@@ -190,11 +184,6 @@ function isContextLengthError(err: unknown): boolean {
   );
 }
 
-// Fires when the model hit maxOutputTokens mid-JSON: the response is cut off,
-// producing invalid JSON that Mastra / JSON.parse cannot complete.
-// Matches only definitive truncation indicators — not generic Zod schema mismatches
-// such as "Failed to parse JSON response: invalid type at ..." which contain "json"+"parse"
-// but are caused by schema shape errors, not by a truncated stream.
 function isTruncatedOutputError(err: unknown): boolean {
   if (isStructuredOutputUnsupportedError(err)) return false;
   const msg = getErrorMessage(err).toLowerCase();
