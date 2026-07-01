@@ -198,7 +198,9 @@ function isTruncatedOutputError(err: unknown): boolean {
     msg.includes('unexpected end of json') ||
     msg.includes('unterminated string') ||
     (msg.includes('syntaxerror') && (msg.includes('unexpected end') || msg.includes('unexpected token'))) ||
-    (msg.includes('invalid json') && (msg.includes('unexpected') || msg.includes('unterminated')))
+    (msg.includes('invalid json') && (msg.includes('unexpected') || msg.includes('unterminated'))) ||
+    msg.includes('failed_generation') ||   // Groq: JSON cut off before completion
+    msg.includes('no object generated')    // Vercel AI SDK NoObjectGeneratedError
   );
 }
 
