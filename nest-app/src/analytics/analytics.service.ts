@@ -160,6 +160,47 @@ function extractRetryDelay(err: unknown): string | null {
   return null;
 }
 
+function parseRetryDelayMs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (/^\d+(\.\d+)?$/.test(trimmed)) {
+    return Math.ceil(Number(trimmed) * 1000);
+  }
+
+  const compoundMatch = /^(\d+)m([\d.]+)s$/i.exec(trimmed);
+  if (compoundMatch) {
+    return (parseInt(compoundMatch[1], 10) * 60_000) + Math.ceil(parseFloat(compoundMatch[2]) * 1000);
+  }
+
+  const minutesMatch = /^([\d.]+)m$/i.exec(trimmed);
+  if (minutesMatch) return Math.ceil(parseFloat(minutesMatch[1]) * 60_000);
+
+  const secondsMatch = /^([\d.]+)s$/i.exec(trimmed);
+  if (secondsMatch) return Math.ceil(parseFloat(secondsMatch[1]) * 1000);
+
+  return null;
+}
+
+function extractRetryDelayMs(err: unknown): number | null {
+  const headers = (err as {
+    responseHeaders?: Record<string, string | number | undefined>;
+  }).responseHeaders;
+
+  const fromHeaders = parseRetryDelayMs(
+    String(
+      headers?.['retry-after']
+      ?? headers?.['x-ratelimit-reset-tokens']
+      ?? headers?.['x-ratelimit-reset-requests']
+      ?? '',
+    ),
+  );
+  if (fromHeaders) return fromHeaders;
+
+  return parseRetryDelayMs(extractRetryDelay(err));
+}
+
 function isStructuredOutputUnsupportedError(err: unknown): boolean {
   const msg = getErrorMessage(err).toLowerCase();
   return (
