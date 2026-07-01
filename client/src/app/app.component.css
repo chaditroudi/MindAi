@@ -623,43 +623,12 @@
 .token-confirm-btn--no:hover:not(:disabled) { background: #fef3c7; }
 .token-confirm-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* ── Token warning banner ──────────────────────────────────────────────────── */
-.token-warning {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 0.75rem 0 0.25rem;
-  padding: 0.65rem 0.9rem;
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  border-radius: 0.5rem;
-  animation: fade-up 180ms ease both;
-}
-.token-warning-icon { flex-shrink: 0; color: #b45309; }
-.token-warning-text { flex: 1; min-width: 0; font-size: 0.82rem; color: #92400e; line-height: 1.5; }
-.token-warning-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-.token-warning-btn {
-  padding: 0.3rem 0.75rem;
-  font: inherit;
+/* ── Cut-off notice (subtle tag on truncated messages) ─────────────────────── */
+.cutoff-notice {
+  margin: 0.5rem 0 0.25rem;
   font-size: 0.78rem;
-  font-weight: 600;
-  border-radius: 0.35rem;
-  border: 1px solid #fcd34d;
-  background: #fff;
-  color: #92400e;
-  cursor: pointer;
-  transition: background 100ms, border-color 100ms;
+  color: #b45309;
 }
-.token-warning-btn:hover:not(:disabled) { background: #fef3c7; border-color: #f59e0b; }
-.token-warning-btn--primary { background: #f59e0b; border-color: #f59e0b; color: #fff; }
-.token-warning-btn--primary:hover:not(:disabled) { background: #d97706; border-color: #d97706; }
-.token-warning-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.token-warning--info { background: #eff6ff; border-color: #bfdbfe; }
-.token-warning--info .token-warning-icon { color: #2563eb; }
-.token-warning--info .token-warning-text  { color: #1e40af; }
-.token-warning--info .token-warning-btn--primary { background: #2563eb; border-color: #2563eb; }
-.token-warning--info .token-warning-btn--primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
 
 /* ── Composer ──────────────────────────────────────────────────────────────── */
 .composer-shell { padding: 0 1.25rem 0.9rem; flex-shrink: 0; }

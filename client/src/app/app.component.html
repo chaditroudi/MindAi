@@ -607,25 +607,39 @@
                 </svg>
               </div>
               <div class="token-confirm-body">
-                <p class="token-confirm-title">{{ conf.kind === 'input' ? 'Input' : 'Response' }} token limit too low</p>
+                <p class="token-confirm-title">
+                  @if (conf.outputFix && conf.inputFix) { Both token limits need raising }
+                  @else if (conf.outputFix) { Response token limit too low }
+                  @else { Input token limit too low }
+                </p>
                 <p class="token-confirm-desc">
-                  @if (conf.kind === 'input') {
-                    Your prompt needs more than this connection's input limit (<strong>{{ conf.currentLimit | number }} tokens</strong>).
-                  } @else {
-                    Your current response limit is <strong>{{ conf.currentLimit | number }} tokens</strong>, but this response needs more to complete.
+                  @if (conf.outputFix && conf.inputFix) {
+                    Response was cut off at <strong>{{ conf.outputFix.current | number }} output tokens</strong>
+                    and this request also exceeded the input limit (<strong>{{ conf.inputFix.current | number }} tokens</strong>).
+                    Raise Out to <strong>{{ conf.outputFix.suggested | number }}</strong> and In to <strong>{{ conf.inputFix.suggested | number }}</strong> and retry?
+                  } @else if (conf.outputFix) {
+                    Response was cut off at <strong>{{ conf.outputFix.current | number }} tokens</strong> — the answer may be incomplete.
+                    Raise the output limit to <strong>{{ conf.outputFix.suggested | number }} tokens</strong> and retry?
+                  } @else if (conf.inputFix) {
+                    @if (conf.retryAfterApply) {
+                      Your prompt exceeds this connection's input limit (<strong>{{ conf.inputFix.current | number }} tokens</strong>).
+                      Raise to <strong>{{ conf.inputFix.suggested | number }} tokens</strong> and retry?
+                    } @else {
+                      This request exceeded the input limit (<strong>{{ conf.inputFix.current | number }} tokens</strong>).
+                      Raise to <strong>{{ conf.inputFix.suggested | number }} tokens</strong> to avoid future blocks?
+                    }
                   }
-                  Would you like to increase it to <strong>{{ conf.suggestedLimit | number }} tokens</strong> and retry?
                 </p>
                 <div class="token-confirm-actions">
                   <button class="token-confirm-btn token-confirm-btn--yes"
                     (click)="confirmMaximizeTokens()"
                     [disabled]="tokenLimitSaving || s.phase === 'loading'">
-                    Yes, maximize &amp; retry
+                    {{ conf.retryAfterApply ? 'Apply &amp; Retry' : 'Apply limit' }}
                   </button>
                   <button class="token-confirm-btn token-confirm-btn--no"
                     (click)="dismissTokenConfirm()"
                     [disabled]="s.phase === 'loading'">
-                    No, keep {{ conf.currentLimit | number }} tokens
+                    {{ conf.outputFix ? 'Keep partial response' : 'Dismiss' }}
                   </button>
                 </div>
               </div>
