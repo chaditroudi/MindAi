@@ -28,12 +28,12 @@ export interface AppState {
   pendingPrompt:     string;
 
   pendingTokenConfirm: {
-    prompt:         string;
-    intent:         ModeKey;
-    currentLimit:   number;
-    suggestedLimit: number;
-    kind:           'input' | 'output';
-    agentApiKey?:   string;
+    prompt:          string;
+    intent:          ModeKey;
+    agentApiKey?:    string;
+    outputFix?:      { current: number; suggested: number };
+    inputFix?:       { current: number; suggested: number };
+    retryAfterApply: boolean;
   } | null;
 
   userId:             string;

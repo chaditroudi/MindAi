@@ -469,6 +469,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         prompt:    '',
       });
 
+      const postConf = this.buildPostCallConfirm(data, prompt.trim(), intent);
+      if (postConf) this.st.patch({ pendingTokenConfirm: postConf });
+
       void this.loadSessions();
       setTimeout(() => void this.loadMemories(), 3000);
 
@@ -492,15 +495,34 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  private buildTokenConfirm(
-    err: ApiError, prompt: string, intent: ModeKey,
-  ): { prompt: string; intent: ModeKey; currentLimit: number; suggestedLimit: number; kind: 'input' | 'output'; agentApiKey?: string } {
-    const kind: 'input' | 'output' = err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW' ? 'input' : 'output';
-    const fallback        = kind === 'output' ? this.st.snap.responseTokenLimit : 8_000;
-    const currentLimit    = Number(err.data?.['currentLimit'])   || fallback;
-    const suggestedLimit  = Number(err.data?.['suggestedLimit']) || Math.min(32_000, currentLimit * 2);
-    const agentApiKey     = typeof err.data?.['agentApiKey'] === 'string' ? err.data['agentApiKey'] as string : undefined;
-    return { prompt, intent, currentLimit, suggestedLimit, kind, agentApiKey };
+  private buildTokenConfirm(err: ApiError, prompt: string, intent: ModeKey) {
+    const isInput    = err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW';
+    const current    = Number(err.data?.['currentLimit'])   || (isInput ? 8_000 : this.effectiveOutputTokenLimit());
+    const suggested  = Number(err.data?.['suggestedLimit']) || Math.min(128_000, current * 2);
+    const agentApiKey = typeof err.data?.['agentApiKey'] === 'string'
+      ? (err.data['agentApiKey'] as string)
+      : this.activeAgent()?.apiKey;
+    return {
+      prompt, intent, agentApiKey,
+      outputFix:      isInput ? undefined : { current, suggested },
+      inputFix:       isInput ? { current, suggested } : undefined,
+      retryAfterApply: true,
+    };
+  }
+
+  private buildPostCallConfirm(data: AnalyticsResponse, prompt: string, intent: ModeKey) {
+    if (!data.tokenLimitExceeded && !data.inputLimitWarning) return null;
+    return {
+      prompt, intent,
+      agentApiKey:     this.activeAgent()?.apiKey,
+      outputFix:       data.outputLimitWarning
+        ? { current: data.outputLimitWarning.currentLimit, suggested: data.outputLimitWarning.suggestedLimit }
+        : undefined,
+      inputFix:        data.inputLimitWarning
+        ? { current: data.inputLimitWarning.currentLimit, suggested: data.inputLimitWarning.suggestedLimit }
+        : undefined,
+      retryAfterApply: !!data.tokenLimitExceeded,
+    };
   }
 
   async chooseReportFormat(choice: 'report' | 'chart' | 'both'): Promise<void> {
@@ -542,6 +564,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           sessionId: reportData.sessionId,
           messages:  [...this.st.snap.messages, combined],
         });
+        const mergedData = {
+          tokenLimitExceeded: combined.tokenLimitExceeded,
+          outputLimitWarning: dashData.outputLimitWarning ?? reportData.outputLimitWarning,
+          inputLimitWarning:  dashData.inputLimitWarning  ?? reportData.inputLimitWarning,
+        } as AnalyticsResponse;
+        const postConf = this.buildPostCallConfirm(mergedData, pendingPrompt, 'report');
+        if (postConf) this.st.patch({ pendingTokenConfirm: postConf });
       } else {
         const apiIntent = choice === 'chart' ? 'dashboard' : 'report';
         const data      = await this.api.runAnalytics({ prompt: pendingPrompt, intent: apiIntent, sessionId }, userId);
@@ -551,6 +580,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           sessionId: data.sessionId,
           messages: [...this.st.snap.messages, this.buildAssistantMessage(data, durationMs, pendingPrompt)],
         });
+        const postConf = this.buildPostCallConfirm(data, pendingPrompt, 'report');
+        if (postConf) this.st.patch({ pendingTokenConfirm: postConf });
       }
       void this.loadSessions();
     } catch (err) {

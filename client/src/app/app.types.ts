@@ -165,39 +165,39 @@ export interface AgentConfigResponse {
 // ─── API responses ────────────────────────────────────────────────────────────
 
 export interface DashboardResponse {
-  intent:              'dashboard';
-  chart:               DashboardSpec;
-  sessionId:           string;
-  messageId:           string;
-  inputTokens:         number;
-  outputTokens:        number;
-  tokenLimitExceeded?: boolean;
-  tokenWarning?:       string;
-  inputTokenWarning?:  string;
+  intent:               'dashboard';
+  chart:                DashboardSpec;
+  sessionId:            string;
+  messageId:            string;
+  inputTokens:          number;
+  outputTokens:         number;
+  tokenLimitExceeded?:  boolean;
+  outputLimitWarning?:  LimitWarning;
+  inputLimitWarning?:   LimitWarning;
 }
 
 export interface ReportResponse {
-  intent:              'report';
-  reportSections?:     ReportSection[];
-  sessionId:           string;
-  messageId:           string;
-  inputTokens:         number;
-  outputTokens:        number;
-  tokenLimitExceeded?: boolean;
-  tokenWarning?:       string;
-  inputTokenWarning?:  string;
+  intent:               'report';
+  reportSections?:      ReportSection[];
+  sessionId:            string;
+  messageId:            string;
+  inputTokens:          number;
+  outputTokens:         number;
+  tokenLimitExceeded?:  boolean;
+  outputLimitWarning?:  LimitWarning;
+  inputLimitWarning?:   LimitWarning;
 }
 
 export interface InquiryResponse {
-  intent:              'general_question' | 'inquiry';
-  summary?:            string;
-  sessionId:           string;
-  messageId:           string;
-  inputTokens:         number;
-  outputTokens:        number;
-  tokenLimitExceeded?: boolean;
-  tokenWarning?:       string;
-  inputTokenWarning?:  string;
+  intent:               'general_question' | 'inquiry';
+  summary?:             string;
+  sessionId:            string;
+  messageId:            string;
+  inputTokens:          number;
+  outputTokens:         number;
+  tokenLimitExceeded?:  boolean;
+  outputLimitWarning?:  LimitWarning;
+  inputLimitWarning?:   LimitWarning;
 }
 
 export type AnalyticsResponse = DashboardResponse | ReportResponse | InquiryResponse;
