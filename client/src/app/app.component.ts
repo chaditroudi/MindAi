@@ -854,13 +854,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.tokenLimitSaving = true;
     try {
       await this.api.updateAgentTokenLimit(agentApiKey, kind, limit);
-      const field = kind === 'input' ? 'inputTokenLimit' : 'outputTokenLimit';
-      const cfg   = this.st.snap.agentConfig;
-      if (cfg) {
-        const agents = cfg.agents.map(a => a.apiKey === agentApiKey ? { ...a, [field]: limit } : a);
-        this.st.patch({ agentConfig: { ...cfg, agents } });
-        this.agentDraft = agents.map(a => this.sanitizeAgent(a));
-      }
+      // Reload from API so the card always shows the true saved value,
+      // preventing stale local-draft values from diverging from the DB.
+      await this.loadAgentConfig();
       return true;
     } catch {
       return false;

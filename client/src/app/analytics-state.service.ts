@@ -12,11 +12,9 @@ export interface AppState {
   durationMs:  number;
   examples:    Record<ModeKey, PromptExample[]>;
 
-  // Session
   sessionId:   string | null;
   messages:    ConversationMessage[];
 
-  // Sidebar
   sidebarOpen:   boolean;
   sidebarTab:    'history' | 'saved' | 'memory' | 'config';
   sessions:      SessionSummary[];
@@ -26,11 +24,9 @@ export interface AppState {
   memoryExtractionEnabled: boolean;
   agentConfig:             AgentConfigResponse | null;
 
-  // Report format suggestion
   pendingSuggestion: boolean;
   pendingPrompt:     string;
 
-  // Token limit confirmation
   pendingTokenConfirm: {
     prompt:         string;
     intent:         ModeKey;
@@ -40,7 +36,6 @@ export interface AppState {
     agentApiKey?:   string;
   } | null;
 
-  // AI connection
   userId:             string;
   hasKey:             boolean;
   provider:           string;
