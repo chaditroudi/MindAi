@@ -648,6 +648,11 @@
                     [disabled]="tokenLimitSaving || s.phase === 'loading'">
                     {{ conf.retryAfterApply ? 'Apply &amp; Retry' : 'Apply limit' }}
                   </button>
+                  <button class="token-confirm-btn token-confirm-btn--config"
+                    (click)="openConfigTab()"
+                    [disabled]="s.phase === 'loading'">
+                    Open Config
+                  </button>
                   <button class="token-confirm-btn token-confirm-btn--no"
                     (click)="dismissTokenConfirm()"
                     [disabled]="s.phase === 'loading'">

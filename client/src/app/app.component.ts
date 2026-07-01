@@ -688,6 +688,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   openConfigTab(): void {
+    this.showAddAgent = false;
     this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
     void this.loadAgentConfig();
   }
