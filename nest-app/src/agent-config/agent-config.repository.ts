@@ -24,6 +24,9 @@ export class AgentEntry {
   // Accumulated usage tracked after every request
   @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
   @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
+
+  // Actual input tokens from the last successful request — used for pre-flight estimation
+  @Prop({ min: 0, default: 0 }) lastInputTokens!: number;
 }
 export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 
@@ -87,8 +90,7 @@ export class AgentConfigRepository {
   }
 
   async incrementUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
-    // Atomically increment both counters for the matching agent
-    const doc = await this.model.findOneAndUpdate(
+    await this.model.findOneAndUpdate(
       {},
       {
         $inc: {
@@ -100,7 +102,14 @@ export class AgentConfigRepository {
         arrayFilters: [{ 'agent.apiKey': agentApiKey }],
         new: true,
       },
-    ).lean() as AgentConfigDocument | null;
+    ).lean();
+  }
 
+  async setLastInputTokens(agentApiKey: string, inputTokens: number): Promise<void> {
+    await this.model.updateOne(
+      {},
+      { $set: { 'agents.$[agent].lastInputTokens': inputTokens } },
+      { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+    );
   }
 }

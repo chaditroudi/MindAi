@@ -39,6 +39,7 @@ function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
     outputTokenLimit: positiveIntOrUndefined(agent.outputTokenLimit),
     inputTokensUsed:  nonNegativeIntOrUndefined(agent.inputTokensUsed),
     outputTokensUsed: nonNegativeIntOrUndefined(agent.outputTokensUsed),
+    lastInputTokens:  nonNegativeIntOrUndefined(agent.lastInputTokens),
   };
 }
 
@@ -78,6 +79,10 @@ export class AgentConfigService {
   async trackUsage(agentApiKey: string, inputTokens: number, outputTokens: number): Promise<void> {
     if (inputTokens <= 0 && outputTokens <= 0) return;
     await this.repo.incrementUsage(agentApiKey, inputTokens, outputTokens);
+  }
+
+  async updateLastInputTokens(agentApiKey: string, inputTokens: number): Promise<void> {
+    if (inputTokens > 0) await this.repo.setLastInputTokens(agentApiKey, inputTokens);
   }
 
   async updateStatus(agentApiKey: string, status: AgentStatus): Promise<void> {
