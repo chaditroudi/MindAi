@@ -5,6 +5,9 @@ import { AgentConfigService } from './agent-config.service';
 import { AgentHealthService } from './agent-health.service';
 
 class AgentEntryDto {
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(100)
+  id?: string;
+
   @IsEnum(['active', 'disabled', 'expired', 'idle'])
   status!: 'active' | 'disabled' | 'expired' | 'idle';
 
@@ -29,8 +32,8 @@ class SaveAgentConfigDto {
 }
 
 class UpdateTokenLimitDto {
-  @IsString() @MinLength(1) @MaxLength(500)
-  apiKey!: string;
+  @IsString() @MinLength(1) @MaxLength(100)
+  agentId!: string;
 
   @IsIn(['input', 'output', 'memory'])
   field!: 'input' | 'output' | 'memory';
@@ -56,8 +59,8 @@ export class AgentConfigController {
     const saved = await this.service.save(dto);
     await Promise.allSettled(
       saved.agents
-        .filter(agent => agent.status !== 'disabled' && !!agent.apiKey)
-        .map(agent => this.health.probeAndUpdateAgent(agent.apiKey)),
+        .filter(agent => agent.status !== 'disabled' && !!agent.apiKey && !!agent.id)
+        .map(agent => this.health.probeAndUpdateAgent(agent.id)),
     );
     return this.service.getConfig();
   }
@@ -69,7 +72,7 @@ export class AgentConfigController {
       : dto.field === 'output'
         ? 'outputTokenLimit'
         : 'memoryTokenLimit';
-    await this.service.updateTokenLimit(dto.apiKey, field, dto.value);
+    await this.service.updateTokenLimit(dto.agentId, field, dto.value);
     return { ok: true };
   }
 }

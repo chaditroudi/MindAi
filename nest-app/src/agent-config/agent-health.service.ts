@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { AgentConfigRepository, type AgentStatus } from './agent-config.repository';
+import { AgentConfigService } from './agent-config.service';
 import { buildProviderValidationRequest } from '../ai/model';
 
 const PROBE_TIMEOUT_MS = 8_000;
@@ -54,11 +55,14 @@ function extractProviderModelIds(provider: string, body: unknown): string[] {
 export class AgentHealthService {
   private readonly logger = new Logger(AgentHealthService.name);
 
-  constructor(private readonly repo: AgentConfigRepository) {}
+  constructor(
+    private readonly repo: AgentConfigRepository,
+    private readonly config: AgentConfigService,
+  ) {}
 
   @Cron('*/5 * * * *')
   async checkAllAgents(): Promise<void> {
-    const config = await this.repo.get();
+    const config = await this.config.getConfig();
     if (!config?.agents?.length) return;
 
     for (const agent of config.agents) {
@@ -69,7 +73,7 @@ export class AgentHealthService {
       const nextStatus: AgentStatus = healthy ? 'active' : 'expired';
 
       if (agent.status !== nextStatus) {
-        await this.repo.updateRuntime(agent.apiKey, {
+        await this.repo.updateRuntime(agent.id, {
           status: nextStatus,
           ...(nextStatus === 'active'
             ? { cooldownUntil: null, lastFailureReason: '' }
@@ -80,9 +84,9 @@ export class AgentHealthService {
     }
   }
 
-  async probeAndUpdateAgent(agentApiKey: string): Promise<AgentStatus> {
-    const config = await this.repo.get();
-    const agent  = config?.agents.find(a => a.apiKey === agentApiKey);
+  async probeAndUpdateAgent(agentId: string): Promise<AgentStatus> {
+    const config = await this.config.getConfig();
+    const agent  = config?.agents.find(a => a.id === agentId);
     if (!agent) return 'idle';
     if (isCooldownActive(agent.cooldownUntil)) return agent.status;
 
@@ -90,7 +94,7 @@ export class AgentHealthService {
     const nextStatus: AgentStatus = healthy ? 'active' : 'expired';
 
     if (agent.status !== nextStatus) {
-      await this.repo.updateRuntime(agent.apiKey, {
+      await this.repo.updateRuntime(agent.id, {
         status: nextStatus,
         ...(nextStatus === 'active'
           ? { cooldownUntil: null, lastFailureReason: '' }

@@ -22,7 +22,7 @@ interface AccessResult {
   provider?:         string;
   maxTokens:         number;
   inputTokenLimit?:  number;
-  agentApiKey?:      string;
+  agentId?:          string;
   lastInputTokens?:  number;
   source:            'personal' | 'agent';
 }
@@ -67,7 +67,7 @@ export interface ResponseConnectionInfo {
   source:            'personal' | 'agent';
   provider?:         string;
   model?:            string;
-  agentApiKey?:      string;
+  agentId?:          string;
   outputTokenLimit?: number;
   inputTokenLimit?:  number;
 }
@@ -98,6 +98,7 @@ const ERROR_CODES = {
 
 const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
 const REQUEST_BASE_OVERHEAD_TOKENS = 512;
+const MAX_CONFIGURED_TOKEN_LIMIT = 128_000;
 
 function getErrorStatus(err: unknown): number | undefined {
   return (err as { statusCode?: number; status?: number }).statusCode
@@ -257,6 +258,19 @@ function isTruncatedOutputError(err: unknown): boolean {
   );
 }
 
+function roundSuggestedTokenLimit(value: number): number {
+  if (value <= 1_000) return Math.ceil(value / 50) * 50;
+  if (value <= 10_000) return Math.ceil(value / 100) * 100;
+  if (value <= 50_000) return Math.ceil(value / 500) * 500;
+  return Math.ceil(value / 1_000) * 1_000;
+}
+
+function suggestTokenLimit(requiredTokens: number): number {
+  const safeRequired = Math.max(1, Math.ceil(requiredTokens));
+  const buffered = Math.max(safeRequired + 128, Math.ceil(safeRequired * 1.25));
+  return Math.min(MAX_CONFIGURED_TOKEN_LIMIT, roundSuggestedTokenLimit(buffered));
+}
+
 
 @Injectable()
 export class AnalyticsService {
@@ -312,7 +326,7 @@ export class AnalyticsService {
     this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
     const t0 = Date.now();
 
-    const triedAgentKeys: string[] = [];
+    const triedAgentIds: string[] = [];
     let access!: AccessResult;
     let result: unknown;
     let inputTokens  = 0;
@@ -324,15 +338,15 @@ export class AnalyticsService {
         settings?.responseTokenLimit ?? settings?.inputTokenLimit,
         minimumInputTokens,
         memoryCtx.memoryTokens,
-        triedAgentKeys,
+        triedAgentIds,
       );
 
-      if (access.agentApiKey) {
-        const selectedAgent = agentCfg.agents.find(agent => agent.apiKey === access.agentApiKey);
+      if (access.agentId) {
+        const selectedAgent = agentCfg.agents.find(agent => agent.id === access.agentId);
         const memoryTokenLimit = selectedAgent?.memoryTokenLimit;
         if (memoryTokenLimit && memoryCtx.memoryTokens > memoryTokenLimit) {
           const currentLimit = memoryTokenLimit;
-          const suggestedLimit = Math.min(128_000, Math.max(memoryCtx.memoryTokens, currentLimit) * 2);
+          const suggestedLimit = suggestTokenLimit(memoryCtx.memoryTokens);
           throw new HttpException(
             {
               error: `Retrieved memory context (~${memoryCtx.memoryTokens.toLocaleString()} tokens) exceeds this connection's memory token limit (${currentLimit.toLocaleString()} tokens). Increase memory limit or reduce memory context.`,
@@ -340,7 +354,7 @@ export class AnalyticsService {
               currentLimit,
               suggestedLimit,
               usedTokens: memoryCtx.memoryTokens,
-              agentApiKey: access.agentApiKey,
+              agentId: access.agentId,
             },
             HttpStatus.UNPROCESSABLE_ENTITY,
           );
@@ -351,7 +365,7 @@ export class AnalyticsService {
         const estimatedTokens = Math.max(minimumInputTokens, access.lastInputTokens ?? 0);
         if (estimatedTokens > access.inputTokenLimit) {
           const currentLimit   = access.inputTokenLimit;
-          const suggestedLimit = Math.min(128_000, estimatedTokens * 2);
+          const suggestedLimit = suggestTokenLimit(estimatedTokens);
           const estimateBasis  = access.lastInputTokens && access.lastInputTokens > minimumInputTokens
             ? 'recent successful request size'
             : 'minimum request size';
@@ -361,7 +375,8 @@ export class AnalyticsService {
               code:          ERROR_CODES.INPUT_TOKEN_LIMIT_TOO_LOW,
               currentLimit,
               suggestedLimit,
-              agentApiKey:   access.agentApiKey,
+              usedTokens:    estimatedTokens,
+              agentId:       access.agentId,
             },
             HttpStatus.UNPROCESSABLE_ENTITY,
           );
@@ -380,8 +395,8 @@ export class AnalyticsService {
           result       = executed.result;
           inputTokens  = executed.usage.inputTokens;
           outputTokens = executed.usage.outputTokens;
-          if (access.agentApiKey) {
-            void this.agentConfig.updateRuntime(access.agentApiKey, {
+          if (access.agentId) {
+            void this.agentConfig.updateRuntime(access.agentId, {
               status: 'active',
               cooldownUntil: null,
               lastFailureReason: '',
@@ -402,13 +417,13 @@ export class AnalyticsService {
             );
           }
           if (isModelNotFoundError(err)) {
-            if (access.agentApiKey) {
-              void this.agentConfig.updateRuntime(access.agentApiKey, {
+            if (access.agentId) {
+              void this.agentConfig.updateRuntime(access.agentId, {
                 status: 'expired',
                 cooldownUntil: null,
                 lastFailureReason: 'Configured model is no longer available for this provider.',
               });
-              triedAgentKeys.push(access.agentApiKey);
+              triedAgentIds.push(access.agentId);
               this.logger.warn(`agent [${access.provider}/${access.model}] model not found — trying next agent`);
               continue agentLoop;
             }
@@ -417,13 +432,13 @@ export class AnalyticsService {
             );
           }
           if (isInvalidKeyError(err)) {
-            if (access.agentApiKey) {
-              void this.agentConfig.updateRuntime(access.agentApiKey, {
+            if (access.agentId) {
+              void this.agentConfig.updateRuntime(access.agentId, {
                 status: 'expired',
                 cooldownUntil: null,
                 lastFailureReason: 'Authentication failed for this API key.',
               });
-              triedAgentKeys.push(access.agentApiKey);
+              triedAgentIds.push(access.agentId);
               this.logger.warn(`agent [${access.provider}/${access.model}] invalid key — trying next agent`);
               continue agentLoop;
             }
@@ -434,16 +449,16 @@ export class AnalyticsService {
           }
           if (isProviderRateLimitError(err)) {
             const exhausted = isFreeTierExhausted(err);
-            if (access.agentApiKey) {
+            if (access.agentId) {
               const retryDelayMs = extractRetryDelayMs(err) ?? 5 * 60_000;
-              void this.agentConfig.updateRuntime(access.agentApiKey, {
+              void this.agentConfig.updateRuntime(access.agentId, {
                 status: exhausted ? 'expired' : 'idle',
                 cooldownUntil: new Date(Date.now() + retryDelayMs),
                 lastFailureReason: exhausted
                   ? 'Provider quota is exhausted for this connection.'
                   : 'Provider rate limit reached. Waiting before retry.',
               });
-              triedAgentKeys.push(access.agentApiKey);
+              triedAgentIds.push(access.agentId);
               this.logger.warn(`agent [${access.provider}/${access.model}] rate-limited — trying next agent`);
               continue agentLoop;
             }
@@ -462,14 +477,14 @@ export class AnalyticsService {
           }
           if (isTruncatedOutputError(err)) {
             const currentLimit   = access.maxTokens;
-            const suggestedLimit = Math.min(32_000, Math.max(8_000, currentLimit * 2));
+            const suggestedLimit = suggestTokenLimit(Math.max(outputTokens || 0, currentLimit));
             throw new HttpException(
               {
                 error:         `Your response token limit (${currentLimit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish.`,
                 code:          ERROR_CODES.TOKEN_LIMIT_TOO_LOW,
                 currentLimit,
                 suggestedLimit,
-                agentApiKey:   access.agentApiKey,
+                agentId:       access.agentId,
               },
               HttpStatus.UNPROCESSABLE_ENTITY,
             );
@@ -483,10 +498,10 @@ export class AnalyticsService {
     this.logger.log(`done in ${durationMs}ms | in:${inputTokens} out:${outputTokens}`);
 
     // Persist token usage (fire-and-forget) — agent budget or personal-key counter
-    if (access.agentApiKey) {
-      void this.agentConfig.trackUsage(access.agentApiKey, inputTokens, outputTokens);
+    if (access.agentId) {
+      void this.agentConfig.trackUsage(access.agentId, inputTokens, outputTokens);
       // Record actual token cost so the next pre-flight check uses real data
-      void this.agentConfig.updateLastInputTokens(access.agentApiKey, inputTokens);
+      void this.agentConfig.updateLastInputTokens(access.agentId, inputTokens);
     } else {
       void this.userSettings.incrementUsage(req.userId, inputTokens, outputTokens);
     }
@@ -497,7 +512,7 @@ export class AnalyticsService {
       inputTokens, outputTokens,
       outputTokenLimit: access.maxTokens,
       inputTokenLimit:  access.inputTokenLimit,
-      agentApiKey: access.agentApiKey,
+      agentId: access.agentId,
       source: access.source,
       model: access.model, provider: access.provider,
     });
@@ -511,7 +526,7 @@ export class AnalyticsService {
     userTokenLimit?:  number,
     minimumInputTokens = 0,
     minimumMemoryTokens = 0,
-    excludeApiKeys:   string[] = [],
+    excludeAgentIds:  string[] = [],
   ): AccessResult {
     if (userKey) {
       return {
@@ -524,7 +539,7 @@ export class AnalyticsService {
     }
 
     const activeAgents = agentCfg.agents.filter(
-      a => a.status === 'active' && !excludeApiKeys.includes(a.apiKey),
+      a => a.status === 'active' && !excludeAgentIds.includes(a.id),
     );
     const active =
       activeAgents.find(a =>
@@ -541,7 +556,7 @@ export class AnalyticsService {
         provider:         active.provider,
         maxTokens:        active.outputTokenLimit,
         inputTokenLimit:  active.inputTokenLimit,
-        agentApiKey:      active.apiKey,
+        agentId:          active.id,
         lastInputTokens:  active.lastInputTokens,
         source:           'agent',
       };
