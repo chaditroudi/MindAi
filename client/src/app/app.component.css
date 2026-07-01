@@ -473,6 +473,18 @@
   gap: 0.5rem;
 }
 .result-timing  { font-size: 0.72rem; color: #9ca3af; }
+.result-connection {
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: #2563eb;
+  padding: 0.1rem 0.45rem;
+  background: #eff6ff;
+  border-radius: 9999px;
+  border: 1px solid #bfdbfe;
+}
 .result-tokens  { font-size: 0.72rem; color: #6b7280; padding: 0.1rem 0.45rem; background: #f3f4f6; border-radius: 9999px; border: 1px solid #e5e7eb; }
 
 .widget-grid {

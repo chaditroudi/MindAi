@@ -467,6 +467,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         sessionId: data.sessionId,
         messages:  [...currentMessages, assistantMsg],
         prompt:    '',
+        provider:  this.normalizeProvider(data.connection?.provider) || this.st.snap.provider,
+        selectedModel: this.effectiveModel(data.connection?.model) || this.st.snap.selectedModel,
       });
 
       const postConf = this.buildPostCallConfirm(data, prompt.trim(), intent);
@@ -564,6 +566,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           phase: 'done', durationMs,
           sessionId: reportData.sessionId,
           messages:  [...this.st.snap.messages, combined],
+          provider:  this.normalizeProvider((reportData.connection ?? dashData.connection)?.provider) || this.st.snap.provider,
+          selectedModel: this.effectiveModel((reportData.connection ?? dashData.connection)?.model) || this.st.snap.selectedModel,
         });
         const mergedData = {
           tokenLimitExceeded: combined.tokenLimitExceeded,
@@ -580,6 +584,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           phase: 'done', durationMs,
           sessionId: data.sessionId,
           messages: [...this.st.snap.messages, this.buildAssistantMessage(data, durationMs, pendingPrompt)],
+          provider: this.normalizeProvider(data.connection?.provider) || this.st.snap.provider,
+          selectedModel: this.effectiveModel(data.connection?.model) || this.st.snap.selectedModel,
         });
         const postConf = this.buildPostCallConfirm(data, pendingPrompt, 'report');
         if (postConf) this.st.patch({ pendingTokenConfirm: postConf });
@@ -663,9 +669,14 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.memoryLimitDraft = this.coercePositiveInt(cfg.memoryLimit, 50);
       // If no personal key was found, check if any active agent exists
       if (!this.st.snap.hasKey) {
-        const hasActive = cfg.agents.some(a => a.status === 'active');
+        const activeAgent = cfg.agents.find(a => a.status === 'active');
+        const hasActive = !!activeAgent;
         if (hasActive) {
-          this.st.patch({ hasKey: true });
+          this.st.patch({
+            hasKey: true,
+            provider: this.normalizeProvider(activeAgent?.provider),
+            selectedModel: this.effectiveModel(activeAgent?.model),
+          });
         } else {
           // No connection at all — open the add modal directly
           this.showAddAgent    = true;
@@ -715,8 +726,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ agentConfig: saved });
       this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-      const hasActive = this.agentDraft.some(a => a.status === 'active');
-      this.st.patch({ hasKey: hasActive });
+      const activeAgent = this.agentDraft.find(a => a.status === 'active');
+      this.st.patch({
+        hasKey: !!activeAgent,
+        provider: this.normalizeProvider(activeAgent?.provider),
+        selectedModel: this.effectiveModel(activeAgent?.model),
+      });
     } catch (err) {
       this.configError = err instanceof Error ? err.message : 'Failed to save.';
     } finally {
