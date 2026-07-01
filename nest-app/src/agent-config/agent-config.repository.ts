@@ -33,6 +33,7 @@ export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 @Schema({ collection: 'agent_config', timestamps: true, versionKey: false })
 export class AgentConfig {
   @Prop({ min: 1, default: 50 }) memoryLimit!: number;
+  @Prop({ min: 1, default: 4_000 }) memoryTokenLimit!: number;
 
   @Prop({ type: [AgentEntrySchema], default: [] })
   agents!: AgentEntry[];
@@ -44,7 +45,8 @@ export const AgentConfigSchema  = SchemaFactory.createForClass(AgentConfig);
 
 export interface AgentConfigPayload {
   memoryLimit?: number;
-  agents?:      Partial<AgentEntry>[];
+  memoryTokenLimit?: number;
+  agents?: Partial<AgentEntry>[];
 }
 
 export interface AgentRuntimeUpdate {
