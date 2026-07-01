@@ -823,7 +823,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ agentConfig: saved });
       this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-      const activeAgent = this.agentDraft.find(a => a.status === 'active');
+      const activeAgent = this.primaryAvailableAgent(this.agentDraft);
       this.st.patch({
         hasKey: !!activeAgent,
         provider: this.normalizeProvider(activeAgent?.provider),
@@ -854,7 +854,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ agentConfig: saved });
       this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-      const activeAgent = this.agentDraft.find(a => a.status === 'active');
+      const activeAgent = this.primaryAvailableAgent(this.agentDraft);
       this.st.patch({
         hasKey: !!activeAgent,
         provider: this.normalizeProvider(activeAgent?.provider),
@@ -928,7 +928,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   private activeAgent(): AgentEntry | undefined {
-    return this.st.snap.agentConfig?.agents.find(a => a.status === 'active');
+    return this.primaryAvailableAgent(this.st.snap.agentConfig?.agents ?? []);
+  }
+
+  private primaryAvailableAgent(agents: AgentEntry[]): AgentEntry | undefined {
+    return agents.find(agent => agent.status === 'active')
+      ?? agents.find(agent => agent.status === 'idle')
+      ?? undefined;
   }
 
   private effectiveOutputTokenLimit(): number {
