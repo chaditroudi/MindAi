@@ -516,6 +516,19 @@ export class PipelineService {
       return this.executeInquiry(prompt, context, opts);
     }
 
+    if (!rows.length) {
+      this.logger.log('dashboard → no matching rows; returning empty dashboard state');
+      return {
+        result: {
+          layout:  'operational',
+          title:   prompt,
+          summary: 'No matching records were found for this dashboard request. Try broadening the filters or rephrasing the question.',
+          widgets: [],
+        },
+        usage: aggUsage,
+      };
+    }
+
     const dispatched = await this.dispatchSkills(plan, rows, prompt, aggUsage, opts);
     const chart = dispatched.result as DashboardSpec;
     if (chart.widgets?.length && !context.length) {
