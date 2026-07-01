@@ -275,13 +275,23 @@ export class AnalyticsService {
 
       // Enforce input token limit (agent connections only; personal key has no cap)
       if (access.inputTokenLimit) {
-        const estimatedTokens = Math.ceil(prompt.length / 4);
+        // Count prompt + already-built memory/session context
+        const promptTokens  = Math.ceil(prompt.length / 4);
+        const contextTokens = memoryContext.reduce((sum, msg) => {
+          const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+          return sum + Math.ceil(text.length / 4);
+        }, 0);
+        // Conservative floor for system instructions + SQL query results injected by the pipeline.
+        // Real requests typically land between 3k–15k tokens of input depending on dataset size.
+        const pipelineOverhead = 3_000;
+        const estimatedTokens  = promptTokens + contextTokens + pipelineOverhead;
+
         if (estimatedTokens > access.inputTokenLimit) {
           const currentLimit   = access.inputTokenLimit;
-          const suggestedLimit = Math.min(128_000, Math.max(estimatedTokens, currentLimit * 2));
+          const suggestedLimit = Math.min(128_000, Math.max(estimatedTokens * 2, 8_000));
           throw new HttpException(
             {
-              error:         `Your prompt is too long (~${estimatedTokens.toLocaleString()} tokens) for this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
+              error:         `Estimated request size (~${estimatedTokens.toLocaleString()} tokens including system context and data) exceeds this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
               code:          ERROR_CODES.INPUT_TOKEN_LIMIT_TOO_LOW,
               currentLimit,
               suggestedLimit,
