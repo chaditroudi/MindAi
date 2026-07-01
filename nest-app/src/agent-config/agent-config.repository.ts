@@ -25,8 +25,6 @@ export class AgentEntry {
   @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
   @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
 
-  // Actual input tokens from the last successful request — used for pre-flight estimation
-  @Prop({ min: 0, default: 0 }) lastInputTokens!: number;
 
   @Prop({ type: Date, default: null }) cooldownUntil?: Date | null;
   @Prop({ type: Date, default: null }) lastCheckedAt?: Date | null;
@@ -37,7 +35,6 @@ export class AgentEntry {
 }
 export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 
-// ── Root config schema ─────────────────────────────────────────────────────────
 
 @Schema({ collection: 'agent_config', timestamps: true, versionKey: false })
 export class AgentConfig {
