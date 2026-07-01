@@ -523,7 +523,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       prompt, intent, agentApiKey,
       memoryFix:      isMemory ? { current, suggested, used: Number(err.data?.['usedTokens']) || undefined } : undefined,
       outputFix:      !isMemory && !isInput ? { current, suggested } : undefined,
-      inputFix:       !isMemory && isInput ? { current, suggested } : undefined,
+      inputFix:       !isMemory && isInput ? { current, suggested, used: Number(err.data?.['usedTokens']) || undefined } : undefined,
       retryAfterApply: true,
     };
   }
@@ -537,7 +537,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
         ? { current: data.outputLimitWarning.currentLimit, suggested: data.outputLimitWarning.suggestedLimit }
         : undefined,
       inputFix:        data.inputLimitWarning
-        ? { current: data.inputLimitWarning.currentLimit, suggested: data.inputLimitWarning.suggestedLimit }
+        ? {
+            current: data.inputLimitWarning.currentLimit,
+            suggested: data.inputLimitWarning.suggestedLimit,
+            used: data.inputLimitWarning.usedTokens,
+          }
         : undefined,
       retryAfterApply: !!data.tokenLimitExceeded,
     };

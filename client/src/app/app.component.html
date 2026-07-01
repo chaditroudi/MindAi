@@ -629,6 +629,7 @@
                   @if (conf.memoryFix) { Memory token limit too low }
                   @else if (conf.outputFix && conf.inputFix) { Both token limits need raising }
                   @else if (conf.outputFix) { Response token limit too low }
+                  @else if (conf.inputFix && !conf.retryAfterApply) { Input limit should be raised }
                   @else { Input token limit too low }
                 </p>
                 <p class="token-confirm-desc">
@@ -649,8 +650,11 @@
                       Your prompt exceeds this connection's input limit (<strong>{{ conf.inputFix.current | number }} tokens</strong>).
                       Raise to <strong>{{ conf.inputFix.suggested | number }} tokens</strong> and retry?
                     } @else {
-                      This request exceeded the input limit (<strong>{{ conf.inputFix.current | number }} tokens</strong>).
-                      Raise to <strong>{{ conf.inputFix.suggested | number }} tokens</strong> to avoid future blocks?
+                      This request succeeded, but it used
+                      <strong>{{ (conf.inputFix.used ?? conf.inputFix.current) | number }} input tokens</strong>,
+                      above this connection's configured input limit of
+                      <strong>{{ conf.inputFix.current | number }} tokens</strong>.
+                      Raise it to <strong>{{ conf.inputFix.suggested | number }}</strong> to avoid future failures?
                     }
                   }
                 </p>

@@ -33,7 +33,7 @@ export interface AppState {
     agentApiKey?:    string;
     memoryFix?:      { current: number; suggested: number; used?: number };
     outputFix?:      { current: number; suggested: number };
-    inputFix?:       { current: number; suggested: number };
+    inputFix?:       { current: number; suggested: number; used?: number };
     retryAfterApply: boolean;
   } | null;
 
