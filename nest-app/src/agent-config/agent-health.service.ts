@@ -20,6 +20,11 @@ function normalizeModelId(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function isCooldownActive(cooldownUntil?: Date | null, now = Date.now()): boolean {
+  if (!cooldownUntil) return false;
+  return new Date(cooldownUntil).getTime() > now;
+}
+
 function extractProviderModelIds(provider: string, body: unknown): string[] {
   const normalized = provider.trim().toLowerCase();
 
@@ -58,12 +63,18 @@ export class AgentHealthService {
 
     for (const agent of config.agents) {
       if (agent.status === 'disabled') continue;
+      if (isCooldownActive(agent.cooldownUntil)) continue;
 
       const healthy = await this.probeProvider(agent.provider, agent.apiKey, agent.model);
       const nextStatus: AgentStatus = healthy ? 'active' : 'expired';
 
       if (agent.status !== nextStatus) {
-        await this.repo.updateAgentStatus(agent.apiKey, nextStatus);
+        await this.repo.updateRuntime(agent.apiKey, {
+          status: nextStatus,
+          ...(nextStatus === 'active'
+            ? { cooldownUntil: null, lastFailureReason: '' }
+            : {}),
+        });
         this.logger.log(`agent [${agent.provider}/${agent.model}]: ${agent.status} → ${nextStatus}`);
       }
     }
@@ -73,12 +84,18 @@ export class AgentHealthService {
     const config = await this.repo.get();
     const agent  = config?.agents.find(a => a.apiKey === agentApiKey);
     if (!agent) return 'idle';
+    if (isCooldownActive(agent.cooldownUntil)) return agent.status;
 
     const healthy = await this.probeProvider(agent.provider, agent.apiKey, agent.model);
     const nextStatus: AgentStatus = healthy ? 'active' : 'expired';
 
     if (agent.status !== nextStatus) {
-      await this.repo.updateAgentStatus(agent.apiKey, nextStatus);
+      await this.repo.updateRuntime(agent.apiKey, {
+        status: nextStatus,
+        ...(nextStatus === 'active'
+          ? { cooldownUntil: null, lastFailureReason: '' }
+          : {}),
+      });
       this.logger.log(`agent [${agent.provider}/${agent.model}]: ${agent.status} → ${nextStatus}`);
     }
 
