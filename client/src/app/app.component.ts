@@ -510,7 +510,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private buildTokenConfirm(err: ApiError, prompt: string, intent: ModeKey) {
     const isMemory   = err.code === 'MEMORY_TOKEN_LIMIT_TOO_LOW';
     const isInput    = err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW';
-    const current    = Number(err.data?.['currentLimit'])   || (isInput ? 8_000 : this.effectiveOutputTokenLimit());
+    const current    = Number(err.data?.['currentLimit']) || (
+      isMemory ? this.memoryTokenLimitDraft : isInput ? 8_000 : this.effectiveOutputTokenLimit()
+    );
     const suggested  = Number(err.data?.['suggestedLimit']) || Math.min(128_000, current * 2);
     const agentApiKey = typeof err.data?.['agentApiKey'] === 'string'
       ? (err.data['agentApiKey'] as string)
@@ -960,6 +962,13 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (!conf) return;
     this.st.patch({ pendingTokenConfirm: null });
 
+    if (conf.memoryFix) {
+      const ok = await this.applyMemoryTokenLimit(conf.memoryFix.suggested);
+      if (!ok) {
+        this.st.setError('Could not update the memory token limit. Please adjust it manually in Config and retry.');
+        return;
+      }
+    }
     if (conf.outputFix) {
       const ok = conf.agentApiKey
         ? await this.applyAgentTokenLimit(conf.agentApiKey, 'output', conf.outputFix.suggested)
@@ -999,6 +1008,26 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     try {
       await this.api.updateResponseTokenLimit(userId, limit);
       this.st.patch({ responseTokenLimit: limit });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      this.tokenLimitSaving = false;
+    }
+  }
+
+  private async applyMemoryTokenLimit(limit: number): Promise<boolean> {
+    this.tokenLimitSaving = true;
+    try {
+      const saved = await this.api.saveAgentConfig({
+        memoryLimit: this.coercePositiveInt(this.memoryLimitDraft, 50),
+        memoryTokenLimit: limit,
+        agents: this.agentDraft.map(agent => this.sanitizeAgent(agent)),
+      });
+      this.st.patch({ agentConfig: saved });
+      this.agentDraft = saved.agents.map(agent => this.sanitizeAgent(agent));
+      this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
+      this.memoryTokenLimitDraft = this.coercePositiveInt(saved.memoryTokenLimit, 4_000);
       return true;
     } catch {
       return false;
