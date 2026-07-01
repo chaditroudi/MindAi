@@ -338,7 +338,7 @@
         <div class="feed-inner">
 
           <!-- Empty state — locked (no key) -->
-          @if (!s.messages.length && s.phase !== 'loading' && s.phase !== 'error' && !s.hasKey) {
+          @if (!s.messages.length && s.phase !== 'loading' && s.phase !== 'error' && !s.hasKey && !s.pendingTokenConfirm) {
             <div class="empty-state empty-state--locked">
               <div class="empty-icon empty-icon--lock">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -358,7 +358,7 @@
           }
 
           <!-- Empty state — ready (has key) -->
-          @if (!s.messages.length && s.phase !== 'loading' && s.phase !== 'error' && s.hasKey) {
+          @if (!s.messages.length && s.phase !== 'loading' && s.phase !== 'error' && s.hasKey && !s.pendingTokenConfirm && !s.pendingSuggestion) {
             <div class="empty-state">
               <div class="empty-icon">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
