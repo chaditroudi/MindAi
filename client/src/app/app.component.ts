@@ -693,13 +693,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.memoryLimitDraft = this.coercePositiveInt(cfg.memoryLimit, 50);
       // If no personal key was found, check if any active agent exists
       if (!this.st.snap.hasKey) {
-        const activeAgent = cfg.agents.find(a => a.status === 'active');
-        const hasActive = !!activeAgent;
-        if (hasActive) {
+        const selectedAgent = this.configuredAgent(cfg);
+        if (selectedAgent) {
           this.st.patch({
             hasKey: true,
-            provider: this.normalizeProvider(activeAgent?.provider),
-            selectedModel: this.effectiveModel(activeAgent?.model),
+            provider: this.normalizeProvider(selectedAgent.provider),
+            selectedModel: this.effectiveModel(selectedAgent.model),
           });
         } else if (!cfg.agents.length) {
           // No connection at all — open the add modal directly
@@ -865,7 +864,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.st.patch({ agentConfig: saved });
     this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
     this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-    const activeAgent = this.agentDraft.find(a => a.status === 'active');
+    const activeAgent = this.configuredAgent(saved);
     this.st.patch({
       hasKey: !!activeAgent,
       provider: this.normalizeProvider(activeAgent?.provider),
@@ -937,8 +936,20 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return [...baseModels, { id: current, label: `${current} (Current)` }];
   }
 
+  private configuredAgent(config: AgentConfigResponse | null | undefined = this.st.snap.agentConfig): AgentEntry | undefined {
+    if (!config) return undefined;
+    const current = config.currentAgentId
+      ? config.agents.find(agent => agent.id === config.currentAgentId)
+      : undefined;
+    return current ?? config.agents.find(agent => agent.status === 'active');
+  }
+
+  isCurrentAgent(agent: AgentEntry): boolean {
+    return this.st.snap.agentConfig?.currentAgentId === agent.id;
+  }
+
   private activeAgent(): AgentEntry | undefined {
-    return this.st.snap.agentConfig?.agents.find(a => a.status === 'active');
+    return this.configuredAgent();
   }
 
   private effectiveOutputTokenLimit(): number {

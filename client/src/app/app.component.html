@@ -194,6 +194,9 @@
                     <span class="config-agent-model">{{ agent.model }}</span>
                   </div>
                   <div class="config-agent-controls">
+                    @if (isCurrentAgent(agent)) {
+                      <span class="agent-status-hint">current</span>
+                    }
                     <span class="agent-status-dot agent-status-dot--{{ agent.status }}"></span>
                     <span class="agent-status-label agent-status-label--{{ agent.status }}">{{ agent.status }}</span>
                     <button class="config-remove-btn" (click)="removeAgent(i)" title="Remove">
