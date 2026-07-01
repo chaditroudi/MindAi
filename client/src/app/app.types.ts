@@ -171,7 +171,8 @@ export interface AgentEntry {
 
 export interface AgentConfigResponse {
   memoryLimit: number;
-  agents:      AgentEntry[];
+  memoryTokenLimit: number;
+  agents: AgentEntry[];
 }
 
 // ─── API responses ────────────────────────────────────────────────────────────

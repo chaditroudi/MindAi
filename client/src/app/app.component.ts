@@ -152,6 +152,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   configError  = '';
   agentDraft:  AgentEntry[] = [];
   memoryLimitDraft = 50;
+  memoryTokenLimitDraft = 4_000;
   newAgent: AgentEntry = this.createEmptyAgent();
   showAddAgent = false;
   editingAgentIndex: number | null = null;
