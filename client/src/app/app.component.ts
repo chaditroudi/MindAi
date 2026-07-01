@@ -653,6 +653,41 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return `${Math.floor(diff / 86_400_000)}d ago`;
   }
 
+  formatDateTime(date: string | Date): string {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(date));
+  }
+
+  agentStatusHint(agent: AgentEntry): string {
+    if (agent.status === 'idle') {
+      return agent.cooldownUntil
+        ? `Cooling down until ${this.formatDateTime(agent.cooldownUntil)}`
+        : 'Rate limited - auto-recovering.';
+    }
+    if (agent.status === 'expired') {
+      return agent.lastFailureReason?.trim() || 'Key invalid or quota exhausted.';
+    }
+    return '';
+  }
+
+  agentHealthMeta(agent: AgentEntry): string {
+    const parts: string[] = [];
+
+    if (agent.lastHealthyAt) parts.push(`Healthy ${this.formatDate(agent.lastHealthyAt)}`);
+    else if (agent.lastCheckedAt) parts.push(`Checked ${this.formatDate(agent.lastCheckedAt)}`);
+
+    if (agent.lastUsedAt) parts.push(`Used ${this.formatDate(agent.lastUsedAt)}`);
+
+    if ((agent.consecutiveFailures ?? 0) > 0) {
+      const count = agent.consecutiveFailures ?? 0;
+      parts.push(`${count} recent failure${count === 1 ? '' : 's'}`);
+    }
+
+    return parts.join(' · ');
+  }
+
   intentLabel(intent: string): string {
     switch (intent) {
       case 'dashboard': return 'Dashboard';
@@ -674,9 +709,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.memoryLimitDraft = this.coercePositiveInt(cfg.memoryLimit, 50);
       // If no personal key was found, check if any active agent exists
       if (!this.st.snap.hasKey) {
-        const activeAgent = cfg.agents.find(a => a.status === 'active');
-        const hasActive = !!activeAgent;
-        if (hasActive) {
+        const activeAgent = this.primaryAvailableAgent(cfg.agents);
+        if (activeAgent) {
           this.st.patch({
             hasKey: true,
             provider: this.normalizeProvider(activeAgent?.provider),
