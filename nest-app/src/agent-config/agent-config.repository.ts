@@ -4,7 +4,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-// ── Agent entry sub-schema ─────────────────────────────────────────────────────
 
 export type AgentStatus = 'active' | 'disabled' | 'expired' | 'idle';
 
@@ -17,7 +16,6 @@ export class AgentEntry {
   @Prop({ required: true }) model!:    string;
   @Prop({ required: true }) apiKey!:   string;
 
-  // Per-request limits (like ChatGPT context window + response cap)
   @Prop({ min: 1, default: 8_000  }) inputTokenLimit!:  number;
   @Prop({ min: 1, default: 8_000  }) outputTokenLimit!: number;
 
