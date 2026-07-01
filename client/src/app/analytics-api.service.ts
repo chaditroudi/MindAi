@@ -107,7 +107,7 @@ export class AnalyticsApiService {
     return this.req(this.http.put<AgentConfigResponse>('/api/agent-config', dto));
   }
 
-  updateAgentTokenLimit(apiKey: string, field: 'input' | 'output', value: number): Promise<{ ok: boolean }> {
+  updateAgentTokenLimit(apiKey: string, field: 'input' | 'output' | 'memory', value: number): Promise<{ ok: boolean }> {
     return this.req(this.http.patch<{ ok: boolean }>('/api/agent-config/token-limit', { apiKey, field, value }));
   }
 

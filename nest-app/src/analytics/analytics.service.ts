@@ -305,27 +305,8 @@ export class AnalyticsService {
     }
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
-    const memoryCtx = await this.buildMemoryContext(
-      req.userId,
-      sessionId,
-      prompt,
-      agentCfg.memoryLimit,
-    );
+    const memoryCtx = await this.buildMemoryContext(req.userId, sessionId, prompt, agentCfg.memoryLimit);
     const memoryContext = memoryCtx.messages;
-    if (agentCfg.memoryTokenLimit && memoryCtx.memoryTokens > agentCfg.memoryTokenLimit) {
-      const currentLimit = agentCfg.memoryTokenLimit;
-      const suggestedLimit = Math.min(128_000, Math.max(memoryCtx.memoryTokens, currentLimit) * 2);
-      throw new HttpException(
-        {
-          error: `Retrieved memory context (~${memoryCtx.memoryTokens.toLocaleString()} tokens) exceeds the configured memory token limit (${currentLimit.toLocaleString()} tokens). Increase memory limit or reduce memory context.`,
-          code: ERROR_CODES.MEMORY_TOKEN_LIMIT_TOO_LOW,
-          currentLimit,
-          suggestedLimit,
-          usedTokens: memoryCtx.memoryTokens,
-        },
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
-    }
     const minimumInputTokens = this.estimateMinimumInputTokens(prompt, memoryContext);
 
     this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
@@ -344,6 +325,26 @@ export class AnalyticsService {
         minimumInputTokens,
         triedAgentKeys,
       );
+
+      if (access.agentApiKey) {
+        const selectedAgent = agentCfg.agents.find(agent => agent.apiKey === access.agentApiKey);
+        const memoryTokenLimit = selectedAgent?.memoryTokenLimit;
+        if (memoryTokenLimit && memoryCtx.memoryTokens > memoryTokenLimit) {
+          const currentLimit = memoryTokenLimit;
+          const suggestedLimit = Math.min(128_000, Math.max(memoryCtx.memoryTokens, currentLimit) * 2);
+          throw new HttpException(
+            {
+              error: `Retrieved memory context (~${memoryCtx.memoryTokens.toLocaleString()} tokens) exceeds this connection's memory token limit (${currentLimit.toLocaleString()} tokens). Increase memory limit or reduce memory context.`,
+              code: ERROR_CODES.MEMORY_TOKEN_LIMIT_TOO_LOW,
+              currentLimit,
+              suggestedLimit,
+              usedTokens: memoryCtx.memoryTokens,
+              agentApiKey: access.agentApiKey,
+            },
+            HttpStatus.UNPROCESSABLE_ENTITY,
+          );
+        }
+      }
 
       if (access.inputTokenLimit) {
         const estimatedTokens = Math.max(minimumInputTokens, access.lastInputTokens ?? 0);

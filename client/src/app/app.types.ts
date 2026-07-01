@@ -165,13 +165,13 @@ export interface AgentEntry {
   apiKey:           string;
   inputTokenLimit:  number;  // max tokens user can send per request
   outputTokenLimit: number;  // max tokens AI can generate per request
+  memoryTokenLimit: number;  // max tokens memory context can contribute
   inputTokensUsed:  number;  // accumulated input tokens consumed
   outputTokensUsed: number;  // accumulated output tokens consumed
 }
 
 export interface AgentConfigResponse {
   memoryLimit: number;
-  memoryTokenLimit: number;
   agents: AgentEntry[];
 }
 
