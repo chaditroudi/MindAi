@@ -37,7 +37,7 @@ export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 export class AgentConfig {
   @Prop({ min: 1, default: 50 }) memoryLimit!: number;
 
-  @Prop({ default: null }) currentAgentId!: string | null;
+  @Prop({ type: String, default: null }) currentAgentId!: string | null;
 
   @Prop({ type: [AgentEntrySchema], default: [] })
   agents!: AgentEntry[];
