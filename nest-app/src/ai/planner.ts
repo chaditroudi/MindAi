@@ -65,6 +65,16 @@ function resolveReference(field: DataSourceField, sources: DataSource[]): DataSo
   });
 }
 
+function resolveReferenceForeignField(source: DataSource): string {
+  return source.fields.find(field => field.role === 'id' || field.name === 'id')?.name ?? '_id';
+}
+
+function resolveReferenceLabelField(source: DataSource, foreignField: string): string {
+  return source.fields.find(field =>
+    (field.type === 'string' || field.type === 'text') && field.name !== foreignField,
+  )?.name ?? 'name';
+}
+
 function buildSchemaSection(sources: DataSource[]): string {
   if (!sources.length) return '\nNo data sources — return needsData=false.';
 
@@ -85,6 +95,10 @@ function buildSchemaSection(sources: DataSource[]): string {
       ['year', 'month', 'quarter', 'date'].some(t => f.name.toLowerCase().includes(t)),
     );
     const dims = source.fields.filter(f => f.type === 'string' || f.type === 'enum' || f.type === 'text');
+    const allProj = source.fields
+      .filter(field => field.name !== '_id')
+      .map(field => `"${field.name}":1`)
+      .join(', ');
 
     lines.push('', `Collection: "${source.collection}"   →   query.sourceName = "${source.name}"`);
     if (source.description) lines.push(`  ${source.description}`);
@@ -119,17 +133,47 @@ function buildSchemaSection(sources: DataSource[]): string {
       const ref = refByField.get(field);
       if (!ref) continue;
       if (joins.some(j => j.localField === field.name && j.from === ref.collection)) continue;
-      joins.push({ from: ref.collection, localField: field.name, foreignField: '_id', as: ref.name });
+      joins.push({
+        from:         ref.collection,
+        localField:   field.name,
+        foreignField: resolveReferenceForeignField(ref),
+        as:           ref.name,
+      });
     }
 
     if (joins.length) {
       lines.push('  Available joins (copy $lookup exactly as shown):');
       for (const j of joins) {
+        const target = sources.find(s => s.collection === j.from || s.name === j.as);
+        const label  = target ? resolveReferenceLabelField(target, j.foreignField) : 'name';
         lines.push(
           `    { "$lookup": { "from": "${j.from}", "localField": "${j.localField}", "foreignField": "${j.foreignField}", "as": "${j.as}" } }`,
           `    → then { "$unwind": "$${j.as}" }  →  access as "${j.as}.fieldName"`,
+          `    → common joined labels: "${j.as}.${label}"`,
         );
       }
+    }
+
+    if (dims.length) {
+      const groupableDim = dims.find(field => !refByField.get(field));
+      if (groupableDim) {
+        lines.push('  Useful pipeline templates:');
+        lines.push(
+          `    Count by "${groupableDim.name}": [{ "$group": { "_id": "$${groupableDim.name}", "value": { "$sum": 1 } } }, { "$sort": { "value": -1 } }, { "$project": { "_id": 0, "label": "$_id", "value": 1 } }]`,
+        );
+        if (metrics.length) {
+          const metric = metrics[0].name;
+          lines.push(
+            `    Sum "${metric}" by "${groupableDim.name}": [{ "$group": { "_id": "$${groupableDim.name}", "value": { "$sum": "$${metric}" } } }, { "$sort": { "value": -1 } }, { "$project": { "_id": 0, "label": "$_id", "value": 1 } }]`,
+          );
+        }
+      }
+    }
+
+    if (allProj) {
+      lines.push(
+        `  Raw list template: [{ "$sort": { "_id": -1 } }, { "$limit": 150 }, { "$project": { "_id": 0, ${allProj} } }]`,
+      );
     }
   }
 
