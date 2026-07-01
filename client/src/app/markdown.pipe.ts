@@ -25,7 +25,6 @@ export class MarkdownPipe implements PipeTransform {
     for (const raw of lines) {
       const line = raw.trimEnd();
       const trimmed = line.trimStart();
-      // Accept both "- " (spec) and "• " (LLM default)
       const isBullet = /^[-•]\s/.test(trimmed);
 
       if (isBullet) {
