@@ -529,6 +529,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           tokenLimitExceeded: dashData.tokenLimitExceeded || reportData.tokenLimitExceeded,
           tokenWarning:       dashData.tokenWarning ?? reportData.tokenWarning,
           inputTokenWarning:  dashData.inputTokenWarning ?? reportData.inputTokenWarning,
+          outputTokenLimit:   this.effectiveOutputTokenLimit(),
           result: {
             type:           'report+chart',
             dashboardSpec:  (dashData as DashboardResponse).chart,
