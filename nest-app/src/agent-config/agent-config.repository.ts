@@ -18,6 +18,7 @@ export class AgentEntry {
 
   @Prop({ min: 1, default: 8_000  }) inputTokenLimit!:  number;
   @Prop({ min: 1, default: 8_000  }) outputTokenLimit!: number;
+  @Prop({ min: 1, default: 4_000  }) memoryTokenLimit!: number;
 
   @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
   @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
@@ -33,7 +34,6 @@ export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 @Schema({ collection: 'agent_config', timestamps: true, versionKey: false })
 export class AgentConfig {
   @Prop({ min: 1, default: 50 }) memoryLimit!: number;
-  @Prop({ min: 1, default: 4_000 }) memoryTokenLimit!: number;
 
   @Prop({ type: [AgentEntrySchema], default: [] })
   agents!: AgentEntry[];
@@ -45,7 +45,6 @@ export const AgentConfigSchema  = SchemaFactory.createForClass(AgentConfig);
 
 export interface AgentConfigPayload {
   memoryLimit?: number;
-  memoryTokenLimit?: number;
   agents?: Partial<AgentEntry>[];
 }
 
@@ -84,7 +83,7 @@ export class AgentConfigRepository {
 
   async updateTokenLimit(
     agentApiKey: string,
-    field: 'inputTokenLimit' | 'outputTokenLimit',
+    field: 'inputTokenLimit' | 'outputTokenLimit' | 'memoryTokenLimit',
     value: number,
   ): Promise<void> {
     await this.model.updateOne(
