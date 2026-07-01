@@ -83,18 +83,14 @@ export const PROVIDER_MODELS: Record<string, { id: string; label: string }[]> = 
 };
 
 // ── Provider detection from API key prefix ────────────────────────────────────
+// Returns null when the key prefix doesn't match — no silent groq fallback.
 
-export function detectProviderFromApiKey(apiKey: string): ProviderName | null {
+function detectProvider(apiKey: string): ProviderName | null {
   if (apiKey.startsWith('gsk_'))    return 'groq';
   if (apiKey.startsWith('sk-ant-')) return 'anthropic';
   if (apiKey.startsWith('AIza'))    return 'google';
   if (apiKey.startsWith('sk-'))     return 'openai';
   return null;
-}
-
-// Returns null when the key prefix doesn't match — no silent groq fallback.
-export function detectProvider(apiKey: string): string | null {
-  return detectProviderFromApiKey(apiKey);
 }
 
 function normalizeProvider(provider?: string): string | undefined {
@@ -208,7 +204,7 @@ async function openAICompatFetch(
 
 // ── Model resolver ────────────────────────────────────────────────────────────
 
-export function resolveModel(
+function resolveModel(
   role:          AgentRole,
   apiKey?:       string,
   userModel?:    string,

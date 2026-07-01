@@ -71,7 +71,6 @@ export class AgentHealthService {
     }
   }
 
-  // Expose for manual triggers (e.g. after admin saves a new agent)
   async probeAndUpdateAgent(agentApiKey: string): Promise<AgentStatus> {
     const config = await this.repo.get();
     const agent  = config?.agents.find(a => a.apiKey === agentApiKey);
