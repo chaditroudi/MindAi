@@ -1491,7 +1491,6 @@
 .agent-status-hint {
   font-size: 0.7rem;
   color: #6b7280;
-  line-height: 1.35;
 }
 .agent-action-btn {
   font-size: 0.7rem;
@@ -1569,24 +1568,6 @@
   color: #9ca3af;
   text-align: center;
   padding: 0.75rem 0;
-}
-
-.config-agent-health {
-  margin-top: 0.35rem;
-}
-
-.config-agent-health-line,
-.config-agent-health-meta {
-  font-size: 0.7rem;
-  line-height: 1.4;
-}
-
-.config-agent-health-line {
-  color: #92400e;
-}
-
-.config-agent-health-meta {
-  color: #6b7280;
 }
 
 .config-error {
