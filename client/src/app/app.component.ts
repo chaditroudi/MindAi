@@ -549,8 +549,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           inputTokens:        (dashData.inputTokens ?? 0) + (reportData.inputTokens ?? 0),
           outputTokens:       (dashData.outputTokens ?? 0) + (reportData.outputTokens ?? 0),
           tokenLimitExceeded: dashData.tokenLimitExceeded || reportData.tokenLimitExceeded,
-          tokenWarning:       dashData.tokenWarning ?? reportData.tokenWarning,
-          inputTokenWarning:  dashData.inputTokenWarning ?? reportData.inputTokenWarning,
           outputTokenLimit:   this.effectiveOutputTokenLimit(),
           result: {
             type:           'report+chart',
@@ -824,8 +822,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       inputTokens:        data.inputTokens,
       outputTokens:       data.outputTokens,
       tokenLimitExceeded: data.tokenLimitExceeded,
-      tokenWarning:       data.tokenWarning,
-      inputTokenWarning:  data.inputTokenWarning,
       outputTokenLimit:   this.effectiveOutputTokenLimit(),
     };
 
@@ -842,27 +838,31 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   tokenLimitSaving = false;
   private pendingReportTempId: string | null = null;
-  private readonly dismissedTokenWarnings = new Set<string>();
-
-  shouldShowTokenWarning(msg: ConversationMessage): boolean {
-    return !!msg.tokenLimitExceeded && !this.dismissedTokenWarnings.has(msg.messageId);
-  }
-
-  dismissTokenWarning(msg: ConversationMessage): void {
-    this.dismissedTokenWarnings.add(msg.messageId);
-  }
 
   async confirmMaximizeTokens(): Promise<void> {
     const conf = this.st.snap.pendingTokenConfirm;
     if (!conf) return;
     this.st.patch({ pendingTokenConfirm: null });
-    const ok = conf.agentApiKey
-      ? await this.applyAgentTokenLimit(conf.agentApiKey, conf.kind, conf.suggestedLimit)
-      : await this.applyResponseTokenLimit(conf.suggestedLimit);
-    if (!ok) {
-      this.st.setError(`Could not update the ${conf.kind} token limit. Please adjust it manually in Config and retry.`);
-      return;
+
+    if (conf.outputFix) {
+      const ok = conf.agentApiKey
+        ? await this.applyAgentTokenLimit(conf.agentApiKey, 'output', conf.outputFix.suggested)
+        : await this.applyResponseTokenLimit(conf.outputFix.suggested);
+      if (!ok) {
+        this.st.setError('Could not update the output token limit. Please adjust it manually in Config and retry.');
+        return;
+      }
     }
+    if (conf.inputFix && conf.agentApiKey) {
+      const ok = await this.applyAgentTokenLimit(conf.agentApiKey, 'input', conf.inputFix.suggested);
+      if (!ok) {
+        this.st.setError('Could not update the input token limit. Please adjust it manually in Config and retry.');
+        return;
+      }
+    }
+
+    if (!conf.retryAfterApply) return;
+
     if (conf.intent === 'report') {
       // Bypass the format picker — the user already chose their format before the token error.
       this.st.patch({ pendingPrompt: conf.prompt, pendingSuggestion: false });
@@ -906,36 +906,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  // Used by the warning banner on already-truncated results
-  maximizedLimit(): number {
-    return Math.min(32_000, Math.max(8_000, this.effectiveOutputTokenLimit() * 2));
-  }
-
-  async maximizeResponseTokenLimit(): Promise<void> {
-    await this.applyResponseTokenLimit(this.maximizedLimit());
-  }
-
   async applyResponseTokenLimitFromConfig(): Promise<void> {
     const ok = await this.applyResponseTokenLimit(this.st.snap.responseTokenLimit);
     if (!ok) this.st.setError('Could not update the output token limit. Please try again.');
-  }
-
-  async retryWithMaxTokens(msg: ConversationMessage): Promise<void> {
-    if (this.st.snap.phase === 'loading') return;
-    const agent = this.activeAgent();
-    const newLimit = this.maximizedLimit();
-    const ok = agent
-      ? await this.applyAgentTokenLimit(agent.apiKey, 'output', newLimit)
-      : await this.applyResponseTokenLimit(newLimit);
-    if (!ok || !msg.prompt || !msg.intent) return;
-    if (msg.intent === 'report') {
-      // Bypass the format picker — retry directly as the same format
-      this.st.patch({ pendingPrompt: msg.prompt, pendingSuggestion: false });
-      await this.chooseReportFormat('report');
-    } else {
-      this.st.patch({ prompt: msg.prompt, intent: msg.intent });
-      await this.run();
-    }
   }
 
   private async loadSessions(): Promise<void> {
