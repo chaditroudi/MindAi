@@ -359,6 +359,16 @@ export class AnalyticsService {
           result       = executed.result;
           inputTokens  = executed.usage.inputTokens;
           outputTokens = executed.usage.outputTokens;
+          if (access.agentApiKey) {
+            void this.agentConfig.updateHealth(access.agentApiKey, {
+              status: 'active',
+              cooldownUntil: null,
+              lastCheckedAt: new Date(),
+              lastHealthyAt: new Date(),
+              lastFailureReason: '',
+              consecutiveFailures: 0,
+            });
+          }
           break agentLoop;
         } catch (err) {
           if (isContextLengthError(err) && context.length > 0) {
@@ -375,7 +385,12 @@ export class AnalyticsService {
           }
           if (isModelNotFoundError(err)) {
             if (access.agentApiKey) {
-              void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
+              await this.agentConfig.updateHealth(access.agentApiKey, {
+                status: 'expired',
+                lastCheckedAt: new Date(),
+                lastFailureReason: 'Configured model is no longer available for this provider.',
+                consecutiveFailures: (agentCfg.agents.find(a => a.apiKey === access.agentApiKey)?.consecutiveFailures ?? 0) + 1,
+              });
               triedAgentKeys.push(access.agentApiKey);
               this.logger.warn(`agent [${access.provider}/${access.model}] model not found — trying next agent`);
               continue agentLoop;
@@ -386,7 +401,12 @@ export class AnalyticsService {
           }
           if (isInvalidKeyError(err)) {
             if (access.agentApiKey) {
-              void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
+              await this.agentConfig.updateHealth(access.agentApiKey, {
+                status: 'expired',
+                lastCheckedAt: new Date(),
+                lastFailureReason: 'Authentication failed for this API key.',
+                consecutiveFailures: (agentCfg.agents.find(a => a.apiKey === access.agentApiKey)?.consecutiveFailures ?? 0) + 1,
+              });
               triedAgentKeys.push(access.agentApiKey);
               this.logger.warn(`agent [${access.provider}/${access.model}] invalid key — trying next agent`);
               continue agentLoop;
@@ -399,7 +419,23 @@ export class AnalyticsService {
           if (isProviderRateLimitError(err)) {
             const exhausted = isFreeTierExhausted(err);
             if (access.agentApiKey) {
-              void this.agentConfig.updateStatus(access.agentApiKey, exhausted ? 'expired' : 'idle');
+              const now = new Date();
+              const retryDelayMs = extractRetryDelayMs(err) ?? 5 * 60_000;
+              await this.agentConfig.updateHealth(access.agentApiKey, exhausted
+                ? {
+                    status: 'expired',
+                    cooldownUntil: null,
+                    lastCheckedAt: now,
+                    lastFailureReason: 'Provider quota is exhausted for this connection.',
+                    consecutiveFailures: (agentCfg.agents.find(a => a.apiKey === access.agentApiKey)?.consecutiveFailures ?? 0) + 1,
+                  }
+                : {
+                    status: 'idle',
+                    cooldownUntil: new Date(now.getTime() + retryDelayMs),
+                    lastCheckedAt: now,
+                    lastFailureReason: 'Provider rate limit reached. Cooling down before retry.',
+                    consecutiveFailures: (agentCfg.agents.find(a => a.apiKey === access.agentApiKey)?.consecutiveFailures ?? 0) + 1,
+                  });
               triedAgentKeys.push(access.agentApiKey);
               this.logger.warn(`agent [${access.provider}/${access.model}] rate-limited — trying next agent`);
               continue agentLoop;
@@ -479,29 +515,44 @@ export class AnalyticsService {
       };
     }
 
-    const activeAgents = agentCfg.agents.filter(
-      a => a.status === 'active' && !excludeApiKeys.includes(a.apiKey),
-    );
-    const active =
-      activeAgents.find(a => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
-      ?? activeAgents[0];
+    const now = Date.now();
+    const rankedAgents = agentCfg.agents
+      .map((agent, index) => ({ agent, index }))
+      .filter(({ agent }) => !excludeApiKeys.includes(agent.apiKey))
+      .filter(({ agent }) => this.isAgentReady(agent, now))
+      .sort((left, right) => this.comparePriority(
+        this.agentPriority(left.agent, minimumInputTokens, left.index),
+        this.agentPriority(right.agent, minimumInputTokens, right.index),
+      ));
 
-    if (active?.apiKey) {
+    const selected = rankedAgents[0]?.agent;
+
+    if (selected?.apiKey) {
       return {
-        apiKey:           active.apiKey,
-        model:            active.model,
-        provider:         active.provider,
-        maxTokens:        active.outputTokenLimit,
-        inputTokenLimit:  active.inputTokenLimit,
-        agentApiKey:      active.apiKey,
-        lastInputTokens:  active.lastInputTokens,
+        apiKey:           selected.apiKey,
+        model:            selected.model,
+        provider:         selected.provider,
+        maxTokens:        selected.outputTokenLimit,
+        inputTokenLimit:  selected.inputTokenLimit,
+        agentApiKey:      selected.apiKey,
+        lastInputTokens:  selected.lastInputTokens,
+        status:           selected.status,
         source:           'agent',
       };
     }
+
+    const nextCooldownAt = agentCfg.agents
+      .filter(agent => !excludeApiKeys.includes(agent.apiKey))
+      .filter(agent => agent.status === 'idle' && !!agent.cooldownUntil)
+      .map(agent => new Date(agent.cooldownUntil as Date).getTime())
+      .filter(value => Number.isFinite(value) && value > now)
+      .sort((left, right) => left - right)[0];
+
     throw Object.assign(
       new UnauthorizedException(
-        'No active AI connection. Your agent may be expired, disabled, or quota-exhausted. ' +
-        'Open Config to re-enable it or add a new connection.',
+        nextCooldownAt
+          ? `No ready AI connection. All available agents are cooling down until ${new Date(nextCooldownAt).toLocaleTimeString()}. Open Config to add or re-enable another connection.`
+          : 'No active AI connection. Your agent may be expired, disabled, or quota-exhausted. Open Config to re-enable it or add a new connection.',
       ),
       { code: ERROR_CODES.NO_ACTIVE_CONNECTION },
     );
