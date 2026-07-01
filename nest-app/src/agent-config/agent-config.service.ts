@@ -268,4 +268,8 @@ export class AgentConfigService {
   ): Promise<void> {
     await this.repo.updateTokenLimit(agentId, field, value);
   }
+
+  async resetAllUsage(): Promise<void> {
+    await this.repo.resetAllUsage();
+  }
 }

@@ -5,6 +5,7 @@ import {
   type AgentStatus,
 } from './agent-config.repository';
 import { AgentConfigService } from './agent-config.service';
+import { isCooldownActive } from './agent-config.utils';
 import { buildProviderValidationRequest } from '../ai/model';
 
 const PROBE_TIMEOUT_MS = 8_000;
@@ -26,14 +27,6 @@ function isQuotaExhausted(body: string): boolean {
 
 function normalizeModelId(value: string): string {
   return value.trim().toLowerCase();
-}
-
-function isCooldownActive(
-  cooldownUntil?: Date | null,
-  now = Date.now(),
-): boolean {
-  if (!cooldownUntil) return false;
-  return new Date(cooldownUntil).getTime() > now;
 }
 
 function extractProviderModelIds(provider: string, body: unknown): string[] {
@@ -71,6 +64,12 @@ export class AgentHealthService {
     private readonly repo: AgentConfigRepository,
     private readonly config: AgentConfigService,
   ) {}
+
+  @Cron('0 0 1 * *')
+  async resetMonthlyUsage(): Promise<void> {
+    await this.config.resetAllUsage();
+    this.logger.log('monthly token usage counters reset');
+  }
 
   @Cron('* * * * *')
   async checkAllAgents(): Promise<void> {
@@ -200,8 +199,9 @@ export class AgentHealthService {
       );
       if (!found) {
         this.logger.warn(
-          `agent model not in list: ${provider}/${model} — treating as healthy`,
+          `agent model not in list: ${provider}/${model} — marking as expired`,
         );
+        return false;
       }
 
       return true;
