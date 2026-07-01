@@ -177,7 +177,6 @@ export interface AgentConfigResponse {
   agents:          AgentEntry[];
 }
 
-// ─── API responses ────────────────────────────────────────────────────────────
 
 export interface DashboardResponse {
   intent:               'dashboard';
