@@ -20,7 +20,7 @@ import type {
   ModeKey, PromptExample, WidgetSpec,
   AnalyticsResponse, DashboardResponse, InquiryResponse, ReportResponse,
   ConversationMessage, MessageResult, SavedResultSummary,
-  AgentEntry, AgentStatus, ConnectionInfo,
+  AgentConfigResponse, AgentEntry, AgentStatus, ConnectionInfo,
 } from './app.types';
 
 const INTENT_MAP: Record<ModeKey, 'dashboard' | 'report' | 'general_question'> = {
@@ -840,7 +840,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private async persistAgentConfig(
     agents: AgentEntry[],
     options: { errorMessage: string },
-  ): Promise<import('./app.types').AgentConfigResponse | null> {
+  ): Promise<AgentConfigResponse | null> {
     this.configSaving = true;
     this.configError  = '';
     try {
@@ -857,7 +857,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  private applySavedAgentConfig(saved: import('./app.types').AgentConfigResponse): void {
+  private applySavedAgentConfig(saved: AgentConfigResponse): void {
     this.st.patch({ agentConfig: saved });
     this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
     this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
