@@ -756,35 +756,54 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (index >= 0) this.openEditAgent(index);
   }
 
-  addAgentToList(): void {
+  async addAgentToList(): Promise<void> {
     const agent = this.sanitizeAgent(this.newAgent);
     if (!agent.provider || !agent.model || !agent.apiKey) return;
-    this.agentDraft      = [...this.agentDraft, agent];
-    this.closeAgentModal();
-    // Auto-save so the connection is active immediately
-    void this.saveAgentConfig().then(() => {
-      if (agent.status === 'active') this.st.patch({ hasKey: true });
+
+    const saved = await this.persistAgentConfig([...this.agentDraft, agent], {
+      errorMessage: 'Failed to add AI connection.',
     });
+    if (!saved) return;
+
+    this.applySavedAgentConfig(saved);
+    this.closeAgentModal();
   }
 
   async saveEditedAgent(): Promise<void> {
     if (this.editingAgentIndex === null) {
-      this.addAgentToList();
+      await this.addAgentToList();
       return;
     }
 
     const agent = this.sanitizeAgent(this.newAgent);
     if (!agent.provider || !agent.model || !agent.apiKey) return;
 
-    this.agentDraft = this.agentDraft.map((current, index) =>
+    const nextAgents = this.agentDraft.map((current, index) =>
       index === this.editingAgentIndex ? { ...current, ...agent } : current,
     );
+    const saved = await this.persistAgentConfig(nextAgents, {
+      errorMessage: 'Failed to update AI connection.',
+    });
+    if (!saved) return;
+
+    this.applySavedAgentConfig(saved);
     this.closeAgentModal();
-    await this.saveAgentConfig();
   }
 
-  removeAgent(index: number): void {
-    this.agentDraft = this.agentDraft.filter((_, i) => i !== index);
+  async removeAgent(index: number): Promise<void> {
+    const agent = this.agentDraft[index];
+    if (!agent) return;
+    if (!window.confirm(`Delete ${this.providerLabel(agent.provider)} · ${this.effectiveModel(agent.model)}?`)) {
+      return;
+    }
+
+    const nextAgents = this.agentDraft.filter((_, i) => i !== index);
+    const saved = await this.persistAgentConfig(nextAgents, {
+      errorMessage: 'Failed to delete AI connection.',
+    });
+    if (!saved) return;
+
+    this.applySavedAgentConfig(saved);
   }
 
   setAgentStatus(index: number, status: AgentStatus): void {
@@ -794,27 +813,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   async saveAgentCard(index: number): Promise<void> {
-    this.configSaving = true;
-    this.configError  = '';
-    try {
-      const saved = await this.api.saveAgentConfig({
-        memoryLimit: this.coercePositiveInt(this.memoryLimitDraft, 50),
-        agents:      this.agentDraft.map(agent => this.sanitizeAgent(agent)),
-      });
-      this.st.patch({ agentConfig: saved });
-      this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
-      this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-      const activeAgent = this.agentDraft.find(a => a.status === 'active');
-      this.st.patch({
-        hasKey: !!activeAgent,
-        provider: this.normalizeProvider(activeAgent?.provider),
-        selectedModel: this.effectiveModel(activeAgent?.model),
-      });
-    } catch (err) {
-      this.configError = err instanceof Error ? err.message : 'Failed to save.';
-    } finally {
-      this.configSaving = false;
-    }
+    const saved = await this.persistAgentConfig(this.agentDraft, {
+      errorMessage: 'Failed to save AI connection.',
+    });
+    if (!saved) return;
+
+    this.applySavedAgentConfig(saved);
   }
 
   async retryAgent(index: number): Promise<void> {
@@ -825,27 +829,44 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   async saveAgentConfig(): Promise<void> {
+    const saved = await this.persistAgentConfig(this.agentDraft, {
+      errorMessage: 'Failed to save config.',
+    });
+    if (!saved) return;
+
+    this.applySavedAgentConfig(saved);
+  }
+
+  private async persistAgentConfig(
+    agents: AgentEntry[],
+    options: { errorMessage: string },
+  ): Promise<import('./app.types').AgentConfigResponse | null> {
     this.configSaving = true;
     this.configError  = '';
     try {
-      const saved = await this.api.saveAgentConfig({
+      return await this.api.saveAgentConfig({
         memoryLimit: this.coercePositiveInt(this.memoryLimitDraft, 50),
-        agents:      this.agentDraft.map(agent => this.sanitizeAgent(agent)),
-      });
-      this.st.patch({ agentConfig: saved });
-      this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
-      this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-      const activeAgent = this.agentDraft.find(a => a.status === 'active');
-      this.st.patch({
-        hasKey: !!activeAgent,
-        provider: this.normalizeProvider(activeAgent?.provider),
-        selectedModel: this.effectiveModel(activeAgent?.model),
+        agents: agents.map(agent => this.sanitizeAgent(agent)),
       });
     } catch (err) {
-      this.configError = err instanceof Error ? err.message : 'Failed to save config.';
+      const fallback = options.errorMessage;
+      this.configError = err instanceof Error && err.message ? err.message : fallback;
+      return null;
     } finally {
       this.configSaving = false;
     }
+  }
+
+  private applySavedAgentConfig(saved: import('./app.types').AgentConfigResponse): void {
+    this.st.patch({ agentConfig: saved });
+    this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
+    this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
+    const activeAgent = this.agentDraft.find(a => a.status === 'active');
+    this.st.patch({
+      hasKey: !!activeAgent,
+      provider: this.normalizeProvider(activeAgent?.provider),
+      selectedModel: this.effectiveModel(activeAgent?.model),
+    });
   }
 
   readonly STATUS_OPTIONS: AgentStatus[] = ['active', 'idle', 'disabled', 'expired'];
