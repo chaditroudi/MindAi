@@ -24,6 +24,7 @@ interface AccessResult {
   inputTokenLimit?:  number;
   agentApiKey?:      string;
   lastInputTokens?:  number;
+  source:            'personal' | 'agent';
 }
 import {
   sessionExists,
@@ -57,12 +58,22 @@ export interface LimitWarning {
   suggestedLimit: number;
 }
 
+export interface ResponseConnectionInfo {
+  source:            'personal' | 'agent';
+  provider?:         string;
+  model?:            string;
+  agentApiKey?:      string;
+  outputTokenLimit?: number;
+  inputTokenLimit?:  number;
+}
+
 export interface AnalyticsResponse {
   intent:               string;
   sessionId:            string;
   messageId:            string;
   inputTokens:          number;
   outputTokens:         number;
+  connection?:          ResponseConnectionInfo;
   tokenLimitExceeded?:  boolean;
   outputLimitWarning?:  LimitWarning;
   inputLimitWarning?:   LimitWarning;
@@ -80,6 +91,7 @@ const ERROR_CODES = {
 } as const;
 
 const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
+const REQUEST_BASE_OVERHEAD_TOKENS = 512;
 
 function getErrorStatus(err: unknown): number | undefined {
   return (err as { statusCode?: number; status?: number }).statusCode
@@ -249,6 +261,7 @@ export class AnalyticsService {
     const memoryContext = await this.buildMemoryContext(
       req.userId, sessionId, prompt,
     );
+    const minimumInputTokens = this.estimateMinimumInputTokens(prompt, memoryContext);
 
     this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
     const t0 = Date.now();
@@ -263,23 +276,21 @@ export class AnalyticsService {
       access = this.resolveAccess(
         userKey, userModel, userProvider, agentCfg,
         settings?.responseTokenLimit ?? settings?.inputTokenLimit,
+        minimumInputTokens,
         triedAgentKeys,
       );
 
-      if (access.inputTokenLimit && access.lastInputTokens) {
-        const promptTokens  = Math.ceil(prompt.length / 4);
-        const contextTokens = memoryContext.reduce((sum, msg) => {
-          const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-          return sum + Math.ceil(text.length / 4);
-        }, 0);
-        const estimatedTokens = promptTokens + contextTokens + access.lastInputTokens;
-
+      if (access.inputTokenLimit) {
+        const estimatedTokens = Math.max(minimumInputTokens, access.lastInputTokens ?? 0);
         if (estimatedTokens > access.inputTokenLimit) {
           const currentLimit   = access.inputTokenLimit;
           const suggestedLimit = Math.min(128_000, estimatedTokens * 2);
+          const estimateBasis  = access.lastInputTokens && access.lastInputTokens > minimumInputTokens
+            ? 'recent successful request size'
+            : 'minimum request size';
           throw new HttpException(
             {
-              error:         `Estimated request size (~${estimatedTokens.toLocaleString()} tokens including system context and data) exceeds this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
+              error:         `Estimated request size (~${estimatedTokens.toLocaleString()} tokens based on ${estimateBasis}) exceeds this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
               code:          ERROR_CODES.INPUT_TOKEN_LIMIT_TOO_LOW,
               currentLimit,
               suggestedLimit,
@@ -398,6 +409,7 @@ export class AnalyticsService {
       outputTokenLimit: access.maxTokens,
       inputTokenLimit:  access.inputTokenLimit,
       agentApiKey: access.agentApiKey,
+      source: access.source,
       model: access.model, provider: access.provider,
     });
   }
@@ -408,6 +420,7 @@ export class AnalyticsService {
     userProvider:     string | undefined,
     agentCfg:         ResolvedConfig,
     userTokenLimit?:  number,
+    minimumInputTokens = 0,
     excludeApiKeys:   string[] = [],
   ): AccessResult {
     if (userKey) {
@@ -416,13 +429,16 @@ export class AnalyticsService {
         model:     userModel,
         provider:  userProvider,
         maxTokens: userTokenLimit ?? 4_000,
+        source:    'personal',
       };
     }
 
-    // Pick the first active agent not already tried
-    const active = agentCfg.agents.find(
+    const activeAgents = agentCfg.agents.filter(
       a => a.status === 'active' && !excludeApiKeys.includes(a.apiKey),
     );
+    const active =
+      activeAgents.find(a => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
+      ?? activeAgents[0];
 
     if (active?.apiKey) {
       return {
@@ -433,6 +449,7 @@ export class AnalyticsService {
         inputTokenLimit:  active.inputTokenLimit,
         agentApiKey:      active.apiKey,
         lastInputTokens:  active.lastInputTokens,
+        source:           'agent',
       };
     }
     throw Object.assign(
@@ -442,6 +459,15 @@ export class AnalyticsService {
       ),
       { code: ERROR_CODES.NO_ACTIVE_CONNECTION },
     );
+  }
+
+  private estimateMinimumInputTokens(prompt: string, memoryContext: CoreMessage[]): number {
+    const promptTokens = Math.ceil(prompt.length / 4);
+    const memoryTokens = memoryContext.reduce((sum, msg) => {
+      const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      return sum + Math.ceil(text.length / 4);
+    }, 0);
+    return promptTokens + memoryTokens + REQUEST_BASE_OVERHEAD_TOKENS;
   }
 
   private async resolveSession(req: AnalyticsRequest): Promise<{
@@ -522,11 +548,12 @@ export class AnalyticsService {
     outputTokenLimit?:  number;
     inputTokenLimit?:   number;
     agentApiKey?:       string;
+    source:             'personal' | 'agent';
     model?:             string;
     provider?:          string;
   }): AnalyticsResponse {
     const { result, prompt, apiKey, sessionId, displayIntent, userId,
-            durationMs, inputTokens, outputTokens, outputTokenLimit, inputTokenLimit, agentApiKey, model, provider } = params;
+            durationMs, inputTokens, outputTokens, outputTokenLimit, inputTokenLimit, agentApiKey, source, model, provider } = params;
 
     const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
     const outputLimitWarning: LimitWarning | undefined = tokenLimitExceeded && outputTokenLimit !== undefined
@@ -552,6 +579,14 @@ export class AnalyticsService {
     void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model, provider });
 
     const tokenFields = {
+      connection: {
+        source,
+        provider,
+        model,
+        agentApiKey,
+        outputTokenLimit,
+        inputTokenLimit,
+      },
       ...(tokenLimitExceeded ? { tokenLimitExceeded } : {}),
       ...(outputLimitWarning ? { outputLimitWarning } : {}),
       ...(inputLimitWarning  ? { inputLimitWarning  } : {}),
