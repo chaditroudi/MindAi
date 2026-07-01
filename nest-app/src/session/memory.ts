@@ -70,7 +70,9 @@ function toIsoString(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'string') {
     const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+    return Number.isNaN(parsed.getTime())
+      ? new Date().toISOString()
+      : parsed.toISOString();
   }
   return new Date().toISOString();
 }
@@ -81,9 +83,15 @@ function trimTitle(prompt: string): string {
 
 function textFromMessage(message: MastraDBMessage): string {
   return message.content.parts
-    .filter((part): part is Extract<typeof message.content.parts[number], { type: 'text'; text: string }> =>
-      part.type === 'text' && typeof part.text === 'string')
-    .map(part => part.text.trim())
+    .filter(
+      (
+        part,
+      ): part is Extract<
+        (typeof message.content.parts)[number],
+        { type: 'text'; text: string }
+      > => part.type === 'text' && typeof part.text === 'string',
+    )
+    .map((part) => part.text.trim())
     .filter(Boolean)
     .join(' ')
     .trim();
@@ -94,7 +102,9 @@ function assistantSummary(result: MessageResult): string {
     return `Dashboard: ${result.dashboardSpec?.title ?? 'chart'} — ${result.dashboardSpec?.summary ?? ''}`.trim();
   }
   if (result.type === 'report') {
-    const headings = (result.reportSections ?? []).map(section => section.heading).join(', ');
+    const headings = (result.reportSections ?? [])
+      .map((section) => section.heading)
+      .join(', ');
     return `Report sections: ${headings}`.trim();
   }
   return result.summary?.trim() || 'Inquiry answered.';
@@ -104,21 +114,27 @@ function readMessageResult(value: unknown): MessageResult | undefined {
   if (!isRecord(value)) return undefined;
 
   const type = value.type;
-  const durationMs = typeof value.durationMs === 'number' && Number.isFinite(value.durationMs) ? value.durationMs : 0;
+  const durationMs =
+    typeof value.durationMs === 'number' && Number.isFinite(value.durationMs)
+      ? value.durationMs
+      : 0;
 
   if (type === 'dashboard') {
     return {
       type,
-      dashboardSpec: isRecord(value.dashboardSpec) ? value.dashboardSpec as unknown as DashboardSpec : undefined,
+      dashboardSpec: isRecord(value.dashboardSpec)
+        ? (value.dashboardSpec as unknown as DashboardSpec)
+        : undefined,
       durationMs,
     };
   }
 
   if (type === 'report') {
     const reportSections = Array.isArray(value.reportSections)
-      ? value.reportSections.filter(isRecord).map(section => ({
-          heading: typeof section.heading === 'string' ? section.heading : 'Section',
-          body:    typeof section.body === 'string' ? section.body : '',
+      ? value.reportSections.filter(isRecord).map((section) => ({
+          heading:
+            typeof section.heading === 'string' ? section.heading : 'Section',
+          body: typeof section.body === 'string' ? section.body : '',
         }))
       : [];
     return { type, reportSections, durationMs };
@@ -135,22 +151,35 @@ function readMessageResult(value: unknown): MessageResult | undefined {
   return undefined;
 }
 
-function readConversationMessage(message: MastraDBMessage): ConversationMessage | null {
-  const uiMessage = isRecord(message.content.metadata) ? message.content.metadata.uiMessage : undefined;
+function readConversationMessage(
+  message: MastraDBMessage,
+): ConversationMessage | null {
+  const uiMessage = isRecord(message.content.metadata)
+    ? message.content.metadata.uiMessage
+    : undefined;
 
   if (isRecord(uiMessage)) {
     const role = uiMessage.role;
-    const messageId = typeof uiMessage.messageId === 'string' ? uiMessage.messageId : message.id;
+    const messageId =
+      typeof uiMessage.messageId === 'string'
+        ? uiMessage.messageId
+        : message.id;
     const createdAt = toIsoString(uiMessage.createdAt ?? message.createdAt);
 
     if (role === 'user') {
       return {
         messageId,
         role: 'user',
-        prompt: typeof uiMessage.prompt === 'string' ? uiMessage.prompt : textFromMessage(message),
-        intent: uiMessage.intent === 'dashboard' || uiMessage.intent === 'report' || uiMessage.intent === 'inquiry'
-          ? uiMessage.intent
-          : undefined,
+        prompt:
+          typeof uiMessage.prompt === 'string'
+            ? uiMessage.prompt
+            : textFromMessage(message),
+        intent:
+          uiMessage.intent === 'dashboard' ||
+          uiMessage.intent === 'report' ||
+          uiMessage.intent === 'inquiry'
+            ? uiMessage.intent
+            : undefined,
         createdAt,
       };
     }
@@ -175,7 +204,11 @@ function readConversationMessage(message: MastraDBMessage): ConversationMessage 
     return {
       messageId: message.id,
       role: 'assistant',
-      result: { type: 'inquiry', summary: textFromMessage(message), durationMs: 0 },
+      result: {
+        type: 'inquiry',
+        summary: textFromMessage(message),
+        durationMs: 0,
+      },
       createdAt: toIsoString(message.createdAt),
     };
   }
@@ -184,28 +217,42 @@ function readConversationMessage(message: MastraDBMessage): ConversationMessage 
 }
 
 function buildSessionSummary(
-  thread: { id: string; title?: string; createdAt?: Date | string; updatedAt?: Date | string; metadata?: Record<string, unknown> },
+  thread: {
+    id: string;
+    title?: string;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    metadata?: Record<string, unknown>;
+  },
   messages: ConversationMessage[],
 ): SessionSummary {
-  const firstUser = messages.find(message => message.role === 'user');
-  const metadataIntent = isRecord(thread.metadata) ? thread.metadata.intent : undefined;
-  const intent = metadataIntent === 'dashboard' || metadataIntent === 'report' || metadataIntent === 'inquiry'
-    ? metadataIntent
-    : firstUser?.intent ?? 'inquiry';
+  const firstUser = messages.find((message) => message.role === 'user');
+  const metadataIntent = isRecord(thread.metadata)
+    ? thread.metadata.intent
+    : undefined;
+  const intent =
+    metadataIntent === 'dashboard' ||
+    metadataIntent === 'report' ||
+    metadataIntent === 'inquiry'
+      ? metadataIntent
+      : (firstUser?.intent ?? 'inquiry');
 
   return {
-    sessionId:    thread.id,
-    title:        thread.title?.trim() || trimTitle(firstUser?.prompt ?? ''),
+    sessionId: thread.id,
+    title: thread.title?.trim() || trimTitle(firstUser?.prompt ?? ''),
     intent,
-    createdAt:    toIsoString(thread.createdAt),
-    updatedAt:    toIsoString(thread.updatedAt),
+    createdAt: toIsoString(thread.createdAt),
+    updatedAt: toIsoString(thread.updatedAt),
     messageCount: messages.length,
   };
 }
 
 export async function sessionExists(threadId: string): Promise<boolean> {
   try {
-    const thread = await memory.getThreadById({ threadId, resourceId: RESOURCE_ID });
+    const thread = await memory.getThreadById({
+      threadId,
+      resourceId: RESOURCE_ID,
+    });
     return Boolean(thread);
   } catch (err) {
     log('memory', `sessionExists failed (non-fatal): ${String(err)}`);
@@ -213,9 +260,16 @@ export async function sessionExists(threadId: string): Promise<boolean> {
   }
 }
 
-export async function ensureThread(threadId: string, title: string, intent?: SessionIntent): Promise<void> {
+export async function ensureThread(
+  threadId: string,
+  title: string,
+  intent?: SessionIntent,
+): Promise<void> {
   try {
-    const existing = await memory.getThreadById({ threadId, resourceId: RESOURCE_ID });
+    const existing = await memory.getThreadById({
+      threadId,
+      resourceId: RESOURCE_ID,
+    });
 
     if (existing) {
       const nextTitle = existing.title?.trim() || trimTitle(title);
@@ -223,8 +277,15 @@ export async function ensureThread(threadId: string, title: string, intent?: Ses
         ...(isRecord(existing.metadata) ? existing.metadata : {}),
         ...(intent ? { intent } : {}),
       };
-      if (nextTitle !== existing.title || JSON.stringify(nextMetadata) !== JSON.stringify(existing.metadata ?? {})) {
-        await memory.updateThread({ id: threadId, title: nextTitle, metadata: nextMetadata });
+      if (
+        nextTitle !== existing.title ||
+        JSON.stringify(nextMetadata) !== JSON.stringify(existing.metadata ?? {})
+      ) {
+        await memory.updateThread({
+          id: threadId,
+          title: nextTitle,
+          metadata: nextMetadata,
+        });
       }
       return;
     }
@@ -245,9 +306,14 @@ export async function ensureThread(threadId: string, title: string, intent?: Ses
   }
 }
 
-export async function getMemoryContext(threadId: string): Promise<CoreMessage[]> {
+export async function getMemoryContext(
+  threadId: string,
+): Promise<CoreMessage[]> {
   try {
-    const { messages } = await memory.getContext({ threadId, resourceId: RESOURCE_ID });
+    const { messages } = await memory.getContext({
+      threadId,
+      resourceId: RESOURCE_ID,
+    });
     if (!messages.length) return [];
     return convertMessages(messages).to('AIV4.Core') as CoreMessage[];
   } catch (err) {
@@ -274,7 +340,8 @@ export async function saveConversationTurn({
 
     const assistantMessage: ConversationMessage = {
       ...assistant,
-      createdAt: assistant.createdAt ?? new Date(now.getTime() + 1).toISOString(),
+      createdAt:
+        assistant.createdAt ?? new Date(now.getTime() + 1).toISOString(),
     };
 
     const messages: MastraDBMessage[] = [
@@ -318,17 +385,24 @@ export async function listSessions(): Promise<SessionSummary[]> {
     orderBy: { field: 'updatedAt', direction: 'DESC' },
   });
 
-  const summaries = await Promise.all(threads.map(async thread => {
-    const detail = await getSessionDetail(thread.id);
-    return detail?.session ?? buildSessionSummary(thread, []);
-  }));
+  const summaries = await Promise.all(
+    threads.map(async (thread) => {
+      const detail = await getSessionDetail(thread.id);
+      return detail?.session ?? buildSessionSummary(thread, []);
+    }),
+  );
 
   return summaries;
 }
 
-export async function getSessionDetail(threadId: string): Promise<SessionDetail | null> {
+export async function getSessionDetail(
+  threadId: string,
+): Promise<SessionDetail | null> {
   try {
-    const thread = await memory.getThreadById({ threadId, resourceId: RESOURCE_ID });
+    const thread = await memory.getThreadById({
+      threadId,
+      resourceId: RESOURCE_ID,
+    });
     if (!thread) return null;
 
     // Use getContext with a high lastMessages cap to fetch the full stored history.
@@ -341,7 +415,8 @@ export async function getSessionDetail(threadId: string): Promise<SessionDetail 
     });
 
     const sorted = [...messages].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
 
     const conversation = sorted

@@ -6,7 +6,12 @@ import { Model } from 'mongoose';
 import { getSources, setSourcesCache, type DataSource } from './sources-cache';
 import type { DataSourceField } from '../types';
 
-@Schema({ collection: 'sources', versionKey: false, timestamps: true, suppressReservedKeysWarning: true })
+@Schema({
+  collection: 'sources',
+  versionKey: false,
+  timestamps: true,
+  suppressReservedKeysWarning: true,
+})
 export class Source {
   @Prop({ required: true, trim: true })
   name: string;
@@ -30,15 +35,15 @@ export const SourceSchema = SchemaFactory.createForClass(Source);
 const MODE_META = {
   dashboard: {
     placeholder: 'Example: show projects by status',
-    promptFn:    (name: string) => `show a dashboard overview of ${name}`,
+    promptFn: (name: string) => `show a dashboard overview of ${name}`,
   },
   report: {
     placeholder: 'Example: generate a report on infrastructure projects',
-    promptFn:    (name: string) => `generate an analytical report for ${name}`,
+    promptFn: (name: string) => `generate an analytical report for ${name}`,
   },
   inquiry: {
     placeholder: 'Example: how many projects are in progress?',
-    promptFn:    (name: string) => `how many records are in ${name}?`,
+    promptFn: (name: string) => `how many records are in ${name}?`,
   },
 } as const;
 
@@ -57,25 +62,36 @@ export class SourcesService implements OnModuleInit {
     await this.reloadCache();
     const sources = getSources();
     if (sources.length) {
-      this.logger.log(`${sources.length} dataset(s) loaded: ${sources.map(s => s.name).join(', ')}`);
+      this.logger.log(
+        `${sources.length} dataset(s) loaded: ${sources.map((s) => s.name).join(', ')}`,
+      );
     } else {
-      this.logger.warn('No sources found — register a dataset via POST /api/sources');
+      this.logger.warn(
+        'No sources found — register a dataset via POST /api/sources',
+      );
     }
   }
 
   private async reloadCache(): Promise<void> {
-    const docs = await this.model.find({}).select('-_id -__v -createdAt -updatedAt').lean();
-    setSourcesCache(docs as unknown as DataSource[]);
+    const docs = await this.model
+      .find({})
+      .select('-_id -__v -createdAt -updatedAt')
+      .lean();
+    setSourcesCache(docs);
   }
 
   getMeta() {
     const sources = getSources();
-    const modes = (Object.entries(MODE_META) as [ModeKey, typeof MODE_META[ModeKey]][])
-      .map(([intent, meta]) => ({
-        intent,
-        placeholder: meta.placeholder,
-        prompts: sources.map(s => ({ label: s.name, prompt: meta.promptFn(s.name) })),
-      }));
+    const modes = (
+      Object.entries(MODE_META) as [ModeKey, (typeof MODE_META)[ModeKey]][]
+    ).map(([intent, meta]) => ({
+      intent,
+      placeholder: meta.placeholder,
+      prompts: sources.map((s) => ({
+        label: s.name,
+        prompt: meta.promptFn(s.name),
+      })),
+    }));
     return { modes };
   }
 
@@ -86,16 +102,21 @@ export class SourcesService implements OnModuleInit {
   async register(source: DataSource): Promise<{ ok: boolean; loaded: number }> {
     await this.model.replaceOne(
       { collection: source.collection } as Record<string, unknown>,
-      source as unknown as Record<string, unknown>,
+      source,
       { upsert: true },
     );
     await this.reloadCache();
-    this.logger.log(`registered: "${source.name}" (${source.collection}) — total: ${getSources().length}`);
+    this.logger.log(
+      `registered: "${source.name}" (${source.collection}) — total: ${getSources().length}`,
+    );
     return { ok: true, loaded: getSources().length };
   }
 
   async remove(collection: string): Promise<boolean> {
-    const r = await this.model.deleteOne({ collection } as Record<string, unknown>);
+    const r = await this.model.deleteOne({ collection } as Record<
+      string,
+      unknown
+    >);
     if (!r.deletedCount) return false;
     await this.reloadCache();
     this.logger.log(`deleted: "${collection}" — total: ${getSources().length}`);

@@ -5,18 +5,27 @@ const positiveInt = (v: string | undefined, fallback: number) => {
 
 export default () => ({
   server: {
-    port:            positiveInt(process.env['PORT'], 3000),
+    port: positiveInt(process.env['PORT'], 3000),
     shutdownTimeout: positiveInt(process.env['SHUTDOWN_TIMEOUT_MS'], 10_000),
-    allowedOrigins:  process.env['ALLOWED_ORIGINS']
-      ? process.env['ALLOWED_ORIGINS'].split(',').map(o => o.trim()).filter(Boolean)
-      : [] as string[],
+    allowedOrigins: process.env['ALLOWED_ORIGINS']
+      ? process.env['ALLOWED_ORIGINS']
+          .split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : ([] as string[]),
     apiKey: process.env['API_KEY'],
   },
   mongodb: {
-    uri:                      process.env['MONGODB_URI'] ?? process.env['DB_URL'],
-    db:                       process.env['MONGODB_DB'],
-    serverSelectionTimeoutMs: positiveInt(process.env['MONGODB_SERVER_SELECTION_TIMEOUT_MS'], 8_000),
-    connectRetries:           positiveInt(process.env['MONGODB_CONNECT_RETRIES'], 1),
-    pipelineTimeoutMs:        positiveInt(process.env['MONGODB_PIPELINE_TIMEOUT_MS'], 30_000),
+    uri: process.env['MONGODB_URI'] ?? process.env['DB_URL'],
+    db: process.env['MONGODB_DB'],
+    serverSelectionTimeoutMs: positiveInt(
+      process.env['MONGODB_SERVER_SELECTION_TIMEOUT_MS'],
+      8_000,
+    ),
+    connectRetries: positiveInt(process.env['MONGODB_CONNECT_RETRIES'], 1),
+    pipelineTimeoutMs: positiveInt(
+      process.env['MONGODB_PIPELINE_TIMEOUT_MS'],
+      30_000,
+    ),
   },
 });

@@ -8,10 +8,12 @@ import { AgentHealthService } from './agent-health.service';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: AgentConfig.name, schema: AgentConfigSchema }]),
+    MongooseModule.forFeature([
+      { name: AgentConfig.name, schema: AgentConfigSchema },
+    ]),
   ],
   controllers: [AgentConfigController],
-  providers:   [AgentConfigRepository, AgentConfigService, AgentHealthService],
-  exports:     [AgentConfigService],
+  providers: [AgentConfigRepository, AgentConfigService, AgentHealthService],
+  exports: [AgentConfigService],
 })
 export class AgentConfigModule {}

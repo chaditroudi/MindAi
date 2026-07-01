@@ -13,18 +13,21 @@ import { z } from 'zod';
 import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
-import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-config.service';
+import {
+  AgentConfigService,
+  type ResolvedConfig,
+} from '../agent-config/agent-config.service';
 import type { ExecuteResult, LlmOpts } from './pipeline.service';
 
 interface AccessResult {
-  apiKey:            string;
-  model?:            string;
-  provider?:         string;
-  maxTokens:         number;
-  inputTokenLimit?:  number;
-  agentId?:          string;
-  lastInputTokens?:  number;
-  source:            'personal' | 'agent';
+  apiKey: string;
+  model?: string;
+  provider?: string;
+  maxTokens: number;
+  inputTokenLimit?: number;
+  agentId?: string;
+  lastInputTokens?: number;
+  source: 'personal' | 'agent';
 }
 import {
   sessionExists,
@@ -36,8 +39,8 @@ import {
   type ConversationMessage,
 } from '../session/memory';
 
-
-const promptSchema = z.string()
+const promptSchema = z
+  .string()
   .min(1, 'Prompt is required')
   .max(1000, 'Prompt must be 1000 characters or fewer');
 
@@ -51,49 +54,49 @@ interface MemoryContextResult {
 }
 
 export interface AnalyticsRequest {
-  prompt:    string;
-  intent?:   string;
+  prompt: string;
+  intent?: string;
   sessionId?: string | null;
-  userId:    string;
+  userId: string;
 }
 
 export interface LimitWarning {
-  usedTokens:   number;
+  usedTokens: number;
   currentLimit: number;
   suggestedLimit: number;
 }
 
 export interface ResponseConnectionInfo {
-  source:            'personal' | 'agent';
-  provider?:         string;
-  model?:            string;
-  agentId?:          string;
+  source: 'personal' | 'agent';
+  provider?: string;
+  model?: string;
+  agentId?: string;
   outputTokenLimit?: number;
-  inputTokenLimit?:  number;
+  inputTokenLimit?: number;
 }
 
 export interface AnalyticsResponse {
-  intent:               string;
-  sessionId:            string;
-  messageId:            string;
-  inputTokens:          number;
-  outputTokens:         number;
-  connection?:          ResponseConnectionInfo;
-  tokenLimitExceeded?:  boolean;
-  outputLimitWarning?:  LimitWarning;
-  inputLimitWarning?:   LimitWarning;
-  [key: string]:        unknown;
+  intent: string;
+  sessionId: string;
+  messageId: string;
+  inputTokens: number;
+  outputTokens: number;
+  connection?: ResponseConnectionInfo;
+  tokenLimitExceeded?: boolean;
+  outputLimitWarning?: LimitWarning;
+  inputLimitWarning?: LimitWarning;
+  [key: string]: unknown;
 }
 
 // ── Error classification ───────────────────────────────────────────────────────
 
 const ERROR_CODES = {
-  INVALID_API_KEY:           'INVALID_API_KEY',
-  LLM_RATE_LIMIT:            'LLM_RATE_LIMIT',
-  MEMORY_TOKEN_LIMIT_TOO_LOW:'MEMORY_TOKEN_LIMIT_TOO_LOW',
-  TOKEN_LIMIT_TOO_LOW:       'TOKEN_LIMIT_TOO_LOW',
+  INVALID_API_KEY: 'INVALID_API_KEY',
+  LLM_RATE_LIMIT: 'LLM_RATE_LIMIT',
+  MEMORY_TOKEN_LIMIT_TOO_LOW: 'MEMORY_TOKEN_LIMIT_TOO_LOW',
+  TOKEN_LIMIT_TOO_LOW: 'TOKEN_LIMIT_TOO_LOW',
   INPUT_TOKEN_LIMIT_TOO_LOW: 'INPUT_TOKEN_LIMIT_TOO_LOW',
-  NO_ACTIVE_CONNECTION:      'NO_ACTIVE_CONNECTION',
+  NO_ACTIVE_CONNECTION: 'NO_ACTIVE_CONNECTION',
 } as const;
 
 const MIN_SUMMARY_LENGTH_FOR_MEMORY = 30;
@@ -101,8 +104,10 @@ const REQUEST_BASE_OVERHEAD_TOKENS = 512;
 const MAX_CONFIGURED_TOKEN_LIMIT = 128_000;
 
 function getErrorStatus(err: unknown): number | undefined {
-  return (err as { statusCode?: number; status?: number }).statusCode
-    ?? (err as { status?: number }).status;
+  return (
+    (err as { statusCode?: number; status?: number }).statusCode ??
+    (err as { status?: number }).status
+  );
 }
 
 function getErrorMessage(err: unknown): string {
@@ -157,11 +162,15 @@ function extractRetryDelay(err: unknown): string | null {
   const secsMatch = /(?:try\s+again|retry)\s+in\s+([\d.]+)\s*s/i.exec(message);
   if (secsMatch) {
     const secs = parseFloat(secsMatch[1]);
-    if (!isNaN(secs)) return secs < 60 ? `${Math.ceil(secs)}s` : `${Math.ceil(secs / 60)}m`;
+    if (!isNaN(secs))
+      return secs < 60 ? `${Math.ceil(secs)}s` : `${Math.ceil(secs / 60)}m`;
   }
-  const compoundMatch = /(?:try\s+again|retry)\s+in\s+(\d+)m([\d.]+)s/i.exec(message);
+  const compoundMatch = /(?:try\s+again|retry)\s+in\s+(\d+)m([\d.]+)s/i.exec(
+    message,
+  );
   if (compoundMatch) {
-    const totalMins = parseInt(compoundMatch[1], 10) + parseFloat(compoundMatch[2]) / 60;
+    const totalMins =
+      parseInt(compoundMatch[1], 10) + parseFloat(compoundMatch[2]) / 60;
     return `${Math.ceil(totalMins)}m`;
   }
   return null;
@@ -178,7 +187,10 @@ function parseRetryDelayMs(value: string | null | undefined): number | null {
 
   const compoundMatch = /^(\d+)m([\d.]+)s$/i.exec(trimmed);
   if (compoundMatch) {
-    return (parseInt(compoundMatch[1], 10) * 60_000) + Math.ceil(parseFloat(compoundMatch[2]) * 1000);
+    return (
+      parseInt(compoundMatch[1], 10) * 60_000 +
+      Math.ceil(parseFloat(compoundMatch[2]) * 1000)
+    );
   }
 
   const minutesMatch = /^([\d.]+)m$/i.exec(trimmed);
@@ -191,16 +203,18 @@ function parseRetryDelayMs(value: string | null | undefined): number | null {
 }
 
 function extractRetryDelayMs(err: unknown): number | null {
-  const headers = (err as {
-    responseHeaders?: Record<string, string | number | undefined>;
-  }).responseHeaders;
+  const headers = (
+    err as {
+      responseHeaders?: Record<string, string | number | undefined>;
+    }
+  ).responseHeaders;
 
   const fromHeaders = parseRetryDelayMs(
     String(
-      headers?.['retry-after']
-      ?? headers?.['x-ratelimit-reset-tokens']
-      ?? headers?.['x-ratelimit-reset-requests']
-      ?? '',
+      headers?.['retry-after'] ??
+        headers?.['x-ratelimit-reset-tokens'] ??
+        headers?.['x-ratelimit-reset-requests'] ??
+        '',
     ),
   );
   if (fromHeaders) return fromHeaders;
@@ -251,10 +265,12 @@ function isTruncatedOutputError(err: unknown): boolean {
   return (
     msg.includes('unexpected end of json') ||
     msg.includes('unterminated string') ||
-    (msg.includes('syntaxerror') && (msg.includes('unexpected end') || msg.includes('unexpected token'))) ||
-    (msg.includes('invalid json') && (msg.includes('unexpected') || msg.includes('unterminated'))) ||
-    msg.includes('failed_generation') ||   // Groq: JSON cut off before completion
-    msg.includes('no object generated')    // Vercel AI SDK NoObjectGeneratedError
+    (msg.includes('syntaxerror') &&
+      (msg.includes('unexpected end') || msg.includes('unexpected token'))) ||
+    (msg.includes('invalid json') &&
+      (msg.includes('unexpected') || msg.includes('unterminated'))) ||
+    msg.includes('failed_generation') || // Groq: JSON cut off before completion
+    msg.includes('no object generated') // Vercel AI SDK NoObjectGeneratedError
   );
 }
 
@@ -268,36 +284,40 @@ function roundSuggestedTokenLimit(value: number): number {
 function suggestTokenLimit(requiredTokens: number): number {
   const safeRequired = Math.max(1, Math.ceil(requiredTokens));
   const buffered = Math.max(safeRequired + 128, Math.ceil(safeRequired * 1.25));
-  return Math.min(MAX_CONFIGURED_TOKEN_LIMIT, roundSuggestedTokenLimit(buffered));
+  return Math.min(
+    MAX_CONFIGURED_TOKEN_LIMIT,
+    roundSuggestedTokenLimit(buffered),
+  );
 }
-
 
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
 
   constructor(
-    private readonly pipeline:     PipelineService,
-    private readonly memory:       MemoryService,
+    private readonly pipeline: PipelineService,
+    private readonly memory: MemoryService,
     private readonly userSettings: UserSettingsService,
-    private readonly agentConfig:  AgentConfigService,
+    private readonly agentConfig: AgentConfigService,
   ) {}
 
-
   private async executeByIntent(
-    intent:        string | undefined,
-    prompt:        string,
+    intent: string | undefined,
+    prompt: string,
     memoryContext: CoreMessage[],
-    opts:          LlmOpts,
+    opts: LlmOpts,
   ): Promise<ExecuteResult<unknown>> {
     switch (intent) {
-      case 'dashboard': return this.pipeline.executeDashboard(prompt, memoryContext, opts);
-      case 'report':    return this.pipeline.executeReport(prompt, memoryContext, opts);
-      case 'inquiry':   return this.pipeline.executeInquiry(prompt, memoryContext, opts);
-      default:          return this.pipeline.execute(prompt, memoryContext, opts);
+      case 'dashboard':
+        return this.pipeline.executeDashboard(prompt, memoryContext, opts);
+      case 'report':
+        return this.pipeline.executeReport(prompt, memoryContext, opts);
+      case 'inquiry':
+        return this.pipeline.executeInquiry(prompt, memoryContext, opts);
+      default:
+        return this.pipeline.execute(prompt, memoryContext, opts);
     }
   }
-
 
   async run(req: AnalyticsRequest): Promise<AnalyticsResponse> {
     const prompt = promptSchema.parse(req.prompt);
@@ -308,9 +328,9 @@ export class AnalyticsService {
       this.agentConfig.getConfig(),
     ]);
 
-    const userKey      = settings?.apiKey?.trim()    || null;
-    const userModel    = settings?.model?.trim()     || undefined;
-    const userProvider = settings?.provider?.trim()  || undefined;
+    const userKey = settings?.apiKey?.trim() || null;
+    const userModel = settings?.model?.trim() || undefined;
+    const userProvider = settings?.provider?.trim() || undefined;
 
     if (settings && (!userKey || !userProvider || !userModel)) {
       throw new BadRequestException(
@@ -318,23 +338,39 @@ export class AnalyticsService {
       );
     }
 
-    const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
-    const memoryCtx = await this.buildMemoryContext(req.userId, sessionId, prompt, agentCfg.memoryLimit);
+    const { sessionId, displayIntent } = await this.resolveSession({
+      ...req,
+      intent,
+    });
+    const memoryCtx = await this.buildMemoryContext(
+      req.userId,
+      sessionId,
+      prompt,
+      agentCfg.memoryLimit,
+    );
     const memoryContext = memoryCtx.messages;
-    const minimumInputTokens = this.estimateMinimumInputTokens(prompt, memoryContext);
+    const minimumInputTokens = this.estimateMinimumInputTokens(
+      prompt,
+      memoryContext,
+    );
 
-    this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
+    this.logger.log(
+      `prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`,
+    );
     const t0 = Date.now();
 
     const triedAgentIds: string[] = [];
     let access!: AccessResult;
     let result: unknown;
-    let inputTokens  = 0;
+    let inputTokens = 0;
     let outputTokens = 0;
 
     agentLoop: for (;;) {
       access = this.resolveAccess(
-        userKey, userModel, userProvider, agentCfg,
+        userKey,
+        userModel,
+        userProvider,
+        agentCfg,
         settings?.responseTokenLimit ?? settings?.inputTokenLimit,
         minimumInputTokens,
         memoryCtx.memoryTokens,
@@ -342,7 +378,9 @@ export class AnalyticsService {
       );
 
       if (access.agentId) {
-        const selectedAgent = agentCfg.agents.find(agent => agent.id === access.agentId);
+        const selectedAgent = agentCfg.agents.find(
+          (agent) => agent.id === access.agentId,
+        );
         const memoryTokenLimit = selectedAgent?.memoryTokenLimit;
         if (memoryTokenLimit && memoryCtx.memoryTokens > memoryTokenLimit) {
           const currentLimit = memoryTokenLimit;
@@ -362,21 +400,26 @@ export class AnalyticsService {
       }
 
       if (access.inputTokenLimit) {
-        const estimatedTokens = Math.max(minimumInputTokens, access.lastInputTokens ?? 0);
+        const estimatedTokens = Math.max(
+          minimumInputTokens,
+          access.lastInputTokens ?? 0,
+        );
         if (estimatedTokens > access.inputTokenLimit) {
-          const currentLimit   = access.inputTokenLimit;
+          const currentLimit = access.inputTokenLimit;
           const suggestedLimit = suggestTokenLimit(estimatedTokens);
-          const estimateBasis  = access.lastInputTokens && access.lastInputTokens > minimumInputTokens
-            ? 'recent successful request size'
-            : 'minimum request size';
+          const estimateBasis =
+            access.lastInputTokens &&
+            access.lastInputTokens > minimumInputTokens
+              ? 'recent successful request size'
+              : 'minimum request size';
           throw new HttpException(
             {
-              error:         `Estimated request size (~${estimatedTokens.toLocaleString()} tokens based on ${estimateBasis}) exceeds this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
-              code:          ERROR_CODES.INPUT_TOKEN_LIMIT_TOO_LOW,
+              error: `Estimated request size (~${estimatedTokens.toLocaleString()} tokens based on ${estimateBasis}) exceeds this connection's input limit (${currentLimit.toLocaleString()} tokens).`,
+              code: ERROR_CODES.INPUT_TOKEN_LIMIT_TOO_LOW,
               currentLimit,
               suggestedLimit,
-              usedTokens:    estimatedTokens,
-              agentId:       access.agentId,
+              usedTokens: estimatedTokens,
+              agentId: access.agentId,
             },
             HttpStatus.UNPROCESSABLE_ENTITY,
           );
@@ -387,13 +430,13 @@ export class AnalyticsService {
       for (;;) {
         try {
           const executed = await this.executeByIntent(intent, prompt, context, {
-            apiKey:    access.apiKey,
-            model:     access.model,
-            provider:  access.provider,
+            apiKey: access.apiKey,
+            model: access.model,
+            provider: access.provider,
             maxTokens: access.maxTokens,
           });
-          result       = executed.result;
-          inputTokens  = executed.usage.inputTokens;
+          result = executed.result;
+          inputTokens = executed.usage.inputTokens;
           outputTokens = executed.usage.outputTokens;
           if (access.agentId) {
             void this.agentConfig.updateRuntime(access.agentId, {
@@ -406,14 +449,16 @@ export class AnalyticsService {
         } catch (err) {
           if (isContextLengthError(err) && context.length > 0) {
             const drop = Math.max(1, Math.ceil(context.length / 2));
-            this.logger.warn(`context too long — dropping oldest ${drop} message(s) and retrying`);
+            this.logger.warn(
+              `context too long — dropping oldest ${drop} message(s) and retrying`,
+            );
             context = context.slice(drop);
             continue;
           }
           if (isStructuredOutputUnsupportedError(err)) {
             throw new BadRequestException(
               'This model does not support structured outputs required by this app. ' +
-              'Please choose a model that supports structured or JSON outputs for this provider, then try again.',
+                'Please choose a model that supports structured or JSON outputs for this provider, then try again.',
             );
           }
           if (isModelNotFoundError(err)) {
@@ -421,10 +466,13 @@ export class AnalyticsService {
               void this.agentConfig.updateRuntime(access.agentId, {
                 status: 'expired',
                 cooldownUntil: null,
-                lastFailureReason: 'Configured model is no longer available for this provider.',
+                lastFailureReason:
+                  'Configured model is no longer available for this provider.',
               });
               triedAgentIds.push(access.agentId);
-              this.logger.warn(`agent [${access.provider}/${access.model}] model not found — trying next agent`);
+              this.logger.warn(
+                `agent [${access.provider}/${access.model}] model not found — trying next agent`,
+              );
               continue agentLoop;
             }
             throw new BadRequestException(
@@ -439,11 +487,15 @@ export class AnalyticsService {
                 lastFailureReason: 'Authentication failed for this API key.',
               });
               triedAgentIds.push(access.agentId);
-              this.logger.warn(`agent [${access.provider}/${access.model}] invalid key — trying next agent`);
+              this.logger.warn(
+                `agent [${access.provider}/${access.model}] invalid key — trying next agent`,
+              );
               continue agentLoop;
             }
             throw Object.assign(
-              new UnauthorizedException('Invalid API key. Please update it in Settings or Agent Config.'),
+              new UnauthorizedException(
+                'Invalid API key. Please update it in Settings or Agent Config.',
+              ),
               { code: ERROR_CODES.INVALID_API_KEY },
             );
           }
@@ -459,7 +511,9 @@ export class AnalyticsService {
                   : 'Provider rate limit reached. Waiting before retry.',
               });
               triedAgentIds.push(access.agentId);
-              this.logger.warn(`agent [${access.provider}/${access.model}] rate-limited — trying next agent`);
+              this.logger.warn(
+                `agent [${access.provider}/${access.model}] rate-limited — trying next agent`,
+              );
               continue agentLoop;
             }
             // Personal key — no failover possible
@@ -476,15 +530,17 @@ export class AnalyticsService {
             );
           }
           if (isTruncatedOutputError(err)) {
-            const currentLimit   = access.maxTokens;
-            const suggestedLimit = suggestTokenLimit(Math.max(outputTokens || 0, currentLimit));
+            const currentLimit = access.maxTokens;
+            const suggestedLimit = suggestTokenLimit(
+              Math.max(outputTokens || 0, currentLimit),
+            );
             throw new HttpException(
               {
-                error:         `Your response token limit (${currentLimit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish.`,
-                code:          ERROR_CODES.TOKEN_LIMIT_TOO_LOW,
+                error: `Your response token limit (${currentLimit.toLocaleString()} tokens) is too low — the AI response was cut off before it could finish.`,
+                code: ERROR_CODES.TOKEN_LIMIT_TOO_LOW,
                 currentLimit,
                 suggestedLimit,
-                agentId:       access.agentId,
+                agentId: access.agentId,
               },
               HttpStatus.UNPROCESSABLE_ENTITY,
             );
@@ -495,93 +551,123 @@ export class AnalyticsService {
     }
 
     const durationMs = Date.now() - t0;
-    this.logger.log(`done in ${durationMs}ms | in:${inputTokens} out:${outputTokens}`);
+    this.logger.log(
+      `done in ${durationMs}ms | in:${inputTokens} out:${outputTokens}`,
+    );
 
     // Persist token usage (fire-and-forget) — agent budget or personal-key counter
     if (access.agentId) {
-      void this.agentConfig.trackUsage(access.agentId, inputTokens, outputTokens);
+      void this.agentConfig.trackUsage(
+        access.agentId,
+        inputTokens,
+        outputTokens,
+      );
       // Record actual token cost so the next pre-flight check uses real data
       void this.agentConfig.updateLastInputTokens(access.agentId, inputTokens);
     } else {
-      void this.userSettings.incrementUsage(req.userId, inputTokens, outputTokens);
+      void this.userSettings.incrementUsage(
+        req.userId,
+        inputTokens,
+        outputTokens,
+      );
     }
 
     return this.buildResponse({
-      result, prompt, apiKey: access.apiKey, sessionId,
-      displayIntent, userId: req.userId, durationMs,
-      inputTokens, outputTokens,
+      result,
+      prompt,
+      apiKey: access.apiKey,
+      sessionId,
+      displayIntent,
+      userId: req.userId,
+      durationMs,
+      inputTokens,
+      outputTokens,
       outputTokenLimit: access.maxTokens,
-      inputTokenLimit:  access.inputTokenLimit,
+      inputTokenLimit: access.inputTokenLimit,
       agentId: access.agentId,
       source: access.source,
-      model: access.model, provider: access.provider,
+      model: access.model,
+      provider: access.provider,
     });
   }
 
   private resolveAccess(
-    userKey:          string | null,
-    userModel:        string | undefined,
-    userProvider:     string | undefined,
-    agentCfg:         ResolvedConfig,
-    userTokenLimit?:  number,
+    userKey: string | null,
+    userModel: string | undefined,
+    userProvider: string | undefined,
+    agentCfg: ResolvedConfig,
+    userTokenLimit?: number,
     minimumInputTokens = 0,
     minimumMemoryTokens = 0,
-    excludeAgentIds:  string[] = [],
+    excludeAgentIds: string[] = [],
   ): AccessResult {
     if (userKey) {
       return {
-        apiKey:    userKey,
-        model:     userModel,
-        provider:  userProvider,
+        apiKey: userKey,
+        model: userModel,
+        provider: userProvider,
         maxTokens: userTokenLimit ?? 4_000,
-        source:    'personal',
+        source: 'personal',
       };
     }
 
     const activeAgents = agentCfg.agents.filter(
-      a => a.status === 'active' && !excludeAgentIds.includes(a.id),
+      (a) => a.status === 'active' && !excludeAgentIds.includes(a.id),
     );
     const orderedAgents = agentCfg.currentAgentId
       ? [
-          ...activeAgents.filter(agent => agent.id === agentCfg.currentAgentId),
-          ...activeAgents.filter(agent => agent.id !== agentCfg.currentAgentId),
+          ...activeAgents.filter(
+            (agent) => agent.id === agentCfg.currentAgentId,
+          ),
+          ...activeAgents.filter(
+            (agent) => agent.id !== agentCfg.currentAgentId,
+          ),
         ]
       : activeAgents;
 
     const active =
-      orderedAgents.find(a =>
-        (!a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
-        && (!a.memoryTokenLimit || a.memoryTokenLimit >= minimumMemoryTokens),
-      )
-      ?? orderedAgents.find(a => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
-      ?? orderedAgents[0];
+      orderedAgents.find(
+        (a) =>
+          (!a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens) &&
+          (!a.memoryTokenLimit || a.memoryTokenLimit >= minimumMemoryTokens),
+      ) ??
+      orderedAgents.find(
+        (a) => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens,
+      ) ??
+      orderedAgents[0];
 
     if (active?.apiKey) {
       return {
-        apiKey:           active.apiKey,
-        model:            active.model,
-        provider:         active.provider,
-        maxTokens:        active.outputTokenLimit,
-        inputTokenLimit:  active.inputTokenLimit,
-        agentId:          active.id,
-        lastInputTokens:  active.lastInputTokens,
-        source:           'agent',
+        apiKey: active.apiKey,
+        model: active.model,
+        provider: active.provider,
+        maxTokens: active.outputTokenLimit,
+        inputTokenLimit: active.inputTokenLimit,
+        agentId: active.id,
+        lastInputTokens: active.lastInputTokens,
+        source: 'agent',
       };
     }
 
     throw Object.assign(
       new UnauthorizedException(
         'No active AI connection. Your agent may be expired, disabled, or quota-exhausted. ' +
-        'Open Config to re-enable it or add a new connection.',
+          'Open Config to re-enable it or add a new connection.',
       ),
       { code: ERROR_CODES.NO_ACTIVE_CONNECTION },
     );
   }
 
-  private estimateMinimumInputTokens(prompt: string, memoryContext: CoreMessage[]): number {
+  private estimateMinimumInputTokens(
+    prompt: string,
+    memoryContext: CoreMessage[],
+  ): number {
     const promptTokens = Math.ceil(prompt.length / 4);
     const memoryTokens = memoryContext.reduce((sum, msg) => {
-      const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      const text =
+        typeof msg.content === 'string'
+          ? msg.content
+          : JSON.stringify(msg.content);
       return sum + Math.ceil(text.length / 4);
     }, 0);
     return promptTokens + memoryTokens + REQUEST_BASE_OVERHEAD_TOKENS;
@@ -604,28 +690,38 @@ export class AnalyticsService {
 
   private toDisplayIntent(intent: string | undefined): SessionIntent {
     if (intent === 'dashboard') return 'dashboard';
-    if (intent === 'report')    return 'report';
+    if (intent === 'report') return 'report';
     return 'inquiry';
   }
 
   private async buildMemoryContext(
-    userId:    string,
+    userId: string,
     sessionId: string,
-    prompt:    string,
+    prompt: string,
     memoryItemLimit: number,
   ): Promise<MemoryContextResult> {
     const sessionContext = await getMemoryContext(sessionId);
-    const longTerm       = await this.memory.getRelevantContext(userId, prompt, memoryItemLimit);
+    const longTerm = await this.memory.getRelevantContext(
+      userId,
+      prompt,
+      memoryItemLimit,
+    );
 
     const longTermMessages: CoreMessage[] = longTerm
       ? [
-          { role: 'user',      content: `[Long-term memory from previous sessions]\n${longTerm}` },
+          {
+            role: 'user',
+            content: `[Long-term memory from previous sessions]\n${longTerm}`,
+          },
           { role: 'assistant', content: 'Noted. I will use this context.' },
         ]
       : [];
 
     const memoryTokens = longTermMessages.reduce((sum, msg) => {
-      const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      const text =
+        typeof msg.content === 'string'
+          ? msg.content
+          : JSON.stringify(msg.content);
       return sum + Math.ceil(text.length / 4);
     }, 0);
 
@@ -635,74 +731,141 @@ export class AnalyticsService {
     };
   }
 
-
   private resolveType(result: unknown): ResolvedType {
-    if (result && typeof result === 'object' && 'widgets' in result)        return 'dashboard';
-    if (result && typeof result === 'object' && 'reportSections' in result) return 'report';
+    if (result && typeof result === 'object' && 'widgets' in result)
+      return 'dashboard';
+    if (result && typeof result === 'object' && 'reportSections' in result)
+      return 'report';
     return 'inquiry';
   }
 
-  private toMessageResult(type: ResolvedType, result: unknown, durationMs: number): MessageResult {
+  private toMessageResult(
+    type: ResolvedType,
+    result: unknown,
+    durationMs: number,
+  ): MessageResult {
     const r = result as Record<string, unknown>;
     switch (type) {
       case 'dashboard':
-        return { type: 'dashboard', dashboardSpec: result as MessageResult['dashboardSpec'], durationMs };
+        return {
+          type: 'dashboard',
+          dashboardSpec: result as MessageResult['dashboardSpec'],
+          durationMs,
+        };
       case 'report':
-        return { type: 'report', reportSections: (r.reportSections as MessageResult['reportSections']) ?? [], durationMs };
+        return {
+          type: 'report',
+          reportSections:
+            (r.reportSections as MessageResult['reportSections']) ?? [],
+          durationMs,
+        };
       case 'inquiry':
-        return { type: 'inquiry', summary: (r.summary as string) ?? '', durationMs };
+        return {
+          type: 'inquiry',
+          summary: (r.summary as string) ?? '',
+          durationMs,
+        };
     }
   }
 
-  private buildResponseSummary(type: ResolvedType, prompt: string, result: unknown): string {
+  private buildResponseSummary(
+    type: ResolvedType,
+    prompt: string,
+    result: unknown,
+  ): string {
     const r = result as Record<string, unknown>;
     if (type === 'inquiry') return (r.summary as string) ?? '';
-    if (type === 'report')  return `Report generated: ${prompt}`;
+    if (type === 'report') return `Report generated: ${prompt}`;
     return `Dashboard generated: ${prompt}`;
   }
 
   private buildResponse(params: {
-    result:             unknown;
-    prompt:             string;
-    apiKey:             string;
-    sessionId:          string;
-    displayIntent:      SessionIntent;
-    userId:             string;
-    durationMs:         number;
-    inputTokens:        number;
-    outputTokens:       number;
-    outputTokenLimit?:  number;
-    inputTokenLimit?:   number;
-    agentId?:           string;
-    source:             'personal' | 'agent';
-    model?:             string;
-    provider?:          string;
+    result: unknown;
+    prompt: string;
+    apiKey: string;
+    sessionId: string;
+    displayIntent: SessionIntent;
+    userId: string;
+    durationMs: number;
+    inputTokens: number;
+    outputTokens: number;
+    outputTokenLimit?: number;
+    inputTokenLimit?: number;
+    agentId?: string;
+    source: 'personal' | 'agent';
+    model?: string;
+    provider?: string;
   }): AnalyticsResponse {
-    const { result, prompt, apiKey, sessionId, displayIntent, userId,
-            durationMs, inputTokens, outputTokens, outputTokenLimit, inputTokenLimit, agentId, source, model, provider } = params;
+    const {
+      result,
+      prompt,
+      apiKey,
+      sessionId,
+      displayIntent,
+      userId,
+      durationMs,
+      inputTokens,
+      outputTokens,
+      outputTokenLimit,
+      inputTokenLimit,
+      agentId,
+      source,
+      model,
+      provider,
+    } = params;
 
-    const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
-    const outputLimitWarning: LimitWarning | undefined = tokenLimitExceeded && outputTokenLimit !== undefined
-      ? { usedTokens: outputTokens, currentLimit: outputTokenLimit, suggestedLimit: suggestTokenLimit(outputTokens) }
-      : undefined;
+    const tokenLimitExceeded =
+      outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
+    const outputLimitWarning: LimitWarning | undefined =
+      tokenLimitExceeded && outputTokenLimit !== undefined
+        ? {
+            usedTokens: outputTokens,
+            currentLimit: outputTokenLimit,
+            suggestedLimit: suggestTokenLimit(outputTokens),
+          }
+        : undefined;
 
-    const inputLimitExceeded = inputTokenLimit !== undefined && inputTokens > inputTokenLimit;
-    const inputLimitWarning: LimitWarning | undefined  = inputLimitExceeded && inputTokenLimit !== undefined
-      ? { usedTokens: inputTokens, currentLimit: inputTokenLimit, suggestedLimit: suggestTokenLimit(inputTokens) }
-      : undefined;
-    const type          = this.resolveType(result);
+    const inputLimitExceeded =
+      inputTokenLimit !== undefined && inputTokens > inputTokenLimit;
+    const inputLimitWarning: LimitWarning | undefined =
+      inputLimitExceeded && inputTokenLimit !== undefined
+        ? {
+            usedTokens: inputTokens,
+            currentLimit: inputTokenLimit,
+            suggestedLimit: suggestTokenLimit(inputTokens),
+          }
+        : undefined;
+    const type = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
-    const messageId     = randomUUID();
+    const messageId = randomUUID();
 
-    const assistantMessage: ConversationMessage & { role: 'assistant'; result: MessageResult } = {
+    const assistantMessage: ConversationMessage & {
+      role: 'assistant';
+      result: MessageResult;
+    } = {
       messageId,
-      role:      'assistant',
-      result:    messageResult,
+      role: 'assistant',
+      result: messageResult,
       createdAt: new Date().toISOString(),
     };
 
-    void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentId, model, provider });
+    void this.persistTurn({
+      sessionId,
+      prompt,
+      displayIntent,
+      assistantMessage,
+    });
+    void this.maybeExtractMemory({
+      type,
+      prompt,
+      result,
+      userId,
+      sessionId,
+      apiKey,
+      agentId,
+      model,
+      provider,
+    });
 
     const tokenFields = {
       connection: {
@@ -715,26 +878,45 @@ export class AnalyticsService {
       },
       ...(tokenLimitExceeded ? { tokenLimitExceeded } : {}),
       ...(outputLimitWarning ? { outputLimitWarning } : {}),
-      ...(inputLimitWarning  ? { inputLimitWarning  } : {}),
+      ...(inputLimitWarning ? { inputLimitWarning } : {}),
     };
 
     if (type === 'dashboard') {
-      return { intent: 'dashboard', chart: result, sessionId, messageId, inputTokens, outputTokens, ...tokenFields };
+      return {
+        intent: 'dashboard',
+        chart: result,
+        sessionId,
+        messageId,
+        inputTokens,
+        outputTokens,
+        ...tokenFields,
+      };
     }
-    return { intent: type, ...(result as object), sessionId, messageId, inputTokens, outputTokens, ...tokenFields };
+    return {
+      intent: type,
+      ...(result as object),
+      sessionId,
+      messageId,
+      inputTokens,
+      outputTokens,
+      ...tokenFields,
+    };
   }
 
   private async persistTurn(params: {
-    sessionId:        string;
-    prompt:           string;
-    displayIntent:    SessionIntent;
-    assistantMessage: ConversationMessage & { role: 'assistant'; result: MessageResult };
+    sessionId: string;
+    prompt: string;
+    displayIntent: SessionIntent;
+    assistantMessage: ConversationMessage & {
+      role: 'assistant';
+      result: MessageResult;
+    };
   }): Promise<void> {
     try {
       await saveConversationTurn({
         threadId: params.sessionId,
-        prompt:   params.prompt,
-        intent:   params.displayIntent,
+        prompt: params.prompt,
+        intent: params.displayIntent,
         assistant: params.assistantMessage,
       });
     } catch (err) {
@@ -743,17 +925,21 @@ export class AnalyticsService {
   }
 
   private async maybeExtractMemory(params: {
-    type:          ResolvedType;
-    prompt:        string;
-    result:        unknown;
-    userId:        string;
-    sessionId:     string;
-    apiKey:        string;
-    agentId?:      string;
-    model?:        string;
-    provider?:     string;
+    type: ResolvedType;
+    prompt: string;
+    result: unknown;
+    userId: string;
+    sessionId: string;
+    apiKey: string;
+    agentId?: string;
+    model?: string;
+    provider?: string;
   }): Promise<void> {
-    const summary = this.buildResponseSummary(params.type, params.prompt, params.result);
+    const summary = this.buildResponseSummary(
+      params.type,
+      params.prompt,
+      params.result,
+    );
     if (summary.length <= MIN_SUMMARY_LENGTH_FOR_MEMORY) return;
     try {
       const { inputTokens, outputTokens } = await this.memory.extractAndSave(
@@ -767,9 +953,17 @@ export class AnalyticsService {
       );
       // Credit memory tokens against whichever budget is active
       if (params.agentId) {
-        void this.agentConfig.trackUsage(params.agentId, inputTokens, outputTokens);
+        void this.agentConfig.trackUsage(
+          params.agentId,
+          inputTokens,
+          outputTokens,
+        );
       } else {
-        void this.userSettings.incrementUsage(params.userId, inputTokens, outputTokens);
+        void this.userSettings.incrementUsage(
+          params.userId,
+          inputTokens,
+          outputTokens,
+        );
       }
     } catch (err) {
       this.logger.warn(`memory.extractAndSave failed: ${err}`);

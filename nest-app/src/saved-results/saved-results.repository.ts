@@ -31,7 +31,7 @@ SavedResultSchema.index({ userId: 1, createdAt: -1 });
 
 export interface SavedResultPayload {
   userId: string;
-  title:  string;
+  title: string;
   prompt: string;
   intent: 'dashboard' | 'report' | 'inquiry';
   result: unknown;
@@ -55,12 +55,12 @@ export class SavedResultsRepository {
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
-    return docs.map(d => ({
-      id:        (d._id as Types.ObjectId).toHexString(),
-      title:     d.title,
-      prompt:    d.prompt,
-      intent:    d.intent,
-      createdAt: (d.createdAt as unknown as Date).toISOString(),
+    return docs.map((d) => ({
+      id: d._id.toHexString(),
+      title: d.title,
+      prompt: d.prompt,
+      intent: d.intent,
+      createdAt: d.createdAt.toISOString(),
     }));
   }
 
@@ -69,12 +69,12 @@ export class SavedResultsRepository {
     const doc = await this.model.findOne({ _id: id, userId }).lean();
     if (!doc) return null;
     return {
-      id:        (doc._id as Types.ObjectId).toHexString(),
-      title:     doc.title,
-      prompt:    doc.prompt,
-      intent:    doc.intent,
-      result:    doc.result,
-      createdAt: (doc.createdAt as unknown as Date).toISOString(),
+      id: doc._id.toHexString(),
+      title: doc.title,
+      prompt: doc.prompt,
+      intent: doc.intent,
+      result: doc.result,
+      createdAt: doc.createdAt.toISOString(),
     };
   }
 

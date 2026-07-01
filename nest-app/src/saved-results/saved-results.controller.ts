@@ -1,15 +1,23 @@
 import {
-  Controller, Get, Post, Delete, Param, Body, Headers,
-  NotFoundException, BadRequestException, HttpCode,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Headers,
+  NotFoundException,
+  BadRequestException,
+  HttpCode,
 } from '@nestjs/common';
 import { IsString, IsOptional, MaxLength, Allow } from 'class-validator';
 import { SavedResultsRepository } from './saved-results.repository';
 import { requireUserId } from '../common/helpers/user-id';
 
 const INTENT_MAP: Record<string, 'dashboard' | 'report' | 'inquiry'> = {
-  dashboard:        'dashboard',
-  report:           'report',
-  inquiry:          'inquiry',
+  dashboard: 'dashboard',
+  report: 'report',
+  inquiry: 'inquiry',
   general_question: 'inquiry',
 };
 
@@ -36,17 +44,14 @@ export class SavedResultsController {
     @Headers('x-user-id') rawUserId: string,
   ) {
     const userId = requireUserId(rawUserId);
-    const item   = await this.service.findOne(id, userId);
+    const item = await this.service.findOne(id, userId);
     if (!item) throw new NotFoundException('Not found.');
     return item;
   }
 
   @Post()
   @HttpCode(201)
-  async save(
-    @Body() dto: SaveDto,
-    @Headers('x-user-id') rawUserId: string,
-  ) {
+  async save(@Body() dto: SaveDto, @Headers('x-user-id') rawUserId: string) {
     const userId = requireUserId(rawUserId);
     if (dto.result === undefined || dto.result === null) {
       throw new BadRequestException('result is required');
@@ -54,7 +59,7 @@ export class SavedResultsController {
     const intent = INTENT_MAP[dto.intent] ?? 'inquiry';
     const id = await this.service.save({
       userId,
-      title:  dto.title,
+      title: dto.title,
       prompt: dto.prompt ?? '',
       intent,
       result: dto.result,
@@ -67,7 +72,7 @@ export class SavedResultsController {
     @Param('id') id: string,
     @Headers('x-user-id') rawUserId: string,
   ) {
-    const userId  = requireUserId(rawUserId);
+    const userId = requireUserId(rawUserId);
     const deleted = await this.service.remove(id, userId);
     if (!deleted) throw new NotFoundException('Not found.');
     return { ok: true };

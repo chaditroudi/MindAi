@@ -5,10 +5,12 @@ import { CacheController } from './cache.controller';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: PromptCache.name, schema: PromptCacheSchema }]),
+    MongooseModule.forFeature([
+      { name: PromptCache.name, schema: PromptCacheSchema },
+    ]),
   ],
   controllers: [CacheController],
-  providers:   [CacheService],
-  exports:     [CacheService],
+  providers: [CacheService],
+  exports: [CacheService],
 })
 export class CacheModule {}

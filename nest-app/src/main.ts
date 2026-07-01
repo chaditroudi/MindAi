@@ -14,7 +14,10 @@ async function bootstrap() {
   app.use(helmet({ contentSecurityPolicy: false }));
 
   const allowedOrigins = process.env['ALLOWED_ORIGINS']
-    ? process.env['ALLOWED_ORIGINS'].split(',').map(o => o.trim()).filter(Boolean)
+    ? process.env['ALLOWED_ORIGINS']
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean)
     : [];
 
   app.enableCors(
@@ -30,14 +33,16 @@ async function bootstrap() {
   await app.listen(port);
 
   const logger = app.get(AppLogger);
-  logger.log(`NestJS + Mongoose ready on http://localhost:${port}`, 'bootstrap');
+  logger.log(
+    `NestJS + Mongoose ready on http://localhost:${port}`,
+    'bootstrap',
+  );
 
   const memoryPath = process.env['LIBSQL_URL'] ?? 'file:./data/memory.db';
   logger.log(`Session memory: ${memoryPath}`, 'AI');
-
 }
 
-bootstrap().catch(err => {
+bootstrap().catch((err) => {
   Logger.error('Failed to start:', err, 'bootstrap');
   process.exit(1);
 });

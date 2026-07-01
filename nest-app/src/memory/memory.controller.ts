@@ -35,7 +35,7 @@ export class MemoryController {
 
   @Delete()
   async clear(@Headers('x-user-id') rawUserId: string) {
-    const userId  = requireUserId(rawUserId);
+    const userId = requireUserId(rawUserId);
     const deleted = await this.service.clear(userId);
     return { ok: true, deleted };
   }

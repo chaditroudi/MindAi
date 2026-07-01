@@ -1,4 +1,11 @@
-import { Controller, Get, Delete, Param, Query, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Delete,
+  Param,
+  Query,
+  NotFoundException,
+} from '@nestjs/common';
 import { HistoryService } from './history.service';
 
 @Controller('api/history')
@@ -8,10 +15,10 @@ export class HistoryController {
   @Get('results')
   async listResults(
     @Query('intent') intent?: string,
-    @Query('skip')   rawSkip?: string,
-    @Query('limit')  rawLimit?: string,
+    @Query('skip') rawSkip?: string,
+    @Query('limit') rawLimit?: string,
   ) {
-    const skip  = Math.max(0, Number(rawSkip) || 0);
+    const skip = Math.max(0, Number(rawSkip) || 0);
     const limit = Math.min(Number(rawLimit) || 20, 100);
     return this.history.listResults({ intent, skip, limit });
   }

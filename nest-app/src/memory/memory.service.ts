@@ -23,29 +23,35 @@ export class MemoryService {
     this.logger.log(`memory extraction ${enabled ? 'ENABLED' : 'DISABLED'}`);
   }
 
-  async getRelevantContext(userId: string, prompt: string, limit = 3): Promise<string> {
+  async getRelevantContext(
+    userId: string,
+    prompt: string,
+    limit = 3,
+  ): Promise<string> {
     try {
       const memories = await this.repo.findRelevant(userId, prompt, limit);
       if (!memories.length) return '';
 
       return memories
-        .map(m => `[${m.type.toUpperCase()}] ${m.content}`)
+        .map((m) => `[${m.type.toUpperCase()}] ${m.content}`)
         .join('\n');
     } catch (err) {
-      this.logger.warn(`getRelevantContext failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.warn(
+        `getRelevantContext failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`,
+      );
       return '';
     }
   }
 
   async extractAndSave(
-    userId:        string,
-    sessionId:     string,
-    prompt:        string,
-    summary:       string,
-    apiKey?:       string,
-    userModel?:    string,
+    userId: string,
+    sessionId: string,
+    prompt: string,
+    summary: string,
+    apiKey?: string,
+    userModel?: string,
     userProvider?: string,
-    maxTokens?:    number,
+    maxTokens?: number,
   ): Promise<{ inputTokens: number; outputTokens: number }> {
     if (!this.extractionEnabled) {
       this.logger.debug('memory extraction skipped (disabled)');
@@ -53,11 +59,20 @@ export class MemoryService {
     }
 
     const { memories, inputTokens, outputTokens } = await extractMemories(
-      prompt, summary, apiKey, userModel, userProvider, maxTokens,
+      prompt,
+      summary,
+      apiKey,
+      userModel,
+      userProvider,
+      maxTokens,
     );
     if (memories.length) {
-      await this.repo.upsert(memories.map(m => ({ ...m, userId, sessionId })));
-      this.logger.log(`saved ${memories.length} memory item(s) for user ${userId}`);
+      await this.repo.upsert(
+        memories.map((m) => ({ ...m, userId, sessionId })),
+      );
+      this.logger.log(
+        `saved ${memories.length} memory item(s) for user ${userId}`,
+      );
     }
     return { inputTokens, outputTokens };
   }

@@ -20,7 +20,15 @@ import { UserSettingsModule } from './user-settings/user-settings.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AgentConfigModule } from './agent-config/agent-config.module';
 
-const angularDist = path.join(__dirname, '..', '..', 'client', 'dist', 'mind-ui', 'browser');
+const angularDist = path.join(
+  __dirname,
+  '..',
+  '..',
+  'client',
+  'dist',
+  'mind-ui',
+  'browser',
+);
 const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
 
 @Module({
@@ -31,11 +39,13 @@ const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
         const uri = cfg.get<string>('mongodb.uri');
-        if (!uri) throw new Error('MONGODB_URI environment variable is required');
+        if (!uri)
+          throw new Error('MONGODB_URI environment variable is required');
         return {
           uri,
-          dbName:                    cfg.get<string>('mongodb.db'),
-          serverSelectionTimeoutMS:  cfg.get<number>('mongodb.serverSelectionTimeoutMs') ?? 8_000,
+          dbName: cfg.get<string>('mongodb.db'),
+          serverSelectionTimeoutMS:
+            cfg.get<number>('mongodb.serverSelectionTimeoutMs') ?? 8_000,
         };
       },
     }),
@@ -47,16 +57,18 @@ const angularBuilt = existsSync(path.join(angularDist, 'index.html'));
     AnalyticsModule,
     AgentConfigModule,
     ...(angularBuilt
-      ? [ServeStaticModule.forRoot({
-          rootPath: angularDist,
-          renderPath: /^(?!\/(?:api(?:\/|$)|health$)).*/,
-        })]
+      ? [
+          ServeStaticModule.forRoot({
+            rootPath: angularDist,
+            renderPath: /^(?!\/(?:api(?:\/|$)|health$)).*/,
+          }),
+        ]
       : []),
   ],
   controllers: [AppController],
   providers: [
     AppLogger,
-    { provide: APP_GUARD,  useClass: ApiKeyGuard },
+    { provide: APP_GUARD, useClass: ApiKeyGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })

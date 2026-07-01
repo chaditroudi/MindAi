@@ -1,13 +1,19 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { SavedResult, SavedResultSchema, SavedResultsRepository } from './saved-results.repository';
+import {
+  SavedResult,
+  SavedResultSchema,
+  SavedResultsRepository,
+} from './saved-results.repository';
 import { SavedResultsController } from './saved-results.controller';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: SavedResult.name, schema: SavedResultSchema }]),
+    MongooseModule.forFeature([
+      { name: SavedResult.name, schema: SavedResultSchema },
+    ]),
   ],
   controllers: [SavedResultsController],
-  providers:   [SavedResultsRepository],
+  providers: [SavedResultsRepository],
 })
 export class SavedResultsModule {}

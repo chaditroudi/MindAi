@@ -11,10 +11,17 @@ export class AppController {
       await mongoose.connection.db?.command({ ping: 1 });
       const sources = getSources();
       if (!sources.length) {
-        res.status(503).json({ ok: false, mongo: 'connected', sources: 0, detail: 'no data sources loaded' });
+        res.status(503).json({
+          ok: false,
+          mongo: 'connected',
+          sources: 0,
+          detail: 'no data sources loaded',
+        });
         return;
       }
-      res.status(200).json({ ok: true, mongo: 'connected', sources: sources.length });
+      res
+        .status(200)
+        .json({ ok: true, mongo: 'connected', sources: sources.length });
     } catch {
       res.status(503).json({ ok: false, mongo: 'unavailable' });
     }

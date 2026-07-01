@@ -21,9 +21,9 @@ export type ChartResultDocument = HydratedDocument<ChartResult>;
 export const ChartResultSchema = SchemaFactory.createForClass(ChartResult);
 
 export interface ChartResultEntry {
-  prompt:     string;
+  prompt: string;
   sourceName: string;
-  dashboard:  DashboardSpec;
+  dashboard: DashboardSpec;
 }
 
 @Injectable()
@@ -38,9 +38,13 @@ export class ChartResultsRepository {
   async save(entry: ChartResultEntry): Promise<void> {
     try {
       await this.model.create(entry);
-      this.logger.log(`saved | source: ${entry.sourceName} | widgets: ${entry.dashboard.widgets.length}`);
+      this.logger.log(
+        `saved | source: ${entry.sourceName} | widgets: ${entry.dashboard.widgets.length}`,
+      );
     } catch (err) {
-      this.logger.error(`save failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.error(
+        `save failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 }

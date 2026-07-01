@@ -1,6 +1,12 @@
 import {
-  Controller, Post, Get, Body, Headers,
-  HttpException, HttpStatus, Logger,
+  Controller,
+  Post,
+  Get,
+  Body,
+  Headers,
+  HttpException,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { AnalyticsService } from './analytics.service';
@@ -32,8 +38,8 @@ export class AnalyticsController {
 
     try {
       return await this.analytics.run({
-        prompt:    dto.prompt,
-        intent:    dto.intent,
+        prompt: dto.prompt,
+        intent: dto.intent,
         sessionId: dto.sessionId,
         userId,
       });

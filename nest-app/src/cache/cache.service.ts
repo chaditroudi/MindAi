@@ -60,7 +60,9 @@ export class CacheService {
       .lean<PromptCacheDocument>();
 
     if (entry) {
-      this.logger.log(`CACHE HIT  | key: ${key} | hits: ${entry.hitCount} | intent: ${intent}`);
+      this.logger.log(
+        `CACHE HIT  | key: ${key} | hits: ${entry.hitCount} | intent: ${intent}`,
+      );
     }
     return (entry?.result as T) ?? null;
   }
@@ -72,7 +74,13 @@ export class CacheService {
       {
         // Only set createdAt on first insert so the TTL index clock is never reset
         $setOnInsert: { key, createdAt: new Date() },
-        $set:         { prompt: prompt.trim(), intent, result, hitCount: 0, lastHitAt: new Date() },
+        $set: {
+          prompt: prompt.trim(),
+          intent,
+          result,
+          hitCount: 0,
+          lastHitAt: new Date(),
+        },
       },
       { upsert: true },
     );

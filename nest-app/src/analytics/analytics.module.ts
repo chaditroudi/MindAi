@@ -13,7 +13,9 @@ import { AgentConfigModule } from '../agent-config/agent-config.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: ChartResult.name, schema: ChartResultSchema }]),
+    MongooseModule.forFeature([
+      { name: ChartResult.name, schema: ChartResultSchema },
+    ]),
     CacheModule,
     HistoryModule,
     MemoryModule,
@@ -21,6 +23,6 @@ import { AgentConfigModule } from '../agent-config/agent-config.module';
     AgentConfigModule,
   ],
   controllers: [AnalyticsController],
-  providers:   [AnalyticsService, PipelineService, ChartResultsRepository],
+  providers: [AnalyticsService, PipelineService, ChartResultsRepository],
 })
 export class AnalyticsModule {}

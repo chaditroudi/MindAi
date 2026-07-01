@@ -1,93 +1,102 @@
 export type WidgetType = string;
 
 export type FieldType =
-  | 'string' | 'number' | 'integer' | 'boolean'
-  | 'date' | 'datetime' | 'enum' | 'reference'
-  | 'array' | 'object' | 'geo' | 'text';
+  | 'string'
+  | 'number'
+  | 'integer'
+  | 'boolean'
+  | 'date'
+  | 'datetime'
+  | 'enum'
+  | 'reference'
+  | 'array'
+  | 'object'
+  | 'geo'
+  | 'text';
 
 export interface DataSourceField {
-  name:          string;
-  label?:        string;
-  description?:  string;
-  type:          FieldType;
-  role?:         'dimension' | 'measure' | 'temporal' | 'id' | 'text';
-  enumValues?:   string[];
-  referenceTo?:  string;
+  name: string;
+  label?: string;
+  description?: string;
+  type: FieldType;
+  role?: 'dimension' | 'measure' | 'temporal' | 'id' | 'text';
+  enumValues?: string[];
+  referenceTo?: string;
   sampleValues?: unknown[];
-  searchable?:   boolean;
-  tags?:         string[];
+  searchable?: boolean;
+  tags?: string[];
 }
 
 export interface DataSourceJoin {
-  from:         string;
-  localField:   string;
+  from: string;
+  localField: string;
   foreignField: string;
-  as:           string;
+  as: string;
 }
 
 export interface SuggestedChart {
-  title:        string;
+  title: string;
   description?: string;
-  chartType:    WidgetType;
-  labelField?:  string;
-  valueField?:  string;
-  xField?:      string;
-  yField?:      string;
+  chartType: WidgetType;
+  labelField?: string;
+  valueField?: string;
+  xField?: string;
+  yField?: string;
   seriesField?: string;
-  agg?:         'sum' | 'avg' | 'count' | 'min' | 'max';
-  pipeline?:    Record<string, unknown>[];
+  agg?: 'sum' | 'avg' | 'count' | 'min' | 'max';
+  pipeline?: Record<string, unknown>[];
 }
 
 export interface DataSource {
-  name:              string;
-  collection:        string;
-  description?:      string;
-  tags?:             string[];
-  fields:            DataSourceField[];
-  joins?:            DataSourceJoin[];
-  suggestedCharts?:  SuggestedChart[];
+  name: string;
+  collection: string;
+  description?: string;
+  tags?: string[];
+  fields: DataSourceField[];
+  joins?: DataSourceJoin[];
+  suggestedCharts?: SuggestedChart[];
 }
 
 export type IntentKind = 'general_question' | 'report' | 'dashboard';
-export type SkillKind  = string;
+export type SkillKind = string;
 export type ExecutionSkillKind = 'aggregation' | 'chart' | 'report' | 'inquiry';
 
 export interface WidgetSpec {
-  id:       string;
-  type:     WidgetType;
-  title:    string;
+  id: string;
+  type: WidgetType;
+  title: string;
   insight?: string;
-  option?:  Record<string, unknown>;
+  option?: Record<string, unknown>;
   columns?: string[];
-  rows?:    Record<string, unknown>[];
-  value?:   number;
+  rows?: Record<string, unknown>[];
+  value?: number;
 }
 
 export interface DashboardSpec {
-  layout:  'executive' | 'analytical' | 'operational';
-  title:   string;
+  layout: 'executive' | 'analytical' | 'operational';
+  title: string;
   summary: string;
   widgets: WidgetSpec[];
 }
 
 export interface ReportSection {
   heading: string;
-  body:    string;
+  body: string;
 }
 
 export type ChartHint = string;
 
 export interface TaskQuery {
   sourceName?: string;
-  limit?:      number;
+  limit?: number;
 }
 
 export interface TaskPlan {
-  needsData:  boolean;
-  query:      TaskQuery;
-  skills:     ExecutionSkillKind[];
+  needsData: boolean;
+  query: TaskQuery;
+  skills: ExecutionSkillKind[];
   chartHint?: ChartHint;
-  strategy?:  SkillKind;
-  pipeline?:  Record<string, unknown>[];
+  strategy?: SkillKind;
+  pipeline?: Record<string, unknown>[];
   wantChart?: boolean;
 }

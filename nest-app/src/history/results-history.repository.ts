@@ -4,7 +4,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-@Schema({ collection: 'results_history', versionKey: false, timestamps: true, suppressReservedKeysWarning: true })
+@Schema({
+  collection: 'results_history',
+  versionKey: false,
+  timestamps: true,
+  suppressReservedKeysWarning: true,
+})
 export class PipelineRun {
   @Prop({ required: true, index: true })
   prompt: string;
@@ -32,12 +37,12 @@ export type PipelineRunDocument = HydratedDocument<PipelineRun>;
 export const PipelineRunSchema = SchemaFactory.createForClass(PipelineRun);
 
 export interface PipelineRunEntry {
-  prompt:     string;
-  intent:     string;
+  prompt: string;
+  intent: string;
   collection: string;
-  pipeline:   unknown[];
-  rows:       Record<string, unknown>[];
-  rowCount:   number;
+  pipeline: unknown[];
+  rows: Record<string, unknown>[];
+  rowCount: number;
   durationMs: number;
 }
 
@@ -52,7 +57,9 @@ export class ResultsHistoryRepository {
 
   async save(entry: PipelineRunEntry): Promise<string> {
     try {
-      const doc = await this.model.create(entry as unknown as Record<string, unknown>);
+      const doc = await this.model.create(
+        entry as unknown as Record<string, unknown>,
+      );
       return (doc._id as { toHexString(): string }).toHexString();
     } catch (err) {
       this.logger.error(`save failed: ${String(err)}`);

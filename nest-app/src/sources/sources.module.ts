@@ -8,7 +8,7 @@ import { SourcesController } from './sources.controller';
     MongooseModule.forFeature([{ name: Source.name, schema: SourceSchema }]),
   ],
   controllers: [SourcesController],
-  providers:   [SourcesService],
-  exports:     [SourcesService],
+  providers: [SourcesService],
+  exports: [SourcesService],
 })
 export class SourcesModule {}

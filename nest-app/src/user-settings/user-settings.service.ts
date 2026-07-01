@@ -1,20 +1,25 @@
-import { Injectable, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { UserSettingsRepository } from './user-settings.repository';
 import type { UserSettingsDocument } from './user-settings.repository';
 import { buildProviderValidationRequest, PROVIDERS } from '../ai/model';
 
 export interface UserSettingsDto {
-  apiKey:              string;
-  provider:            string;
-  model:               string;
+  apiKey: string;
+  provider: string;
+  model: string;
   responseTokenLimit?: number;
-  inputTokenLimit?:    number;
+  inputTokenLimit?: number;
 }
 
 export interface ValidationResult {
-  ok:       boolean;
+  ok: boolean;
   provider: string;
-  model:    string;
+  model: string;
 }
 
 const TIMEOUT_MS = 8_000;
@@ -31,7 +36,7 @@ async function validateApiKey(apiKey: string, provider: string): Promise<void> {
   try {
     res = await fetch(request.url, {
       headers: request.headers,
-      signal:  AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
     throw new HttpException(
@@ -47,15 +52,14 @@ async function validateApiKey(apiKey: string, provider: string): Promise<void> {
   // other non-OK = provider endpoint temporarily down → don't block save
 }
 
-
 function sanitizeSettings(dto: UserSettingsDto): UserSettingsDto {
   const responseTokenLimit = dto.responseTokenLimit ?? dto.inputTokenLimit;
   return {
-    apiKey:             dto.apiKey.trim(),
-    provider:           dto.provider.trim().toLowerCase(),
-    model:              dto.model.trim(),
+    apiKey: dto.apiKey.trim(),
+    provider: dto.provider.trim().toLowerCase(),
+    model: dto.model.trim(),
     responseTokenLimit,
-    inputTokenLimit:    responseTokenLimit,
+    inputTokenLimit: responseTokenLimit,
   };
 }
 
@@ -89,12 +93,19 @@ export class UserSettingsService {
     return this.repo.findByUser(userId);
   }
 
-  async patchTokenLimit(userId: string, responseTokenLimit: number): Promise<{ ok: boolean }> {
+  async patchTokenLimit(
+    userId: string,
+    responseTokenLimit: number,
+  ): Promise<{ ok: boolean }> {
     const ok = await this.repo.patchTokenLimit(userId, responseTokenLimit);
     return { ok };
   }
 
-  async incrementUsage(userId: string, inputTokens: number, outputTokens: number): Promise<void> {
+  async incrementUsage(
+    userId: string,
+    inputTokens: number,
+    outputTokens: number,
+  ): Promise<void> {
     if (inputTokens <= 0 && outputTokens <= 0) return;
     await this.repo.incrementUsage(userId, inputTokens, outputTokens);
   }

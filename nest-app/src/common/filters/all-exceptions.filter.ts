@@ -1,6 +1,10 @@
 import {
-  ExceptionFilter, Catch, ArgumentsHost,
-  HttpException, HttpStatus, Logger,
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
@@ -13,9 +17,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
 
-    const status = exception instanceof HttpException
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
 
     if (status >= 500) {
       this.logger.error(
@@ -23,7 +28,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
-
 
     let errorMsg: string;
     let errorCode: string | undefined;
@@ -35,15 +39,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else {
         const r = raw as Record<string, unknown>;
         const isBuiltinFormat = typeof r['statusCode'] === 'number';
-        errorMsg = isBuiltinFormat && typeof r['message'] === 'string'
-          ? (r['message'] as string)
-          : typeof r['error'] === 'string'
-            ? (r['error'] as string)
-            : 'An error occurred';
-        errorCode = typeof r['code'] === 'string' ? (r['code'] as string) : undefined;
+        errorMsg =
+          isBuiltinFormat && typeof r['message'] === 'string'
+            ? r['message']
+            : typeof r['error'] === 'string'
+              ? r['error']
+              : 'An error occurred';
+        errorCode = typeof r['code'] === 'string' ? r['code'] : undefined;
       }
       if (!errorCode) {
-        const attached = (exception as unknown as Record<string, unknown>)['code'];
+        const attached = (exception as unknown as Record<string, unknown>)[
+          'code'
+        ];
         if (typeof attached === 'string') errorCode = attached;
       }
     } else {
@@ -59,7 +66,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const raw = exception.getResponse();
       if (typeof raw === 'object' && raw !== null) {
-        for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+        for (const [key, val] of Object.entries(
+          raw as Record<string, unknown>,
+        )) {
           if (!(key in body) && key !== 'message' && key !== 'statusCode') {
             body[key] = val;
           }

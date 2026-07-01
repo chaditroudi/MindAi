@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 
@@ -11,11 +16,16 @@ export class ApiKeyGuard implements CanActivate {
 
   canActivate(ctx: ExecutionContext): boolean {
     const requiredKey = this.cfg.get<string>('server.apiKey');
-    if (!requiredKey) return true; 
+    if (!requiredKey) return true;
 
     const req = ctx.switchToHttp().getRequest<Request>();
     if (PUBLIC_EXACT.has(req.path)) return true;
-    if (PUBLIC_PREFIXES.some(p => req.path === p || req.path.startsWith(p + '/'))) return true;
+    if (
+      PUBLIC_PREFIXES.some(
+        (p) => req.path === p || req.path.startsWith(p + '/'),
+      )
+    )
+      return true;
 
     const provided = Array.isArray(req.headers['x-api-key'])
       ? req.headers['x-api-key'][0]

@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { ResultsHistoryRepository, type PipelineRunEntry } from './results-history.repository';
-import { listSessions, getSessionDetail, deleteSession } from '../session/memory';
+import {
+  ResultsHistoryRepository,
+  type PipelineRunEntry,
+} from './results-history.repository';
+import {
+  listSessions,
+  getSessionDetail,
+  deleteSession,
+} from '../session/memory';
 
 @Injectable()
 export class HistoryService {

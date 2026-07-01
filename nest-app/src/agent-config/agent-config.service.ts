@@ -9,15 +9,15 @@ import {
 } from './agent-config.repository';
 
 export interface ResolvedConfig {
-  memoryLimit:     number;
-  currentAgentId:  string | null;
-  agents:          AgentEntry[];
+  memoryLimit: number;
+  currentAgentId: string | null;
+  agents: AgentEntry[];
 }
 
 const DEFAULTS: ResolvedConfig = {
-  memoryLimit:    50,
+  memoryLimit: 50,
   currentAgentId: null,
-  agents:         [],
+  agents: [],
 };
 
 function trimOrUndefined(value?: string): string | undefined {
@@ -26,19 +26,28 @@ function trimOrUndefined(value?: string): string | undefined {
 }
 
 function positiveIntOrUndefined(value?: number): number | undefined {
-  return Number.isFinite(value) && (value as number) > 0 ? Math.round(value as number) : undefined;
+  return Number.isFinite(value) && (value as number) > 0
+    ? Math.round(value as number)
+    : undefined;
 }
 
 function nonNegativeIntOrUndefined(value?: number): number | undefined {
-  return Number.isFinite(value) && (value as number) >= 0 ? Math.round(value as number) : undefined;
+  return Number.isFinite(value) && (value as number) >= 0
+    ? Math.round(value as number)
+    : undefined;
 }
 
-function nullableTrimmedString(value?: string | null): string | null | undefined {
+function nullableTrimmedString(
+  value?: string | null,
+): string | null | undefined {
   if (value === null) return null;
   return trimOrUndefined(value ?? undefined);
 }
 
-function isCooldownActive(cooldownUntil?: Date | null, now = Date.now()): boolean {
+function isCooldownActive(
+  cooldownUntil?: Date | null,
+  now = Date.now(),
+): boolean {
   if (!cooldownUntil) return false;
   return new Date(cooldownUntil).getTime() > now;
 }
@@ -46,26 +55,26 @@ function isCooldownActive(cooldownUntil?: Date | null, now = Date.now()): boolea
 function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
   return {
     ...agent,
-    id:               trimOrUndefined(agent.id),
-    provider:         trimOrUndefined(agent.provider)?.toLowerCase(),
-    model:            trimOrUndefined(agent.model),
-    apiKey:           trimOrUndefined(agent.apiKey),
-    inputTokenLimit:  positiveIntOrUndefined(agent.inputTokenLimit),
+    id: trimOrUndefined(agent.id),
+    provider: trimOrUndefined(agent.provider)?.toLowerCase(),
+    model: trimOrUndefined(agent.model),
+    apiKey: trimOrUndefined(agent.apiKey),
+    inputTokenLimit: positiveIntOrUndefined(agent.inputTokenLimit),
     outputTokenLimit: positiveIntOrUndefined(agent.outputTokenLimit),
     memoryTokenLimit: positiveIntOrUndefined(agent.memoryTokenLimit),
-    inputTokensUsed:  nonNegativeIntOrUndefined(agent.inputTokensUsed),
+    inputTokensUsed: nonNegativeIntOrUndefined(agent.inputTokensUsed),
     outputTokensUsed: nonNegativeIntOrUndefined(agent.outputTokensUsed),
-    lastInputTokens:  nonNegativeIntOrUndefined(agent.lastInputTokens),
-    cooldownUntil:    agent.cooldownUntil ?? undefined,
+    lastInputTokens: nonNegativeIntOrUndefined(agent.lastInputTokens),
+    cooldownUntil: agent.cooldownUntil ?? undefined,
     lastFailureReason: trimOrUndefined(agent.lastFailureReason),
   };
 }
 
 function sanitizePayload(data: AgentConfigPayload): AgentConfigPayload {
   return {
-    memoryLimit:    positiveIntOrUndefined(data.memoryLimit),
+    memoryLimit: positiveIntOrUndefined(data.memoryLimit),
     currentAgentId: nullableTrimmedString(data.currentAgentId),
-    agents:         data.agents?.map(agent => sanitizeAgentEntry(agent)),
+    agents: data.agents?.map((agent) => sanitizeAgentEntry(agent)),
   };
 }
 
@@ -76,7 +85,7 @@ function ensureAgentIds(agents: Partial<AgentEntry>[] = []): {
   const seen = new Set<string>();
   let changed = false;
 
-  const normalized = agents.map(rawAgent => {
+  const normalized = agents.map((rawAgent) => {
     const agent = sanitizeAgentEntry(rawAgent);
     let id = agent.id;
 
@@ -99,19 +108,27 @@ export class AgentConfigService {
   constructor(private readonly repo: AgentConfigRepository) {}
 
   private canBeCurrentAgent(agent: AgentEntry, now = Date.now()): boolean {
-    return agent.status === 'active' && !isCooldownActive(agent.cooldownUntil, now);
+    return (
+      agent.status === 'active' && !isCooldownActive(agent.cooldownUntil, now)
+    );
   }
 
-  private pickCurrentAgentId(currentAgentId: string | null | undefined, agents: AgentEntry[]): string | null {
+  private pickCurrentAgentId(
+    currentAgentId: string | null | undefined,
+    agents: AgentEntry[],
+  ): string | null {
     const current = currentAgentId
-      ? agents.find(agent => agent.id === currentAgentId)
+      ? agents.find((agent) => agent.id === currentAgentId)
       : undefined;
 
     if (current && this.canBeCurrentAgent(current)) return current.id;
-    return agents.find(agent => this.canBeCurrentAgent(agent))?.id ?? null;
+    return agents.find((agent) => this.canBeCurrentAgent(agent))?.id ?? null;
   }
 
-  private mergeRuntimeState(incoming: Partial<AgentEntry>, existing?: AgentEntry): Partial<AgentEntry> {
+  private mergeRuntimeState(
+    incoming: Partial<AgentEntry>,
+    existing?: AgentEntry,
+  ): Partial<AgentEntry> {
     if (!existing) return incoming;
     return {
       ...existing,
@@ -122,7 +139,8 @@ export class AgentConfigService {
       memoryTokenLimit: incoming.memoryTokenLimit ?? existing.memoryTokenLimit,
       lastInputTokens: incoming.lastInputTokens ?? existing.lastInputTokens,
       cooldownUntil: incoming.cooldownUntil ?? existing.cooldownUntil,
-      lastFailureReason: incoming.lastFailureReason ?? existing.lastFailureReason,
+      lastFailureReason:
+        incoming.lastFailureReason ?? existing.lastFailureReason,
     };
   }
 
@@ -132,26 +150,29 @@ export class AgentConfigService {
 
     const normalized = ensureAgentIds(doc.agents ?? []);
     const normalizedAgents = normalized.agents as AgentEntry[];
-    const currentAgentId = this.pickCurrentAgentId(doc.currentAgentId ?? null, normalizedAgents);
+    const currentAgentId = this.pickCurrentAgentId(
+      doc.currentAgentId ?? null,
+      normalizedAgents,
+    );
     const currentChanged = currentAgentId !== (doc.currentAgentId ?? null);
 
     if (normalized.changed || currentChanged) {
       const saved = await this.repo.save({
-        memoryLimit:    doc.memoryLimit,
+        memoryLimit: doc.memoryLimit,
         currentAgentId,
-        agents:         normalized.agents,
+        agents: normalized.agents,
       });
       return {
-        memoryLimit:    saved.memoryLimit ?? DEFAULTS.memoryLimit,
+        memoryLimit: saved.memoryLimit ?? DEFAULTS.memoryLimit,
         currentAgentId: saved.currentAgentId ?? null,
-        agents:         saved.agents ?? [],
+        agents: saved.agents ?? [],
       };
     }
 
     return {
-      memoryLimit:    doc.memoryLimit ?? DEFAULTS.memoryLimit,
+      memoryLimit: doc.memoryLimit ?? DEFAULTS.memoryLimit,
       currentAgentId,
-      agents:         doc.agents ?? [],
+      agents: doc.agents ?? [],
     };
   }
 
@@ -162,20 +183,26 @@ export class AgentConfigService {
   async getCurrentAgent(): Promise<AgentEntry | null> {
     const cfg = await this.getConfig();
     if (!cfg.currentAgentId) return null;
-    return cfg.agents.find(agent => agent.id === cfg.currentAgentId) ?? null;
+    return cfg.agents.find((agent) => agent.id === cfg.currentAgentId) ?? null;
   }
 
   async save(data: AgentConfigPayload): Promise<ResolvedConfig> {
     const current = await this.getConfig();
-    const currentById = new Map(current.agents.map(agent => [agent.id, agent]));
-    const currentByApiKey = new Map(current.agents.map(agent => [agent.apiKey, agent]));
+    const currentById = new Map(
+      current.agents.map((agent) => [agent.id, agent]),
+    );
+    const currentByApiKey = new Map(
+      current.agents.map((agent) => [agent.apiKey, agent]),
+    );
     const sanitized = sanitizePayload(data);
-    const normalizedIncoming = sanitized.agents ? ensureAgentIds(sanitized.agents).agents : undefined;
-    const mergedAgents = normalizedIncoming?.map(agent =>
+    const normalizedIncoming = sanitized.agents
+      ? ensureAgentIds(sanitized.agents).agents
+      : undefined;
+    const mergedAgents = normalizedIncoming?.map((agent) =>
       this.mergeRuntimeState(
         agent,
-        (agent.id ? currentById.get(agent.id) : undefined)
-        ?? (agent.apiKey ? currentByApiKey.get(agent.apiKey) : undefined),
+        (agent.id ? currentById.get(agent.id) : undefined) ??
+          (agent.apiKey ? currentByApiKey.get(agent.apiKey) : undefined),
       ),
     );
 
@@ -191,28 +218,39 @@ export class AgentConfigService {
       ...(mergedAgents ? { agents: mergedAgents } : {}),
     });
     return {
-      memoryLimit:    doc.memoryLimit,
+      memoryLimit: doc.memoryLimit,
       currentAgentId: doc.currentAgentId ?? null,
-      agents:         doc.agents,
+      agents: doc.agents,
     };
   }
 
   async syncCurrentAgent(config?: ResolvedConfig): Promise<string | null> {
-    const resolved = config ?? await this.getConfig();
-    const nextCurrentAgentId = this.pickCurrentAgentId(resolved.currentAgentId, resolved.agents);
+    const resolved = config ?? (await this.getConfig());
+    const nextCurrentAgentId = this.pickCurrentAgentId(
+      resolved.currentAgentId,
+      resolved.agents,
+    );
     if (nextCurrentAgentId !== resolved.currentAgentId) {
       await this.repo.updateCurrentAgentId(nextCurrentAgentId);
     }
     return nextCurrentAgentId;
   }
 
-  async trackUsage(agentId: string, inputTokens: number, outputTokens: number): Promise<void> {
+  async trackUsage(
+    agentId: string,
+    inputTokens: number,
+    outputTokens: number,
+  ): Promise<void> {
     if (inputTokens <= 0 && outputTokens <= 0) return;
     await this.repo.incrementUsage(agentId, inputTokens, outputTokens);
   }
 
-  async updateLastInputTokens(agentId: string, inputTokens: number): Promise<void> {
-    if (inputTokens > 0) await this.repo.setLastInputTokens(agentId, inputTokens);
+  async updateLastInputTokens(
+    agentId: string,
+    inputTokens: number,
+  ): Promise<void> {
+    if (inputTokens > 0)
+      await this.repo.setLastInputTokens(agentId, inputTokens);
   }
 
   async updateStatus(agentId: string, status: AgentStatus): Promise<void> {
@@ -220,7 +258,10 @@ export class AgentConfigService {
     await this.syncCurrentAgent();
   }
 
-  async updateRuntime(agentId: string, update: AgentRuntimeUpdate): Promise<void> {
+  async updateRuntime(
+    agentId: string,
+    update: AgentRuntimeUpdate,
+  ): Promise<void> {
     await this.repo.updateRuntime(agentId, update);
     if (update.status !== undefined || update.cooldownUntil !== undefined) {
       await this.syncCurrentAgent();
