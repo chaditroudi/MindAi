@@ -509,18 +509,18 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private buildTokenConfirm(err: ApiError, prompt: string, intent: ModeKey) {
     const isMemory   = err.code === 'MEMORY_TOKEN_LIMIT_TOO_LOW';
     const isInput    = err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW';
-    const agentApiKey = typeof err.data?.['agentApiKey'] === 'string'
-      ? (err.data['agentApiKey'] as string)
-      : this.activeAgent()?.apiKey;
-    const memoryCurrent = agentApiKey
-      ? this.agentDraft.find(agent => agent.apiKey === agentApiKey)?.memoryTokenLimit
+    const agentId = typeof err.data?.['agentId'] === 'string'
+      ? (err.data['agentId'] as string)
+      : this.activeAgent()?.id;
+    const memoryCurrent = agentId
+      ? this.agentDraft.find(agent => agent.id === agentId)?.memoryTokenLimit
       : undefined;
     const current    = Number(err.data?.['currentLimit']) || (
       isMemory ? (memoryCurrent ?? 4_000) : isInput ? 8_000 : this.effectiveOutputTokenLimit()
     );
     const suggested  = Number(err.data?.['suggestedLimit']) || Math.min(128_000, current * 2);
     return {
-      prompt, intent, agentApiKey,
+      prompt, intent, agentId,
       memoryFix:      isMemory ? { current, suggested, used: Number(err.data?.['usedTokens']) || undefined } : undefined,
       outputFix:      !isMemory && !isInput ? { current, suggested } : undefined,
       inputFix:       !isMemory && isInput ? { current, suggested, used: Number(err.data?.['usedTokens']) || undefined } : undefined,
@@ -532,7 +532,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (!data.tokenLimitExceeded && !data.inputLimitWarning) return null;
     return {
       prompt, intent,
-      agentApiKey:     data.connection?.agentApiKey ?? this.activeAgent()?.apiKey,
+      agentId:         data.connection?.agentId ?? this.activeAgent()?.id,
       outputFix:       data.outputLimitWarning
         ? { current: data.outputLimitWarning.currentLimit, suggested: data.outputLimitWarning.suggestedLimit }
         : undefined,
@@ -715,12 +715,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     } catch { /* non-critical */ }
   }
 
-  openConfigTab(agentApiKey?: string): void {
+  openConfigTab(agentId?: string): void {
     this.showAddAgent = false;
     this.editingAgentIndex = null;
     this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
     void this.loadAgentConfig().then(() => {
-      if (agentApiKey) this.openAgentEditorByApiKey(agentApiKey);
+      if (agentId) this.openAgentEditorById(agentId);
     });
   }
 
@@ -751,12 +751,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   openConfigFromTokenWarning(): void {
-    const agentApiKey = this.st.snap.pendingTokenConfirm?.agentApiKey;
-    this.openConfigTab(agentApiKey);
+    const agentId = this.st.snap.pendingTokenConfirm?.agentId;
+    this.openConfigTab(agentId);
   }
 
-  private openAgentEditorByApiKey(apiKey: string): void {
-    const index = this.agentDraft.findIndex(agent => agent.apiKey === apiKey);
+  private openAgentEditorById(agentId: string): void {
+    const index = this.agentDraft.findIndex(agent => agent.id === agentId);
     if (index >= 0) this.openEditAgent(index);
   }
 
@@ -886,6 +886,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   private createEmptyAgent(): AgentEntry {
     return {
+      id:               '',
       status:           'active',
       provider:         '',
       model:            '',
@@ -901,6 +902,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private sanitizeAgent(agent: AgentEntry): AgentEntry {
     return {
       ...agent,
+      id:               agent.id?.trim() ?? '',
       provider:         this.effectiveProvider(agent.provider),
       model:            this.effectiveModel(agent.model),
       apiKey:           agent.apiKey.trim(),
@@ -987,8 +989,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.st.patch({ pendingTokenConfirm: null });
 
     if (conf.memoryFix) {
-      const ok = conf.agentApiKey
-        ? await this.applyAgentTokenLimit(conf.agentApiKey, 'memory', conf.memoryFix.suggested)
+      const ok = conf.agentId
+        ? await this.applyAgentTokenLimit(conf.agentId, 'memory', conf.memoryFix.suggested)
         : false;
       if (!ok) {
         this.st.setError('Could not update the memory token limit. Please adjust it manually in Config and retry.');
@@ -996,16 +998,16 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       }
     }
     if (conf.outputFix) {
-      const ok = conf.agentApiKey
-        ? await this.applyAgentTokenLimit(conf.agentApiKey, 'output', conf.outputFix.suggested)
+      const ok = conf.agentId
+        ? await this.applyAgentTokenLimit(conf.agentId, 'output', conf.outputFix.suggested)
         : await this.applyResponseTokenLimit(conf.outputFix.suggested);
       if (!ok) {
         this.st.setError('Could not update the output token limit. Please adjust it manually in Config and retry.');
         return;
       }
     }
-    if (conf.inputFix && conf.agentApiKey) {
-      const ok = await this.applyAgentTokenLimit(conf.agentApiKey, 'input', conf.inputFix.suggested);
+    if (conf.inputFix && conf.agentId) {
+      const ok = await this.applyAgentTokenLimit(conf.agentId, 'input', conf.inputFix.suggested);
       if (!ok) {
         this.st.setError('Could not update the input token limit. Please adjust it manually in Config and retry.');
         return;
@@ -1042,10 +1044,10 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  private async applyAgentTokenLimit(agentApiKey: string, kind: 'input' | 'output' | 'memory', limit: number): Promise<boolean> {
+  private async applyAgentTokenLimit(agentId: string, kind: 'input' | 'output' | 'memory', limit: number): Promise<boolean> {
     this.tokenLimitSaving = true;
     try {
-      await this.api.updateAgentTokenLimit(agentApiKey, kind, limit);
+      await this.api.updateAgentTokenLimit(agentId, kind, limit);
       // Reload from API so the card always shows the true saved value,
       // preventing stale local-draft values from diverging from the DB.
       await this.loadAgentConfig();
