@@ -19,11 +19,9 @@ export class AgentEntry {
   @Prop({ min: 1, default: 8_000  }) inputTokenLimit!:  number;
   @Prop({ min: 1, default: 8_000  }) outputTokenLimit!: number;
 
-  // Accumulated usage tracked after every request
   @Prop({ min: 0, default: 0 }) inputTokensUsed!:  number;
   @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
 
-  // Actual input tokens from the last successful request — used for pre-flight estimation
   @Prop({ min: 0, default: 0 }) lastInputTokens!: number;
 
   @Prop({ type: Date, default: null }) cooldownUntil?: Date | null;
