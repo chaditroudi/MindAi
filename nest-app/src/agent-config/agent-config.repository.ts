@@ -138,6 +138,18 @@ export class AgentConfigRepository {
     );
   }
 
+  async resetAllUsage(): Promise<void> {
+    await this.model.updateOne(
+      {},
+      {
+        $set: {
+          'agents.$[].inputTokensUsed': 0,
+          'agents.$[].outputTokensUsed': 0,
+        },
+      },
+    );
+  }
+
   async updateRuntime(
     agentId: string,
     update: AgentRuntimeUpdate,

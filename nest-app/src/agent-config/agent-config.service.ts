@@ -7,6 +7,7 @@ import {
   type AgentRuntimeUpdate,
   type AgentStatus,
 } from './agent-config.repository';
+import { isCooldownActive } from './agent-config.utils';
 
 export interface ResolvedConfig {
   memoryLimit: number;
@@ -42,14 +43,6 @@ function nullableTrimmedString(
 ): string | null | undefined {
   if (value === null) return null;
   return trimOrUndefined(value ?? undefined);
-}
-
-function isCooldownActive(
-  cooldownUntil?: Date | null,
-  now = Date.now(),
-): boolean {
-  if (!cooldownUntil) return false;
-  return new Date(cooldownUntil).getTime() > now;
 }
 
 function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
