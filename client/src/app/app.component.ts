@@ -152,7 +152,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   configError  = '';
   agentDraft:  AgentEntry[] = [];
   memoryLimitDraft = 50;
-  memoryTokenLimitDraft = 4_000;
   newAgent: AgentEntry = this.createEmptyAgent();
   showAddAgent = false;
   editingAgentIndex: number | null = null;
@@ -510,13 +509,16 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   private buildTokenConfirm(err: ApiError, prompt: string, intent: ModeKey) {
     const isMemory   = err.code === 'MEMORY_TOKEN_LIMIT_TOO_LOW';
     const isInput    = err.code === 'INPUT_TOKEN_LIMIT_TOO_LOW';
-    const current    = Number(err.data?.['currentLimit']) || (
-      isMemory ? this.memoryTokenLimitDraft : isInput ? 8_000 : this.effectiveOutputTokenLimit()
-    );
-    const suggested  = Number(err.data?.['suggestedLimit']) || Math.min(128_000, current * 2);
     const agentApiKey = typeof err.data?.['agentApiKey'] === 'string'
       ? (err.data['agentApiKey'] as string)
       : this.activeAgent()?.apiKey;
+    const memoryCurrent = agentApiKey
+      ? this.agentDraft.find(agent => agent.apiKey === agentApiKey)?.memoryTokenLimit
+      : undefined;
+    const current    = Number(err.data?.['currentLimit']) || (
+      isMemory ? (memoryCurrent ?? 4_000) : isInput ? 8_000 : this.effectiveOutputTokenLimit()
+    );
+    const suggested  = Number(err.data?.['suggestedLimit']) || Math.min(128_000, current * 2);
     return {
       prompt, intent, agentApiKey,
       memoryFix:      isMemory ? { current, suggested, used: Number(err.data?.['usedTokens']) || undefined } : undefined,
@@ -685,7 +687,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ agentConfig: cfg });
       this.agentDraft       = cfg.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(cfg.memoryLimit, 50);
-      this.memoryTokenLimitDraft = this.coercePositiveInt(cfg.memoryTokenLimit, 4_000);
       // If no personal key was found, check if any active agent exists
       if (!this.st.snap.hasKey) {
         const activeAgent = cfg.agents.find(a => a.status === 'active');
@@ -798,13 +799,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     try {
       const saved = await this.api.saveAgentConfig({
         memoryLimit: this.coercePositiveInt(this.memoryLimitDraft, 50),
-        memoryTokenLimit: this.coercePositiveInt(this.memoryTokenLimitDraft, 4_000),
         agents:      this.agentDraft.map(agent => this.sanitizeAgent(agent)),
       });
       this.st.patch({ agentConfig: saved });
       this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-      this.memoryTokenLimitDraft = this.coercePositiveInt(saved.memoryTokenLimit, 4_000);
       const activeAgent = this.agentDraft.find(a => a.status === 'active');
       this.st.patch({
         hasKey: !!activeAgent,
@@ -831,13 +830,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     try {
       const saved = await this.api.saveAgentConfig({
         memoryLimit: this.coercePositiveInt(this.memoryLimitDraft, 50),
-        memoryTokenLimit: this.coercePositiveInt(this.memoryTokenLimitDraft, 4_000),
         agents:      this.agentDraft.map(agent => this.sanitizeAgent(agent)),
       });
       this.st.patch({ agentConfig: saved });
       this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-      this.memoryTokenLimitDraft = this.coercePositiveInt(saved.memoryTokenLimit, 4_000);
       const activeAgent = this.agentDraft.find(a => a.status === 'active');
       this.st.patch({
         hasKey: !!activeAgent,
@@ -870,6 +867,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       apiKey:           '',
       inputTokenLimit:  8_000,
       outputTokenLimit: 8_000,
+      memoryTokenLimit: 4_000,
       inputTokensUsed:  0,
       outputTokensUsed: 0,
     };
@@ -883,6 +881,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       apiKey:           agent.apiKey.trim(),
       inputTokenLimit:  this.coercePositiveInt(agent.inputTokenLimit, 8_000),
       outputTokenLimit: this.coercePositiveInt(agent.outputTokenLimit, 8_000),
+      memoryTokenLimit: this.coercePositiveInt(agent.memoryTokenLimit, 4_000),
       inputTokensUsed:  this.coerceNonNegativeInt(agent.inputTokensUsed),
       outputTokensUsed: this.coerceNonNegativeInt(agent.outputTokensUsed),
     };
