@@ -3,6 +3,7 @@ import {
   AgentConfigRepository,
   type AgentConfigPayload,
   type AgentEntry,
+  type AgentRuntimeUpdate,
   type AgentStatus,
 } from './agent-config.repository';
 
@@ -40,6 +41,8 @@ function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
     inputTokensUsed:  nonNegativeIntOrUndefined(agent.inputTokensUsed),
     outputTokensUsed: nonNegativeIntOrUndefined(agent.outputTokensUsed),
     lastInputTokens:  nonNegativeIntOrUndefined(agent.lastInputTokens),
+    cooldownUntil:    agent.cooldownUntil ?? undefined,
+    lastFailureReason: trimOrUndefined(agent.lastFailureReason),
   };
 }
 
@@ -53,6 +56,19 @@ function sanitizePayload(data: AgentConfigPayload): AgentConfigPayload {
 @Injectable()
 export class AgentConfigService {
   constructor(private readonly repo: AgentConfigRepository) {}
+
+  private mergeRuntimeState(incoming: Partial<AgentEntry>, existing?: AgentEntry): Partial<AgentEntry> {
+    if (!existing) return incoming;
+    return {
+      ...existing,
+      ...incoming,
+      inputTokensUsed: incoming.inputTokensUsed ?? existing.inputTokensUsed,
+      outputTokensUsed: incoming.outputTokensUsed ?? existing.outputTokensUsed,
+      lastInputTokens: incoming.lastInputTokens ?? existing.lastInputTokens,
+      cooldownUntil: incoming.cooldownUntil ?? existing.cooldownUntil,
+      lastFailureReason: incoming.lastFailureReason ?? existing.lastFailureReason,
+    };
+  }
 
   async getConfig(): Promise<ResolvedConfig> {
     const doc = await this.repo.get();
@@ -69,7 +85,17 @@ export class AgentConfigService {
   }
 
   async save(data: AgentConfigPayload): Promise<ResolvedConfig> {
-    const doc = await this.repo.save(sanitizePayload(data));
+    const current = await this.repo.get();
+    const currentByApiKey = new Map((current?.agents ?? []).map(agent => [agent.apiKey, agent]));
+    const sanitized = sanitizePayload(data);
+    const mergedAgents = sanitized.agents?.map(agent =>
+      this.mergeRuntimeState(agent, agent.apiKey ? currentByApiKey.get(agent.apiKey) : undefined),
+    );
+
+    const doc = await this.repo.save({
+      ...sanitized,
+      ...(mergedAgents ? { agents: mergedAgents } : {}),
+    });
     return {
       memoryLimit: doc.memoryLimit,
       agents:      doc.agents,
@@ -87,6 +113,10 @@ export class AgentConfigService {
 
   async updateStatus(agentApiKey: string, status: AgentStatus): Promise<void> {
     await this.repo.updateAgentStatus(agentApiKey, status);
+  }
+
+  async updateRuntime(agentApiKey: string, update: AgentRuntimeUpdate): Promise<void> {
+    await this.repo.updateRuntime(agentApiKey, update);
   }
 
   async updateTokenLimit(

@@ -27,6 +27,9 @@ export class AgentEntry {
 
   // Actual input tokens from the last successful request — used for pre-flight estimation
   @Prop({ min: 0, default: 0 }) lastInputTokens!: number;
+
+  @Prop({ type: Date, default: null }) cooldownUntil?: Date | null;
+  @Prop({ default: '' }) lastFailureReason?: string;
 }
 export const AgentEntrySchema = SchemaFactory.createForClass(AgentEntry);
 
@@ -46,6 +49,12 @@ export const AgentConfigSchema  = SchemaFactory.createForClass(AgentConfig);
 export interface AgentConfigPayload {
   memoryLimit?: number;
   agents?:      Partial<AgentEntry>[];
+}
+
+export interface AgentRuntimeUpdate {
+  status?: AgentStatus;
+  cooldownUntil?: Date | null;
+  lastFailureReason?: string;
 }
 
 @Injectable()
@@ -107,6 +116,23 @@ export class AgentConfigRepository {
     await this.model.updateOne(
       {},
       { $set: { 'agents.$[agent].lastInputTokens': inputTokens } },
+      { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
+    );
+  }
+
+  async updateRuntime(agentApiKey: string, update: AgentRuntimeUpdate): Promise<void> {
+    const normalized = Object.fromEntries(
+      Object.entries(update).filter(([, value]) => value !== undefined),
+    );
+    if (!Object.keys(normalized).length) return;
+
+    const setPayload = Object.fromEntries(
+      Object.entries(normalized).map(([key, value]) => [`agents.$[agent].${key}`, value]),
+    );
+
+    await this.model.updateOne(
+      {},
+      { $set: setPayload },
       { arrayFilters: [{ 'agent.apiKey': agentApiKey }] },
     );
   }
