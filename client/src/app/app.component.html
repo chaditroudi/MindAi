@@ -876,9 +876,11 @@
       </div>
       <h2 class="key-modal-title">{{ isEditingAgent ? 'Edit AI connection' : 'Add AI connection' }}</h2>
       <p class="key-modal-desc">
-        {{ isEditingAgent
-          ? 'Update provider, model, API key, and token limits for this connection.'
-          : 'Provider, model and API key. Status is set automatically based on your key''s health.' }}
+        @if (isEditingAgent) {
+          Update provider, model, API key, and token limits for this connection.
+        } @else {
+          Provider, model and API key. Status is set automatically based on your key's health.
+        }
       </p>
 
       <label class="key-modal-label">Provider</label>
