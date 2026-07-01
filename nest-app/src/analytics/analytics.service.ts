@@ -666,22 +666,22 @@ export class AnalyticsService {
     outputTokens:       number;
     outputTokenLimit?:  number;
     inputTokenLimit?:   number;
-    agentApiKey?:       string;
+    agentId?:           string;
     source:             'personal' | 'agent';
     model?:             string;
     provider?:          string;
   }): AnalyticsResponse {
     const { result, prompt, apiKey, sessionId, displayIntent, userId,
-            durationMs, inputTokens, outputTokens, outputTokenLimit, inputTokenLimit, agentApiKey, source, model, provider } = params;
+            durationMs, inputTokens, outputTokens, outputTokenLimit, inputTokenLimit, agentId, source, model, provider } = params;
 
     const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
     const outputLimitWarning: LimitWarning | undefined = tokenLimitExceeded && outputTokenLimit !== undefined
-      ? { usedTokens: outputTokens, currentLimit: outputTokenLimit, suggestedLimit: Math.min(128_000, outputTokenLimit * 2) }
+      ? { usedTokens: outputTokens, currentLimit: outputTokenLimit, suggestedLimit: suggestTokenLimit(outputTokens) }
       : undefined;
 
     const inputLimitExceeded = inputTokenLimit !== undefined && inputTokens > inputTokenLimit;
     const inputLimitWarning: LimitWarning | undefined  = inputLimitExceeded && inputTokenLimit !== undefined
-      ? { usedTokens: inputTokens, currentLimit: inputTokenLimit, suggestedLimit: Math.min(128_000, inputTokens * 2) }
+      ? { usedTokens: inputTokens, currentLimit: inputTokenLimit, suggestedLimit: suggestTokenLimit(inputTokens) }
       : undefined;
     const type          = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
@@ -695,14 +695,14 @@ export class AnalyticsService {
     };
 
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
-    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model, provider });
+    void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentId, model, provider });
 
     const tokenFields = {
       connection: {
         source,
         provider,
         model,
-        agentApiKey,
+        agentId,
         outputTokenLimit,
         inputTokenLimit,
       },
@@ -742,7 +742,7 @@ export class AnalyticsService {
     userId:        string;
     sessionId:     string;
     apiKey:        string;
-    agentApiKey?:  string;
+    agentId?:      string;
     model?:        string;
     provider?:     string;
   }): Promise<void> {
@@ -759,8 +759,8 @@ export class AnalyticsService {
         params.provider,
       );
       // Credit memory tokens against whichever budget is active
-      if (params.agentApiKey) {
-        void this.agentConfig.trackUsage(params.agentApiKey, inputTokens, outputTokens);
+      if (params.agentId) {
+        void this.agentConfig.trackUsage(params.agentId, inputTokens, outputTokens);
       } else {
         void this.userSettings.incrementUsage(params.userId, inputTokens, outputTokens);
       }

@@ -73,7 +73,7 @@ export interface ConnectionInfo {
   source:            ConnectionSource;
   provider?:         string;
   model?:            string;
-  agentApiKey?:      string;
+  agentId?:          string;
   outputTokenLimit?: number;
   inputTokenLimit?:  number;
 }
@@ -159,6 +159,7 @@ export interface MemoryConfigResponse {
 export type AgentStatus = 'active' | 'disabled' | 'expired' | 'idle';
 
 export interface AgentEntry {
+  id:               string;
   status:           AgentStatus;
   provider:         string;
   model:            string;

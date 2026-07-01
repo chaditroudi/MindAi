@@ -30,7 +30,7 @@ export interface AppState {
   pendingTokenConfirm: {
     prompt:          string;
     intent:          ModeKey;
-    agentApiKey?:    string;
+    agentId?:        string;
     memoryFix?:      { current: number; suggested: number; used?: number };
     outputFix?:      { current: number; suggested: number };
     inputFix?:       { current: number; suggested: number; used?: number };
