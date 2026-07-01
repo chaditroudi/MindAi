@@ -214,11 +214,11 @@
                     <button class="agent-action-btn agent-action-btn--primary" (click)="setAgentStatus(i, 'active'); saveAgentCard(i)">Enable</button>
                   }
                   @if (agent.status === 'expired') {
-                    <span class="agent-status-hint">{{ agentStatusHint(agent) }}</span>
+                    <span class="agent-status-hint">Key invalid or quota exhausted —</span>
                     <button class="agent-action-btn agent-action-btn--primary" (click)="retryAgent(i)">Retry</button>
                   }
                   @if (agent.status === 'idle') {
-                    <span class="agent-status-hint">{{ agentStatusHint(agent) }}</span>
+                    <span class="agent-status-hint">Rate limited — auto-recovering…</span>
                   }
                 </div>
 
@@ -244,17 +244,6 @@
                   <span>↑ {{ agent.inputTokensUsed.toLocaleString() }} input used</span>
                   <span>↓ {{ agent.outputTokensUsed.toLocaleString() }} output used</span>
                 </div>
-
-                @if (agent.lastFailureReason || agent.lastHealthyAt || agent.lastCheckedAt || agent.lastUsedAt || (agent.consecutiveFailures ?? 0) > 0) {
-                  <div class="config-agent-health">
-                    @if (agent.status === 'active' && agent.lastFailureReason) {
-                      <div class="config-agent-health-line">{{ agent.lastFailureReason }}</div>
-                    }
-                    @if (agentHealthMeta(agent)) {
-                      <div class="config-agent-health-meta">{{ agentHealthMeta(agent) }}</div>
-                    }
-                  </div>
-                }
 
               </div>
             }
