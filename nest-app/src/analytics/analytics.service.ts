@@ -282,12 +282,12 @@ export class AnalyticsService {
           const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
           return sum + Math.ceil(text.length / 4);
         }, 0);
-        // System instructions + SQL query results injected by the pipeline.
-        // Overhead varies by intent: dashboard fetches data for many widgets,
-        // report builds multiple sections, inquiry answers a single focused question.
-        const pipelineOverhead = intent === 'dashboard' ? 10_000
-                               : intent === 'report'    ?  7_000
-                               :                           4_000; // inquiry / general
+        // Fully dynamic: use actual input tokens consumed by the last successful
+        // request on this agent as the pipeline overhead estimate. On the first
+        // call ever (no history), overhead = 0 — the estimate is prompt + context
+        // only and the request is allowed through; the post-response inputTokenWarning
+        // will show the real usage so the user can adjust their limit.
+        const pipelineOverhead = access.lastInputTokens ?? 0;
         const estimatedTokens  = promptTokens + contextTokens + pipelineOverhead;
 
         if (estimatedTokens > access.inputTokenLimit) {
@@ -403,6 +403,8 @@ export class AnalyticsService {
     // Persist token usage (fire-and-forget) — agent budget or personal-key counter
     if (access.agentApiKey) {
       void this.agentConfig.trackUsage(access.agentApiKey, inputTokens, outputTokens);
+      // Record actual token cost so the next pre-flight check uses real data
+      void this.agentConfig.updateLastInputTokens(access.agentApiKey, inputTokens);
     } else {
       void this.userSettings.incrementUsage(req.userId, inputTokens, outputTokens);
     }
@@ -448,6 +450,7 @@ export class AnalyticsService {
         maxTokens:        active.outputTokenLimit,
         inputTokenLimit:  active.inputTokenLimit,
         agentApiKey:      active.apiKey,
+        lastInputTokens:  active.lastInputTokens,
       };
     }
     throw Object.assign(
