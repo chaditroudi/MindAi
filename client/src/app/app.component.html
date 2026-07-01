@@ -172,17 +172,6 @@
                 </button>
               </div>
             </div>
-            <div class="config-field">
-              <label class="config-label">Memory token limit</label>
-              <div class="config-token-row">
-                <input class="config-input config-token-input"
-                  type="number" min="1" max="128000" step="1"
-                  [(ngModel)]="memoryTokenLimitDraft" />
-                <button class="config-token-apply-btn" (click)="saveAgentConfig()" [disabled]="configSaving">
-                  {{ configSaving ? '…' : 'Apply' }}
-                </button>
-              </div>
-            </div>
           </section>
 
           <section class="config-section">
@@ -244,6 +233,11 @@
                     Out:
                     <input class="agent-limit-input" type="number" min="1" max="128000"
                       [(ngModel)]="agent.outputTokenLimit" />
+                  </label>
+                  <label class="agent-limit-label" title="Max memory tokens allowed for retrieved memory context">
+                    Mem:
+                    <input class="agent-limit-input" type="number" min="1" max="128000"
+                      [(ngModel)]="agent.memoryTokenLimit" />
                   </label>
                   <button class="agent-save-btn" (click)="saveAgentCard(i)" [disabled]="configSaving">
                     {{ configSaving ? '…' : 'Save' }}

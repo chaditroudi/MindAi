@@ -962,7 +962,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.st.patch({ pendingTokenConfirm: null });
 
     if (conf.memoryFix) {
-      const ok = await this.applyMemoryTokenLimit(conf.memoryFix.suggested);
+      const ok = conf.agentApiKey
+        ? await this.applyAgentTokenLimit(conf.agentApiKey, 'memory', conf.memoryFix.suggested)
+        : false;
       if (!ok) {
         this.st.setError('Could not update the memory token limit. Please adjust it manually in Config and retry.');
         return;
@@ -1015,33 +1017,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
-  private async applyMemoryTokenLimit(limit: number): Promise<boolean> {
-    this.tokenLimitSaving = true;
-    try {
-      const saved = await this.api.saveAgentConfig({
-        memoryLimit: this.coercePositiveInt(this.memoryLimitDraft, 50),
-        memoryTokenLimit: limit,
-        agents: this.agentDraft.map(agent => this.sanitizeAgent(agent)),
-      });
-      this.st.patch({ agentConfig: saved });
-      this.agentDraft = saved.agents.map(agent => this.sanitizeAgent(agent));
-      this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
-      this.memoryTokenLimitDraft = this.coercePositiveInt(saved.memoryTokenLimit, 4_000);
-      const activeAgent = this.agentDraft.find(a => a.status === 'active');
-      this.st.patch({
-        hasKey: !!activeAgent,
-        provider: this.normalizeProvider(activeAgent?.provider),
-        selectedModel: this.effectiveModel(activeAgent?.model),
-      });
-      return true;
-    } catch {
-      return false;
-    } finally {
-      this.tokenLimitSaving = false;
-    }
-  }
-
-  private async applyAgentTokenLimit(agentApiKey: string, kind: 'input' | 'output', limit: number): Promise<boolean> {
+  private async applyAgentTokenLimit(agentApiKey: string, kind: 'input' | 'output' | 'memory', limit: number): Promise<boolean> {
     this.tokenLimitSaving = true;
     try {
       await this.api.updateAgentTokenLimit(agentApiKey, kind, limit);
