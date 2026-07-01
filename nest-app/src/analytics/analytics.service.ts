@@ -52,15 +52,22 @@ export interface AnalyticsRequest {
   userId:    string;
 }
 
+export interface LimitWarning {
+  usedTokens:   number;
+  currentLimit: number;
+  suggestedLimit: number;
+}
+
 export interface AnalyticsResponse {
-  intent:              string;
-  sessionId:           string;
-  messageId:           string;
-  inputTokens:         number;
-  outputTokens:        number;
-  tokenLimitExceeded?: boolean;
-  tokenWarning?:       string;
-  [key: string]:       unknown;
+  intent:               string;
+  sessionId:            string;
+  messageId:            string;
+  inputTokens:          number;
+  outputTokens:         number;
+  tokenLimitExceeded?:  boolean;
+  outputLimitWarning?:  LimitWarning;
+  inputLimitWarning?:   LimitWarning;
+  [key: string]:        unknown;
 }
 
 // ── Error classification ───────────────────────────────────────────────────────
@@ -526,15 +533,13 @@ export class AnalyticsService {
             durationMs, inputTokens, outputTokens, outputTokenLimit, inputTokenLimit, agentApiKey, model, provider } = params;
 
     const tokenLimitExceeded = outputTokenLimit !== undefined && outputTokens >= outputTokenLimit;
-    const tokenWarning = tokenLimitExceeded
-      ? `Response reached your configured response token limit (${outputTokens}/${outputTokenLimit}). ` +
-        `The answer may be incomplete. Do you wish to continue with a higher limit?`
+    const outputLimitWarning: LimitWarning | undefined = tokenLimitExceeded && outputTokenLimit !== undefined
+      ? { usedTokens: outputTokens, currentLimit: outputTokenLimit, suggestedLimit: Math.min(128_000, outputTokenLimit * 2) }
       : undefined;
 
     const inputLimitExceeded = inputTokenLimit !== undefined && inputTokens > inputTokenLimit;
-    const inputTokenWarning  = inputLimitExceeded
-      ? `This request used ${inputTokens.toLocaleString()} input tokens, but your connection's input limit is set to ${inputTokenLimit.toLocaleString()}. ` +
-        `Raise the In limit on your agent card to avoid queries being blocked.`
+    const inputLimitWarning: LimitWarning | undefined  = inputLimitExceeded && inputTokenLimit !== undefined
+      ? { usedTokens: inputTokens, currentLimit: inputTokenLimit, suggestedLimit: Math.min(128_000, inputTokens * 2) }
       : undefined;
     const type          = this.resolveType(result);
     const messageResult = this.toMessageResult(type, result, durationMs);
@@ -550,13 +555,16 @@ export class AnalyticsService {
     void this.persistTurn({ sessionId, prompt, displayIntent, assistantMessage });
     void this.maybeExtractMemory({ type, prompt, result, userId, sessionId, apiKey, agentApiKey, model, provider });
 
-    const tokenFields      = tokenLimitExceeded  ? { tokenLimitExceeded, tokenWarning }  : {};
-    const inputTokenFields = inputLimitExceeded  ? { inputTokenWarning }                  : {};
+    const tokenFields = {
+      ...(tokenLimitExceeded ? { tokenLimitExceeded } : {}),
+      ...(outputLimitWarning ? { outputLimitWarning } : {}),
+      ...(inputLimitWarning  ? { inputLimitWarning  } : {}),
+    };
 
     if (type === 'dashboard') {
-      return { intent: 'dashboard', chart: result, sessionId, messageId, inputTokens, outputTokens, ...tokenFields, ...inputTokenFields };
+      return { intent: 'dashboard', chart: result, sessionId, messageId, inputTokens, outputTokens, ...tokenFields };
     }
-    return { intent: type, ...(result as object), sessionId, messageId, inputTokens, outputTokens, ...tokenFields, ...inputTokenFields };
+    return { intent: type, ...(result as object), sessionId, messageId, inputTokens, outputTokens, ...tokenFields };
   }
 
   private async persistTurn(params: {

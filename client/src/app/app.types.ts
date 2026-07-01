@@ -61,6 +61,12 @@ export interface MessageResult {
 
 // ─── Conversation messages ────────────────────────────────────────────────────
 
+export interface LimitWarning {
+  usedTokens:    number;
+  currentLimit:  number;
+  suggestedLimit: number;
+}
+
 export interface ConversationMessage {
   messageId:           string;
   role:                'user' | 'assistant';
@@ -71,8 +77,6 @@ export interface ConversationMessage {
   inputTokens?:       number;
   outputTokens?:      number;
   tokenLimitExceeded?: boolean;
-  tokenWarning?:       string;
-  inputTokenWarning?:  string;
   outputTokenLimit?:   number;
 }
 
