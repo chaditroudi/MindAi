@@ -9,13 +9,11 @@ import {
 
 export interface ResolvedConfig {
   memoryLimit: number;
-  memoryTokenLimit: number;
   agents: AgentEntry[];
 }
 
 const DEFAULTS: ResolvedConfig = {
   memoryLimit: 50,
-  memoryTokenLimit: 4_000,
   agents: [],
 };
 
@@ -40,6 +38,7 @@ function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
     apiKey:           trimOrUndefined(agent.apiKey),
     inputTokenLimit:  positiveIntOrUndefined(agent.inputTokenLimit),
     outputTokenLimit: positiveIntOrUndefined(agent.outputTokenLimit),
+    memoryTokenLimit: positiveIntOrUndefined(agent.memoryTokenLimit),
     inputTokensUsed:  nonNegativeIntOrUndefined(agent.inputTokensUsed),
     outputTokensUsed: nonNegativeIntOrUndefined(agent.outputTokensUsed),
     lastInputTokens:  nonNegativeIntOrUndefined(agent.lastInputTokens),
@@ -51,7 +50,6 @@ function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
 function sanitizePayload(data: AgentConfigPayload): AgentConfigPayload {
   return {
     memoryLimit: positiveIntOrUndefined(data.memoryLimit),
-    memoryTokenLimit: positiveIntOrUndefined(data.memoryTokenLimit),
     agents: data.agents?.map(agent => sanitizeAgentEntry(agent)),
   };
 }
@@ -67,6 +65,7 @@ export class AgentConfigService {
       ...incoming,
       inputTokensUsed: incoming.inputTokensUsed ?? existing.inputTokensUsed,
       outputTokensUsed: incoming.outputTokensUsed ?? existing.outputTokensUsed,
+      memoryTokenLimit: incoming.memoryTokenLimit ?? existing.memoryTokenLimit,
       lastInputTokens: incoming.lastInputTokens ?? existing.lastInputTokens,
       cooldownUntil: incoming.cooldownUntil ?? existing.cooldownUntil,
       lastFailureReason: incoming.lastFailureReason ?? existing.lastFailureReason,
@@ -78,7 +77,6 @@ export class AgentConfigService {
     if (!doc) return { ...DEFAULTS };
     return {
       memoryLimit: doc.memoryLimit ?? DEFAULTS.memoryLimit,
-      memoryTokenLimit: doc.memoryTokenLimit ?? DEFAULTS.memoryTokenLimit,
       agents: doc.agents ?? [],
     };
   }
@@ -102,7 +100,6 @@ export class AgentConfigService {
     });
     return {
       memoryLimit: doc.memoryLimit,
-      memoryTokenLimit: doc.memoryTokenLimit ?? DEFAULTS.memoryTokenLimit,
       agents: doc.agents,
     };
   }
@@ -126,7 +123,7 @@ export class AgentConfigService {
 
   async updateTokenLimit(
     agentApiKey: string,
-    field: 'inputTokenLimit' | 'outputTokenLimit',
+    field: 'inputTokenLimit' | 'outputTokenLimit' | 'memoryTokenLimit',
     value: number,
   ): Promise<void> {
     await this.repo.updateTokenLimit(agentApiKey, field, value);

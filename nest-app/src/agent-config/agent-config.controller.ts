@@ -16,13 +16,13 @@ class AgentEntryDto {
 
   @IsOptional() @IsInt() @Min(1) inputTokenLimit?:  number;
   @IsOptional() @IsInt() @Min(1) outputTokenLimit?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(128_000) memoryTokenLimit?: number;
   @IsOptional() @IsInt() @Min(0) inputTokensUsed?:  number;
   @IsOptional() @IsInt() @Min(0) outputTokensUsed?: number;
 }
 
 class SaveAgentConfigDto {
   @IsOptional() @IsInt() @Min(1) memoryLimit?: number;
-  @IsOptional() @IsInt() @Min(1) @Max(128_000) memoryTokenLimit?: number;
 
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => AgentEntryDto)
   agents?: AgentEntryDto[];
@@ -32,8 +32,8 @@ class UpdateTokenLimitDto {
   @IsString() @MinLength(1) @MaxLength(500)
   apiKey!: string;
 
-  @IsIn(['input', 'output'])
-  field!: 'input' | 'output';
+  @IsIn(['input', 'output', 'memory'])
+  field!: 'input' | 'output' | 'memory';
 
   @IsInt() @Min(1) @Max(128_000)
   value!: number;
@@ -64,7 +64,11 @@ export class AgentConfigController {
 
   @Patch('token-limit')
   async updateTokenLimit(@Body() dto: UpdateTokenLimitDto) {
-    const field = dto.field === 'input' ? 'inputTokenLimit' : 'outputTokenLimit';
+    const field = dto.field === 'input'
+      ? 'inputTokenLimit'
+      : dto.field === 'output'
+        ? 'outputTokenLimit'
+        : 'memoryTokenLimit';
     await this.service.updateTokenLimit(dto.apiKey, field, dto.value);
     return { ok: true };
   }
