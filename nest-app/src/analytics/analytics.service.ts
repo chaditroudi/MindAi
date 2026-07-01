@@ -323,6 +323,7 @@ export class AnalyticsService {
         userKey, userModel, userProvider, agentCfg,
         settings?.responseTokenLimit ?? settings?.inputTokenLimit,
         minimumInputTokens,
+        memoryCtx.memoryTokens,
         triedAgentKeys,
       );
 
@@ -509,6 +510,7 @@ export class AnalyticsService {
     agentCfg:         ResolvedConfig,
     userTokenLimit?:  number,
     minimumInputTokens = 0,
+    minimumMemoryTokens = 0,
     excludeApiKeys:   string[] = [],
   ): AccessResult {
     if (userKey) {
@@ -525,7 +527,11 @@ export class AnalyticsService {
       a => a.status === 'active' && !excludeApiKeys.includes(a.apiKey),
     );
     const active =
-      activeAgents.find(a => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
+      activeAgents.find(a =>
+        (!a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
+        && (!a.memoryTokenLimit || a.memoryTokenLimit >= minimumMemoryTokens),
+      )
+      ?? activeAgents.find(a => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
       ?? activeAgents[0];
 
     if (active?.apiKey) {
