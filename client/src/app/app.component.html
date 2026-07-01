@@ -441,7 +441,22 @@
                       </article>
                     }
                   </div>
-                  @if (msg.tokenLimitExceeded) {
+                  @if (msg.tokenLimitExceeded && msg.inputTokenWarning) {
+                    <div class="token-warning">
+                      <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                      <span class="token-warning-text">Both limits need raising — output hit {{ st.snap.responseTokenLimit | number }} tokens (response cut off) and input capacity is also too low. Retry with more output, then raise the In limit in config.</span>
+                      <div class="token-warning-actions">
+                        <button class="token-warning-btn token-warning-btn--primary" (click)="retryWithMaxTokens(msg)" [disabled]="tokenLimitSaving || st.snap.phase === 'loading'">
+                          Retry with {{ maximizedLimit() | number }} tokens
+                        </button>
+                        <button class="token-warning-btn" (click)="openConfigAgents()">
+                          Open Config
+                        </button>
+                      </div>
+                    </div>
+                  } @else if (msg.tokenLimitExceeded) {
                     <div class="token-warning">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -456,8 +471,7 @@
                         </button>
                       </div>
                     </div>
-                  }
-                  @if (msg.inputTokenWarning) {
+                  } @else if (msg.inputTokenWarning) {
                     <div class="token-warning token-warning--info">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -497,7 +511,22 @@
                       </article>
                     }
                   </div>
-                  @if (msg.tokenLimitExceeded) {
+                  @if (msg.tokenLimitExceeded && msg.inputTokenWarning) {
+                    <div class="token-warning">
+                      <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                      <span class="token-warning-text">Both limits need raising — output hit {{ st.snap.responseTokenLimit | number }} tokens (response cut off) and input capacity is also too low. Retry with more output, then raise the In limit in config.</span>
+                      <div class="token-warning-actions">
+                        <button class="token-warning-btn token-warning-btn--primary" (click)="retryWithMaxTokens(msg)" [disabled]="tokenLimitSaving || st.snap.phase === 'loading'">
+                          Retry with {{ maximizedLimit() | number }} tokens
+                        </button>
+                        <button class="token-warning-btn" (click)="openConfigAgents()">
+                          Open Config
+                        </button>
+                      </div>
+                    </div>
+                  } @else if (msg.tokenLimitExceeded) {
                     <div class="token-warning">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -512,8 +541,7 @@
                         </button>
                       </div>
                     </div>
-                  }
-                  @if (msg.inputTokenWarning) {
+                  } @else if (msg.inputTokenWarning) {
                     <div class="token-warning token-warning--info">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -603,7 +631,22 @@
                       </article>
                     }
                   </div>
-                  @if (msg.tokenLimitExceeded) {
+                  @if (msg.tokenLimitExceeded && msg.inputTokenWarning) {
+                    <div class="token-warning">
+                      <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                      <span class="token-warning-text">Both limits need raising — output hit {{ st.snap.responseTokenLimit | number }} tokens (response cut off) and input capacity is also too low. Retry with more output, then raise the In limit in config.</span>
+                      <div class="token-warning-actions">
+                        <button class="token-warning-btn token-warning-btn--primary" (click)="retryWithMaxTokens(msg)" [disabled]="tokenLimitSaving || st.snap.phase === 'loading'">
+                          Retry with {{ maximizedLimit() | number }} tokens
+                        </button>
+                        <button class="token-warning-btn" (click)="openConfigAgents()">
+                          Open Config
+                        </button>
+                      </div>
+                    </div>
+                  } @else if (msg.tokenLimitExceeded) {
                     <div class="token-warning">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -618,8 +661,7 @@
                         </button>
                       </div>
                     </div>
-                  }
-                  @if (msg.inputTokenWarning) {
+                  } @else if (msg.inputTokenWarning) {
                     <div class="token-warning token-warning--info">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -653,7 +695,22 @@
                   <div class="answer-card">
                     <p>{{ msg.result.summary }}</p>
                   </div>
-                  @if (msg.tokenLimitExceeded) {
+                  @if (msg.tokenLimitExceeded && msg.inputTokenWarning) {
+                    <div class="token-warning">
+                      <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                      <span class="token-warning-text">Both limits need raising — output hit {{ st.snap.responseTokenLimit | number }} tokens (response cut off) and input capacity is also too low. Retry with more output, then raise the In limit in config.</span>
+                      <div class="token-warning-actions">
+                        <button class="token-warning-btn token-warning-btn--primary" (click)="retryWithMaxTokens(msg)" [disabled]="tokenLimitSaving || st.snap.phase === 'loading'">
+                          Retry with {{ maximizedLimit() | number }} tokens
+                        </button>
+                        <button class="token-warning-btn" (click)="openConfigAgents()">
+                          Open Config
+                        </button>
+                      </div>
+                    </div>
+                  } @else if (msg.tokenLimitExceeded) {
                     <div class="token-warning">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -668,8 +725,7 @@
                         </button>
                       </div>
                     </div>
-                  }
-                  @if (msg.inputTokenWarning) {
+                  } @else if (msg.inputTokenWarning) {
                     <div class="token-warning token-warning--info">
                       <svg class="token-warning-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
