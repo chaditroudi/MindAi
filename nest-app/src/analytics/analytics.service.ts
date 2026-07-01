@@ -583,9 +583,10 @@ export class AnalyticsService {
     userId:    string,
     sessionId: string,
     prompt:    string,
-  ): Promise<CoreMessage[]> {
+    memoryItemLimit: number,
+  ): Promise<MemoryContextResult> {
     const sessionContext = await getMemoryContext(sessionId);
-    const longTerm       = await this.memory.getRelevantContext(userId, prompt);
+    const longTerm       = await this.memory.getRelevantContext(userId, prompt, memoryItemLimit);
 
     const longTermMessages: CoreMessage[] = longTerm
       ? [
@@ -594,7 +595,15 @@ export class AnalyticsService {
         ]
       : [];
 
-    return [...longTermMessages, ...sessionContext];
+    const memoryTokens = longTermMessages.reduce((sum, msg) => {
+      const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      return sum + Math.ceil(text.length / 4);
+    }, 0);
+
+    return {
+      messages: [...longTermMessages, ...sessionContext],
+      memoryTokens,
+    };
   }
 
 
