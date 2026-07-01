@@ -1321,6 +1321,11 @@
   color: #6b7280;
   font-weight: 500;
 }
+.config-label-hint {
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 0.7rem;
+}
 .config-input {
   width: 100%;
   box-sizing: border-box;

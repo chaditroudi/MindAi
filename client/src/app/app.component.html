@@ -142,7 +142,7 @@
           <section class="config-section">
             <h4 class="config-section-title">AI Settings</h4>
             <div class="config-field">
-              <label class="config-label">Output token limit</label>
+              <label class="config-label">Output token limit <span class="config-label-hint">(personal key)</span></label>
               <div class="config-token-row">
                 <input class="config-input config-token-input"
                   type="number" min="1" max="128000" step="1"
@@ -207,7 +207,7 @@
                 <!-- Status actions -->
                 <div class="agent-status-actions">
                   @if (agent.status === 'active') {
-                    <button class="agent-action-btn agent-action-btn--muted" (click)="setAgentStatus(i, 'disabled')">Disable</button>
+                    <button class="agent-action-btn agent-action-btn--muted" (click)="setAgentStatus(i, 'disabled'); saveAgentCard(i)">Disable</button>
                   }
                   @if (agent.status === 'disabled') {
                     <button class="agent-action-btn agent-action-btn--primary" (click)="setAgentStatus(i, 'active'); saveAgentCard(i)">Enable</button>
