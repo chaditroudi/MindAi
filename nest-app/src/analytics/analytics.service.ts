@@ -313,16 +313,6 @@ export class AnalyticsService {
           result       = executed.result;
           inputTokens  = executed.usage.inputTokens;
           outputTokens = executed.usage.outputTokens;
-          if (access.agentApiKey) {
-            void this.agentConfig.updateHealth(access.agentApiKey, {
-              status: 'active',
-              cooldownUntil: null,
-              lastCheckedAt: new Date(),
-              lastHealthyAt: new Date(),
-              lastFailureReason: '',
-              consecutiveFailures: 0,
-            });
-          }
           break agentLoop;
         } catch (err) {
           if (isContextLengthError(err) && context.length > 0) {
@@ -339,12 +329,7 @@ export class AnalyticsService {
           }
           if (isModelNotFoundError(err)) {
             if (access.agentApiKey) {
-              await this.agentConfig.updateHealth(access.agentApiKey, {
-                status: 'expired',
-                lastCheckedAt: new Date(),
-                lastFailureReason: 'Configured model is no longer available for this provider.',
-                consecutiveFailures: (agentCfg.agents.find(a => a.apiKey === access.agentApiKey)?.consecutiveFailures ?? 0) + 1,
-              });
+              void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
               triedAgentKeys.push(access.agentApiKey);
               this.logger.warn(`agent [${access.provider}/${access.model}] model not found — trying next agent`);
               continue agentLoop;
@@ -355,12 +340,7 @@ export class AnalyticsService {
           }
           if (isInvalidKeyError(err)) {
             if (access.agentApiKey) {
-              await this.agentConfig.updateHealth(access.agentApiKey, {
-                status: 'expired',
-                lastCheckedAt: new Date(),
-                lastFailureReason: 'Authentication failed for this API key.',
-                consecutiveFailures: (agentCfg.agents.find(a => a.apiKey === access.agentApiKey)?.consecutiveFailures ?? 0) + 1,
-              });
+              void this.agentConfig.updateStatus(access.agentApiKey, 'expired');
               triedAgentKeys.push(access.agentApiKey);
               this.logger.warn(`agent [${access.provider}/${access.model}] invalid key — trying next agent`);
               continue agentLoop;
@@ -373,23 +353,7 @@ export class AnalyticsService {
           if (isProviderRateLimitError(err)) {
             const exhausted = isFreeTierExhausted(err);
             if (access.agentApiKey) {
-              const now = new Date();
-              const retryDelayMs = extractRetryDelayMs(err) ?? 5 * 60_000;
-              await this.agentConfig.updateHealth(access.agentApiKey, exhausted
-                ? {
-                    status: 'expired',
-                    cooldownUntil: null,
-                    lastCheckedAt: now,
-                    lastFailureReason: 'Provider quota is exhausted for this connection.',
-                    consecutiveFailures: (agentCfg.agents.find(a => a.apiKey === access.agentApiKey)?.consecutiveFailures ?? 0) + 1,
-                  }
-                : {
-                    status: 'idle',
-                    cooldownUntil: new Date(now.getTime() + retryDelayMs),
-                    lastCheckedAt: now,
-                    lastFailureReason: 'Provider rate limit reached. Cooling down before retry.',
-                    consecutiveFailures: (agentCfg.agents.find(a => a.apiKey === access.agentApiKey)?.consecutiveFailures ?? 0) + 1,
-                  });
+              void this.agentConfig.updateStatus(access.agentApiKey, exhausted ? 'expired' : 'idle');
               triedAgentKeys.push(access.agentApiKey);
               this.logger.warn(`agent [${access.provider}/${access.model}] rate-limited — trying next agent`);
               continue agentLoop;
