@@ -14,6 +14,7 @@ import { PipelineService } from './pipeline.service';
 import { MemoryService } from '../memory/memory.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
 import { AgentConfigService, type ResolvedConfig } from '../agent-config/agent-config.service';
+import type { AgentEntry, AgentStatus } from '../agent-config/agent-config.repository';
 import type { ExecuteResult, LlmOpts } from './pipeline.service';
 
 interface AccessResult {
@@ -24,6 +25,7 @@ interface AccessResult {
   inputTokenLimit?:  number;
   agentApiKey?:      string;
   lastInputTokens?:  number;
+  status?:           AgentStatus;
   source:            'personal' | 'agent';
 }
 import {
@@ -158,6 +160,50 @@ function extractRetryDelay(err: unknown): string | null {
     return `${Math.ceil(totalMins)}m`;
   }
   return null;
+}
+
+function parseRetryDelayMs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (/^\d+(\.\d+)?$/.test(trimmed)) {
+    return Math.ceil(Number(trimmed) * 1000);
+  }
+
+  const compoundMatch = /^(\d+)m([\d.]+)s$/i.exec(trimmed);
+  if (compoundMatch) {
+    return (parseInt(compoundMatch[1], 10) * 60_000) + Math.ceil(parseFloat(compoundMatch[2]) * 1000);
+  }
+
+  const minutesMatch = /^([\d.]+)m$/i.exec(trimmed);
+  if (minutesMatch) return Math.ceil(parseFloat(minutesMatch[1]) * 60_000);
+
+  const secondsMatch = /^([\d.]+)s$/i.exec(trimmed);
+  if (secondsMatch) return Math.ceil(parseFloat(secondsMatch[1]) * 1000);
+
+  const millisMatch = /^([\d.]+)ms$/i.exec(trimmed);
+  if (millisMatch) return Math.ceil(parseFloat(millisMatch[1]));
+
+  return null;
+}
+
+function extractRetryDelayMs(err: unknown): number | null {
+  const headers = (err as {
+    responseHeaders?: Record<string, string | number | undefined>;
+  }).responseHeaders;
+
+  const fromHeaders = parseRetryDelayMs(
+    String(
+      headers?.['retry-after']
+      ?? headers?.['x-ratelimit-reset-tokens']
+      ?? headers?.['x-ratelimit-reset-requests']
+      ?? '',
+    ),
+  );
+  if (fromHeaders) return fromHeaders;
+
+  return parseRetryDelayMs(extractRetryDelay(err));
 }
 
 function isStructuredOutputUnsupportedError(err: unknown): boolean {
@@ -468,6 +514,41 @@ export class AnalyticsService {
       return sum + Math.ceil(text.length / 4);
     }, 0);
     return promptTokens + memoryTokens + REQUEST_BASE_OVERHEAD_TOKENS;
+  }
+
+  private isAgentReady(agent: AgentEntry, now = Date.now()): boolean {
+    if (agent.status === 'disabled' || agent.status === 'expired') return false;
+    if (agent.status === 'active') return true;
+    if (agent.status !== 'idle') return false;
+    if (!agent.cooldownUntil) return true;
+
+    return new Date(agent.cooldownUntil).getTime() <= now;
+  }
+
+  private agentPriority(agent: AgentEntry, minimumInputTokens: number, originalIndex: number): number[] {
+    const statusPriority = agent.status === 'active' ? 0 : 1;
+    const inputPriority = !agent.inputTokenLimit || agent.inputTokenLimit >= minimumInputTokens ? 0 : 1;
+    const recentHealthyAt = Math.max(
+      agent.lastUsedAt ? new Date(agent.lastUsedAt).getTime() : 0,
+      agent.lastHealthyAt ? new Date(agent.lastHealthyAt).getTime() : 0,
+    );
+
+    return [
+      statusPriority,
+      inputPriority,
+      -recentHealthyAt,
+      agent.consecutiveFailures ?? 0,
+      -(agent.outputTokenLimit ?? 0),
+      originalIndex,
+    ];
+  }
+
+  private comparePriority(left: number[], right: number[]): number {
+    for (let i = 0; i < Math.max(left.length, right.length); i += 1) {
+      const diff = (left[i] ?? 0) - (right[i] ?? 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
   }
 
   private async resolveSession(req: AnalyticsRequest): Promise<{
