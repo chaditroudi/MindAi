@@ -20,7 +20,7 @@ import type {
   ModeKey, PromptExample, WidgetSpec,
   AnalyticsResponse, DashboardResponse, InquiryResponse, ReportResponse,
   ConversationMessage, MessageResult, SavedResultSummary,
-  AgentEntry, AgentStatus,
+  AgentEntry, AgentStatus, ConnectionInfo,
 } from './app.types';
 
 const INTENT_MAP: Record<ModeKey, 'dashboard' | 'report' | 'general_question'> = {
@@ -514,7 +514,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (!data.tokenLimitExceeded && !data.inputLimitWarning) return null;
     return {
       prompt, intent,
-      agentApiKey:     this.activeAgent()?.apiKey,
+      agentApiKey:     data.connection?.agentApiKey ?? this.activeAgent()?.apiKey,
       outputFix:       data.outputLimitWarning
         ? { current: data.outputLimitWarning.currentLimit, suggested: data.outputLimitWarning.suggestedLimit }
         : undefined,
@@ -548,8 +548,11 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
           intent:             'report',
           inputTokens:        (dashData.inputTokens ?? 0) + (reportData.inputTokens ?? 0),
           outputTokens:       (dashData.outputTokens ?? 0) + (reportData.outputTokens ?? 0),
+          connection:         reportData.connection ?? dashData.connection,
           tokenLimitExceeded: dashData.tokenLimitExceeded || reportData.tokenLimitExceeded,
-          outputTokenLimit:   this.effectiveOutputTokenLimit(),
+          outputTokenLimit:   reportData.connection?.outputTokenLimit
+            ?? dashData.connection?.outputTokenLimit
+            ?? this.effectiveOutputTokenLimit(),
           result: {
             type:           'report+chart',
             dashboardSpec:  (dashData as DashboardResponse).chart,
@@ -814,6 +817,18 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     return this.activeAgent()?.outputTokenLimit ?? this.st.snap.responseTokenLimit;
   }
 
+  connectionLabel(connection: ConnectionInfo | null | undefined): string {
+    if (!connection) return '';
+    const provider = this.providerLabel(connection.provider);
+    const model    = this.effectiveModel(connection.model);
+    const parts = [
+      provider ? provider : connection.source === 'agent' ? 'Agent' : 'Personal key',
+      model || undefined,
+      connection.source === 'agent' ? 'agent' : 'personal',
+    ].filter(Boolean);
+    return parts.join(' · ');
+  }
+
   private buildAssistantMessage(data: AnalyticsResponse, durationMs: number, prompt: string): ConversationMessage {
     const base = {
       messageId:          data.messageId,
@@ -821,8 +836,9 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       prompt,
       inputTokens:        data.inputTokens,
       outputTokens:       data.outputTokens,
+      connection:         data.connection,
       tokenLimitExceeded: data.tokenLimitExceeded,
-      outputTokenLimit:   this.effectiveOutputTokenLimit(),
+      outputTokenLimit:   data.connection?.outputTokenLimit ?? this.effectiveOutputTokenLimit(),
     };
 
     if (data.intent === 'dashboard' && 'chart' in data) {

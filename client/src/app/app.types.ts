@@ -67,6 +67,17 @@ export interface LimitWarning {
   suggestedLimit: number;
 }
 
+export type ConnectionSource = 'personal' | 'agent';
+
+export interface ConnectionInfo {
+  source:            ConnectionSource;
+  provider?:         string;
+  model?:            string;
+  agentApiKey?:      string;
+  outputTokenLimit?: number;
+  inputTokenLimit?:  number;
+}
+
 export interface ConversationMessage {
   messageId:           string;
   role:                'user' | 'assistant';
@@ -76,6 +87,7 @@ export interface ConversationMessage {
   createdAt?:         string;
   inputTokens?:       number;
   outputTokens?:      number;
+  connection?:        ConnectionInfo;
   tokenLimitExceeded?: boolean;
   outputTokenLimit?:   number;
 }
@@ -171,6 +183,7 @@ export interface DashboardResponse {
   messageId:            string;
   inputTokens:          number;
   outputTokens:         number;
+  connection?:          ConnectionInfo;
   tokenLimitExceeded?:  boolean;
   outputLimitWarning?:  LimitWarning;
   inputLimitWarning?:   LimitWarning;
@@ -183,6 +196,7 @@ export interface ReportResponse {
   messageId:            string;
   inputTokens:          number;
   outputTokens:         number;
+  connection?:          ConnectionInfo;
   tokenLimitExceeded?:  boolean;
   outputLimitWarning?:  LimitWarning;
   inputLimitWarning?:   LimitWarning;
@@ -195,6 +209,7 @@ export interface InquiryResponse {
   messageId:            string;
   inputTokens:          number;
   outputTokens:         number;
+  connection?:          ConnectionInfo;
   tokenLimitExceeded?:  boolean;
   outputLimitWarning?:  LimitWarning;
   inputLimitWarning?:   LimitWarning;
