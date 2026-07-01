@@ -950,6 +950,16 @@
             [(ngModel)]="newAgent.outputTokenLimit" />
         </div>
       </div>
+      <label class="key-modal-label">
+        Memory limit
+        <span class="key-modal-label-hint">retrieved memory tokens</span>
+      </label>
+      <input class="key-modal-input"
+        type="number"
+        min="1"
+        max="128000"
+        step="1"
+        [(ngModel)]="newAgent.memoryTokenLimit" />
 
       @if (agentTestStatus !== 'idle') {
         <div class="key-modal-test-result" [class.ok]="agentTestStatus === 'ok'" [class.error]="agentTestStatus === 'error'" [class.testing]="agentTestStatus === 'testing'">
