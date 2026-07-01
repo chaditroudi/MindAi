@@ -433,44 +433,30 @@ export class AnalyticsService {
       };
     }
 
-    const now = Date.now();
-    const rankedAgents = agentCfg.agents
-      .map((agent, index) => ({ agent, index }))
-      .filter(({ agent }) => !excludeApiKeys.includes(agent.apiKey))
-      .filter(({ agent }) => this.isAgentReady(agent, now))
-      .sort((left, right) => this.comparePriority(
-        this.agentPriority(left.agent, minimumInputTokens, left.index),
-        this.agentPriority(right.agent, minimumInputTokens, right.index),
-      ));
+    const activeAgents = agentCfg.agents.filter(
+      a => a.status === 'active' && !excludeApiKeys.includes(a.apiKey),
+    );
+    const active =
+      activeAgents.find(a => !a.inputTokenLimit || a.inputTokenLimit >= minimumInputTokens)
+      ?? activeAgents[0];
 
-    const selected = rankedAgents[0]?.agent;
-
-    if (selected?.apiKey) {
+    if (active?.apiKey) {
       return {
-        apiKey:           selected.apiKey,
-        model:            selected.model,
-        provider:         selected.provider,
-        maxTokens:        selected.outputTokenLimit,
-        inputTokenLimit:  selected.inputTokenLimit,
-        agentApiKey:      selected.apiKey,
-        lastInputTokens:  selected.lastInputTokens,
-        status:           selected.status,
+        apiKey:           active.apiKey,
+        model:            active.model,
+        provider:         active.provider,
+        maxTokens:        active.outputTokenLimit,
+        inputTokenLimit:  active.inputTokenLimit,
+        agentApiKey:      active.apiKey,
+        lastInputTokens:  active.lastInputTokens,
         source:           'agent',
       };
     }
 
-    const nextCooldownAt = agentCfg.agents
-      .filter(agent => !excludeApiKeys.includes(agent.apiKey))
-      .filter(agent => agent.status === 'idle' && !!agent.cooldownUntil)
-      .map(agent => new Date(agent.cooldownUntil as Date).getTime())
-      .filter(value => Number.isFinite(value) && value > now)
-      .sort((left, right) => left - right)[0];
-
     throw Object.assign(
       new UnauthorizedException(
-        nextCooldownAt
-          ? `No ready AI connection. All available agents are cooling down until ${new Date(nextCooldownAt).toLocaleTimeString()}. Open Config to add or re-enable another connection.`
-          : 'No active AI connection. Your agent may be expired, disabled, or quota-exhausted. Open Config to re-enable it or add a new connection.',
+        'No active AI connection. Your agent may be expired, disabled, or quota-exhausted. ' +
+        'Open Config to re-enable it or add a new connection.',
       ),
       { code: ERROR_CODES.NO_ACTIVE_CONNECTION },
     );
@@ -483,41 +469,6 @@ export class AnalyticsService {
       return sum + Math.ceil(text.length / 4);
     }, 0);
     return promptTokens + memoryTokens + REQUEST_BASE_OVERHEAD_TOKENS;
-  }
-
-  private isAgentReady(agent: AgentEntry, now = Date.now()): boolean {
-    if (agent.status === 'disabled' || agent.status === 'expired') return false;
-    if (agent.status === 'active') return true;
-    if (agent.status !== 'idle') return false;
-    if (!agent.cooldownUntil) return true;
-
-    return new Date(agent.cooldownUntil).getTime() <= now;
-  }
-
-  private agentPriority(agent: AgentEntry, minimumInputTokens: number, originalIndex: number): number[] {
-    const statusPriority = agent.status === 'active' ? 0 : 1;
-    const inputPriority = !agent.inputTokenLimit || agent.inputTokenLimit >= minimumInputTokens ? 0 : 1;
-    const recentHealthyAt = Math.max(
-      agent.lastUsedAt ? new Date(agent.lastUsedAt).getTime() : 0,
-      agent.lastHealthyAt ? new Date(agent.lastHealthyAt).getTime() : 0,
-    );
-
-    return [
-      statusPriority,
-      inputPriority,
-      -recentHealthyAt,
-      agent.consecutiveFailures ?? 0,
-      -(agent.outputTokenLimit ?? 0),
-      originalIndex,
-    ];
-  }
-
-  private comparePriority(left: number[], right: number[]): number {
-    for (let i = 0; i < Math.max(left.length, right.length); i += 1) {
-      const diff = (left[i] ?? 0) - (right[i] ?? 0);
-      if (diff !== 0) return diff;
-    }
-    return 0;
   }
 
   private async resolveSession(req: AnalyticsRequest): Promise<{
