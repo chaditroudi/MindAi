@@ -177,7 +177,7 @@
           <section class="config-section">
             <div class="config-section-head">
               <h4 class="config-section-title">AI Connections</h4>
-              <button class="config-add-btn" (click)="showAddAgent = true; agentTestStatus = 'idle'">+ Add</button>
+              <button class="config-add-btn" (click)="openAddAgentModal()">+ Add</button>
             </div>
 
             @if (!agentDraft.length) {
@@ -206,6 +206,7 @@
 
                 <!-- Status actions -->
                 <div class="agent-status-actions">
+                  <button class="agent-action-btn agent-action-btn--primary" (click)="openEditAgent(i)">Edit</button>
                   @if (agent.status === 'active') {
                     <button class="agent-action-btn agent-action-btn--muted" (click)="setAgentStatus(i, 'disabled'); saveAgentCard(i)">Disable</button>
                   }
@@ -649,7 +650,7 @@
                     {{ conf.retryAfterApply ? 'Apply &amp; Retry' : 'Apply limit' }}
                   </button>
                   <button class="token-confirm-btn token-confirm-btn--config"
-                    (click)="openConfigTab()"
+                    (click)="openConfigFromTokenWarning()"
                     [disabled]="s.phase === 'loading'">
                     Open Config
                   </button>
@@ -866,15 +867,19 @@
 
 <!-- ── Add AI Connection Modal ───────────────────────────────────────────── -->
 @if (showAddAgent) {
-  <div class="key-modal-backdrop" (click)="showAddAgent = false">
+  <div class="key-modal-backdrop" (click)="closeAgentModal()">
     <div class="key-modal agent-modal" (click)="$event.stopPropagation()">
       <div class="key-modal-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
         </svg>
       </div>
-      <h2 class="key-modal-title">Add AI connection</h2>
-      <p class="key-modal-desc">Provider, model and API key. Status is set automatically based on your key's health.</p>
+      <h2 class="key-modal-title">{{ isEditingAgent ? 'Edit AI connection' : 'Add AI connection' }}</h2>
+      <p class="key-modal-desc">
+        {{ isEditingAgent
+          ? 'Update provider, model, API key, and token limits for this connection.'
+          : 'Provider, model and API key. Status is set automatically based on your key''s health.' }}
+      </p>
 
       <label class="key-modal-label">Provider</label>
       <select class="key-modal-input"
@@ -941,15 +946,15 @@
         </div>
       }
       <div class="key-modal-actions">
-        <button class="key-modal-secondary" (click)="showAddAgent = false; agentTestStatus = 'idle'">Cancel</button>
+        <button class="key-modal-secondary" (click)="closeAgentModal()">Cancel</button>
         <button class="key-modal-secondary" [disabled]="agentTestStatus === 'testing' || !newAgent.apiKey || !newAgent.model"
           (click)="testAgentConnection()">
           {{ agentTestStatus === 'testing' ? 'Testing…' : 'Test connection' }}
         </button>
         <button class="key-modal-primary"
           [disabled]="!newAgent.model || !newAgent.apiKey"
-          (click)="addAgentToList()">
-          Add connection
+          (click)="saveEditedAgent()">
+          {{ isEditingAgent ? 'Save connection' : 'Add connection' }}
         </button>
       </div>
     </div>
