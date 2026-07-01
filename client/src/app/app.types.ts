@@ -167,6 +167,13 @@ export interface AgentEntry {
   outputTokenLimit: number;  // max tokens AI can generate per request
   inputTokensUsed:  number;  // accumulated input tokens consumed
   outputTokensUsed: number;  // accumulated output tokens consumed
+  lastInputTokens?: number;
+  cooldownUntil?: string | null;
+  lastCheckedAt?: string | null;
+  lastHealthyAt?: string | null;
+  lastUsedAt?: string | null;
+  lastFailureReason?: string;
+  consecutiveFailures?: number;
 }
 
 export interface AgentConfigResponse {
