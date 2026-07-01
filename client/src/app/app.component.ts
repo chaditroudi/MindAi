@@ -154,6 +154,7 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   memoryLimitDraft = 50;
   newAgent: AgentEntry = this.createEmptyAgent();
   showAddAgent = false;
+  editingAgentIndex: number | null = null;
 
   private readonly destroy$      = new Subject<void>();
   private readonly initedWidgets = new Set<string>();
@@ -291,8 +292,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   openConfigAgents(): void {
-    this.showAddAgent    = true;
-    this.agentTestStatus = 'idle';
+    this.showAddAgent = false;
+    this.editingAgentIndex = null;
     this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
     void this.loadAgentConfig();
   }
@@ -350,6 +351,10 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   get availableNewAgentModels(): ModelOption[] {
     return this.modelsForProvider(this.newAgent.provider, this.newAgent.model);
+  }
+
+  get isEditingAgent(): boolean {
+    return this.editingAgentIndex !== null;
   }
 
   // mode + session controls
@@ -677,33 +682,90 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
             provider: this.normalizeProvider(activeAgent?.provider),
             selectedModel: this.effectiveModel(activeAgent?.model),
           });
-        } else {
+        } else if (!cfg.agents.length) {
           // No connection at all — open the add modal directly
           this.showAddAgent    = true;
           this.agentTestStatus = 'idle';
+          this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
+        } else {
+          // Existing connections are present but none are active — let the user edit/retry them.
+          this.showAddAgent = false;
           this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
         }
       }
     } catch { /* non-critical */ }
   }
 
-  openConfigTab(): void {
+  openConfigTab(agentApiKey?: string): void {
     this.showAddAgent = false;
+    this.editingAgentIndex = null;
     this.st.patch({ sidebarOpen: true, sidebarTab: 'config' });
-    void this.loadAgentConfig();
+    void this.loadAgentConfig().then(() => {
+      if (agentApiKey) this.openAgentEditorByApiKey(agentApiKey);
+    });
+  }
+
+  openAddAgentModal(): void {
+    this.editingAgentIndex = null;
+    this.newAgent = this.createEmptyAgent();
+    this.showAddAgent = true;
+    this.agentTestStatus = 'idle';
+    this.agentTestError = '';
+  }
+
+  closeAgentModal(): void {
+    this.showAddAgent = false;
+    this.editingAgentIndex = null;
+    this.newAgent = this.createEmptyAgent();
+    this.agentTestStatus = 'idle';
+    this.agentTestError = '';
+  }
+
+  openEditAgent(index: number): void {
+    const agent = this.agentDraft[index];
+    if (!agent) return;
+    this.editingAgentIndex = index;
+    this.newAgent = this.sanitizeAgent({ ...agent });
+    this.showAddAgent = true;
+    this.agentTestStatus = 'idle';
+    this.agentTestError = '';
+  }
+
+  openConfigFromTokenWarning(): void {
+    const agentApiKey = this.st.snap.pendingTokenConfirm?.agentApiKey;
+    this.openConfigTab(agentApiKey);
+  }
+
+  private openAgentEditorByApiKey(apiKey: string): void {
+    const index = this.agentDraft.findIndex(agent => agent.apiKey === apiKey);
+    if (index >= 0) this.openEditAgent(index);
   }
 
   addAgentToList(): void {
     const agent = this.sanitizeAgent(this.newAgent);
     if (!agent.provider || !agent.model || !agent.apiKey) return;
     this.agentDraft      = [...this.agentDraft, agent];
-    this.newAgent        = this.createEmptyAgent();
-    this.showAddAgent    = false;
-    this.agentTestStatus = 'idle';
+    this.closeAgentModal();
     // Auto-save so the connection is active immediately
     void this.saveAgentConfig().then(() => {
       if (agent.status === 'active') this.st.patch({ hasKey: true });
     });
+  }
+
+  async saveEditedAgent(): Promise<void> {
+    if (this.editingAgentIndex === null) {
+      this.addAgentToList();
+      return;
+    }
+
+    const agent = this.sanitizeAgent(this.newAgent);
+    if (!agent.provider || !agent.model || !agent.apiKey) return;
+
+    this.agentDraft = this.agentDraft.map((current, index) =>
+      index === this.editingAgentIndex ? { ...current, ...agent } : current,
+    );
+    this.closeAgentModal();
+    await this.saveAgentConfig();
   }
 
   removeAgent(index: number): void {
@@ -758,6 +820,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.st.patch({ agentConfig: saved });
       this.agentDraft       = saved.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
+      const activeAgent = this.agentDraft.find(a => a.status === 'active');
+      this.st.patch({
+        hasKey: !!activeAgent,
+        provider: this.normalizeProvider(activeAgent?.provider),
+        selectedModel: this.effectiveModel(activeAgent?.model),
+      });
     } catch (err) {
       this.configError = err instanceof Error ? err.message : 'Failed to save config.';
     } finally {
