@@ -45,6 +45,11 @@ const promptSchema = z.string()
 
 type ResolvedType = 'dashboard' | 'report' | 'inquiry';
 
+interface MemoryContextResult {
+  messages: CoreMessage[];
+  memoryTokens: number;
+}
+
 export interface AnalyticsRequest {
   prompt:    string;
   intent?:   string;
@@ -85,6 +90,7 @@ export interface AnalyticsResponse {
 const ERROR_CODES = {
   INVALID_API_KEY:           'INVALID_API_KEY',
   LLM_RATE_LIMIT:            'LLM_RATE_LIMIT',
+  MEMORY_TOKEN_LIMIT_TOO_LOW:'MEMORY_TOKEN_LIMIT_TOO_LOW',
   TOKEN_LIMIT_TOO_LOW:       'TOKEN_LIMIT_TOO_LOW',
   INPUT_TOKEN_LIMIT_TOO_LOW: 'INPUT_TOKEN_LIMIT_TOO_LOW',
   NO_ACTIVE_CONNECTION:      'NO_ACTIVE_CONNECTION',
@@ -299,9 +305,27 @@ export class AnalyticsService {
     }
 
     const { sessionId, displayIntent } = await this.resolveSession({ ...req, intent });
-    const memoryContext = await this.buildMemoryContext(
-      req.userId, sessionId, prompt,
+    const memoryCtx = await this.buildMemoryContext(
+      req.userId,
+      sessionId,
+      prompt,
+      agentCfg.memoryLimit,
     );
+    const memoryContext = memoryCtx.messages;
+    if (agentCfg.memoryTokenLimit && memoryCtx.memoryTokens > agentCfg.memoryTokenLimit) {
+      const currentLimit = agentCfg.memoryTokenLimit;
+      const suggestedLimit = Math.min(128_000, Math.max(memoryCtx.memoryTokens, currentLimit) * 2);
+      throw new HttpException(
+        {
+          error: `Retrieved memory context (~${memoryCtx.memoryTokens.toLocaleString()} tokens) exceeds the configured memory token limit (${currentLimit.toLocaleString()} tokens). Increase memory limit or reduce memory context.`,
+          code: ERROR_CODES.MEMORY_TOKEN_LIMIT_TOO_LOW,
+          currentLimit,
+          suggestedLimit,
+          usedTokens: memoryCtx.memoryTokens,
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
     const minimumInputTokens = this.estimateMinimumInputTokens(prompt, memoryContext);
 
     this.logger.log(`prompt: "${prompt}" | intent: ${intent ?? 'auto'} | session: ${sessionId}`);
