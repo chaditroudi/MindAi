@@ -35,7 +35,6 @@ import {
   type ConversationMessage,
 } from '../session/memory';
 
-// ── Prompt validation ──────────────────────────────────────────────────────────
 
 const promptSchema = z.string()
   .min(1, 'Prompt is required')
@@ -130,20 +129,17 @@ function isFreeTierExhausted(err: unknown): boolean {
     (msg.includes('limit: 0') && msg.includes('quota')) ||
     (msg.includes('resource_exhausted') && msg.includes('per_day')) ||
     (msg.includes('resource_exhausted') && msg.includes('daily')) ||
-    // Groq TPD exhaustion: "Rate limit reached... on tokens per day (TPD): Limit 100000"
     (msg.includes('tokens per day') && msg.includes('limit'))
   );
 }
 
 function extractRetryDelay(err: unknown): string | null {
   const message = getErrorMessage(err);
-  // Bare seconds: "try again in 30s", "retry in 45.15s"
   const secsMatch = /(?:try\s+again|retry)\s+in\s+([\d.]+)\s*s/i.exec(message);
   if (secsMatch) {
     const secs = parseFloat(secsMatch[1]);
     if (!isNaN(secs)) return secs < 60 ? `${Math.ceil(secs)}s` : `${Math.ceil(secs / 60)}m`;
   }
-  // Compound minutes+seconds: "try again in 21m17.856s" (Groq TPD format)
   const compoundMatch = /(?:try\s+again|retry)\s+in\s+(\d+)m([\d.]+)s/i.exec(message);
   if (compoundMatch) {
     const totalMins = parseInt(compoundMatch[1], 10) + parseFloat(compoundMatch[2]) / 60;
@@ -163,8 +159,6 @@ function isStructuredOutputUnsupportedError(err: unknown): boolean {
 
 function isModelNotFoundError(err: unknown): boolean {
   const msg = getErrorMessage(err).toLowerCase();
-  // Do NOT rely on status 404 alone — other errors can return 404.
-  // Match on specific message patterns from Google, OpenAI, Groq, Anthropic.
   return (
     msg.includes('is not found for api version') ||
     msg.includes('is not supported for generatecontent') ||
