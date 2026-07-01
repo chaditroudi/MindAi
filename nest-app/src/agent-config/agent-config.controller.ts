@@ -22,6 +22,7 @@ class AgentEntryDto {
 
 class SaveAgentConfigDto {
   @IsOptional() @IsInt() @Min(1) memoryLimit?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(128_000) memoryTokenLimit?: number;
 
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => AgentEntryDto)
   agents?: AgentEntryDto[];

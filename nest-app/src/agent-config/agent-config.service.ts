@@ -9,12 +9,14 @@ import {
 
 export interface ResolvedConfig {
   memoryLimit: number;
-  agents:      AgentEntry[];
+  memoryTokenLimit: number;
+  agents: AgentEntry[];
 }
 
 const DEFAULTS: ResolvedConfig = {
   memoryLimit: 50,
-  agents:      [],
+  memoryTokenLimit: 4_000,
+  agents: [],
 };
 
 function trimOrUndefined(value?: string): string | undefined {
@@ -49,7 +51,8 @@ function sanitizeAgentEntry(agent: Partial<AgentEntry>): Partial<AgentEntry> {
 function sanitizePayload(data: AgentConfigPayload): AgentConfigPayload {
   return {
     memoryLimit: positiveIntOrUndefined(data.memoryLimit),
-    agents:      data.agents?.map(agent => sanitizeAgentEntry(agent)),
+    memoryTokenLimit: positiveIntOrUndefined(data.memoryTokenLimit),
+    agents: data.agents?.map(agent => sanitizeAgentEntry(agent)),
   };
 }
 
@@ -75,7 +78,8 @@ export class AgentConfigService {
     if (!doc) return { ...DEFAULTS };
     return {
       memoryLimit: doc.memoryLimit ?? DEFAULTS.memoryLimit,
-      agents:      doc.agents      ?? [],
+      memoryTokenLimit: doc.memoryTokenLimit ?? DEFAULTS.memoryTokenLimit,
+      agents: doc.agents ?? [],
     };
   }
 
@@ -98,7 +102,8 @@ export class AgentConfigService {
     });
     return {
       memoryLimit: doc.memoryLimit,
-      agents:      doc.agents,
+      memoryTokenLimit: doc.memoryTokenLimit ?? DEFAULTS.memoryTokenLimit,
+      agents: doc.agents,
     };
   }
 

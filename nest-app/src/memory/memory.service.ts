@@ -23,9 +23,9 @@ export class MemoryService {
     this.logger.log(`memory extraction ${enabled ? 'ENABLED' : 'DISABLED'}`);
   }
 
-  async getRelevantContext(userId: string, prompt: string): Promise<string> {
+  async getRelevantContext(userId: string, prompt: string, limit = 3): Promise<string> {
     try {
-      const memories = await this.repo.findRelevant(userId, prompt, 3);
+      const memories = await this.repo.findRelevant(userId, prompt, limit);
       if (!memories.length) return '';
 
       return memories
