@@ -160,13 +160,24 @@
           <section class="config-section">
             <h4 class="config-section-title">Memory</h4>
             <div class="config-field">
-              <label class="config-label">Memory limit (items)</label>
+              <label class="config-label">Memory item limit</label>
               <div class="config-token-row">
                 <select class="config-input config-token-input" [(ngModel)]="memoryLimitDraft">
                   @for (opt of MEMORY_LIMIT_OPTIONS; track opt.value) {
                     <option [ngValue]="opt.value">{{ opt.label }}</option>
                   }
                 </select>
+                <button class="config-token-apply-btn" (click)="saveAgentConfig()" [disabled]="configSaving">
+                  {{ configSaving ? '…' : 'Apply' }}
+                </button>
+              </div>
+            </div>
+            <div class="config-field">
+              <label class="config-label">Memory token limit</label>
+              <div class="config-token-row">
+                <input class="config-input config-token-input"
+                  type="number" min="1" max="128000" step="1"
+                  [(ngModel)]="memoryTokenLimitDraft" />
                 <button class="config-token-apply-btn" (click)="saveAgentConfig()" [disabled]="configSaving">
                   {{ configSaving ? '…' : 'Apply' }}
                 </button>
@@ -621,12 +632,18 @@
               </div>
               <div class="token-confirm-body">
                 <p class="token-confirm-title">
-                  @if (conf.outputFix && conf.inputFix) { Both token limits need raising }
+                  @if (conf.memoryFix) { Memory token limit too low }
+                  @else if (conf.outputFix && conf.inputFix) { Both token limits need raising }
                   @else if (conf.outputFix) { Response token limit too low }
                   @else { Input token limit too low }
                 </p>
                 <p class="token-confirm-desc">
-                  @if (conf.outputFix && conf.inputFix) {
+                  @if (conf.memoryFix) {
+                    Retrieved memory context
+                    @if (conf.memoryFix.used) { (~<strong>{{ conf.memoryFix.used | number }} tokens</strong>) }
+                    exceeds the configured memory token limit (<strong>{{ conf.memoryFix.current | number }} tokens</strong>).
+                    Raise it to <strong>{{ conf.memoryFix.suggested | number }}</strong> and retry?
+                  } @else if (conf.outputFix && conf.inputFix) {
                     Response was cut off at <strong>{{ conf.outputFix.current | number }} output tokens</strong>
                     and this request also exceeded the input limit (<strong>{{ conf.inputFix.current | number }} tokens</strong>).
                     Raise Out to <strong>{{ conf.outputFix.suggested | number }}</strong> and In to <strong>{{ conf.inputFix.suggested | number }}</strong> and retry?

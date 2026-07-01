@@ -1028,6 +1028,12 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.agentDraft = saved.agents.map(agent => this.sanitizeAgent(agent));
       this.memoryLimitDraft = this.coercePositiveInt(saved.memoryLimit, 50);
       this.memoryTokenLimitDraft = this.coercePositiveInt(saved.memoryTokenLimit, 4_000);
+      const activeAgent = this.agentDraft.find(a => a.status === 'active');
+      this.st.patch({
+        hasKey: !!activeAgent,
+        provider: this.normalizeProvider(activeAgent?.provider),
+        selectedModel: this.effectiveModel(activeAgent?.model),
+      });
       return true;
     } catch {
       return false;
