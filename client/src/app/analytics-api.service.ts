@@ -23,7 +23,6 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly http = inject(HttpClient);
-  private readonly appRef = inject(ApplicationRef);
 
   getMeta(): Promise<MetaResponse> {
     return this.req(this.http.get<MetaResponse>('/api/meta'));
