@@ -32,25 +32,6 @@ const MODE_META: Record<ModeKey, { label: string; hint: string }> = {
   inquiry:   { label: 'Inquiry',   hint: 'Direct answer to a data question' },
 };
 
-const WIDGET_TYPE_LABELS: Record<string, string> = {
-  table:                'Table',
-  kpi_card:             'KPI',
-  line_chart:           'Trend',
-  area_chart:           'Area',
-  multi_line_chart:     'Multi-line',
-  bar_chart:            'Bars',
-  horizontal_bar_chart: 'Ranking',
-  grouped_bar_chart:    'Grouped',
-  stacked_bar_chart:    'Stacked',
-  donut_chart:          'Share',
-  scatter_plot:         'Scatter',
-  gauge_chart:          'Gauge',
-  funnel_chart:         'Funnel',
-  radar_chart:          'Radar',
-  heatmap:              'Heatmap',
-};
-
-type WidgetDisplayKind = 'chart' | 'kpi' | 'table' | 'unknown';
 type ProviderId =
   | 'openai'
   | 'anthropic'
