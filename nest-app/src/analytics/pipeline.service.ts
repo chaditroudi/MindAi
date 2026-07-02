@@ -227,17 +227,34 @@ export class PipelineService {
     const plannerMaxTokens = clampStageTokens(maxTokens, PLANNER_MAX_TOKENS);
 
     for (let attempt = 0; attempt < 2; attempt++) {
-      const { plan, usage } = await runSupervisorPlan({
-        prompt,
-        intent,
-        sources,
-        context,
-        apiKey,
-        userModel,
-        userProvider,
-        hint,
-        maxTokens: plannerMaxTokens,
-      });
+      let plan: TaskPlan;
+      let usage: TokenUsage;
+      try {
+        ({ plan, usage } = await runSupervisorPlan({
+          prompt,
+          intent,
+          sources,
+          context,
+          apiKey,
+          userModel,
+          userProvider,
+          hint,
+          maxTokens: plannerMaxTokens,
+        }));
+      } catch (err) {
+        // Strict schema rejected the model's output (e.g. `strategy` outside
+        // the 5 allowed values) — retry once with a corrective hint instead of
+        // silently coercing to a default, so a wrong plan never ships unnoticed.
+        const msg = err instanceof Error ? err.message : String(err);
+        if (attempt === 0) {
+          hint =
+            `Your previous response failed output validation: ${msg}. ` +
+            `Re-read the required output shape and enum values exactly — ` +
+            `"strategy" must be exactly one of: standard, trend, comparison, anomaly, overview.`;
+          continue;
+        }
+        throw err;
+      }
       plannerUsage = addUsage(plannerUsage, usage);
       this.logger.log(
         `plan [${attempt + 1}] | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`,
