@@ -42,6 +42,14 @@ export class WidgetGridComponent implements AfterViewChecked, OnDestroy {
 
   private readonly charts = inject(ChartRenderService);
   private readonly inited = new Set<string>();
+  // Widget ids restart from "w1" on every response, so a plain id would collide
+  // across different messages in the same ChartRenderService singleton — namespace
+  // it per component instance so disposing one message's chart never touches another's.
+  private readonly instanceKey = crypto.randomUUID();
+
+  private renderKey(widgetId: string): string {
+    return `${this.instanceKey}:${widgetId}`;
+  }
 
   ngAfterViewChecked(): void {
     this.chartHosts.forEach(ref => {
@@ -50,13 +58,13 @@ export class WidgetGridComponent implements AfterViewChecked, OnDestroy {
       if (!widgetId || this.inited.has(widgetId)) return;
       const widget = this.widgets.find(w => w.id === widgetId);
       if (!widget?.option) return;
-      this.charts.initWidget(el, widget);
+      this.charts.initWidget(el, { ...widget, id: this.renderKey(widget.id) });
       this.inited.add(widgetId);
     });
   }
 
   ngOnDestroy(): void {
-    this.widgets.forEach(w => this.charts.dispose(w.id));
+    this.widgets.forEach(w => this.charts.dispose(this.renderKey(w.id)));
     this.inited.clear();
   }
 
