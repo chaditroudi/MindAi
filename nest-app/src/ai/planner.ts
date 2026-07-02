@@ -304,10 +304,13 @@ function buildPlanSchema(intent: IntentKind) {
 
   if (intent === 'dashboard') {
     return base.extend({
-      strategy: strategySchema()
-        .catch(PLANNER_DEFAULT_STRATEGY)
-        .default(PLANNER_DEFAULT_STRATEGY),
-      chartHint: z.string().catch('distribution').default('distribution'),
+      // No .catch() here: an invalid strategy must surface as a validation
+      // error so runWithRetry() can correct it, not silently become 'standard'.
+      strategy: strategySchema().default(PLANNER_DEFAULT_STRATEGY),
+      // chartHint is intentionally open-ended per SKILL.md ("use any value
+      // that best captures what the user wants") — only require it be a
+      // non-empty string; the model's actual wording is preserved as-is.
+      chartHint: z.string().min(1).default('distribution'),
     });
   }
 
