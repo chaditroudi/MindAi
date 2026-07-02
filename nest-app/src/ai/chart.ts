@@ -140,6 +140,58 @@ function hasSeriesEncode(series: unknown): boolean {
   return series.some((item) => isPlainRecord(item) && 'encode' in item);
 }
 
+// ── Data-shape pre-check ─────────────────────────────────────────────────────
+// Runs in pure code, before the chart LLM call, so a chartHint that is
+// physically impossible for the actual aggregated rows (e.g. "scatter" with
+// only one numeric field) never reaches the model. chartHint stays otherwise
+// open-ended per SKILL.md — only these two known-impossible combinations are
+// corrected; everything else is passed through untouched.
+
+type DataShape = 'grouped_pairs' | 'time_series' | 'scatter_capable' | 'multi_field';
+
+const TEMPORAL_NAME_HINTS = ['year', 'month', 'quarter', 'date', 'day', 'time'];
+
+function isTemporalField(key: string, rows: Record<string, unknown>[]): boolean {
+  if (TEMPORAL_NAME_HINTS.some((t) => key.toLowerCase().includes(t))) return true;
+  return rows.some((row) => {
+    const value = row[key];
+    return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+  });
+}
+
+function isNumericField(key: string, rows: Record<string, unknown>[]): boolean {
+  let sawNumber = false;
+  for (const row of rows) {
+    const value = row[key];
+    if (value == null) continue;
+    if (typeof value !== 'number') return false;
+    sawNumber = true;
+  }
+  return sawNumber;
+}
+
+function analyzeDataShape(rows: Record<string, unknown>[]): DataShape {
+  const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  const numericKeys = keys.filter((k) => isNumericField(k, rows));
+  const temporalKeys = keys.filter((k) => isTemporalField(k, rows));
+
+  if (keys.length === 2 && numericKeys.length === 1) return 'grouped_pairs';
+  if (temporalKeys.length > 0 && numericKeys.length >= 1) return 'time_series';
+  if (numericKeys.length >= 2 && keys.length >= 3) return 'scatter_capable';
+  return 'multi_field';
+}
+
+function reconcileChartHint(hint: string, shape: DataShape): string {
+  const normalized = hint.trim().toLowerCase();
+  if (normalized === 'scatter' && shape !== 'scatter_capable') {
+    return shape === 'time_series' ? 'trend' : 'ranking';
+  }
+  if (normalized === 'trend' && shape !== 'time_series') {
+    return 'ranking';
+  }
+  return hint;
+}
+
 function normalizeDataset(
   dataset: unknown,
   rows: Record<string, unknown>[],
