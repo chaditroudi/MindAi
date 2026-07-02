@@ -431,7 +431,7 @@ export async function runChart(
               rows,
               prompt,
               strategy,
-              chartHint,
+              reconciledHint,
               source,
             ),
           },
