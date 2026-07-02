@@ -132,9 +132,7 @@ const STATIC_MODELS_BY_PROVIDER: Record<ProviderId, ModelOption[]> = {
   templateUrl: './app.component.html',
   styleUrls:   ['./app.component.css'],
 })
-export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
-  @ViewChildren('chartHost') private chartHosts!: QueryList<ElementRef<HTMLDivElement>>;
-
+export class AppComponent implements OnInit, OnDestroy {
   readonly st           = inject(AnalyticsStateService);
   private readonly api    = inject(AnalyticsApiService);
   private readonly charts = inject(ChartRenderService);
@@ -152,9 +150,8 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
   showAddAgent = false;
   editingAgentIndex: number | null = null;
 
-  private readonly destroy$      = new Subject<void>();
-  private readonly initedWidgets = new Set<string>();
-  private timerStart             = 0;
+  private readonly destroy$ = new Subject<void>();
+  private timerStart        = 0;
 
   readonly state$   = this.st.state$;
   readonly modeMeta = MODE_META;
@@ -185,23 +182,6 @@ export class AppComponent implements OnInit, AfterViewChecked, OnDestroy {
     void this.loadMemories();
     void this.loadMemoryConfig();
     void this.loadAgentConfig();
-  }
-
-  ngAfterViewChecked(): void {
-    // Init any chart hosts that haven't been initialized yet
-    this.chartHosts.forEach(ref => {
-      const el  = ref.nativeElement;
-      const key = el.getAttribute('data-widget-id');
-      if (!key || this.initedWidgets.has(key)) return;
-
-      const [msgId, widgetId] = key.split('|');
-      const msg    = this.st.snap.messages.find(m => m.messageId === msgId);
-      const widget = msg?.result?.dashboardSpec?.widgets.find(w => w.id === widgetId);
-      if (!widget?.option) return;
-
-      this.charts.initWidget(el, widget);
-      this.initedWidgets.add(key);
-    });
   }
 
   ngOnDestroy(): void {
