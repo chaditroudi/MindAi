@@ -12,6 +12,7 @@ import { AnalyticsApiService, ApiError } from './analytics-api.service';
 import { AnalyticsStateService } from './analytics-state.service';
 import { ChartRenderService } from './chart-render.service';
 import { MarkdownPipe } from './markdown.pipe';
+import { WidgetGridComponent } from './widget-grid.component';
 import type {
   ModeKey, PromptExample, WidgetSpec,
   AnalyticsResponse, DashboardResponse, InquiryResponse, ReportResponse,
@@ -128,7 +129,7 @@ const STATIC_MODELS_BY_PROVIDER: Record<ProviderId, ModelOption[]> = {
 @Component({
   selector:    'app-root',
   standalone:  true,
-  imports:     [CommonModule, FormsModule, MarkdownPipe],
+  imports:     [CommonModule, FormsModule, MarkdownPipe, WidgetGridComponent],
   templateUrl: './app.component.html',
   styleUrls:   ['./app.component.css'],
 })
@@ -354,7 +355,6 @@ export class AppComponent implements OnInit, OnDestroy {
     try {
       const { messages } = await this.api.getSession(sessionId);
       this.charts.disposeAll();
-      this.initedWidgets.clear();
       const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
       this.st.patch({
         sessionId,
@@ -609,33 +609,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.st.setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
       }
     }
-  }
-
-  // widget display helpers
-
-  isChartWidget(w: WidgetSpec): boolean {
-    return this.widgetDisplayKind(w) === 'chart';
-  }
-
-  isKpiWidget(w: WidgetSpec): boolean {
-    return this.widgetDisplayKind(w) === 'kpi';
-  }
-
-  isTableWidget(w: WidgetSpec): boolean {
-    return this.widgetDisplayKind(w) === 'table';
-  }
-
-  trackById(_: number, w: WidgetSpec): string { return w.id; }
-
-  trackByMsgId(_: number, m: ConversationMessage): string { return m.messageId; }
-
-  widgetTypeLabel(widget: WidgetSpec): string {
-    return WIDGET_TYPE_LABELS[widget.type]
-      ?? widget.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  widgetKey(msgId: string, widgetId: string): string {
-    return `${msgId}|${widgetId}`;
   }
 
   formatDate(date: string | Date): string {
