@@ -343,6 +343,7 @@ export class PipelineService {
     if (
       lower.includes('only supports date') ||
       lower.includes('arguments to $date') ||
+      lower.includes('coercible to date') ||
       (lower.includes('bson type') && lower.includes('date')) ||
       (lower.includes('convert') && lower.includes('to date'))
     ) {
