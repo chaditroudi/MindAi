@@ -14,7 +14,7 @@ import { ChartRenderService } from './chart-render.service';
 import { MarkdownPipe } from './markdown.pipe';
 import { WidgetGridComponent } from './widget-grid.component';
 import type {
-  ModeKey, PromptExample, WidgetSpec,
+  ModeKey, PromptExample,
   AnalyticsResponse, DashboardResponse, InquiryResponse, ReportResponse,
   ConversationMessage, MessageResult, SavedResultSummary,
   AgentConfigResponse, AgentEntry, AgentStatus, ConnectionInfo,
@@ -1094,16 +1094,4 @@ export class AppComponent implements OnInit, OnDestroy {
     } catch { /* non-critical */ }
   }
 
-  private widgetDisplayKind(widget: WidgetSpec): WidgetDisplayKind {
-    if (this.hasChartOption(widget)) return 'chart';
-    if (typeof widget.value === 'number') return 'kpi';
-    if (widget.type === 'kpi_card') return 'kpi';
-    if (Array.isArray(widget.columns) || Array.isArray(widget.rows)) return 'table';
-    if (widget.type === 'table') return 'table';
-    return 'unknown';
-  }
-
-  private hasChartOption(widget: WidgetSpec): boolean {
-    return typeof widget.option === 'object' && widget.option !== null;
-  }
 }
