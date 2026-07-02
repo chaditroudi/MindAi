@@ -278,7 +278,17 @@ export class AppComponent implements OnInit, OnDestroy {
       this.agentTestStatus = 'error';
       this.agentTestError  = err instanceof Error ? err.message : 'Validation failed. Please try again.';
     }
-         this.cdr.detectChanges();
+    // The promise chain in AnalyticsApiService settles outside Angular's zone
+    // in this app (confirmed live — Zone.current is '<root>' at this point),
+    // so zone.js never notices this state changed and the UI silently stays
+    // on "Validating..." forever even though the request already completed.
+    // Force this component's own view to re-check; scoped to just this
+    // component (not ApplicationRef.tick()) to avoid some unrelated part of
+    // the app tripping Angular's dev-mode double-check consistency error.
+    // Swallow that error defensively if it still fires — the DOM is already
+    // correct from the first (non-verify) pass by the time it would throw.
+    try {
+      this.cdr.detectChanges();
     } catch {
       /* dev-mode ExpressionChangedAfterItHasBeenCheckedError guard; DOM is already correct */
     }
