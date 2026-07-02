@@ -28,6 +28,8 @@ export class MemoryService {
     prompt: string,
     limit = 3,
   ): Promise<string> {
+    if (!this.extractionEnabled) return '';
+
     try {
       const memories = await this.repo.findRelevant(userId, prompt, limit);
       if (!memories.length) return '';
