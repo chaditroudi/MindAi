@@ -262,36 +262,20 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async testAgentConnection(): Promise<void> {
-    console.log('[DIAG] testAgentConnection start', { newAgent: this.newAgent });
     const { provider, model, apiKey } = this.newAgent;
-    if (!apiKey || !provider || !model) {
-      console.log('[DIAG] early return — missing field', { apiKey: !!apiKey, provider, model });
-      return;
-    }
+    if (!apiKey || !provider || !model) return;
     const requestId = ++this.agentTestRequestId;
     this.agentTestStatus = 'testing';
     this.agentTestError  = '';
-    console.log('[DIAG] set testing, requestId', requestId);
     try {
-      const result = await this.api.validateSettings({ apiKey, provider, model });
-      console.log('[DIAG] validateSettings resolved', result);
-      if (requestId !== this.agentTestRequestId) {
-        console.log('[DIAG] stale requestId on success, skipping', requestId, this.agentTestRequestId);
-        return;
-      }
+      await this.api.validateSettings({ apiKey, provider, model });
+      if (requestId !== this.agentTestRequestId) return; // a newer test superseded this one
       this.agentTestStatus = 'ok';
-      console.log('[DIAG] set ok');
     } catch (err) {
-      console.log('[DIAG] validateSettings rejected', err);
-      if (requestId !== this.agentTestRequestId) {
-        console.log('[DIAG] stale requestId on error, skipping', requestId, this.agentTestRequestId);
-        return;
-      }
+      if (requestId !== this.agentTestRequestId) return; // a newer test superseded this one
       this.agentTestStatus = 'error';
       this.agentTestError  = err instanceof Error ? err.message : 'Validation failed. Please try again.';
-      console.log('[DIAG] set error', this.agentTestStatus, this.agentTestError);
     }
-    console.log('[DIAG] testAgentConnection end, final status', this.agentTestStatus);
   }
 
   normalizeProvider(provider: string | null | undefined): string {
