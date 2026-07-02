@@ -3,6 +3,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   MemoryItem,
   MemoryItemSchema,
+  MemorySettings,
+  MemorySettingsSchema,
   MemoryRepository,
 } from './memory.repository';
 import { MemoryService } from './memory.service';
@@ -12,6 +14,7 @@ import { MemoryController } from './memory.controller';
   imports: [
     MongooseModule.forFeature([
       { name: MemoryItem.name, schema: MemoryItemSchema },
+      { name: MemorySettings.name, schema: MemorySettingsSchema },
     ]),
   ],
   providers: [MemoryRepository, MemoryService],

@@ -77,7 +77,22 @@ export class MemoryRepository {
   constructor(
     @InjectModel(MemoryItem.name)
     private readonly model: Model<MemoryItemDocument>,
+    @InjectModel(MemorySettings.name)
+    private readonly settingsModel: Model<MemorySettingsDocument>,
   ) {}
+
+  async getExtractionEnabled(): Promise<boolean | null> {
+    const doc = await this.settingsModel.findOne().lean();
+    return doc ? doc.extractionEnabled : null;
+  }
+
+  async setExtractionEnabled(enabled: boolean): Promise<void> {
+    await this.settingsModel.updateOne(
+      {},
+      { $set: { extractionEnabled: enabled } },
+      { upsert: true },
+    );
+  }
 
   async upsert(items: MemoryPayload[]): Promise<void> {
     for (const item of items) {

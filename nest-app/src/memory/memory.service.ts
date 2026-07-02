@@ -1,18 +1,31 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { MemoryRepository } from './memory.repository';
 import { extractMemories } from '../ai/memory-skill';
 
 @Injectable()
-export class MemoryService {
+export class MemoryService implements OnModuleInit {
   private readonly logger = new Logger(MemoryService.name);
 
   // Defaults to true; set MEMORY_EXTRACTION_ENABLED=false to disable at startup.
+  // Overridden below by the persisted value (if any) once the module initializes,
+  // so a user's toggle survives process restarts instead of resetting to this default.
   private extractionEnabled: boolean = (() => {
     const v = process.env['MEMORY_EXTRACTION_ENABLED']?.toLowerCase().trim();
     return v !== 'false' && v !== '0' && v !== 'no';
   })();
 
   constructor(private readonly repo: MemoryRepository) {}
+
+  async onModuleInit(): Promise<void> {
+    try {
+      const stored = await this.repo.getExtractionEnabled();
+      if (stored !== null) this.extractionEnabled = stored;
+    } catch (err) {
+      this.logger.warn(
+        `failed to load persisted memory toggle (using default): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
 
   getEnabled(): boolean {
     return this.extractionEnabled;
@@ -21,6 +34,13 @@ export class MemoryService {
   setEnabled(enabled: boolean): void {
     this.extractionEnabled = enabled;
     this.logger.log(`memory extraction ${enabled ? 'ENABLED' : 'DISABLED'}`);
+    this.repo
+      .setExtractionEnabled(enabled)
+      .catch((err) =>
+        this.logger.error(
+          `failed to persist memory toggle: ${err instanceof Error ? err.message : String(err)}`,
+        ),
+      );
   }
 
   async getRelevantContext(
