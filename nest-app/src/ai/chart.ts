@@ -421,36 +421,56 @@ export async function runChart(
     userModel,
     userProvider,
   );
-  const result = await withRateLimitRetry(
-    () =>
-      agent.generate(
-        [
-          {
-            role: 'user',
-            content: buildChartPrompt(
-              rows,
-              prompt,
-              strategy,
-              reconciledHint,
-              source,
-            ),
-          },
-        ],
-        {
-          structuredOutput: { schema: dashboardSchema },
-          modelSettings: {
-            maxOutputTokens: maxTokens ?? MAX_TOKENS,
-            temperature: 0,
-            maxRetries: 0,
-          },
-          abortSignal: freshSignal('chart'),
-          providerOptions: skillProviderOptions(apiKey, userProvider),
-        },
-      ),
-    'chart',
+
+  const basePrompt = buildChartPrompt(
+    rows,
+    prompt,
+    strategy,
+    reconciledHint,
+    source,
   );
 
-  const plan = result.object as LlmDashboard;
+  let generateHint: string | undefined;
+  let result: Awaited<ReturnType<typeof agent.generate>> | undefined;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const content = generateHint
+      ? `${basePrompt}\n\nPREVIOUS ATTEMPT FAILED — ${generateHint}`
+      : basePrompt;
+    try {
+      result = await withRateLimitRetry(
+        () =>
+          agent.generate([{ role: 'user', content }], {
+            structuredOutput: { schema: dashboardSchema },
+            modelSettings: {
+              maxOutputTokens: maxTokens ?? MAX_TOKENS,
+              temperature: 0,
+              maxRetries: 0,
+            },
+            abortSignal: freshSignal('chart'),
+            providerOptions: skillProviderOptions(apiKey, userProvider),
+          }),
+        'chart',
+      );
+      break;
+    } catch (err) {
+      // Structured-output validation failed (e.g. the model echoes the
+      // "strategy" value like "overview" into the unrelated "layout" enum,
+      // which only accepts analytical/executive/operational). Retry once
+      // with an explicit correction instead of crashing the whole request.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (attempt === 0) {
+        generateHint =
+          `Your previous response failed output validation: ${msg}. ` +
+          `Note that "layout" is a PRESENTATION style, unrelated to any "strategy" ` +
+          `value mentioned above — it must be exactly one of: analytical, executive, operational.`;
+        log('chart', `retrying after validation failure: ${msg}`);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  const plan = result!.object as LlmDashboard;
   const usage: TokenUsage = {
     inputTokens: result.usage.inputTokens ?? 0,
     outputTokens: result.usage.outputTokens ?? 0,
