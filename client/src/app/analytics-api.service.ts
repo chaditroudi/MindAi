@@ -127,10 +127,10 @@ export class AnalyticsApiService {
     return this.req(this.http.delete<{ ok: boolean }>(`/api/history/sessions/${sessionId}`));
   }
 
-  private req<T>(stream: Observable<T>): Promise<T> {
+  private req<T>(stream: Observable<T>, timeoutMs = 480_000): Promise<T> {
     return firstValueFrom(
       stream.pipe(
-        timeout(480_000),
+        timeout(timeoutMs),
         catchError((error: unknown) => {
           if (error instanceof TimeoutError)
             return throwError(() => new Error('Request timed out. Check that the server is running.'));

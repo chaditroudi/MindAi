@@ -122,6 +122,11 @@ export class AppComponent implements OnInit, OnDestroy {
   // Agent connection test state
   agentTestStatus: 'idle' | 'testing' | 'ok' | 'error' = 'idle';
   agentTestError = '';
+  // Bumped on every testAgentConnection() call so a stale in-flight response
+  // (e.g. from a previous click, or a request that lands out of order) can
+  // never overwrite the result of a newer one — was leaving the modal stuck
+  // on "Validating..." after the actual (later) response had already arrived.
+  private agentTestRequestId = 0;
 
   // Agent config editing state
   configSaving = false;
@@ -259,12 +264,15 @@ export class AppComponent implements OnInit, OnDestroy {
   async testAgentConnection(): Promise<void> {
     const { provider, model, apiKey } = this.newAgent;
     if (!apiKey || !provider || !model) return;
+    const requestId = ++this.agentTestRequestId;
     this.agentTestStatus = 'testing';
     this.agentTestError  = '';
     try {
       await this.api.validateSettings({ apiKey, provider, model });
+      if (requestId !== this.agentTestRequestId) return; // a newer test superseded this one
       this.agentTestStatus = 'ok';
     } catch (err) {
+      if (requestId !== this.agentTestRequestId) return; // a newer test superseded this one
       this.agentTestStatus = 'error';
       this.agentTestError  = err instanceof Error ? err.message : 'Validation failed. Please try again.';
     }
