@@ -397,9 +397,18 @@ export async function runChart(
     };
   }
 
+  const shape = analyzeDataShape(rows);
+  const reconciledHint = chartHint ? reconcileChartHint(chartHint, shape) : chartHint;
+  if (reconciledHint !== chartHint) {
+    log(
+      'chart',
+      `chartHint corrected: "${chartHint}" -> "${reconciledHint}" (data shape: ${shape}, impossible for requested hint)`,
+    );
+  }
+
   log(
     'chart',
-    `rows: ${rows.length} | strategy: ${strategy ?? 'standard'} | hint: ${chartHint ?? '-'} | source: ${source?.name ?? '?'}`,
+    `rows: ${rows.length} | strategy: ${strategy ?? 'standard'} | hint: ${chartHint ?? '-'} -> ${reconciledHint ?? '-'} | shape: ${shape} | source: ${source?.name ?? '?'}`,
   );
 
   const rowKeys = new Set<string>(rows.flatMap((row) => Object.keys(row)));
