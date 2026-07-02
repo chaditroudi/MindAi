@@ -128,6 +128,14 @@ export class AnalyticsApiService {
     return this.req(this.http.delete<{ ok: boolean }>(`/api/history/sessions/${sessionId}`));
   }
 
+  // The RxJS chain below (firstValueFrom + timeout()) can settle outside
+  // Angular's zone — confirmed live: a rejected request correctly updates
+  // component state, but Zone.current is '<root>' at that point, so Angular
+  // never detects the change and the UI never re-renders (e.g. a failed
+  // "Test connection" stays on "Validating..." forever even though the
+  // request completed in well under a second). Re-entering the zone at the
+  // exact settle point, for every caller, fixes it once instead of requiring
+  // every call site to remember to wrap its own state updates in zone.run().
   private req<T>(stream: Observable<T>, timeoutMs = 480_000): Promise<T> {
     return firstValueFrom(
       stream.pipe(
@@ -151,6 +159,9 @@ export class AnalyticsApiService {
           return throwError(() => new Error('An unexpected error occurred.'));
         }),
       ),
+    ).then(
+      (value) => this.zone.run(() => value),
+      (error) => this.zone.run(() => { throw error; }),
     );
   }
 }
