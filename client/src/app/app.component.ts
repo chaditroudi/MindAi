@@ -283,10 +283,10 @@ export class AppComponent implements OnInit, OnDestroy {
     // so zone.js never notices this state changed and the UI silently stays
     // on "Validating..." forever even though the request already completed.
     // Force this component's own view to re-check; scoped to just this
-    // component (not ApplicationRef.tick()) to avoid an unrelated, unrelated
-    // part of the app tripping Angular's dev-mode double-check consistency
-    // error. Swallow that error defensively if it still fires — the DOM is
-    // already correct from the first (non-verify) pass by the time it would.
+    // component (not ApplicationRef.tick()) to avoid some unrelated part of
+    // the app tripping Angular's dev-mode double-check consistency error.
+    // Swallow that error defensively if it still fires — the DOM is already
+    // correct from the first (non-verify) pass by the time it would throw.
     try {
       this.cdr.detectChanges();
     } catch {
