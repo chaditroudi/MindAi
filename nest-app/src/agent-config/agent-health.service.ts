@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { appendFileSync, mkdirSync } from 'node:fs';
+import * as path from 'node:path';
 import {
   AgentConfigRepository,
   type AgentStatus,
@@ -9,6 +11,20 @@ import { isCooldownActive } from './agent-config.utils';
 import { buildProviderValidationRequest } from '../ai/model';
 
 const PROBE_TIMEOUT_MS = 8_000;
+
+const LOG_DIR = path.join(process.cwd(), 'logs');
+const LOG_FILE = path.join(LOG_DIR, 'agent-health.log');
+
+function writeHealthLog(lines: string[]): void {
+  try {
+    mkdirSync(LOG_DIR, { recursive: true });
+    const stamp = new Date().toISOString();
+    const body = lines.map((line) => `[${stamp}] ${line}`).join('\n') + '\n';
+    appendFileSync(LOG_FILE, body, 'utf8');
+  } catch {
+    // logging to disk is best-effort; never break the health check itself
+  }
+}
 
 const QUOTA_EXHAUSTED_PATTERNS = [
   'free_tier',
@@ -69,17 +85,32 @@ export class AgentHealthService {
   async resetMonthlyUsage(): Promise<void> {
     await this.config.resetAllUsage();
     this.logger.log('monthly token usage counters reset');
+    writeHealthLog(['monthly token usage counters reset']);
   }
 
   @Cron('* * * * *')
   async checkAllAgents(): Promise<void> {
     const config = await this.config.getConfig();
-    if (!config?.agents?.length) return;
+    if (!config?.agents?.length) {
+      writeHealthLog(['run skipped: no agents configured']);
+      return;
+    }
     const previousCurrentAgentId = config.currentAgentId;
 
+    let checked = 0;
+    let skipped = 0;
+    const changes: string[] = [];
+
     for (const agent of config.agents) {
-      if (agent.status === 'disabled') continue;
-      if (isCooldownActive(agent.cooldownUntil)) continue;
+      if (agent.status === 'disabled') {
+        skipped++;
+        continue;
+      }
+      if (isCooldownActive(agent.cooldownUntil)) {
+        skipped++;
+        continue;
+      }
+      checked++;
 
       const healthy = await this.probeProvider(
         agent.provider,
@@ -101,13 +132,14 @@ export class AgentHealthService {
           agent.cooldownUntil = null;
           agent.lastFailureReason = '';
         }
-        this.logger.log(
-          `agent [${agent.provider}/${agent.model}]: ${previousStatus} -> ${nextStatus}`,
-        );
+        const line = `agent [${agent.provider}/${agent.model}]: ${previousStatus} -> ${nextStatus}`;
+        this.logger.log(line);
+        changes.push(line);
       }
     }
 
     const nextCurrentAgentId = await this.config.syncCurrentAgent(config);
+    let switchLine: string | null = null;
     if (nextCurrentAgentId !== previousCurrentAgentId) {
       const nextAgent = nextCurrentAgentId
         ? config.agents.find((agent) => agent.id === nextCurrentAgentId)
@@ -121,10 +153,15 @@ export class AgentHealthService {
       const nextLabel = nextAgent
         ? `${nextAgent.provider}/${nextAgent.model}`
         : 'none';
-      this.logger.log(
-        `current agent switched: ${previousLabel} -> ${nextLabel}`,
-      );
+      switchLine = `current agent switched: ${previousLabel} -> ${nextLabel}`;
+      this.logger.log(switchLine);
     }
+
+    writeHealthLog([
+      `run summary: checked=${checked} skipped=${skipped} changes=${changes.length}`,
+      ...changes,
+      ...(switchLine ? [switchLine] : []),
+    ]);
   }
 
   async probeAndUpdateAgent(agentId: string): Promise<AgentStatus> {
