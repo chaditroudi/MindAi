@@ -342,7 +342,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   newSession(): void {
     this.charts.disposeAll();
-    this.initedWidgets.clear();
     this.st.newSession();
   }
 
