@@ -233,6 +233,55 @@ function attachDatasetSource(
   return option;
 }
 
+// ECharts heatmap series has no visible output without a visualMap component —
+// the "value" dimension has nowhere to map to a color otherwise, so cells
+// render blank. The model reliably picks the right series type and encode,
+// but the SKILL.md doesn't mandate visualMap, so guarantee it in code instead
+// of hoping every generation remembers — same principle as attachDatasetSource
+// above guaranteeing dataset.source.
+function ensureHeatmapVisualMap(
+  option: Record<string, unknown>,
+  rows: Record<string, unknown>[],
+): Record<string, unknown> {
+  if (isPlainRecord(option['visualMap'])) return option;
+  if (Array.isArray(option['visualMap']) && option['visualMap'].length)
+    return option;
+
+  const series = Array.isArray(option['series']) ? option['series'] : [];
+  const heatmapSeries = series.find(
+    (s): s is Record<string, unknown> =>
+      isPlainRecord(s) && s['type'] === 'heatmap',
+  );
+  if (!heatmapSeries) return option;
+
+  const encode = heatmapSeries['encode'];
+  const valueField = isPlainRecord(encode) && typeof encode['value'] === 'string'
+    ? encode['value']
+    : undefined;
+  if (!valueField) return option;
+
+  const values = rows
+    .map((row) => row[valueField])
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  if (!values.length) return option;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  return {
+    ...option,
+    visualMap: {
+      type: 'continuous',
+      calculable: true,
+      min,
+      max: max > min ? max : min + 1,
+      orient: 'horizontal',
+      left: 'center',
+      top: 0,
+    },
+  };
+}
+
 function collectDatasetDimensions(
   value: unknown,
   acc = new Set<string>(),
@@ -362,7 +411,7 @@ function toWidgetSpec(
     return null;
   }
 
-  const hydrated = attachDatasetSource(option, rows);
+  const hydrated = ensureHeatmapVisualMap(attachDatasetSource(option, rows), rows);
   logUnknownRefs(hydrated, rowKeys, widget.title);
 
   return {
