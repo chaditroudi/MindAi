@@ -1,11 +1,7 @@
 import {
-  AfterViewChecked,
   Component,
-  ElementRef,
   OnDestroy,
   OnInit,
-  QueryList,
-  ViewChildren,
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
