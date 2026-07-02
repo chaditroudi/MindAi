@@ -472,8 +472,8 @@ export async function runChart(
 
   const plan = result!.object as LlmDashboard;
   const usage: TokenUsage = {
-    inputTokens: result.usage.inputTokens ?? 0,
-    outputTokens: result.usage.outputTokens ?? 0,
+    inputTokens: result!.usage.inputTokens ?? 0,
+    outputTokens: result!.usage.outputTokens ?? 0,
   };
 
   log(
