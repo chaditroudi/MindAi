@@ -1,0 +1,35 @@
+<div class="widget-grid">
+  @for (w of widgets; track w.id) {
+    <article class="widget" [class.widget--wide]="isTableWidget(w)">
+      <div class="widget-head">
+        <span class="widget-type">{{ widgetTypeLabel(w) }}</span>
+        <h4>{{ w.title }}</h4>
+        @if (w.insight) { <p class="widget-insight">{{ w.insight }}</p> }
+      </div>
+      @if (isChartWidget(w)) {
+        <div class="chart-wrap">
+          <div #chartHost class="chart-canvas" [attr.data-widget-id]="w.id"></div>
+        </div>
+      }
+      @if (isKpiWidget(w)) {
+        <div class="kpi-wrap">
+          <span class="kpi-value">{{ w.value | number }}</span>
+        </div>
+      }
+      @if (isTableWidget(w)) {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>@for (c of w.columns; track c) { <th>{{ c }}</th> }</tr>
+            </thead>
+            <tbody>
+              @for (row of w.rows; track $index) {
+                <tr>@for (c of w.columns; track c) { <td>{{ row[c] ?? '—' }}</td> }</tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
+  }
+</div>
