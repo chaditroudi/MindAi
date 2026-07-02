@@ -20,8 +20,11 @@ class AgentEntryDto {
   
 
   const AGENT_STATUS = [
-    
-  ]
+    'active',
+    'disabled',
+    'expired',
+    'idle'
+  ] as const
 
 
 }

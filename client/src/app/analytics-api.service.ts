@@ -1,4 +1,4 @@
-import { ApplicationRef, inject, Injectable, NgZone } from '@angular/core';
+import { ApplicationRef, inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom, Observable, throwError, TimeoutError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
@@ -23,7 +23,6 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly http = inject(HttpClient);
-  private readonly zone = inject(NgZone);
   private readonly appRef = inject(ApplicationRef);
 
   getMeta(): Promise<MetaResponse> {
