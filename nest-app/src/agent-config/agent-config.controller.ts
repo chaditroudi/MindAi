@@ -17,62 +17,35 @@ import { AgentConfigService } from './agent-config.service';
 import { AgentHealthService } from './agent-health.service';
 
 class AgentEntryDto {
-  import { Body, Controller, Get, Patch, Put } from '@nestjs/common';
-import {
-  IsArray,
-  IsEnum,
-  IsIn,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  MaxLength,
-  Min,
-  MinLength,
-  ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
-import { AgentConfigService } from './agent-config.service';
-import { AgentHealthService } from './agent-health.service';
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  id?: string;
 
-const AGENT_STATUSES = ['active', 'disabled', 'expired', 'idle'] as const;
-type AgentStatus = (typeof AGENT_STATUSES)[number];
+  @IsEnum(['active', 'disabled', 'expired', 'idle'])
+  status!: 'active' | 'disabled' | 'expired' | 'idle';
 
-const TOKEN_LIMIT_FIELDS = ['input', 'output', 'memory'] as const;
-type TokenLimitField = (typeof TOKEN_LIMIT_FIELDS)[number];
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  provider!: string;
 
-const TOKEN_LIMIT_FIELD_MAP = {
-  input: 'inputTokenLimit',
-  output: 'outputTokenLimit',
-  memory: 'memoryTokenLimit',
-} as const;
-
-const MAX_TOKEN_LIMIT = 128_000;
-
-class AgentEntryDto {
-  @IsOptional() @IsString() @MinLength(1) @MaxLength(100) id?: string;
-
-  @IsEnum(AGENT_STATUSES) status!: AgentStatus;
-
-  @IsString() @MinLength(1) @MaxLength(100) provider!: string;
   @IsString() @MinLength(1) @MaxLength(200) model!: string;
   @IsString() @MinLength(1) @MaxLength(500) apiKey!: string;
 
   @IsOptional() @IsInt() @Min(1) inputTokenLimit?: number;
   @IsOptional() @IsInt() @Min(1) outputTokenLimit?: number;
-  @IsOptional() @IsInt() @Min(1) @Max(MAX_TOKEN_LIMIT) memoryTokenLimit?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(128_000) memoryTokenLimit?: number;
   @IsOptional() @IsInt() @Min(0) inputTokensUsed?: number;
   @IsOptional() @IsInt() @Min(0) outputTokensUsed?: number;
 }
 
 class SaveAgentConfigDto {
   @IsOptional() @IsInt() @Min(1) memoryLimit?: number;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  currentAgentId?: string | null;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(100) currentAgentId?:
+    | string
+    | null;
 
   @IsOptional()
   @IsArray()
@@ -82,11 +55,18 @@ class SaveAgentConfigDto {
 }
 
 class UpdateTokenLimitDto {
-  @IsString() @MinLength(1) @MaxLength(100) agentId!: string;
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  agentId!: string;
 
-  @IsIn(TOKEN_LIMIT_FIELDS) field!: TokenLimitField;
+  @IsIn(['input', 'output', 'memory'])
+  field!: 'input' | 'output' | 'memory';
 
-  @IsInt() @Min(1) @Max(MAX_TOKEN_LIMIT) value!: number;
+  @IsInt()
+  @Min(1)
+  @Max(128_000)
+  value!: number;
 }
 
 @Controller('api/agent-config')
@@ -97,7 +77,7 @@ export class AgentConfigController {
   ) {}
 
   @Get()
-  get() {
+  async get() {
     return this.service.getConfig();
   }
 
@@ -110,11 +90,13 @@ export class AgentConfigController {
 
   @Patch('token-limit')
   async updateTokenLimit(@Body() dto: UpdateTokenLimitDto) {
-    await this.service.updateTokenLimit(
-      dto.agentId,
-      TOKEN_LIMIT_FIELD_MAP[dto.field],
-      dto.value,
-    );
+    const field =
+      dto.field === 'input'
+        ? 'inputTokenLimit'
+        : dto.field === 'output'
+          ? 'outputTokenLimit'
+          : 'memoryTokenLimit';
+    await this.service.updateTokenLimit(dto.agentId, field, dto.value);
     return { ok: true };
   }
 }
