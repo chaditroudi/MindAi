@@ -119,6 +119,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly st           = inject(AnalyticsStateService);
   private readonly api    = inject(AnalyticsApiService);
   private readonly charts = inject(ChartRenderService);
+  private readonly cdr     = inject(ChangeDetectorRef);
 
   // Agent connection test state
   agentTestStatus: 'idle' | 'testing' | 'ok' | 'error' = 'idle';
