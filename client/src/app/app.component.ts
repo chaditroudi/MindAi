@@ -271,10 +271,12 @@ export class AppComponent implements OnInit, OnDestroy {
       await this.api.validateSettings({ apiKey, provider, model });
       if (requestId !== this.agentTestRequestId) return; // a newer test superseded this one
       this.agentTestStatus = 'ok';
+      console.log('[DIAG2] status now', this.agentTestStatus, 'zone?', (window as any).Zone?.current?.name);
     } catch (err) {
       if (requestId !== this.agentTestRequestId) return; // a newer test superseded this one
       this.agentTestStatus = 'error';
       this.agentTestError  = err instanceof Error ? err.message : 'Validation failed. Please try again.';
+      console.log('[DIAG2] status now', this.agentTestStatus, 'zone?', (window as any).Zone?.current?.name);
     }
   }
 
