@@ -793,9 +793,7 @@
 @media (max-width: 720px) {
   .feed-scroll { padding: 0.9rem; }
   .composer-shell { padding: 0 0.9rem 0.75rem; }
-  .widget-grid, .skeleton-pair { grid-template-columns: 1fr; }
-  .widget, .widget--wide { grid-column: 1; }
-  .chart-canvas { height: 14rem; }
+  .skeleton-pair { grid-template-columns: 1fr; }
   .msg-user { max-width: 90%; }
 }
 @media (max-width: 480px) {

@@ -35,6 +35,7 @@ const WIDGET_TYPE_LABELS: Record<string, string> = {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './widget-grid.component.html',
+  styleUrl: './widget-grid.component.css',
 })
 export class WidgetGridComponent implements AfterViewChecked, OnDestroy {
   @Input() widgets: WidgetSpec[] = [];
