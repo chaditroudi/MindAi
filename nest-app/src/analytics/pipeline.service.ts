@@ -181,7 +181,9 @@ export class PipelineService {
         this.logger.log(
           `cache hit | intent: ${intent} | rows: ${cached.rows.length}`,
         );
-        return cached;
+        // Older cache entries were written before `usage` was cached alongside
+        // { plan, rows } — default it so downstream addUsage() never sees undefined.
+        return { ...cached, usage: cached.usage ?? zeroUsage() };
       }
     }
 
@@ -198,7 +200,7 @@ export class PipelineService {
     );
 
     if (collection)
-      this.flush(intent, prompt, plan, collection, rows, durationMs);
+      this.flush(intent, prompt, plan, collection, rows, durationMs, usage);
     return { plan, rows, usage };
   }
 
@@ -516,10 +518,11 @@ export class PipelineService {
     collection: string,
     rows: Row[],
     durationMs: number,
+    usage: TokenUsage,
   ): void {
     if (rows.length) {
       this.cache
-        .setCached(intent, prompt, { plan, rows })
+        .setCached(intent, prompt, { plan, rows, usage })
         .catch((err) => this.logger.error(`cache write failed: ${err}`));
     }
     this.history
