@@ -22,7 +22,6 @@ function writeHealthLog(lines: string[]): void {
     const body = lines.map((line) => `[${stamp}] ${line}`).join('\n') + '\n';
     appendFileSync(LOG_FILE, body, 'utf8');
   } catch {
-    // logging to disk is best-effort; never break the health check itself
   }
 }
 
