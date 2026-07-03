@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-require-imports --
+   jest.mock() calls below aren't hoisted by ts-jest the way babel-jest hoists
+   them, so the module under test must be pulled in via a runtime require()
+   placed after the mocks — an ES import would be hoisted above them by the
+   TS compiler's CommonJS emit and load the real (unmocked) module first. */
 import { BadRequestException, HttpException } from '@nestjs/common';
 import type { AnalyticsService } from './analytics.service';
 import type { PipelineService } from './pipeline.service';
