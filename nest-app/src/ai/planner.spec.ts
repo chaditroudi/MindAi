@@ -45,7 +45,7 @@ describe('buildPlanSchema', () => {
   describe('dashboard intent', () => {
     const schema = buildPlanSchema('dashboard');
     const parse = (input: unknown) =>
-      schema.parse(input) as { strategy: string; chartHint: string };
+      schema.parse(input) as unknown as { strategy: string; chartHint: string };
 
     it('defaults strategy to "standard" and chartHint to "distribution"', () => {
       const parsed = parse(basePlan);
@@ -73,7 +73,11 @@ describe('buildPlanSchema', () => {
     const schema = buildPlanSchema('report');
 
     it('allows omitting strategy and chartHint entirely', () => {
-      const parsed = schema.parse(basePlan);
+      const parsed = schema.parse(basePlan) as unknown as {
+        strategy?: string;
+        chartHint?: string;
+        wantChart: boolean;
+      };
       expect(parsed.strategy).toBeUndefined();
       expect(parsed.chartHint).toBeUndefined();
       expect(parsed.wantChart).toBe(false);
