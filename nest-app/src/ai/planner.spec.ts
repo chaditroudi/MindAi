@@ -90,9 +90,7 @@ describe('buildPlanSchema', () => {
     const schema = buildPlanSchema('general_question');
 
     it('rejects an empty stage object', () => {
-      expect(() =>
-        schema.parse({ ...basePlan, pipeline: [{}] }),
-      ).toThrow();
+      expect(() => schema.parse({ ...basePlan, pipeline: [{}] })).toThrow();
     });
 
     it('rejects a stage with no operator key', () => {
@@ -192,7 +190,10 @@ describe('finalizeTaskPlan', () => {
   it('hoists query.pipeline to the root when root pipeline is empty', () => {
     const withQueryPipeline = plan({
       pipeline: [],
-      query: { sourceName: 'Projects', pipeline: [{ $match: { status: 'active' } }] } as never,
+      query: {
+        sourceName: 'Projects',
+        pipeline: [{ $match: { status: 'active' } }],
+      } as never,
     });
     const result = finalizeTaskPlan({
       plan: withQueryPipeline,
@@ -205,7 +206,10 @@ describe('finalizeTaskPlan', () => {
   it('prefers the root-level pipeline when both root and query.pipeline are set', () => {
     const withBoth = plan({
       pipeline: [{ $sort: { status: 1 } }],
-      query: { sourceName: 'Projects', pipeline: [{ $match: { status: 'active' } }] } as never,
+      query: {
+        sourceName: 'Projects',
+        pipeline: [{ $match: { status: 'active' } }],
+      } as never,
     });
     const result = finalizeTaskPlan({
       plan: withBoth,
@@ -228,7 +232,11 @@ describe('finalizeTaskPlan', () => {
 describe('runSupervisorPlan', () => {
   beforeEach(() => {
     generate.mockReset().mockResolvedValue({
-      object: { needsData: true, query: { sourceName: 'Projects' }, pipeline: [] },
+      object: {
+        needsData: true,
+        query: { sourceName: 'Projects' },
+        pipeline: [],
+      },
       usage: { inputTokens: 12, outputTokens: 34 },
     });
     createSkillAgent.mockClear();
