@@ -20,8 +20,6 @@ function makeModel(docs: DataSource[] = []) {
   return { find, select, lean, replaceOne, deleteOne };
 }
 
-type FakeModel = ReturnType<typeof makeModel>;
-
 describe('SourcesService', () => {
   afterEach(() => {
     // sources-cache.ts holds a module-level singleton — reset it so tests
