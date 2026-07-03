@@ -19,8 +19,21 @@ jest.mock('../ai/writer', () => ({
 // same ESM-parse problem as above — stub it out too.
 jest.mock('../history/history.service', () => ({ HistoryService: class {} }));
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PipelineService } =
   require('./pipeline.service') as typeof import('./pipeline.service');
+
+interface ResolvedPipelineResult {
+  pipeline: Record<string, unknown>[];
+  collection: string;
+}
+
+interface PipelineServiceTestAccess {
+  resolvePipeline(
+    plan: ReturnType<typeof makePlan>,
+    sources: DataSource[],
+  ): ResolvedPipelineResult | null;
+}
 
 const SOURCE: DataSource = {
   name: 'Projects',
@@ -57,10 +70,12 @@ describe('PipelineService.resolvePipeline (private, exercised via bracket access
     service = new PipelineService(connection, cache, history, chartRepo);
   });
 
+  function asTestAccess(target: InstanceType<typeof PipelineService>) {
+    return target as unknown as PipelineServiceTestAccess;
+  }
+
   function resolve(pipeline: Record<string, unknown>[]) {
-    return (
-      service as unknown as { resolvePipeline: Function }
-    ).resolvePipeline(makePlan(pipeline), [SOURCE]);
+    return asTestAccess(service).resolvePipeline(makePlan(pipeline), [SOURCE]);
   }
 
   it('resolves a well-formed pipeline against the matching registered source', () => {
@@ -74,10 +89,8 @@ describe('PipelineService.resolvePipeline (private, exercised via bracket access
   it('matches the source case/whitespace-insensitively by name or collection', () => {
     const plan = makePlan([{ $match: { status: 'active' } }]);
     plan.query.sourceName = '  projects  ';
-    const result = (
-      service as unknown as { resolvePipeline: Function }
-    ).resolvePipeline(plan, [SOURCE]);
-    expect(result.collection).toBe('projects');
+    const result = asTestAccess(service).resolvePipeline(plan, [SOURCE]);
+    expect(result?.collection).toBe('projects');
   });
 
   it('rejects a query against an unregistered data source', () => {
