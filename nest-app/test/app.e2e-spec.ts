@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment --
+   supertest's `.getHttpServer()` return type and every `res.body` are
+   untyped by design (arbitrary JSON over the wire) — this file only ever
+   asserts on real HTTP responses, so there's no meaningful static type to
+   recover here. */
 import 'reflect-metadata';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -22,7 +27,9 @@ describe('App e2e (AI-independent modules)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
   }, 60_000);
 
@@ -45,9 +52,11 @@ describe('App e2e (AI-independent modules)', () => {
     });
 
     it('allows public routes (health, meta) without x-api-key', async () => {
-      await request(app.getHttpServer()).get('/health').expect((res) => {
-        expect([200, 503]).toContain(res.status);
-      });
+      await request(app.getHttpServer())
+        .get('/health')
+        .expect((res) => {
+          expect([200, 503]).toContain(res.status);
+        });
       await request(app.getHttpServer()).get('/api/meta').expect(200);
     });
   });
@@ -69,7 +78,9 @@ describe('App e2e (AI-independent modules)', () => {
         .set(auth())
         .send({ name: 'Projects' })
         .expect(400);
-      expect(res.body.error).toMatch(/name, collection, and at least one field/);
+      expect(res.body.error).toMatch(
+        /name, collection, and at least one field/,
+      );
     });
 
     it('rejects a collection name that looks like a Mongo operator/system collection', async () => {
@@ -225,7 +236,7 @@ describe('App e2e (AI-independent modules)', () => {
       expect(someoneElses.body).toHaveLength(0);
     });
 
-    it('404s fetching another user\'s saved result by id', async () => {
+    it("404s fetching another user's saved result by id", async () => {
       await request(app.getHttpServer())
         .get(`/api/saved/${savedId}`)
         .set(auth('user-2'))
