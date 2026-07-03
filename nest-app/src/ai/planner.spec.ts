@@ -9,10 +9,19 @@ import type { DataSource, TaskPlan, ExecutionSkillKind } from '../types';
 // which pulls in @mastra/core/agent -> an ESM-only dependency ts-jest can't
 // parse under node_modules. Stub the module out; runSupervisorPlan tests
 // below only assert on how planner.ts *calls* these, not their real behavior.
-const generate = jest.fn();
+interface GeneratedMessage {
+  role: string;
+  content: string;
+}
+interface GenerateResult {
+  object: unknown;
+  usage: { inputTokens?: number; outputTokens?: number };
+}
+
+const generate = jest.fn<Promise<GenerateResult>, [GeneratedMessage[], unknown]>();
 const createSkillAgent = jest.fn().mockReturnValue({ generate });
-const withRateLimitRetry = jest.fn((fn: () => unknown, _label?: string) =>
-  fn(),
+const withRateLimitRetry = jest.fn(
+  (fn: () => unknown, label: string) => (void label, fn()),
 );
 const freshSignal = jest.fn().mockReturnValue(undefined);
 const skillProviderOptions = jest.fn().mockReturnValue({});
@@ -21,7 +30,7 @@ jest.mock('./model', () => ({
   createSkillAgent: (
     ...args: Parameters<typeof import('./model').createSkillAgent>
   ) => createSkillAgent(...args),
-  withRateLimitRetry: (fn: () => unknown, label?: string) =>
+  withRateLimitRetry: (fn: () => unknown, label: string) =>
     withRateLimitRetry(fn, label),
   freshSignal: (label?: string) => freshSignal(label),
   skillProviderOptions: (apiKey?: string, provider?: string) =>
@@ -251,7 +260,7 @@ describe('runSupervisorPlan', () => {
       hint: 'strategy must be one of the 5 allowed values',
     });
 
-    const messages = generate.mock.calls[0][0] as { content: string }[];
+    const messages = generate.mock.calls[0][0];
     const lastMessage = messages[messages.length - 1];
     expect(lastMessage.content).toContain('PREVIOUS ATTEMPT FAILED');
     expect(lastMessage.content).toContain(
@@ -266,7 +275,7 @@ describe('runSupervisorPlan', () => {
       sources: [PROJECTS],
     });
 
-    const messages = generate.mock.calls[0][0] as { content: string }[];
+    const messages = generate.mock.calls[0][0];
     const lastMessage = messages[messages.length - 1];
     expect(lastMessage.content).not.toContain('PREVIOUS ATTEMPT FAILED');
   });
