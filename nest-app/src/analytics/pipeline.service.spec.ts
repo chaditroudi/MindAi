@@ -19,7 +19,6 @@ jest.mock('../ai/writer', () => ({
 // same ESM-parse problem as above — stub it out too.
 jest.mock('../history/history.service', () => ({ HistoryService: class {} }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PipelineService } =
   require('./pipeline.service') as typeof import('./pipeline.service');
 

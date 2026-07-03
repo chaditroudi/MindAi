@@ -29,7 +29,6 @@ jest.mock('../session/memory', () => ({
   saveConversationTurn: jest.fn().mockResolvedValue(undefined),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const AnalyticsServiceCtor = (
   require('./analytics.service') as typeof import('./analytics.service')
 ).AnalyticsService;
