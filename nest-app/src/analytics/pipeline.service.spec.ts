@@ -24,7 +24,8 @@ jest.mock('../ai/writer', () => ({
 // same ESM-parse problem as above — stub it out too.
 jest.mock('../history/history.service', () => ({ HistoryService: class {} }));
 
-const { PipelineService } = require('./pipeline.service') as typeof import('./pipeline.service');
+const { PipelineService } =
+  require('./pipeline.service') as typeof import('./pipeline.service');
 
 interface ResolvedPipelineResult {
   pipeline: Record<string, unknown>[];

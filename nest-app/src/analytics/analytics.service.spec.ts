@@ -34,10 +34,9 @@ jest.mock('../session/memory', () => ({
   saveConversationTurn: jest.fn().mockResolvedValue(undefined),
 }));
 
-const AnalyticsServiceCtor =
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  (require('./analytics.service') as typeof import('./analytics.service'))
-    .AnalyticsService;
+const AnalyticsServiceCtor = (
+  require('./analytics.service') as typeof import('./analytics.service')
+).AnalyticsService;
 
 function makeAgent(overrides: Partial<AgentEntry> = {}): AgentEntry {
   return {
