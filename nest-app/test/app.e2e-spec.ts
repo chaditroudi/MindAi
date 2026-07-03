@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import request from 'supertest';
+import * as request from 'supertest';
 import { TestAppModule } from './test-app.module';
 import { CacheService } from '../src/cache/cache.service';
 
