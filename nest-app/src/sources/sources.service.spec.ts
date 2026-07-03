@@ -22,8 +22,6 @@ function makeModel(docs: DataSource[] = []) {
 
 describe('SourcesService', () => {
   afterEach(() => {
-    // sources-cache.ts holds a module-level singleton — reset it so tests
-    // don't leak registered sources into one another.
     setSourcesCache([]);
   });
 
