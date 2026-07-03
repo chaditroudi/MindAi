@@ -199,7 +199,7 @@ describe('AnalyticsService', () => {
       agentConfig.getConfig.mockResolvedValue(makeConfig([agent], agent.id));
       pipeline.execute.mockRejectedValue(new Error('Unexpected end of JSON input'));
 
-      const err = await service.run({ prompt: 'hi', userId: 'u1' }).catch((e) => e);
+      const err = await service.run({ prompt: 'hi', userId: 'u1' }).catch((e: HttpException) => e);
 
       expect(err).toBeInstanceOf(HttpException);
       expect(err.getStatus()).toBe(422);
@@ -213,7 +213,7 @@ describe('AnalyticsService', () => {
       agentConfig.getConfig.mockResolvedValue(makeConfig([agent], agent.id));
       memory.getRelevantContext.mockResolvedValue('x'.repeat(1000));
 
-      const err = await service.run({ prompt: 'hi', userId: 'u1' }).catch((e) => e);
+      const err = await service.run({ prompt: 'hi', userId: 'u1' }).catch((e: HttpException) => e);
 
       expect(err.getStatus()).toBe(422);
       expect(err.getResponse()).toMatchObject({ code: 'MEMORY_TOKEN_LIMIT_TOO_LOW' });
@@ -224,7 +224,7 @@ describe('AnalyticsService', () => {
       const agent = makeAgent({ inputTokenLimit: 5 });
       agentConfig.getConfig.mockResolvedValue(makeConfig([agent], agent.id));
 
-      const err = await service.run({ prompt: 'hi', userId: 'u1' }).catch((e) => e);
+      const err = await service.run({ prompt: 'hi', userId: 'u1' }).catch((e: HttpException) => e);
 
       expect(err.getStatus()).toBe(422);
       expect(err.getResponse()).toMatchObject({ code: 'INPUT_TOKEN_LIMIT_TOO_LOW' });
