@@ -29,6 +29,12 @@ const withRateLimitRetry = jest.fn(
 const freshSignal = jest.fn().mockReturnValue(undefined);
 const skillProviderOptions = jest.fn().mockReturnValue({});
 
+// createSkillAgent's return type (Agent) and skillProviderOptions' own real
+// return type (declared `any` in model.ts) make these mock pass-throughs
+// unavoidably untyped — this whole file only ever exercises the mocks, so
+// disable the unsafe-* checks for this narrow boundary rather than fighting
+// jest.fn()'s inference for values we never actually type-depend on.
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 jest.mock('./model', () => ({
   createSkillAgent: (
     ...args: Parameters<typeof import('./model').createSkillAgent>
@@ -39,6 +45,7 @@ jest.mock('./model', () => ({
   skillProviderOptions: (apiKey?: string, provider?: string) =>
     skillProviderOptions(apiKey, provider),
 }));
+/* eslint-enable @typescript-eslint/no-unsafe-return */
 
 const {
   buildPlanSchema,
