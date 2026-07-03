@@ -107,8 +107,27 @@ VISUALIZATION CONTRACT
    - `compare` -> emphasize side-by-side or multi-series comparison
    - `scatter` / `anomaly` -> emphasize correlation and outliers
    - `overview` -> 2-4 complementary widgets with distinct purposes
+   - CHART HINT is free-text and open-ended — the runtime does not validate
+     or normalize it, so it may not exactly match one of the labels above.
+     Map it to the closest intent yourself.
 
-6. Titles and insights must be decision-useful, not generic.
+6. CHART HINT is a suggestion, not a mandate — reconcile it against what the
+   data in COLUMNS / SAMPLE ROWS can actually support before designing:
+   - `scatter` needs at least two independent numeric fields (see `jsType` /
+     `schemaType` in COLUMNS). If the data only has one numeric measure, fall
+     back to whichever fits better: `trend` if a date/time field exists,
+     otherwise `ranking`.
+   - `trend` needs a temporal or naturally sequential field (a date/time
+     value, or a name like year/month/quarter/day, or values that parse as
+     dates). If nothing qualifies, fall back to `ranking`.
+   - `part_of_whole` needs a categorical field with a bounded, mutually
+     exclusive breakdown (low `distinctCount`). If the category has very high
+     cardinality, fall back to `ranking` instead of a cluttered pie/treemap.
+   - If the requested hint is simply infeasible for the given fields, silently
+     design the best-fitting alternative — do not error, apologize, or mention
+     the substitution in the output; just build the right chart for the data.
+
+7. Titles and insights must be decision-useful, not generic.
    Good:
    - "Budget Concentrates in Transport Projects"
    - "Central Region Leads Annual Spend"
@@ -116,12 +135,12 @@ VISUALIZATION CONTRACT
    - "Budget Chart"
    - "Project Visualization"
 
-7. Choose layout intentionally:
+8. Choose layout intentionally:
    - `executive` for summary-first dashboards
    - `analytical` for deeper breakdowns and comparisons
    - `operational` for practical day-to-day monitoring
 
-8. Prefer readable dashboards over novelty.
+9. Prefer readable dashboards over novelty.
    Use advanced ECharts features when they improve clarity, not just complexity.
 
 DESIGN GUIDANCE
