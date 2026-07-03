@@ -15,6 +15,9 @@ jest.mock('../ai/writer', () => ({
   runReportSkill: jest.fn(),
   runInquirySkill: jest.fn(),
 }));
+// HistoryService itself imports session/memory.ts -> @mastra/memory, the
+// same ESM-parse problem as above — stub it out too.
+jest.mock('../history/history.service', () => ({ HistoryService: class {} }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PipelineService } = require('./pipeline.service') as typeof import('./pipeline.service');
