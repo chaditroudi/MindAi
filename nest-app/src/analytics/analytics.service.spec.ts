@@ -1,5 +1,4 @@
 import { BadRequestException, HttpException } from '@nestjs/common';
-import { AnalyticsService } from './analytics.service';
 import type { PipelineService } from './pipeline.service';
 import type { MemoryService } from '../memory/memory.service';
 import type { UserSettingsService } from '../user-settings/user-settings.service';
@@ -9,12 +8,28 @@ import type {
 } from '../agent-config/agent-config.service';
 import type { AgentEntry } from '../agent-config/agent-config.repository';
 
+// These services transitively import ai/model.ts, which pulls in
+// @mastra/core/agent -> an ESM-only dependency ts-jest can't parse under
+// node_modules. This suite only ever exercises AnalyticsService against
+// mocked collaborators, so replace the modules outright instead of letting
+// Jest load (and choke on) their real implementations.
+jest.mock('./pipeline.service', () => ({ PipelineService: class {} }));
+jest.mock('../memory/memory.service', () => ({ MemoryService: class {} }));
+jest.mock('../user-settings/user-settings.service', () => ({
+  UserSettingsService: class {},
+}));
+jest.mock('../agent-config/agent-config.service', () => ({
+  AgentConfigService: class {},
+}));
 jest.mock('../session/memory', () => ({
   sessionExists: jest.fn().mockResolvedValue(false),
   ensureThread: jest.fn().mockResolvedValue(undefined),
   getMemoryContext: jest.fn().mockResolvedValue([]),
   saveConversationTurn: jest.fn().mockResolvedValue(undefined),
 }));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { AnalyticsService } = require('./analytics.service') as typeof import('./analytics.service');
 
 function makeAgent(overrides: Partial<AgentEntry> = {}): AgentEntry {
   return {
