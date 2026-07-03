@@ -20,7 +20,7 @@ import type {
 } from '../types';
 import { readJsonSection, skillFile } from '../ai/skill-prompt';
 
-function patchConvert(value: unknown): unknown {
+export function patchConvert(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(patchConvert);
   if (value !== null && typeof value === 'object') {
     const obj = value as Record<string, unknown>;
