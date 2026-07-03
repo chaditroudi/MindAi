@@ -45,11 +45,13 @@ async function validateApiKey(apiKey: string, provider: string): Promise<void> {
     );
   }
 
-  if (res.status === 401 || res.status === 403) {
+  // 429 = rate-limited but key is valid → allow save.
+  // Any other 4xx means the provider rejected this exact key/request (wrong
+  // key format for this provider, bad key, etc.) — reject it. Only 5xx /
+  // network errors are ambiguous ("provider temporarily down") and pass through.
+  if (res.status !== 429 && res.status >= 400 && res.status < 500) {
     throw new BadRequestException(`Invalid ${provider} API key.`);
   }
-  // 429 = rate-limited but key is valid → allow save
-  // other non-OK = provider endpoint temporarily down → don't block save
 }
 
 function sanitizeSettings(dto: UserSettingsDto): UserSettingsDto {

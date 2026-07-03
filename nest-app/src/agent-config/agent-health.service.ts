@@ -213,12 +213,16 @@ export class AgentHealthService {
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
       });
 
-      if (res.status === 401 || res.status === 403) return false;
-
       if (res.status === 429) {
         const body = await res.text().catch(() => '');
         return !isQuotaExhausted(body);
       }
+
+      // Any 4xx (other than 429) means the provider rejected this exact
+      // key/request — e.g. a key from the wrong provider, or a dead key.
+      // Only 5xx / network errors are ambiguous ("provider temporarily
+      // down") and should not flip a healthy agent to expired.
+      if (res.status >= 400 && res.status < 500) return false;
 
       if (!res.ok) return true;
       if (!model?.trim()) return true;
