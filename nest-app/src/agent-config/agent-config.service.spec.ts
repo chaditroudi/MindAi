@@ -19,7 +19,7 @@ function makeAgent(overrides: Partial<AgentEntry> = {}): AgentEntry {
     outputTokensUsed: 0,
     lastInputTokens: 0,
     ...overrides,
-  } as AgentEntry;
+  };
 }
 
 function makeDoc(
@@ -71,7 +71,11 @@ describe('AgentConfigService', () => {
 
       const cfg = await service.getConfig();
 
-      expect(cfg).toEqual({ memoryLimit: 50, currentAgentId: null, agents: [] });
+      expect(cfg).toEqual({
+        memoryLimit: 50,
+        currentAgentId: null,
+        agents: [],
+      });
       expect(repo.save).not.toHaveBeenCalled();
     });
 
@@ -189,7 +193,7 @@ describe('AgentConfigService', () => {
       );
 
       await service.save({
-        agents: [{ id: existing.id, model: 'claude-updated' } as never],
+        agents: [{ id: existing.id, model: 'claude-updated' }],
       });
 
       const savedAgents = repo.save.mock.calls[0][0].agents!;
@@ -210,7 +214,7 @@ describe('AgentConfigService', () => {
       );
 
       await service.save({
-        agents: [{ apiKey: existing.apiKey, model: 'new-model' } as never],
+        agents: [{ apiKey: existing.apiKey, model: 'new-model' }],
       });
 
       const savedAgents = repo.save.mock.calls[0][0].agents!;
@@ -232,7 +236,7 @@ describe('AgentConfigService', () => {
             provider: 'openai',
             model: 'gpt-5',
             apiKey: 'brand-new-key',
-          } as never,
+          },
         ],
       });
 
