@@ -38,10 +38,6 @@ export class AnalyticsApiService {
   }
 
   validateSettings(dto: { apiKey: string; provider: string; model: string }): Promise<{ ok: boolean; provider: string; model: string }> {
-    // Short timeout: the backend's own provider check is capped at 8s
-    // (validateApiKey() in user-settings.service.ts), so this is an
-    // interactive "click and wait" action — it should never sit on the
-    // default 8-minute timeout meant for long-running dashboard generation.
     return this.req(this.http.post<{ ok: boolean; provider: string; model: string }>('/api/settings/validate', dto), 15_000);
   }
 

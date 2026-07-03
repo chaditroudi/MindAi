@@ -49,7 +49,6 @@ export interface DashboardSpec {
   widgets:  WidgetSpec[];
 }
 
-// ─── Stored result per assistant message ─────────────────────────────────────
 
 export interface MessageResult {
   type:             'dashboard' | 'report' | 'inquiry' | 'report+chart';
@@ -59,7 +58,6 @@ export interface MessageResult {
   durationMs:       number;
 }
 
-// ─── Conversation messages ────────────────────────────────────────────────────
 
 export interface LimitWarning {
   usedTokens:    number;
