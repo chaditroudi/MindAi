@@ -64,7 +64,7 @@ describe('fetchProviderModels', () => {
 
   it('returns [] for an unrecognized provider without calling fetch', async () => {
     const fetchSpy = jest.fn();
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    global.fetch = fetchSpy;
 
     const models = await fetchProviderModels('nope', 'key');
 
@@ -76,8 +76,8 @@ describe('fetchProviderModels', () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+      json: () => ({}),
+    });
 
     await expect(fetchProviderModels('openai', 'bad-key')).rejects.toThrow(
       /401/,
@@ -88,7 +88,7 @@ describe('fetchProviderModels', () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({
+      json: () => ({
         models: [
           {
             name: 'models/gemini-2.5-pro',
@@ -101,7 +101,7 @@ describe('fetchProviderModels', () => {
           },
         ],
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const models = await fetchProviderModels('google', 'key');
 
@@ -112,13 +112,13 @@ describe('fetchProviderModels', () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({
+      json: () => ({
         data: [
           { id: 'claude-sonnet-4-6', display_name: 'Claude Sonnet 4.6' },
           { id: 'claude-legacy' },
         ],
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const models = await fetchProviderModels('anthropic', 'key');
 
@@ -132,10 +132,10 @@ describe('fetchProviderModels', () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({
+      json: () => ({
         data: [{ id: 'zeta-model' }, { id: 'alpha-model' }],
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const models = await fetchProviderModels('groq', 'key');
 
