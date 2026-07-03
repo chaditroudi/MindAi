@@ -166,7 +166,7 @@ describe('withRateLimitRetry', () => {
       .mockRejectedValueOnce(
         Object.assign(new Error('rate limited'), {
           statusCode: 429,
-          responseHeaders: { 'retry-after': '0' },
+          responseHeaders: { 'retry-after': '0.01' },
         }),
       )
       .mockResolvedValueOnce('ok');
@@ -180,7 +180,7 @@ describe('withRateLimitRetry', () => {
   it('gives up after exhausting maxRetries and throws the last error', async () => {
     const err = Object.assign(new Error('rate limited'), {
       statusCode: 429,
-      responseHeaders: { 'retry-after': '0' },
+      responseHeaders: { 'retry-after': '0.01' },
     });
     const fn = jest.fn().mockRejectedValue(err);
 
