@@ -131,7 +131,7 @@ export class AgentConfigController {
         : dto.field === 'output'
           ? 'outputTokenLimit'
           : 'memoryTokenLimit';
-    await this.service.updateTokenLimit(dto.agentId, field, dto.value);
+    await this.service.updateToken_çLimit(dto.agentId, field, dto.value);
     return { ok: true };
   }
 }
