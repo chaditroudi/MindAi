@@ -439,7 +439,7 @@ export function finalizeTaskPlan({
   };
 }
 
-function deriveExecutionSkills(
+export function deriveExecutionSkills(
   plan: Pick<TaskPlan, 'needsData' | 'wantChart'>,
   intent: IntentKind,
 ): TaskPlan['skills'] {
