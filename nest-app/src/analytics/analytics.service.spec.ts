@@ -29,8 +29,8 @@ jest.mock('../session/memory', () => ({
   saveConversationTurn: jest.fn().mockResolvedValue(undefined),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const AnalyticsServiceCtor: typeof AnalyticsService = require('./analytics.service').AnalyticsService;
+const AnalyticsServiceCtor: typeof AnalyticsService =
+  require('./analytics.service').AnalyticsService;
 
 function makeAgent(overrides: Partial<AgentEntry> = {}): AgentEntry {
   return {
@@ -46,18 +46,35 @@ function makeAgent(overrides: Partial<AgentEntry> = {}): AgentEntry {
     outputTokensUsed: 0,
     lastInputTokens: 0,
     ...overrides,
-  } as AgentEntry;
+  };
 }
 
-function makeConfig(agents: AgentEntry[] = [], currentAgentId: string | null = null): ResolvedConfig {
+function makeConfig(
+  agents: AgentEntry[] = [],
+  currentAgentId: string | null = null,
+): ResolvedConfig {
   return { memoryLimit: 50, currentAgentId, agents };
 }
 
 describe('AnalyticsService', () => {
-  let pipeline: jest.Mocked<Pick<PipelineService, 'execute' | 'executeDashboard' | 'executeReport' | 'executeInquiry'>>;
-  let memory: jest.Mocked<Pick<MemoryService, 'getRelevantContext' | 'extractAndSave'>>;
-  let userSettings: jest.Mocked<Pick<UserSettingsService, 'findByUser' | 'incrementUsage'>>;
-  let agentConfig: jest.Mocked<Pick<AgentConfigService, 'getConfig' | 'updateRuntime' | 'trackUsage' | 'updateLastInputTokens'>>;
+  let pipeline: jest.Mocked<
+    Pick<
+      PipelineService,
+      'execute' | 'executeDashboard' | 'executeReport' | 'executeInquiry'
+    >
+  >;
+  let memory: jest.Mocked<
+    Pick<MemoryService, 'getRelevantContext' | 'extractAndSave'>
+  >;
+  let userSettings: jest.Mocked<
+    Pick<UserSettingsService, 'findByUser' | 'incrementUsage'>
+  >;
+  let agentConfig: jest.Mocked<
+    Pick<
+      AgentConfigService,
+      'getConfig' | 'updateRuntime' | 'trackUsage' | 'updateLastInputTokens'
+    >
+  >;
   let service: AnalyticsService;
 
   const successResult = { summary: 'ok' };
@@ -66,13 +83,21 @@ describe('AnalyticsService', () => {
   beforeEach(() => {
     pipeline = {
       execute: jest.fn().mockResolvedValue({ result: successResult, usage }),
-      executeDashboard: jest.fn().mockResolvedValue({ result: successResult, usage }),
-      executeReport: jest.fn().mockResolvedValue({ result: successResult, usage }),
-      executeInquiry: jest.fn().mockResolvedValue({ result: successResult, usage }),
+      executeDashboard: jest
+        .fn()
+        .mockResolvedValue({ result: successResult, usage }),
+      executeReport: jest
+        .fn()
+        .mockResolvedValue({ result: successResult, usage }),
+      executeInquiry: jest
+        .fn()
+        .mockResolvedValue({ result: successResult, usage }),
     };
     memory = {
       getRelevantContext: jest.fn().mockResolvedValue(null),
-      extractAndSave: jest.fn().mockResolvedValue({ inputTokens: 0, outputTokens: 0 }),
+      extractAndSave: jest
+        .fn()
+        .mockResolvedValue({ inputTokens: 0, outputTokens: 0 }),
     };
     userSettings = {
       findByUser: jest.fn().mockResolvedValue(null),
@@ -107,7 +132,11 @@ describe('AnalyticsService', () => {
       expect(pipeline.execute).toHaveBeenCalledWith(
         'hi',
         [],
-        expect.objectContaining({ apiKey: 'user-key', provider: 'openai', model: 'gpt-5' }),
+        expect.objectContaining({
+          apiKey: 'user-key',
+          provider: 'openai',
+          model: 'gpt-5',
+        }),
       );
     });
 
@@ -137,7 +166,9 @@ describe('AnalyticsService', () => {
     it('throws NO_ACTIVE_CONNECTION when no personal key and no active agents exist', async () => {
       agentConfig.getConfig.mockResolvedValue(makeConfig([]));
 
-      await expect(service.run({ prompt: 'hi', userId: 'u1' })).rejects.toMatchObject({
+      await expect(
+        service.run({ prompt: 'hi', userId: 'u1' }),
+      ).rejects.toMatchObject({
         code: 'NO_ACTIVE_CONNECTION',
       });
     });
@@ -150,7 +181,9 @@ describe('AnalyticsService', () => {
       agentConfig.getConfig.mockResolvedValue(makeConfig([bad, good], bad.id));
 
       pipeline.execute
-        .mockRejectedValueOnce(Object.assign(new Error('401 invalid api key'), { statusCode: 401 }))
+        .mockRejectedValueOnce(
+          Object.assign(new Error('401 invalid api key'), { statusCode: 401 }),
+        )
         .mockResolvedValueOnce({ result: successResult, usage });
 
       const res = await service.run({ prompt: 'hi', userId: 'u1' });
@@ -173,7 +206,9 @@ describe('AnalyticsService', () => {
         Object.assign(new Error('invalid api key'), { statusCode: 401 }),
       );
 
-      await expect(service.run({ prompt: 'hi', userId: 'u1' })).rejects.toMatchObject({
+      await expect(
+        service.run({ prompt: 'hi', userId: 'u1' }),
+      ).rejects.toMatchObject({
         code: 'INVALID_API_KEY',
       });
     });
@@ -184,7 +219,9 @@ describe('AnalyticsService', () => {
       memory.getRelevantContext.mockResolvedValue('some long-term memory');
 
       pipeline.execute
-        .mockRejectedValueOnce(new Error('context_length_exceeded: too many tokens'))
+        .mockRejectedValueOnce(
+          new Error('context_length_exceeded: too many tokens'),
+        )
         .mockResolvedValueOnce({ result: successResult, usage });
 
       await service.run({ prompt: 'hi', userId: 'u1' });
@@ -197,9 +234,13 @@ describe('AnalyticsService', () => {
     it('maps a truncated-output error to a TOKEN_LIMIT_TOO_LOW 422 with a suggested limit', async () => {
       const agent = makeAgent();
       agentConfig.getConfig.mockResolvedValue(makeConfig([agent], agent.id));
-      pipeline.execute.mockRejectedValue(new Error('Unexpected end of JSON input'));
+      pipeline.execute.mockRejectedValue(
+        new Error('Unexpected end of JSON input'),
+      );
 
-      const err = (await service.run({ prompt: 'hi', userId: 'u1' }).catch((e: unknown) => e)) as HttpException;
+      const err = (await service
+        .run({ prompt: 'hi', userId: 'u1' })
+        .catch((e: unknown) => e)) as HttpException;
 
       expect(err).toBeInstanceOf(HttpException);
       expect(err.getStatus()).toBe(422);
@@ -213,10 +254,14 @@ describe('AnalyticsService', () => {
       agentConfig.getConfig.mockResolvedValue(makeConfig([agent], agent.id));
       memory.getRelevantContext.mockResolvedValue('x'.repeat(1000));
 
-      const err = (await service.run({ prompt: 'hi', userId: 'u1' }).catch((e: unknown) => e)) as HttpException;
+      const err = (await service
+        .run({ prompt: 'hi', userId: 'u1' })
+        .catch((e: unknown) => e)) as HttpException;
 
       expect(err.getStatus()).toBe(422);
-      expect(err.getResponse()).toMatchObject({ code: 'MEMORY_TOKEN_LIMIT_TOO_LOW' });
+      expect(err.getResponse()).toMatchObject({
+        code: 'MEMORY_TOKEN_LIMIT_TOO_LOW',
+      });
       expect(pipeline.execute).not.toHaveBeenCalled();
     });
 
@@ -224,10 +269,14 @@ describe('AnalyticsService', () => {
       const agent = makeAgent({ inputTokenLimit: 5 });
       agentConfig.getConfig.mockResolvedValue(makeConfig([agent], agent.id));
 
-      const err = (await service.run({ prompt: 'hi', userId: 'u1' }).catch((e: unknown) => e)) as HttpException;
+      const err = (await service
+        .run({ prompt: 'hi', userId: 'u1' })
+        .catch((e: unknown) => e)) as HttpException;
 
       expect(err.getStatus()).toBe(422);
-      expect(err.getResponse()).toMatchObject({ code: 'INPUT_TOKEN_LIMIT_TOO_LOW' });
+      expect(err.getResponse()).toMatchObject({
+        code: 'INPUT_TOKEN_LIMIT_TOO_LOW',
+      });
       expect(pipeline.execute).not.toHaveBeenCalled();
     });
   });

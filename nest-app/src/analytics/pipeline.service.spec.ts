@@ -19,8 +19,8 @@ jest.mock('../ai/writer', () => ({
 // same ESM-parse problem as above — stub it out too.
 jest.mock('../history/history.service', () => ({ HistoryService: class {} }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PipelineService } = require('./pipeline.service') as typeof import('./pipeline.service');
+const { PipelineService } =
+  require('./pipeline.service') as typeof import('./pipeline.service');
 
 const SOURCE: DataSource = {
   name: 'Projects',
@@ -58,10 +58,9 @@ describe('PipelineService.resolvePipeline (private, exercised via bracket access
   });
 
   function resolve(pipeline: Record<string, unknown>[]) {
-    return (service as unknown as { resolvePipeline: Function }).resolvePipeline(
-      makePlan(pipeline),
-      [SOURCE],
-    );
+    return (
+      service as unknown as { resolvePipeline: Function }
+    ).resolvePipeline(makePlan(pipeline), [SOURCE]);
   }
 
   it('resolves a well-formed pipeline against the matching registered source', () => {
@@ -75,10 +74,9 @@ describe('PipelineService.resolvePipeline (private, exercised via bracket access
   it('matches the source case/whitespace-insensitively by name or collection', () => {
     const plan = makePlan([{ $match: { status: 'active' } }]);
     plan.query.sourceName = '  projects  ';
-    const result = (service as unknown as { resolvePipeline: Function }).resolvePipeline(
-      plan,
-      [SOURCE],
-    );
+    const result = (
+      service as unknown as { resolvePipeline: Function }
+    ).resolvePipeline(plan, [SOURCE]);
     expect(result.collection).toBe('projects');
   });
 
@@ -86,21 +84,31 @@ describe('PipelineService.resolvePipeline (private, exercised via bracket access
     const plan = makePlan([{ $match: { status: 'active' } }]);
     plan.query.sourceName = 'not-a-real-source';
     expect(() =>
-      (service as unknown as { resolvePipeline: Function }).resolvePipeline(plan, [SOURCE]),
+      (service as unknown as { resolvePipeline: Function }).resolvePipeline(
+        plan,
+        [SOURCE],
+      ),
     ).toThrow(/No registered data source/);
   });
 
   describe('forbidden stage denylist (security boundary)', () => {
-    it.each(['$merge', '$out', '$function', '$where', '$unionWith', '$graphLookup'])(
-      'rejects a pipeline containing %s',
-      (stage) => {
-        expect(() => resolve([{ [stage]: {} }])).toThrow(/not permitted/);
-      },
-    );
+    it.each([
+      '$merge',
+      '$out',
+      '$function',
+      '$where',
+      '$unionWith',
+      '$graphLookup',
+    ])('rejects a pipeline containing %s', (stage) => {
+      expect(() => resolve([{ [stage]: {} }])).toThrow(/not permitted/);
+    });
 
     it('rejects a forbidden stage even when it is not the first stage', () => {
       expect(() =>
-        resolve([{ $match: { status: 'active' } }, { $merge: { into: 'other' } }]),
+        resolve([
+          { $match: { status: 'active' } },
+          { $merge: { into: 'other' } },
+        ]),
       ).toThrow(/not permitted/);
     });
 
@@ -140,7 +148,10 @@ describe('PipelineService.resolvePipeline (private, exercised via bracket access
 
     it('strips non-operator commentary keys instead of failing', () => {
       const result = resolve([
-        { $match: { status: 'active' }, note: 'explaining the filter' } as never,
+        {
+          $match: { status: 'active' },
+          note: 'explaining the filter',
+        },
       ]);
       expect(result.pipeline).toEqual([{ $match: { status: 'active' } }]);
     });
@@ -199,7 +210,12 @@ describe('patchConvert', () => {
   it('defaults onError/onNull to null for date conversions', () => {
     const input = { $convert: { input: '$startYear', to: 'date' } };
     expect(patchConvert(input)).toEqual({
-      $convert: { input: '$startYear', to: 'date', onError: null, onNull: null },
+      $convert: {
+        input: '$startYear',
+        to: 'date',
+        onError: null,
+        onNull: null,
+      },
     });
   });
 
@@ -228,7 +244,9 @@ describe('patchConvert', () => {
       { $match: { a: 1 } },
       {
         $project: {
-          year: { $convert: { input: '$y', to: 'date', onError: null, onNull: null } },
+          year: {
+            $convert: { input: '$y', to: 'date', onError: null, onNull: null },
+          },
         },
       },
     ]);
