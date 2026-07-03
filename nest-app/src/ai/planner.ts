@@ -291,7 +291,7 @@ function strategySchema() {
   );
 }
 
-function buildPlanSchema(intent: IntentKind) {
+export function buildPlanSchema(intent: IntentKind) {
   const base = z.object({
     needsData: z.boolean(),
     query: z.object({
@@ -397,7 +397,7 @@ export async function runSupervisorPlan({
   };
 }
 
-function finalizeTaskPlan({
+export function finalizeTaskPlan({
   plan,
   intent,
   availableSources,
