@@ -12,7 +12,7 @@ export class SavedResult {
   @Prop({ required: true, maxlength: 200, trim: true })
   title: string;
 
-  @Prop({ required: true, maxlength: 1000 })
+  @Prop({ maxlength: 1000, default: '' })
   prompt: string;
 
   @Prop({ required: true, enum: ['dashboard', 'report', 'inquiry'] })
