@@ -140,52 +140,6 @@ function hasSeriesEncode(series: unknown): boolean {
   return series.some((item) => isPlainRecord(item) && 'encode' in item);
 }
 
-
-type DataShape = 'grouped_pairs' | 'time_series' | 'scatter_capable' | 'multi_field';
-
-const TEMPORAL_NAME_HINTS = ['year', 'month', 'quarter', 'date', 'day', 'time'];
-
-function isTemporalField(key: string, rows: Record<string, unknown>[]): boolean {
-  if (TEMPORAL_NAME_HINTS.some((t) => key.toLowerCase().includes(t))) return true;
-  return rows.some((row) => {
-    const value = row[key];
-    return typeof value === 'string' && !Number.isNaN(Date.parse(value));
-  });
-}
-
-function isNumericField(key: string, rows: Record<string, unknown>[]): boolean {
-  let sawNumber = false;
-  for (const row of rows) {
-    const value = row[key];
-    if (value == null) continue;
-    if (typeof value !== 'number') return false;
-    sawNumber = true;
-  }
-  return sawNumber;
-}
-
-function analyzeDataShape(rows: Record<string, unknown>[]): DataShape {
-  const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))];
-  const numericKeys = keys.filter((k) => isNumericField(k, rows));
-  const temporalKeys = keys.filter((k) => isTemporalField(k, rows));
-
-  if (keys.length === 2 && numericKeys.length === 1) return 'grouped_pairs';
-  if (temporalKeys.length > 0 && numericKeys.length >= 1) return 'time_series';
-  if (numericKeys.length >= 2 && keys.length >= 3) return 'scatter_capable';
-  return 'multi_field';
-}
-
-function reconcileChartHint(hint: string, shape: DataShape): string {
-  const normalized = hint.trim().toLowerCase();
-  if (normalized === 'scatter' && shape !== 'scatter_capable') {
-    return shape === 'time_series' ? 'trend' : 'ranking';
-  }
-  if (normalized === 'trend' && shape !== 'time_series') {
-    return 'ranking';
-  }
-  return hint;
-}
-
 function normalizeDataset(
   dataset: unknown,
   rows: Record<string, unknown>[],
@@ -434,18 +388,9 @@ export async function runChart(
     };
   }
 
-  const shape = analyzeDataShape(rows);
-  const reconciledHint = chartHint ? reconcileChartHint(chartHint, shape) : chartHint;
-  if (reconciledHint !== chartHint) {
-    log(
-      'chart',
-      `chartHint corrected: "${chartHint}" -> "${reconciledHint}" (data shape: ${shape}, impossible for requested hint)`,
-    );
-  }
-
   log(
     'chart',
-    `rows: ${rows.length} | strategy: ${strategy ?? 'standard'} | hint: ${chartHint ?? '-'} -> ${reconciledHint ?? '-'} | shape: ${shape} | source: ${source?.name ?? '?'}`,
+    `rows: ${rows.length} | strategy: ${strategy ?? 'standard'} | hint: ${chartHint ?? '-'} | source: ${source?.name ?? '?'}`,
   );
 
   const rowKeys = new Set<string>(rows.flatMap((row) => Object.keys(row)));
@@ -459,13 +404,7 @@ export async function runChart(
     userProvider,
   );
 
-  const basePrompt = buildChartPrompt(
-    rows,
-    prompt,
-    strategy,
-    reconciledHint,
-    source,
-  );
+  const basePrompt = buildChartPrompt(rows, prompt, strategy, chartHint, source);
 
   let generateHint: string | undefined;
   let result: Awaited<ReturnType<typeof agent.generate>> | undefined;
