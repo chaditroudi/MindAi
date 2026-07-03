@@ -11,13 +11,17 @@ import {
   Min,
   Max,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AgentConfigService } from './agent-config.service';
 import { AgentHealthService } from './agent-health.service';
 
 class AgentEntryDto {
-  @IsOptional()
+  // A new agent arrives from the client with id: '' (not omitted), and
+  // @IsOptional() only skips null/undefined — not ''. Use ValidateIf so an
+  // empty id is treated as "no id" instead of failing MinLength(1).
+  @ValidateIf((o: AgentEntryDto) => o.id !== undefined && o.id !== '')
   @IsString()
   @MinLength(1)
   @MaxLength(100)

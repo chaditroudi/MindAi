@@ -39,12 +39,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else {
         const r = raw as Record<string, unknown>;
         const isBuiltinFormat = typeof r['statusCode'] === 'number';
+        const message = r['message'];
         errorMsg =
-          isBuiltinFormat && typeof r['message'] === 'string'
-            ? r['message']
-            : typeof r['error'] === 'string'
-              ? r['error']
-              : 'An error occurred';
+          isBuiltinFormat && typeof message === 'string'
+            ? message
+            : isBuiltinFormat &&
+                Array.isArray(message) &&
+                message.every((m) => typeof m === 'string')
+              ? message.join('; ')
+              : typeof r['error'] === 'string'
+                ? r['error']
+                : 'An error occurred';
         errorCode = typeof r['code'] === 'string' ? r['code'] : undefined;
       }
       if (!errorCode) {
