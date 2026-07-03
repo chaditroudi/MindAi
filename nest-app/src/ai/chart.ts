@@ -140,12 +140,6 @@ function hasSeriesEncode(series: unknown): boolean {
   return series.some((item) => isPlainRecord(item) && 'encode' in item);
 }
 
-// ── Data-shape pre-check ─────────────────────────────────────────────────────
-// Runs in pure code, before the chart LLM call, so a chartHint that is
-// physically impossible for the actual aggregated rows (e.g. "scatter" with
-// only one numeric field) never reaches the model. chartHint stays otherwise
-// open-ended per SKILL.md — only these two known-impossible combinations are
-// corrected; everything else is passed through untouched.
 
 type DataShape = 'grouped_pairs' | 'time_series' | 'scatter_capable' | 'multi_field';
 
@@ -233,12 +227,6 @@ function attachDatasetSource(
   return option;
 }
 
-// ECharts heatmap series has no visible output without a visualMap component —
-// the "value" dimension has nowhere to map to a color otherwise, so cells
-// render blank. The model reliably picks the right series type and encode,
-// but the SKILL.md doesn't mandate visualMap, so guarantee it in code instead
-// of hoping every generation remembers — same principle as attachDatasetSource
-// above guaranteeing dataset.source.
 function ensureHeatmapVisualMap(
   option: Record<string, unknown>,
   rows: Record<string, unknown>[],
