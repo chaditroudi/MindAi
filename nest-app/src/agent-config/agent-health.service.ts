@@ -87,7 +87,7 @@ export class AgentHealthService {
     writeHealthLog(['monthly token usage counters reset']);
   }
 
-  @Cron('* * * * *')
+  @Cron('* * * * *') // every minutes
   async checkAllAgents(): Promise<void> {
     const config = await this.config.getConfig();
     if (!config?.agents?.length) {
