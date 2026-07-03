@@ -15,9 +15,9 @@ interface GenerateResult {
 
 const generate = jest.fn<Promise<GenerateResult>, [unknown, unknown]>();
 const createSkillAgent = jest.fn().mockReturnValue({ generate });
-const withRateLimitRetry = jest.fn((fn: () => unknown, label: string) => (
-  void label, fn()
-));
+const withRateLimitRetry = jest.fn(
+  (fn: () => unknown, label: string) => (void label, fn()),
+);
 const freshSignal = jest.fn().mockReturnValue(undefined);
 const skillProviderOptions = jest.fn().mockReturnValue({});
 const buildInquiryMessage = jest.fn().mockReturnValue('inquiry message');
@@ -37,11 +37,11 @@ jest.mock('./model', () => ({
   skillProviderOptions: (apiKey?: string, provider?: string) =>
     skillProviderOptions(apiKey, provider),
 }));
-/* eslint-enable @typescript-eslint/no-unsafe-return */
 jest.mock('../prompts', () => ({
   buildInquiryMessage: (...args: unknown[]) => buildInquiryMessage(...args),
   buildReportMessage: (...args: unknown[]) => buildReportMessage(...args),
 }));
+/* eslint-enable @typescript-eslint/no-unsafe-return */
 
 const { runInquirySkill, runReportSkill } =
   require('./writer') as typeof import('./writer');
