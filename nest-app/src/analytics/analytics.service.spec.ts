@@ -1,4 +1,5 @@
 import { BadRequestException, HttpException } from '@nestjs/common';
+import type { AnalyticsService } from './analytics.service';
 import type { PipelineService } from './pipeline.service';
 import type { MemoryService } from '../memory/memory.service';
 import type { UserSettingsService } from '../user-settings/user-settings.service';
@@ -29,7 +30,7 @@ jest.mock('../session/memory', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { AnalyticsService } = require('./analytics.service') as typeof import('./analytics.service');
+const AnalyticsServiceCtor: typeof AnalyticsService = require('./analytics.service').AnalyticsService;
 
 function makeAgent(overrides: Partial<AgentEntry> = {}): AgentEntry {
   return {
@@ -84,7 +85,7 @@ describe('AnalyticsService', () => {
       updateLastInputTokens: jest.fn().mockResolvedValue(undefined),
     };
 
-    service = new AnalyticsService(
+    service = new AnalyticsServiceCtor(
       pipeline as unknown as PipelineService,
       memory as unknown as MemoryService,
       userSettings as unknown as UserSettingsService,
