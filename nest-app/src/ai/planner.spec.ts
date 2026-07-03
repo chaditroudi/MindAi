@@ -18,7 +18,10 @@ interface GenerateResult {
   usage: { inputTokens?: number; outputTokens?: number };
 }
 
-const generate = jest.fn<Promise<GenerateResult>, [GeneratedMessage[], unknown]>();
+const generate = jest.fn<
+  Promise<GenerateResult>,
+  [GeneratedMessage[], unknown]
+>();
 const createSkillAgent = jest.fn().mockReturnValue({ generate });
 const withRateLimitRetry = jest.fn(
   (fn: () => unknown, label: string) => (void label, fn()),
