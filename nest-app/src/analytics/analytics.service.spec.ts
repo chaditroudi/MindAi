@@ -173,8 +173,9 @@ describe('AnalyticsService', () => {
 
       await service.run({ prompt: 'hi', userId: 'u1' });
 
-      const [firstCall, secondCall] = pipeline.execute.mock.calls;
-      expect(secondCall![1].length).toBeLessThan(firstCall![1].length);
+      const firstContext = pipeline.execute.mock.calls[0]?.[1] ?? [];
+      const secondContext = pipeline.execute.mock.calls[1]?.[1] ?? [];
+      expect(secondContext.length).toBeLessThan(firstContext.length);
     });
 
     it('maps a truncated-output error to a TOKEN_LIMIT_TOO_LOW 422 with a suggested limit', async () => {
