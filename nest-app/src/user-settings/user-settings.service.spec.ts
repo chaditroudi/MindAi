@@ -43,18 +43,20 @@ describe('UserSettingsService', () => {
   describe('validate', () => {
     it('rejects an unknown provider without making a network call', async () => {
       const fetchSpy = jest.fn();
-      global.fetch = fetchSpy as unknown as typeof fetch;
+      global.fetch = fetchSpy;
 
       await expect(
-        service.validate({ apiKey: 'k', provider: 'not-a-provider', model: 'm' }),
+        service.validate({
+          apiKey: 'k',
+          provider: 'not-a-provider',
+          model: 'm',
+        }),
       ).rejects.toThrow(BadRequestException);
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it('sanitizes provider/apiKey/model casing and whitespace on success', async () => {
-      global.fetch = jest
-        .fn()
-        .mockResolvedValue({ status: 200 }) as unknown as typeof fetch;
+      global.fetch = jest.fn().mockResolvedValue({ status: 200 });
 
       const result = await service.validate({
         apiKey: '  my-key  ',
@@ -66,9 +68,7 @@ describe('UserSettingsService', () => {
     });
 
     it('maps a network failure to a 502 Bad Gateway', async () => {
-      global.fetch = jest
-        .fn()
-        .mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
+      global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
 
       const err = await service
         .validate({ apiKey: 'k', provider: 'openai', model: 'm' })
@@ -79,9 +79,7 @@ describe('UserSettingsService', () => {
     });
 
     it('rejects a key the provider reports as invalid (4xx, not 429)', async () => {
-      global.fetch = jest
-        .fn()
-        .mockResolvedValue({ status: 401 }) as unknown as typeof fetch;
+      global.fetch = jest.fn().mockResolvedValue({ status: 401 });
 
       await expect(
         service.validate({ apiKey: 'bad', provider: 'openai', model: 'm' }),
@@ -89,9 +87,7 @@ describe('UserSettingsService', () => {
     });
 
     it('treats 429 (rate-limited but valid key) as a pass', async () => {
-      global.fetch = jest
-        .fn()
-        .mockResolvedValue({ status: 429 }) as unknown as typeof fetch;
+      global.fetch = jest.fn().mockResolvedValue({ status: 429 });
 
       await expect(
         service.validate({ apiKey: 'k', provider: 'openai', model: 'm' }),
@@ -99,9 +95,7 @@ describe('UserSettingsService', () => {
     });
 
     it('treats a 5xx provider error as ambiguous and allows the save', async () => {
-      global.fetch = jest
-        .fn()
-        .mockResolvedValue({ status: 503 }) as unknown as typeof fetch;
+      global.fetch = jest.fn().mockResolvedValue({ status: 503 });
 
       await expect(
         service.validate({ apiKey: 'k', provider: 'openai', model: 'm' }),
@@ -111,9 +105,7 @@ describe('UserSettingsService', () => {
 
   describe('save', () => {
     it('normalizes responseTokenLimit/inputTokenLimit to the same value before persisting', async () => {
-      global.fetch = jest
-        .fn()
-        .mockResolvedValue({ status: 200 }) as unknown as typeof fetch;
+      global.fetch = jest.fn().mockResolvedValue({ status: 200 });
 
       await service.save('user-1', {
         apiKey: 'k',
