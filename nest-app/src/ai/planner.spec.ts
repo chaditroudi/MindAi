@@ -11,7 +11,9 @@ import type { DataSource, TaskPlan, ExecutionSkillKind } from '../types';
 // below only assert on how planner.ts *calls* these, not their real behavior.
 const generate = jest.fn();
 const createSkillAgent = jest.fn().mockReturnValue({ generate });
-const withRateLimitRetry = jest.fn((fn: () => unknown) => fn());
+const withRateLimitRetry = jest.fn((fn: () => unknown, _label?: string) =>
+  fn(),
+);
 const freshSignal = jest.fn().mockReturnValue(undefined);
 const skillProviderOptions = jest.fn().mockReturnValue({});
 
