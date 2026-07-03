@@ -96,12 +96,9 @@ describe('PipelineService.resolvePipeline (private, exercised via bracket access
   it('rejects a query against an unregistered data source', () => {
     const plan = makePlan([{ $match: { status: 'active' } }]);
     plan.query.sourceName = 'not-a-real-source';
-    expect(() =>
-      (service as unknown as { resolvePipeline: Function }).resolvePipeline(
-        plan,
-        [SOURCE],
-      ),
-    ).toThrow(/No registered data source/);
+    expect(() => asTestAccess(service).resolvePipeline(plan, [SOURCE])).toThrow(
+      /No registered data source/,
+    );
   });
 
   describe('forbidden stage denylist (security boundary)', () => {
@@ -166,7 +163,7 @@ describe('PipelineService.resolvePipeline (private, exercised via bracket access
           note: 'explaining the filter',
         },
       ]);
-      expect(result.pipeline).toEqual([{ $match: { status: 'active' } }]);
+      expect(result?.pipeline).toEqual([{ $match: { status: 'active' } }]);
     });
   });
 
