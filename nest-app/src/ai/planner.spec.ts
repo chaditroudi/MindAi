@@ -16,10 +16,14 @@ const freshSignal = jest.fn().mockReturnValue(undefined);
 const skillProviderOptions = jest.fn().mockReturnValue({});
 
 jest.mock('./model', () => ({
-  createSkillAgent: (...args: unknown[]) => createSkillAgent(...args),
-  withRateLimitRetry: (...args: unknown[]) => withRateLimitRetry(...args),
-  freshSignal: (...args: unknown[]) => freshSignal(...args),
-  skillProviderOptions: (...args: unknown[]) => skillProviderOptions(...args),
+  createSkillAgent: (
+    ...args: Parameters<typeof import('./model').createSkillAgent>
+  ) => createSkillAgent(...args),
+  withRateLimitRetry: (fn: () => unknown, label?: string) =>
+    withRateLimitRetry(fn, label),
+  freshSignal: (label?: string) => freshSignal(label),
+  skillProviderOptions: (apiKey?: string, provider?: string) =>
+    skillProviderOptions(apiKey, provider),
 }));
 
 const {
@@ -40,15 +44,17 @@ describe('buildPlanSchema', () => {
 
   describe('dashboard intent', () => {
     const schema = buildPlanSchema('dashboard');
+    const parse = (input: unknown) =>
+      schema.parse(input) as { strategy: string; chartHint: string };
 
     it('defaults strategy to "standard" and chartHint to "distribution"', () => {
-      const parsed = schema.parse(basePlan);
+      const parsed = parse(basePlan);
       expect(parsed.strategy).toBe('standard');
       expect(parsed.chartHint).toBe('distribution');
     });
 
     it('trims and lowercases a valid strategy', () => {
-      const parsed = schema.parse({ ...basePlan, strategy: '  Trend  ' });
+      const parsed = parse({ ...basePlan, strategy: '  Trend  ' });
       expect(parsed.strategy).toBe('trend');
     });
 
