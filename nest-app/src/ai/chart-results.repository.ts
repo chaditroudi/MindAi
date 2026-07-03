@@ -49,15 +49,3 @@ export class ChartResultsRepository {
   }
 }
 
-
-/*
-
-
-
-
-
-
-
-
-
-
