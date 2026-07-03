@@ -69,14 +69,12 @@
     "typescript-eslint": "^8.20.0"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts", "mjs"],
+    "moduleFileExtensions": ["js", "json", "ts"],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest",
-      "^.+\\.mjs$": "ts-jest"
+      "^.+\\.(t|j)s$": "ts-jest"
     },
-    "transformIgnorePatterns": ["/node_modules/(?!(tokenx)/)"],
     "collectCoverageFrom": ["**/*.(t|j)s"],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
