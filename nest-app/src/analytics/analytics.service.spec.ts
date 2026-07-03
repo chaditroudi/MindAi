@@ -14,11 +14,6 @@ import type {
 } from '../agent-config/agent-config.service';
 import type { AgentEntry } from '../agent-config/agent-config.repository';
 
-// These services transitively import ai/model.ts, which pulls in
-// @mastra/core/agent -> an ESM-only dependency ts-jest can't parse under
-// node_modules. This suite only ever exercises AnalyticsService against
-// mocked collaborators, so replace the modules outright instead of letting
-// Jest load (and choke on) their real implementations.
 jest.mock('./pipeline.service', () => ({ PipelineService: class {} }));
 jest.mock('../memory/memory.service', () => ({ MemoryService: class {} }));
 jest.mock('../user-settings/user-settings.service', () => ({
