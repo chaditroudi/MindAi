@@ -14,6 +14,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiTags } from '@nestjs/swagger';
 import { AgentConfigService } from './agent-config.service';
 import { AgentHealthService } from './agent-health.service';
 
@@ -70,6 +71,7 @@ class UpdateTokenLimitDto {
   value!: number;
 }
 
+@ApiTags('agent-config')
 @Controller('api/agent-config')
 export class AgentConfigController {
   constructor(
