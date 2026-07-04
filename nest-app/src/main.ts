@@ -16,14 +16,8 @@ function setupSwagger(app: import('@nestjs/common').INestApplication): void {
         'See README.md for the full architecture and worked examples.',
     )
     .setVersion('1.0')
-    .addApiKey(
-      { type: 'apiKey', in: 'header', name: 'x-api-key' },
-      'apiKey',
-    )
-    .addApiKey(
-      { type: 'apiKey', in: 'header', name: 'x-user-id' },
-      'userId',
-    )
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'x-api-key' }, 'apiKey')
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'x-user-id' }, 'userId')
     .addTag('analytics', 'Main AI query endpoint')
     .addTag('sources', 'Registered dataset schemas')
     .addTag('history', 'Past pipeline runs and conversation sessions')

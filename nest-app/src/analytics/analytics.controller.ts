@@ -43,7 +43,8 @@ export class AnalyticsController {
   @ApiHeader({
     name: 'x-user-id',
     required: true,
-    description: 'Caller identity used to scope settings, memory, and saved results. Not authenticated — see README §15.',
+    description:
+      'Caller identity used to scope settings, memory, and saved results. Not authenticated — see README §15.',
   })
   @Post('analytics')
   async runAnalytics(
