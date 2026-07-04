@@ -120,11 +120,14 @@ MindAi/
 │   └── src/app/                 ← flat, single-view SPA (see §10)
 │
 ├── skills/                      ← Markdown "skill" prompt files consumed by nest-app/src/ai
-│   ├── aggregation/SKILL.md         planner system prompt + pipeline-stage semantics config
-│   ├── chart/SKILL.md               chart-widget system prompt (full ECharts authoring contract)
-│   ├── writer/SKILL.md, report/SKILL.md, inquiry/SKILL.md   writer system prompts
-│   ├── memory/SKILL.md              memory-extraction system prompt
-│   ├── analytics/SKILL.md, suggestions/SKILL.md   supporting prompt text
+│   │                            ← 5 of 8 folders are actually loaded (verified via `skillFile()` call sites) — see §6
+│   ├── aggregation/SKILL.md         ACTIVE — planner system prompt + pipeline-stage semantics config
+│   ├── chart/SKILL.md               ACTIVE — chart-widget system prompt (full ECharts authoring contract)
+│   ├── report/SKILL.md, inquiry/SKILL.md   ACTIVE — writer system prompts (loaded by ai/writer.ts)
+│   ├── memory/SKILL.md              ACTIVE — memory-extraction system prompt
+│   ├── writer/SKILL.md              DEAD — no `skillFile('writer', ...)` call anywhere; not loaded
+│   ├── analytics/SKILL.md           DEAD — not loaded
+│   └── suggestions/SKILL.md         DEAD — not loaded
 │
 ├── src/                         ← LEGACY prototype (Mastra + Express). Not used — do not build on this.
 ├── ARCHITECTURE.md, HOW_IT_WORKS.md, PROJECT_WORKFLOW_REPORT.md
