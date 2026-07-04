@@ -151,7 +151,6 @@ export class AgentConfigService {
     const currentChanged = currentAgentId !== (doc.currentAgentId ?? null);
 
     if (normalized.changed || currentChanged) {
-
       const saved = await this.repo.save({
         memoryLimit: doc.memoryLimit,
         currentAgentId,

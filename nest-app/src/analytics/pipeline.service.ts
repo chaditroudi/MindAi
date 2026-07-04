@@ -86,7 +86,6 @@ export interface ExecuteResult<T> {
   usage: TokenUsage;
 }
 
-
 interface StageBehavior {
   validateKeys: boolean;
   walkValues: boolean;
@@ -158,7 +157,6 @@ export class PipelineService {
     private readonly history: HistoryService,
     private readonly chartRepo: ChartResultsRepository,
   ) {}
-
 
   async aggregate(
     prompt: string,
@@ -553,7 +551,6 @@ export class PipelineService {
       (s) => s.name === sourceName || s.collection === sourceName,
     );
   }
-
 
   private async dispatchSkills(
     plan: TaskPlan,

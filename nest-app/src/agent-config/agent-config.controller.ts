@@ -18,7 +18,6 @@ import { AgentConfigService } from './agent-config.service';
 import { AgentHealthService } from './agent-health.service';
 
 class AgentEntryDto {
-
   @ValidateIf((o: AgentEntryDto) => o.id !== undefined && o.id !== '')
   @IsString()
   @MinLength(1)
@@ -92,7 +91,6 @@ export class AgentConfigController {
 
   @Patch('token-limit')
   async updateTokenLimit(@Body() dto: UpdateTokenLimitDto) {
-
     const field =
       dto.field === 'input'
         ? 'inputTokenLimit'

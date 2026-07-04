@@ -226,9 +226,6 @@ function buildSchemaSection(sources: DataSource[]): string {
     for (const j of source.joins ?? []) {
       joins.push(j);
     }
-    // ...then fill in any reference fields resolveReference() found that
-    // AREN'T already covered by an explicit join, so the model still gets a
-    // usable $lookup template for auto-detected references.
     for (const field of source.fields) {
       const ref = refByField.get(field);
       if (!ref) continue;
