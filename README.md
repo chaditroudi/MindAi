@@ -1421,6 +1421,32 @@ Known `code` values (see `ERROR_CODES` in [`analytics/analytics.service.ts`](nes
 
 ## 23. Known Limitations & Roadmap Considerations
 
+### Feature Maturity Matrix
+
+The fastest way to answer "is X safe to rely on?" without re-reading the whole document — every major subsystem, rated by what was actually verified in the code (not by intent or aspiration):
+
+| Subsystem | Status | Notes |
+|---|:---:|---|
+| Dashboard / report / inquiry generation | ✅ Solid | Deterministic guardrails around the LLM output (sanitize, renderability check, heatmap `visualMap`, 1-retry pipeline validation) |
+| MongoDB pipeline planning & validation | ✅ Solid | Field/stage validation before execution; targeted retry hints — see [§6](#6-ai-pipeline-in-detail), [§4.8](#4-architecture) |
+| Prompt-result caching (7-day TTL) | ✅ Solid | Correctly bypassed on follow-up turns |
+| Short-term conversation memory (LibSQL) | ✅ Solid | No horizontal-scaling story yet if `nest-app` runs multi-instance |
+| Agent pool fallback + health-check cron | ✅ Solid | One real gap: probe **fails open** on network errors — see [§16](#16-background-jobs) |
+| Per-user settings (BYO API key) | ✅ Solid | Key stored in plaintext — see [§15](#15-security-model--trust-boundaries) |
+| API documentation (Swagger/OpenAPI) | ✅ Solid (new) | Public route by design (`/api/docs`) even behind `API_KEY` — see [§15](#15-security-model--trust-boundaries) |
+| Token limit enforcement | ⚠️ Works, with caveats | Pre-flight check is a character-count *estimate*, not the provider's real tokenizer ([§6](#6-ai-pipeline-in-detail)); personal-connection usage counters are **never** auto-reset, only the shared agent pool's are |
+| Long-term memory extraction & recall | ⚠️ Works, with caveats | Relevance ranking is keyword/tag overlap, not embeddings; extraction is `void`-called, not truly decoupled from the request |
+| Skills system (prompt loading) | ⚠️ Works, with caveats | **3 of 8** `skills/` folders (`writer`, `analytics`, `suggestions`) are dead code — not loaded by anything, see [§6](#6-ai-pipeline-in-detail) |
+| Authentication / authorization | ❌ Not implemented | `x-user-id` is an unverified namespace key, not identity — by design for now, see [§15](#15-security-model--trust-boundaries) |
+| Request rate limiting | ❌ Not implemented | No middleware; only reactive per-provider backoff after a 429 |
+| CI/CD pipeline | ❌ Not implemented | No `.github/workflows` found in the repo |
+| Containerization | ❌ Not implemented | No `Dockerfile`/`docker-compose.yml` found in the repo |
+| License | ❌ Missing | `nest-app/package.json` declares `"license": "UNLICENSED"`; no `LICENSE` file exists anywhere in the repo |
+| Frontend automated testing / linting | ❌ Not implemented | `client/package.json` has no `test` or `lint` script at all (unlike the backend) |
+| Horizontal scaling (multiple `nest-app` instances) | ❌ Undocumented | Single MongoDB connection assumption is fine; single-file LibSQL is not multi-instance-safe as-is |
+
+### Detailed gap notes
+
 A candid list of gaps found while documenting this system — useful input for prioritizing engineering work, not a criticism of the current implementation:
 
 - **Auth is namespace-only, not identity-verified** ([§15](#15-security-model--trust-boundaries)) — the single largest gap if this is ever exposed beyond a trusted internal network.
