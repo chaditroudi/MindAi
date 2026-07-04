@@ -71,7 +71,6 @@ function patchConvert(value: unknown): unknown {
   return value;
 }
 
-// -- internal step functions --
 
 async function checkCache(
   intent:   IntentKind,

@@ -33,7 +33,6 @@ function resolveProvider(key: string): { name: string; url: string } | null {
   return { name: provider, url: `${baseURL}/models` };
 }
 
-// POST /api/key — verify + save
 userKeyRouter.post('/key', async (req, res) => {
   try {
     const userId = (req.headers['x-user-id'] as string | undefined)?.trim();
@@ -42,7 +41,6 @@ userKeyRouter.post('/key', async (req, res) => {
     const { apiKey, model, provider: dtoProvider } = saveSchema.parse(req.body);
     const key = apiKey.trim();
 
-    // Provider must be explicitly supplied or auto-detected from key prefix — no silent default.
     const resolvedProvider = dtoProvider?.trim() || resolveProvider(key)?.name;
     if (!resolvedProvider) {
       res.status(400).json({ error: 'Could not detect provider from key. Please select your provider manually.' });
@@ -77,7 +75,6 @@ userKeyRouter.post('/key', async (req, res) => {
   }
 });
 
-// GET /api/key — check if key is saved
 userKeyRouter.get('/key', async (req, res) => {
   const userId = (req.headers['x-user-id'] as string | undefined)?.trim();
   if (!userId) { res.status(401).json({ error: 'User ID missing.' }); return; }
@@ -85,7 +82,6 @@ userKeyRouter.get('/key', async (req, res) => {
   res.json({ hasKey: !!key });
 });
 
-// DELETE /api/key — remove saved key
 userKeyRouter.delete('/key', async (req, res) => {
   try {
     const userId = (req.headers['x-user-id'] as string | undefined)?.trim();

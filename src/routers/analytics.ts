@@ -16,7 +16,6 @@ const analyticsInputSchema = z.object({
 export const analyticsRouter = Router();
 
 analyticsRouter.get('/provider', (_req, res) => {
-  // Provider is determined per-user from their saved settings — no server-level default.
   res.json({ provider: '', hasGlobalKey: false });
 });
 
@@ -58,8 +57,6 @@ analyticsRouter.post('/analytics', loadSession, saveSession, async (req, res) =>
       result = await handler(ctx.prompt, req.memoryContext, settings.apiKey, settings.model, settings.provider);
     } else {
       log('router', 'no intent — routing through dynamic analytics agent');
-      // Create a per-request agent so the user's own model/provider/key are used
-      // for both intent routing and all skill tool calls.
       const agent = createAnalyticsAgent(settings.apiKey, settings.model, settings.provider);
       const agentResponse = await agent.generateLegacy(
         [{ role: 'user', content: ctx.prompt }],
