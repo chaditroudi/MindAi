@@ -94,17 +94,6 @@ function fieldDesc(f: DataSourceField): string | undefined {
   );
 }
 
-/**
- * Guesses whether a field is a foreign-key-style reference to ANOTHER
- * registered source, so buildSchemaSection can surface a ready-to-copy
- * $lookup template for the planner LLM instead of expecting it to invent
- * join syntax from scratch. Three strategies, tried in order:
- *  1. an explicit `referenceTo` on the field (most reliable — trust it outright)
- *  2. the field's description mentioning "reference"/"id"/"ref " AND naming
- *     another source by name/collection
- *  3. a fuzzy name match: the field name is a prefix/suffix match against
- *     another source's (singularized) name or collection
- */
 function resolveReference(
   field: DataSourceField,
   sources: DataSource[],
@@ -125,8 +114,6 @@ function resolveReference(
     );
   if (byDesc) return byDesc;
   return sources.find((s) => {
-    // Strip a trailing 's' as a crude singularization before comparing —
-    // "regions" (collection) vs "region" (field name), etc.
     const col = s.collection.toLowerCase().replace(/s$/, '');
     const nm = s.name.toLowerCase().replace(/s$/, '');
     return (
@@ -183,9 +170,6 @@ function buildSchemaSection(sources: DataSource[]): string {
   ];
 
   for (const source of sources) {
-    // Precompute once per source: which fields look like references to
-    // another source, which are numeric measures, which look temporal
-    // (date/year/month/etc.), and which are plain string/enum dimensions.
     const refByField = new Map(
       source.fields.map((f) => [f, resolveReference(f, sources)]),
     );
@@ -216,12 +200,6 @@ function buildSchemaSection(sources: DataSource[]): string {
     if (source.description) lines.push(`  ${source.description}`);
     lines.push('  Fields:');
 
-    // One line per field: name + a tag list (type, measure/temporal/dimension,
-    // a "→ references X" note if it's a join target, plus its description).
-    // Enum fields get their allowed values spelled out explicitly (so the
-    // model can't invent a value outside the real set); free-text/number
-    // fields get a few real sample values instead, purely as a hint of what
-    // the data actually looks like.
     for (const field of source.fields) {
       const ref = refByField.get(field);
       const desc = fieldDesc(field);
@@ -281,10 +259,6 @@ function buildSchemaSection(sources: DataSource[]): string {
     }
 
     if (joins.length) {
-      // Spelled out as a literal, copy-pasteable $lookup + $unwind pair —
-      // deliberately prescriptive rather than just describing the
-      // relationship in prose, since a hand-written join is one of the more
-      // error-prone things to ask an LLM to generate freehand.
       lines.push('  Available joins (copy $lookup exactly as shown):');
       for (const j of joins) {
         const target = sources.find(
@@ -301,10 +275,6 @@ function buildSchemaSection(sources: DataSource[]): string {
       }
     }
 
-    // A couple of ready-made "count by X" / "sum Y by X" pipeline templates
-    // for the first non-reference dimension — nudges the model toward the
-    // dataset+encode-friendly {_id, value} label/value shape chart.ts's
-    // SKILL.md expects, rather than an arbitrary result shape.
     if (dims.length) {
       const groupableDim = dims.find((field) => !refByField.get(field));
       if (groupableDim) {
@@ -351,11 +321,7 @@ function strategySchema() {
   );
 }
 
-/**
- * Builds the Zod schema the planner's structured output must conform to —
- * shape differs by intent, since only a dashboard needs a presentation
- * `strategy`/`chartHint`, and only a report has a `wantChart` toggle.
- */
+
 export function buildPlanSchema(intent: IntentKind) {
   const base = z.object({
     needsData: z.boolean(),
