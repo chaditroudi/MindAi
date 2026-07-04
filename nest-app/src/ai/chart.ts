@@ -45,17 +45,10 @@ const CHART_INSTRUCTIONS = readMarkdownSection(
 
 const MAX_WIDGETS = Number(process.env['CHART_MAX_WIDGETS'] ?? 4);
 const MAX_TOKENS = Number(process.env['CHART_MAX_TOKENS'] ?? 2_000);
-// Depth/property caps for sanitizeJson below — a hard ceiling against a
-// pathological or malformed LLM response ballooning into something huge
-// before it's ever rendered.
-const MAX_JSON_DEPTH = Number(process.env['CHART_JSON_MAX_DEPTH'] ?? 24);
 const MAX_JSON_PROPERTIES = Number(
   process.env['CHART_JSON_MAX_PROPERTIES'] ?? 8_000,
 );
 const MAX_TABLE_ROWS = Number(process.env['CHART_TABLE_MAX_ROWS'] ?? 100);
-// Any ECharts option missing ALL of these keys has no actual visualization
-// content — used by hasRenderableSignal to drop empty/decorative-only
-// widgets rather than shipping something that renders as a blank box.
 const RENDERABLE_OPTION_KEYS = new Set([
   'series',
   'graphic',
@@ -141,8 +134,6 @@ function sanitizeJson(
   }
   if (typeof value === 'number') {
     state.count += 1;
-    // NaN/Infinity aren't valid JSON — coerce to null rather than letting
-    // them silently corrupt JSON.stringify downstream.
     return Number.isFinite(value) ? value : null;
   }
   if (Array.isArray(value)) {
@@ -292,8 +283,6 @@ function ensureHeatmapVisualMap(
       type: 'continuous',
       calculable: true,
       min,
-      // Guard against a degenerate single-value dataset where min === max —
-      // ECharts needs a non-zero range to render a usable color scale.
       max: max > min ? max : min + 1,
       orient: 'horizontal',
       left: 'center',
@@ -302,7 +291,6 @@ function ensureHeatmapVisualMap(
   };
 }
 
-/** Recursively collects every dimension name declared on a `dataset` (used by logUnknownRefs below to know what encode references are actually valid). */
 function collectDatasetDimensions(
   value: unknown,
   acc = new Set<string>(),
@@ -334,7 +322,6 @@ function collectDatasetDimensions(
   return acc;
 }
 
-/** Recursively walks an option collecting every field name referenced by any `encode` block anywhere in it (series, visualMap, etc). */
 function collectEncodeRefs(
   value: unknown,
   acc = new Set<string>(),
@@ -390,15 +377,12 @@ function logUnknownRefs(
   }
 }
 
-/** Builds a `table` widget (raw rows + columns) — the one widget type that skips ECharts option handling entirely. */
 function buildTableWidget(
   widget: LlmWidget,
   rows: Record<string, unknown>[],
   rowKeys: Set<string>,
   id: string,
 ): WidgetSpec {
-  // Use the model's requested columns if they're all real fields; otherwise
-  // fall back to every field the rows actually have.
   const requested = widget.columns?.filter((col) => rowKeys.has(col)) ?? [];
   const columns = requested.length ? requested : [...rowKeys];
 
@@ -481,8 +465,6 @@ export async function runChart(
   userProvider?: string,
   maxTokens?: number,
 ): Promise<ChartResult> {
-  // No rows at all — don't even call the LLM, just return an explicit
-  // "no data" dashboard with zero token cost.
   if (!rows.length) {
     return {
       result: {
@@ -542,10 +524,6 @@ export async function runChart(
       );
       break;
     } catch (err) {
-      // Structured-output validation failed (e.g. the model echoes the
-      // "strategy" value like "overview" into the unrelated "layout" enum,
-      // which only accepts analytical/executive/operational). Retry once
-      // with an explicit correction instead of crashing the whole request.
       const msg = err instanceof Error ? err.message : String(err);
       if (attempt === 0) {
         generateHint =
@@ -571,8 +549,6 @@ export async function runChart(
   );
   logTrace('chart:llm', 'dashboard plan', plan);
 
-  // Run every widget through the sanitize/hydrate pipeline, dropping
-  // anything that came back null (invalid or unrenderable option).
   const widgets = plan.widgets
     .slice(0, MAX_WIDGETS)
     .map((widget, index) => toWidgetSpec(widget, rows, rowKeys, index))
