@@ -151,6 +151,7 @@ MindAi/
 | Validation | `class-validator` / `class-transformer` | Applied globally via `ValidationPipe({ whitelist: true, transform: true })` |
 | Scheduling | `@nestjs/schedule` | Two cron jobs in `agent-config` (see [§16](#16-background-jobs)) |
 | Logging | Custom colored console logger + `AsyncLocalStorage` request IDs | See [§17](#17-logging--observability) |
+| API documentation | `@nestjs/swagger` — live OpenAPI UI at `/api/docs`, raw spec at `/api/docs-json` | Generated from `class-validator` DTOs via the `@nestjs/swagger` Nest CLI plugin (`nest-cli.json`); disable with `DISABLE_SWAGGER=true` |
 | Security | `helmet`, optional `x-api-key` guard, CORS allow-list | See [§15](#15-security-model--trust-boundaries) for the gaps |
 | Frontend | Angular 21 (standalone components, no NgModules) | Tailwind CSS for styling, ECharts for rendering |
 
