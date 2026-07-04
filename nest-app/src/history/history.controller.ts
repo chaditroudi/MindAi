@@ -6,8 +6,10 @@ import {
   Query,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { HistoryService } from './history.service';
 
+@ApiTags('history')
 @Controller('api/history')
 export class HistoryController {
   constructor(private readonly history: HistoryService) {}

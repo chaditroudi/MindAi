@@ -8,9 +8,11 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { SourcesService } from './sources.service';
 import type { DataSource } from './sources-cache';
 
+@ApiTags('sources')
 @Controller('api')
 export class SourcesController {
   constructor(private readonly sources: SourcesService) {}
