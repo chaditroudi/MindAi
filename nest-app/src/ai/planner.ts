@@ -21,21 +21,8 @@ import type {
   IntentKind,
 } from '../types';
 
-/**
- * planner.ts — the "supervisor" agent role
- * -----------------------------------------
- * Turns a user prompt into a TaskPlan: which skills to run (aggregation,
- * chart, report, inquiry), a MongoDB aggregation pipeline, and a couple of
- * presentation hints (strategy, chartHint). This is the ONLY place that
- * decides *what data to fetch* — the pipeline it produces is later run
- * through pipeline.service.ts's safety gate (forbidden-stage denylist +
- * field validation) before it ever touches the real database.
- */
 
 const skillPath = skillFile('aggregation', 'SKILL.md');
-// Three separate sections of the same SKILL.md: a shared base prompt, plus
-// intent-specific guidance swapped in depending on whether this is a
-// dashboard request or not (see buildPlannerPrompt below).
 const AGGREGATION_PROMPT_BASE = readMarkdownSection(
   skillPath,
   'Runtime Prompt',
@@ -49,10 +36,6 @@ const AGGREGATION_PROMPT_NONDASH = readMarkdownSection(
   'Runtime Prompt Non-Dashboard',
 );
 
-// The 5 allowed values for a dashboard's presentation "strategy" — purely a
-// display hint (e.g. emphasize trend-over-time vs. side-by-side comparison),
-// unrelated to the also-model-supplied "layout" field on the chart skill's
-// own output.
 export const PLANNER_STRATEGIES = [
   'standard',
   'trend',
@@ -104,10 +87,6 @@ const pipelineStageSchema = z.record(z.unknown()).superRefine((stage, ctx) => {
   }
 });
 
-// Some DataSourceField objects apparently carry a non-standard `desc` key
-// (older data?) alongside the typed `description` — this checks both so
-// neither older nor newer source records lose their description text in the
-// schema section shown to the planner LLM.
 function fieldDesc(f: DataSourceField): string | undefined {
   return (
     f.description ??
