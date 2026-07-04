@@ -15,7 +15,7 @@ MindAi turns a plain-language question into a MongoDB query and a finished answe
 | **Main endpoint** | `POST /api/analytics` — `{ prompt, intent?, sessionId? }` |
 | **LLM calls per request** | 2 (planner + writer/chart), 0 on a cache hit |
 | **Supported LLM providers** | OpenAI, Anthropic, Google Gemini, Groq, Mistral, Together, Perplexity |
-| **Auth model** | Optional shared `x-api-key`; per-request `x-user-id` is **not verified** (see [§14](#14-security-model--trust-boundaries)) |
+| **Auth model** | Optional shared `x-api-key`; per-request `x-user-id` is **not verified** (see [§15](#15-security-model--trust-boundaries)) |
 | **Run backend** | `cd nest-app && npm run start:dev` |
 | **Run frontend** | `cd client && npm start` |
 | **Run backend tests** | `cd nest-app && npm run test` |
@@ -30,19 +30,20 @@ MindAi turns a plain-language question into a MongoDB query and a finished answe
 6. [AI Pipeline in Detail](#6-ai-pipeline-in-detail)
 7. [Data Model — MongoDB Collections](#7-data-model--mongodb-collections)
 8. [API Reference](#8-api-reference)
-9. [Frontend (client/)](#9-frontend-client)
-10. [Getting Started](#10-getting-started)
-11. [Configuration Reference](#11-configuration-reference)
-12. [Error Handling & Resilience](#12-error-handling--resilience)
-13. [Testing](#13-testing)
-14. [Security Model & Trust Boundaries](#14-security-model--trust-boundaries)
-15. [Background Jobs](#15-background-jobs)
-16. [Deployment](#16-deployment)
-17. [Error Response Format](#17-error-response-format)
-18. [Common Workflows](#18-common-workflows)
-19. [Glossary](#19-glossary)
-20. [Troubleshooting](#20-troubleshooting)
-21. [Contributing](#21-contributing)
+9. [Examples — Prompts, Requests & Responses](#9-examples--prompts-requests--responses)
+10. [Frontend (client/)](#10-frontend-client)
+11. [Getting Started](#11-getting-started)
+12. [Configuration Reference](#12-configuration-reference)
+13. [Error Handling & Resilience](#13-error-handling--resilience)
+14. [Testing](#14-testing)
+15. [Security Model & Trust Boundaries](#15-security-model--trust-boundaries)
+16. [Background Jobs](#16-background-jobs)
+17. [Deployment](#17-deployment)
+18. [Error Response Format](#18-error-response-format)
+19. [Common Workflows](#19-common-workflows)
+20. [Glossary](#20-glossary)
+21. [Troubleshooting](#21-troubleshooting)
+22. [Contributing](#22-contributing)
 
 ---
 
@@ -59,6 +60,8 @@ A client sends a natural-language prompt to `POST /api/analytics`. The backend c
 If `intent` is omitted, the same pipeline is still run generically (`PipelineService.execute()`) and dispatches based on whatever skills the planner decided the prompt needs.
 
 Everything is driven by **data sources** registered at runtime (`POST /api/sources`): a MongoDB collection plus a field schema (name, type, role, enum values, references to other sources). The LLM is only ever shown field names that exist in a registered source's schema, and any pipeline stage referencing an unregistered field is rejected before it ever reaches MongoDB — this is the single biggest design decision in the codebase, because it turns "LLM hallucinates a field name" from a runtime bug into a caught, retryable validation error.
+
+Full worked examples of every intent — request bodies and complete JSON responses, including real ECharts chart options — are in [§9](#9-examples--prompts-requests--responses).
 
 ## 2. Repository Layout
 
@@ -96,11 +99,11 @@ MindAi/
 │   └── test/                      ← e2e tests (Jest)
 │
 ├── client/                      ← THE FRONTEND (Angular 21 + ECharts + Tailwind)
-│   └── src/app/                 ← flat, single-view SPA (see §9)
+│   └── src/app/                 ← flat, single-view SPA (see §10)
 │
 ├── skills/                      ← Markdown "skill" prompt files consumed by nest-app/src/ai
 │   ├── aggregation/SKILL.md         planner system prompt + pipeline-stage semantics config
-│   ├── chart/SKILL.md               chart-widget system prompt
+│   ├── chart/SKILL.md               chart-widget system prompt (full ECharts authoring contract)
 │   ├── writer/SKILL.md, report/SKILL.md, inquiry/SKILL.md   writer system prompts
 │   ├── memory/SKILL.md              memory-extraction system prompt
 │   ├── analytics/SKILL.md, suggestions/SKILL.md   supporting prompt text
@@ -123,9 +126,10 @@ MindAi/
 | LLM access | Vercel AI SDK (`ai`) + `@mastra/core` `Agent` | One `Agent` instance created per call, per role (`supervisor`, `writer`, `chart`, `memory`) |
 | Provider adapters | `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, `@ai-sdk/groq` | Mistral / Together / Perplexity ride the OpenAI-compatible adapter with a custom `fetch` |
 | Structured LLM output | `zod` schemas passed as `structuredOutput` on every agent call | Guarantees the shape of `TaskPlan`, `DashboardSpec`, report sections, etc. |
+| Charting | ECharts, authored directly by the chart LLM (see [§6](#6-ai-pipeline-in-detail) and [§9](#9-examples--prompts-requests--responses)) | The model designs the full `option` object; the runtime only sanitizes and injects live row data |
 | Validation | `class-validator` / `class-transformer` | Applied globally via `ValidationPipe({ whitelist: true, transform: true })` |
-| Scheduling | `@nestjs/schedule` | Two cron jobs in `agent-config` (see [§15](#15-background-jobs)) |
-| Security | `helmet`, optional `x-api-key` guard, CORS allow-list | See [§14](#14-security-model--trust-boundaries) for the gaps |
+| Scheduling | `@nestjs/schedule` | Two cron jobs in `agent-config` (see [§16](#16-background-jobs)) |
+| Security | `helmet`, optional `x-api-key` guard, CORS allow-list | See [§15](#15-security-model--trust-boundaries) for the gaps |
 | Frontend | Angular 21 (standalone components, no NgModules) | Tailwind CSS for styling, ECharts for rendering |
 
 ## 4. Architecture
@@ -229,11 +233,20 @@ Builds the *"YOUR DATABASE SCHEMA"* section of the system prompt from every regi
 | Date operator (`$year`, `$dateToString`, …) on an integer field | Names the exact field(s) stored as integers and says not to use date operators on them |
 | Pipeline returned 0 rows but a `$match` used a string literal | "…enum values use exact casing from schema allowed values" |
 
-If both attempts fail, `aggregate()` throws — the analytics layer surfaces this as a generic 500 unless it matches one of the classified error types in [§12](#12-error-handling--resilience).
+If both attempts fail, `aggregate()` throws — the analytics layer surfaces this as a generic 500 unless it matches one of the classified error types in [§13](#13-error-handling--resilience).
 
 ### Chart builder (`ai/chart.ts`) — LLM call #2 (dashboard, and report when `wantChart`)
 
-Takes the resolved rows and asks the model to choose widget types/fields for a `DashboardSpec` (`widgets: [{ type, title, insight?, option?, columns? }]`, capped at `CHART_MAX_WIDGETS`). Before returning, the option payload is walked by `sanitizeJson()`, which drops anything past `CHART_JSON_MAX_DEPTH` (default 20) or once `CHART_JSON_MAX_PROPERTIES` (default 8,000) values have been counted — a guard against a runaway or adversarial LLM response ballooning the response payload.
+Unlike the planner, the chart LLM is **not** filling in a fixed template — per `skills/chart/SKILL.md` it is instructed to author a *complete, arbitrary ECharts `option` object* (bar/line/area/scatter/pie/funnel/radar/heatmap, stacked/dual-axis/multi-series, `dataset`+`encode`, `visualMap`, `markLine`, etc.), or to fall back to `type: "table"` with a `columns[]` list when a raw table is clearly better than a chart. The only hard constraints:
+
+- **No live data required from the model.** The model may omit `option.dataset.source` entirely — `attachDatasetSource()` injects the real MongoDB rows into `dataset.source` (or wraps a bare `series[].data`-free option in `{ dataset: { source: rows }, ...option }`) after generation, so the LLM never has to transcribe row values into its response.
+- **Widget count** is capped at `CHART_MAX_WIDGETS` (default 4); each widget needs a `title`, and either a non-empty `option` or `type: "table"`.
+- **Size/depth guard.** The returned option is walked by `sanitizeJson()`, which drops anything past `CHART_JSON_MAX_DEPTH` (default 20) or once `CHART_JSON_MAX_PROPERTIES` (default 8,000) values have been counted — a guard against a runaway or adversarial LLM response ballooning the response payload.
+- **Renderability check.** `hasRenderableSignal()` drops any widget whose sanitized option has none of the known ECharts top-level keys (`series`, `dataset`, `graphic`, `geo`, etc.) — an empty or decorative-only option never reaches the client.
+- **Heatmap safety net.** If a `heatmap` series exists with no `visualMap`, `ensureHeatmapVisualMap()` computes a `min`/`max` continuous `visualMap` from the actual row values so the heatmap isn't rendered uncolored.
+- `strategy` and `chartHint` from the plan are advisory, not mandatory — the skill prompt explicitly tells the model to reconcile an infeasible hint (e.g. `scatter` requested but only one numeric field exists) against what the actual data supports, silently choosing the best fit.
+
+See [§9](#9-examples--prompts-requests--responses) for full, realistic `option` payloads (bar, donut/pie, dual-axis line+bar, and table widgets).
 
 ### Writer (`ai/writer.ts`) — LLM call #2 (report/inquiry)
 
@@ -275,7 +288,7 @@ interface DataSource {
   suggestedCharts?: SuggestedChart[];
 }
 ```
-`field.type` ∈ `string | number | integer | boolean | date | datetime | enum | reference | array | object | geo | text`. `field.role` ∈ `dimension | measure | temporal | id | text`. Registering rejects `$`-prefixed or `system.*` collection names, and any field name containing `$` or a NUL byte.
+`field.type` ∈ `string | number | integer | boolean | date | datetime | enum | reference | array | object | geo | text`. `field.role` ∈ `dimension | measure | temporal | id | text`. Registering rejects `$`-prefixed or `system.*` collection names, and any field name containing `$` or a NUL byte. See [§9](#9-examples--prompts-requests--responses) for a full `POST /api/sources` request body.
 
 ### `prompt_cache` — cached pipeline/dashboard/report results (`cache/cache.service.ts`)
 
@@ -304,7 +317,7 @@ Written fire-and-forget from `PipelineService.flush()` whenever a pipeline retur
 ```ts
 { userId, title (≤200), prompt (≤1000), intent: 'dashboard'|'report'|'inquiry', result: unknown, createdAt, updatedAt }
 ```
-Indexed on `{ userId: 1, createdAt: -1 }`. All reads/writes are scoped to the `x-user-id` header (see [§14](#14-security-model--trust-boundaries) for why that's not real per-user isolation).
+Indexed on `{ userId: 1, createdAt: -1 }`. All reads/writes are scoped to the `x-user-id` header (see [§15](#15-security-model--trust-boundaries) for why that's not real per-user isolation).
 
 ### `user_settings` — per-user BYO API key (`user-settings/user-settings.repository.ts`)
 
@@ -329,7 +342,7 @@ interface AgentEntry {
   cooldownUntil?: Date|null; lastFailureReason?: string;
 }
 ```
-Status transitions are driven by `AgentHealthService` (probe results) and by `AnalyticsService` reacting to live call failures (`updateRuntime()`), see [§15](#15-background-jobs).
+Status transitions are driven by `AgentHealthService` (probe results) and by `AnalyticsService` reacting to live call failures (`updateRuntime()`), see [§16](#16-background-jobs).
 
 ### `memory_items` / `memory_settings` — long-term memory (`memory/memory.repository.ts`)
 
@@ -359,24 +372,24 @@ Request:
 ```jsonc
 { "prompt": "top 5 projects by budget", "intent": "dashboard", "sessionId": "optional-uuid" }
 ```
-Headers: `x-user-id: <any non-empty string>` (required — see [§14](#14-security-model--trust-boundaries)).
+Headers: `x-user-id: <any non-empty string>` (required — see [§15](#15-security-model--trust-boundaries)).
 
-Response (dashboard example):
+Response (dashboard example — abbreviated; see [§9](#9-examples--prompts-requests--responses) for the complete, unabbreviated payload):
 ```jsonc
 {
   "intent": "dashboard",
   "chart": {
     "layout": "analytical",
     "title": "top 5 projects by budget",
-    "summary": "Paris leads with 1,200 (34%).",
-    "widgets": [ { "id": "w1", "type": "bar_chart", "title": "...", "option": { /* ECharts option */ } } ]
+    "summary": "Downtown Transit Hub leads with $12.4M, more than double the next project.",
+    "widgets": [ { "id": "w1", "type": "bar chart", "title": "...", "option": { /* full ECharts option */ } } ]
   },
   "sessionId": "…", "messageId": "…",
   "inputTokens": 812, "outputTokens": 240,
   "connection": { "source": "agent", "provider": "groq", "model": "llama-3.3-70b-versatile", "agentId": "…" }
 }
 ```
-Report/inquiry responses replace `chart` with `reportSections: [{heading, body}]` or `summary: string` respectively. See [§17](#17-error-response-format) for the error shape and possible `code`s.
+Report/inquiry responses replace `chart` with `reportSections: [{heading, body}]` or `summary: string` respectively. See [§18](#18-error-response-format) for the error shape and possible `code`s.
 
 ### Full route table
 
@@ -415,7 +428,298 @@ Report/inquiry responses replace `chart` with `reportSections: [{heading, body}]
 | `PUT` | `/api/agent-config` | ✓ | Replace the agent pool (triggers an immediate health check) |
 | `PATCH` | `/api/agent-config/token-limit` | ✓ | Update one agent's input/output/memory token limit |
 
-## 9. Frontend (client/)
+## 9. Examples — Prompts, Requests & Responses
+
+All examples below use a `Projects` source registered like this:
+
+```jsonc
+// POST /api/sources
+{
+  "name": "Projects",
+  "collection": "projects",
+  "description": "Municipal infrastructure projects",
+  "fields": [
+    { "name": "title",    "type": "string",  "role": "dimension" },
+    { "name": "status",   "type": "enum",    "role": "dimension", "enumValues": ["planned", "active", "completed"] },
+    { "name": "region",   "type": "string",  "role": "dimension" },
+    { "name": "budget",   "type": "number",  "role": "measure" },
+    { "name": "year",     "type": "integer", "role": "temporal" }
+  ]
+}
+```
+
+Every `/api/analytics` call below also sends:
+```
+Content-Type: application/json
+x-user-id: user-123
+```
+
+### 9.1 Dashboard — single ranking chart
+
+**Prompt:** *"top 5 projects by budget"*
+
+Request:
+```jsonc
+POST /api/analytics
+{ "prompt": "top 5 projects by budget", "intent": "dashboard" }
+```
+
+Response:
+```jsonc
+{
+  "intent": "dashboard",
+  "chart": {
+    "layout": "analytical",
+    "title": "Top 5 Projects by Budget",
+    "summary": "Downtown Transit Hub leads at $12.4M — more than double the next project.",
+    "widgets": [
+      {
+        "id": "w1",
+        "type": "bar chart",
+        "title": "Top 5 Projects by Budget",
+        "insight": "Downtown Transit Hub accounts for over a third of the combined top-5 budget.",
+        "option": {
+          "tooltip": { "trigger": "axis" },
+          "grid": { "left": 16, "right": 16, "top": 24, "bottom": 24, "containLabel": true },
+          "xAxis": { "type": "category" },
+          "yAxis": { "type": "value", "name": "Budget (USD)" },
+          "series": [
+            { "type": "bar", "name": "Budget", "encode": { "x": "title", "y": "budget" } }
+          ],
+          "dataset": {
+            "source": [
+              { "title": "Downtown Transit Hub",       "budget": 12400000 },
+              { "title": "Riverside Water Treatment",   "budget": 5800000 },
+              { "title": "North Bridge Rehabilitation", "budget": 4200000 },
+              { "title": "Solar Grid Expansion",        "budget": 3100000 },
+              { "title": "Central Library Renovation",  "budget": 2600000 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "sessionId": "5b6e2a8e-2b41-4c9a-9f2d-3a7e0c1d9b44",
+  "messageId": "9d3f4b21-7a6e-4e0a-8c3d-1f5a2b6e9c70",
+  "inputTokens": 812,
+  "outputTokens": 236,
+  "connection": {
+    "source": "agent",
+    "provider": "groq",
+    "model": "llama-3.3-70b-versatile",
+    "agentId": "a1f3c9d0-...",
+    "outputTokenLimit": 8000,
+    "inputTokenLimit": 8000
+  }
+}
+```
+
+> Note the `dataset.source` array: the LLM only had to decide `series.type: "bar"` and `encode: { x: "title", y: "budget" }` — the runtime (`attachDatasetSource()` in `ai/chart.ts`) filled in the real rows returned by MongoDB. This is true for every chart widget in this codebase; the model never transcribes data values by hand.
+
+### 9.2 Dashboard — composition (donut/pie)
+
+**Prompt:** *"breakdown of projects by status"*
+
+Request:
+```jsonc
+POST /api/analytics
+{ "prompt": "breakdown of projects by status", "intent": "dashboard" }
+```
+
+Response widget (rest of the envelope is the same shape as 9.1):
+```jsonc
+{
+  "id": "w1",
+  "type": "donut chart",
+  "title": "Project Status Composition",
+  "insight": "58% of projects are still active; only 12% have been completed.",
+  "option": {
+    "tooltip": { "trigger": "item" },
+    "legend": { "bottom": 0 },
+    "series": [
+      {
+        "type": "pie",
+        "radius": ["42%", "72%"],
+        "encode": { "itemName": "status", "value": "count" }
+      }
+    ],
+    "dataset": {
+      "source": [
+        { "status": "active",    "count": 58 },
+        { "status": "planned",   "count": 30 },
+        { "status": "completed", "count": 12 }
+      ]
+    }
+  }
+}
+```
+
+### 9.3 Dashboard — trend / dual-axis comparison
+
+**Prompt:** *"show budget and project count by region"*
+
+Response widget:
+```jsonc
+{
+  "id": "w1",
+  "type": "dual-axis bar+line",
+  "title": "Budget vs. Project Count by Region",
+  "insight": "The Central region has the most projects but not the highest total budget — North does, concentrated in fewer, larger projects.",
+  "option": {
+    "tooltip": { "trigger": "axis" },
+    "legend": { "top": 0 },
+    "xAxis": [{ "type": "category" }],
+    "yAxis": [
+      { "type": "value", "name": "Budget (USD)" },
+      { "type": "value", "name": "Project Count" }
+    ],
+    "series": [
+      { "type": "bar",  "name": "Budget",        "encode": { "x": "region", "y": "budget" } },
+      { "type": "line", "name": "Project Count", "yAxisIndex": 1, "encode": { "x": "region", "y": "projectCount" } }
+    ],
+    "dataset": {
+      "source": [
+        { "region": "North",   "budget": 18200000, "projectCount": 9 },
+        { "region": "Central", "budget": 15600000, "projectCount": 14 },
+        { "region": "South",   "budget": 9800000,  "projectCount": 7 }
+      ]
+    }
+  }
+}
+```
+
+### 9.4 Dashboard — overview (multiple widgets, `strategy: "overview"`)
+
+**Prompt:** *"give me an overview of the projects data"*
+
+Response `chart.widgets` (2–4 complementary widgets per the chart skill's overview guidance — table included when a raw list is clearly useful alongside the charts):
+```jsonc
+[
+  { "id": "w1", "type": "donut chart", "title": "Projects by Status", "option": { "...": "as in 9.2" } },
+  { "id": "w2", "type": "bar chart",   "title": "Budget by Region",   "option": { "...": "as in 9.1, dimension=region" } },
+  {
+    "id": "w3",
+    "type": "table",
+    "title": "All Active Projects",
+    "insight": "27 active projects across 3 regions.",
+    "columns": ["title", "region", "budget", "year"],
+    "rows": [
+      { "title": "Downtown Transit Hub",     "region": "North",   "budget": 12400000, "year": 2025 },
+      { "title": "Riverside Water Treatment","region": "Central", "budget": 5800000,  "year": 2024 }
+    ]
+  }
+]
+```
+(`rows` on a table widget is capped at `CHART_TABLE_MAX_ROWS`, default 100 — see [§12](#12-configuration-reference).)
+
+### 9.5 Report — with an attached chart
+
+**Prompt:** *"analyze infrastructure projects by region"*
+
+Request:
+```jsonc
+POST /api/analytics
+{ "prompt": "analyze infrastructure projects by region", "intent": "report" }
+```
+
+Response:
+```jsonc
+{
+  "intent": "report",
+  "reportSections": [
+    {
+      "heading": "Overview",
+      "body": "The portfolio spans 30 projects across three regions with a combined budget of $43.6M. North region holds the largest share of committed funds despite having fewer projects than Central."
+    },
+    {
+      "heading": "Key Findings",
+      "body": "Downtown Transit Hub ($12.4M) is the single largest project in the portfolio, representing 28% of total spend. Central region has the highest project count (14) but a lower average budget per project ($1.1M vs. North's $2.0M)."
+    },
+    {
+      "heading": "Regional Breakdown",
+      "body": "North: 9 projects, $18.2M. Central: 14 projects, $15.6M. South: 7 projects, $9.8M."
+    },
+    {
+      "heading": "Recommendations",
+      "body": "Review South region's lower project velocity relative to its budget allocation; consider reallocating Central's smaller, high-volume projects toward fewer higher-impact initiatives."
+    }
+  ],
+  "chart": {
+    "layout": "analytical",
+    "title": "analyze infrastructure projects by region",
+    "summary": "North leads in budget despite fewer projects than Central.",
+    "widgets": [ { "id": "w1", "type": "bar chart", "title": "Budget by Region", "option": { "...": "as in 9.1" } } ]
+  },
+  "sessionId": "…", "messageId": "…",
+  "inputTokens": 1204, "outputTokens": 512,
+  "connection": { "source": "personal", "provider": "openai", "model": "gpt-4o-mini" }
+}
+```
+`chart` is only present when the report intent's plan set `wantChart: true` **and** at least 2 rows were returned — otherwise the response has no `chart` key at all.
+
+### 9.6 Inquiry — short factual answer
+
+**Prompt:** *"how many projects are active?"*
+
+Request:
+```jsonc
+POST /api/analytics
+{ "prompt": "how many projects are active?", "intent": "inquiry" }
+```
+
+Response:
+```jsonc
+{
+  "intent": "inquiry",
+  "summary": "There are 58 active projects across 3 regions, with North holding the largest share at 24.",
+  "sessionId": "…", "messageId": "…",
+  "inputTokens": 340, "outputTokens": 42,
+  "connection": { "source": "agent", "provider": "groq", "model": "llama-3.3-70b-versatile", "agentId": "…" }
+}
+```
+
+### 9.7 Follow-up in the same session
+
+**Prompt 1:** *"show projects by status"* → note the returned `sessionId`.
+**Prompt 2 (same session):** *"now filter to just the North region"*
+
+```jsonc
+POST /api/analytics
+{ "prompt": "now filter to just the North region", "intent": "dashboard", "sessionId": "5b6e2a8e-2b41-4c9a-9f2d-3a7e0c1d9b44" }
+```
+The prompt cache is bypassed for this call (session context is non-empty), and the planner receives the prior turn as conversation context so it can add a `$match: { region: "North" }` stage without the user having to repeat the original ask.
+
+### 9.8 No matching data
+
+**Prompt:** *"show projects in Antarctica"* (no such region in the data)
+
+```jsonc
+{
+  "intent": "dashboard",
+  "chart": {
+    "layout": "operational",
+    "title": "show projects in Antarctica",
+    "summary": "No matching records were found for this dashboard request. Try broadening the filters or rephrasing the question.",
+    "widgets": []
+  },
+  "sessionId": "…", "messageId": "…",
+  "inputTokens": 640, "outputTokens": 0
+}
+```
+
+### 9.9 Error example — no active AI connection
+
+```jsonc
+// 401 Unauthorized
+{
+  "error": "No active AI connection. Your agent may be expired, disabled, or quota-exhausted. Open Config to re-enable it or add a new connection.",
+  "code": "NO_ACTIVE_CONNECTION"
+}
+```
+
+See [§18](#18-error-response-format) for the full list of error `code`s and [§21](#21-troubleshooting) for how to resolve each one.
+
+## 10. Frontend (client/)
 
 An Angular 21 single-page app (`client/src/app/`, standalone components, no routing module — one view):
 
@@ -427,16 +731,16 @@ An Angular 21 single-page app (`client/src/app/`, standalone components, no rout
 - **`markdown.pipe.ts`** — renders report section bodies as Markdown.
 - **`app.types.ts`** — the frontend's mirror of the backend's `DashboardSpec`/`ReportResult`/`InquiryResult` shapes.
 
-Run it with `npm start` from `client/` (proxies API calls to the NestJS server per [`client/proxy.conf.json`](client/proxy.conf.json)). Production build: `npm run build` → `client/dist/mind-ui/browser`, which the backend can serve directly (see [§16](#16-deployment)).
+Run it with `npm start` from `client/` (proxies API calls to the NestJS server per [`client/proxy.conf.json`](client/proxy.conf.json)). Production build: `npm run build` → `client/dist/mind-ui/browser`, which the backend can serve directly (see [§17](#17-deployment)).
 
-## 10. Getting Started
+## 11. Getting Started
 
 Prerequisites: Node.js 20+, a running MongoDB instance, and an API key for at least one supported LLM provider (or plan to configure a shared agent after boot).
 
 ```powershell
 # 1. Backend
 cd nest-app
-copy .env.example .env    # if present — otherwise create .env, see §11
+copy .env.example .env    # if present — otherwise create .env, see §12
 npm install
 npm run start:dev         # http://localhost:3000
 
@@ -448,11 +752,11 @@ npm start                 # proxies to the backend above
 
 First-run checklist:
 1. Confirm MongoDB is reachable — `GET /health` should report `mongo: "connected"`.
-2. Register at least one dataset: `POST /api/sources` with `{ name, collection, fields: [...] }` (it must already exist in MongoDB with data, or point at an empty collection you plan to seed).
+2. Register at least one dataset: `POST /api/sources` with `{ name, collection, fields: [...] }` (it must already exist in MongoDB with data, or point at an empty collection you plan to seed) — see [§9.1](#9-examples--prompts-requests--responses) for a full example body.
 3. Configure an AI connection — either `POST /api/settings` with a personal key (per `x-user-id`), or `PUT /api/agent-config` for a connection shared by everyone with no personal key.
-4. Send a prompt: `POST /api/analytics { "prompt": "...", "intent": "inquiry" }` with headers `x-user-id: dev`.
+4. Send a prompt: `POST /api/analytics { "prompt": "...", "intent": "inquiry" }` with headers `x-user-id: dev` — see [§9](#9-examples--prompts-requests--responses) for more prompt/response examples.
 
-## 11. Configuration Reference
+## 12. Configuration Reference
 
 Read from [`nest-app/src/config/configuration.ts`](nest-app/src/config/configuration.ts) and env vars read directly across `nest-app/src`:
 
@@ -489,7 +793,7 @@ CHART_TABLE_MAX_ROWS=100
 
 LLM provider credentials are **not** set as server env vars in normal operation — they come from per-user Settings (`/api/settings`) or the shared Agent Config pool (`/api/agent-config`), both stored in MongoDB. This is different from the legacy `src/` prototype, which read a single `GROQ_API_KEY` from the environment — do not port that pattern back in.
 
-## 12. Error Handling & Resilience
+## 13. Error Handling & Resilience
 
 `AnalyticsService.run()` classifies provider/LLM failures and reacts specifically instead of surfacing a raw stack trace:
 
@@ -508,7 +812,7 @@ LLM provider credentials are **not** set as server env vars in normal operation 
 
 Aggregation pipeline generation itself gets **one automatic retry** with a targeted hint describing exactly what validation or MongoDB rule was violated (unknown field, bad `$convert` usage, mixed `$project` exclusion/inclusion, wrong stage shape) — see the table in [§6](#6-ai-pipeline-in-detail).
 
-## 13. Testing
+## 14. Testing
 
 ```powershell
 cd nest-app
@@ -520,7 +824,7 @@ npm run test:e2e    # end-to-end, test/jest-e2e.json + test/test-app.module.ts
 
 Existing spec coverage: `common/helpers/user-id`, `analytics/pipeline.service`, `analytics/analytics.service`, `sources/sources.service`, `user-settings/user-settings.service`, `agent-config/agent-config.service`, `ai/model`, `ai/planner`, `ai/writer`. When adding a new service, colocate a `*.spec.ts` next to it — that's the existing convention, not a separate `__tests__` tree.
 
-## 14. Security Model & Trust Boundaries
+## 15. Security Model & Trust Boundaries
 
 Read this before building anything that assumes real authentication — the current model is deliberately lightweight and has gaps the team should be aware of.
 
@@ -531,7 +835,7 @@ Read this before building anything that assumes real authentication — the curr
 - **`helmet()` is applied with CSP disabled** (`contentSecurityPolicy: false` in [`main.ts`](nest-app/src/main.ts)) since the app serves its own Angular bundle; re-enable/tune CSP if that changes.
 - Registering a data source (`POST /api/sources`) blocks Mongo system collections and `$`-prefixed names, but does **not** otherwise sandbox which collections can be exposed — only register collections that are meant to be queryable through prompts.
 
-## 15. Background Jobs
+## 16. Background Jobs
 
 `AgentHealthService` ([`agent-config/agent-health.service.ts`](nest-app/src/agent-config/agent-health.service.ts)) runs two `@nestjs/schedule` cron jobs:
 
@@ -542,7 +846,7 @@ Read this before building anything that assumes real authentication — the curr
 
 Both jobs append a line to `nest-app/logs/agent-health.log` (created on demand) in addition to the NestJS logger, so you can audit agent status flips without digging through general server logs. `AgentHealthService.checkAllAgents()` is also invoked synchronously right after `PUT /api/agent-config` saves a new pool, so status is fresh immediately after an edit rather than waiting up to a minute.
 
-## 16. Deployment
+## 17. Deployment
 
 The backend can serve the built Angular app directly, so a single NestJS process can be the whole deployment:
 
@@ -566,7 +870,7 @@ Production checklist:
 - `app.enableShutdownHooks()` is already wired up — NestJS will close the Mongo connection cleanly on `SIGTERM`; make sure your process manager/orchestrator sends that signal and waits up to `SHUTDOWN_TIMEOUT_MS`.
 - Build the Angular app *before* starting the backend if you want single-process serving — the static-file check only runs once, at boot.
 
-## 17. Error Response Format
+## 18. Error Response Format
 
 Every error response (validation, guards, unhandled exceptions) is normalized by `AllExceptionsFilter` ([`common/filters/all-exceptions.filter.ts`](nest-app/src/common/filters/all-exceptions.filter.ts)) to a single shape:
 
@@ -580,15 +884,15 @@ Every error response (validation, guards, unhandled exceptions) is normalized by
 }
 ```
 
-Known `code` values (see `ERROR_CODES` in [`analytics/analytics.service.ts`](nest-app/src/analytics/analytics.service.ts)): `INVALID_API_KEY`, `LLM_RATE_LIMIT`, `MEMORY_TOKEN_LIMIT_TOO_LOW`, `TOKEN_LIMIT_TOO_LOW`, `INPUT_TOKEN_LIMIT_TOO_LOW`, `NO_ACTIVE_CONNECTION`. Frontend code should switch on `code` rather than parsing `error` text, since the message wording can change.
+Known `code` values (see `ERROR_CODES` in [`analytics/analytics.service.ts`](nest-app/src/analytics/analytics.service.ts)): `INVALID_API_KEY`, `LLM_RATE_LIMIT`, `MEMORY_TOKEN_LIMIT_TOO_LOW`, `TOKEN_LIMIT_TOO_LOW`, `INPUT_TOKEN_LIMIT_TOO_LOW`, `NO_ACTIVE_CONNECTION`. Frontend code should switch on `code` rather than parsing `error` text, since the message wording can change. See [§9.9](#9-examples--prompts-requests--responses) for a worked example.
 
 5xx errors are logged server-side with a stack trace; 4xx errors are not (they're expected client mistakes, not bugs).
 
-## 18. Common Workflows
+## 19. Common Workflows
 
 **Add a new queryable dataset**
 1. Make sure the MongoDB collection exists (empty is fine).
-2. `POST /api/sources` with `{ name, collection, description?, fields: [{ name, type, role?, enumValues?, referenceTo? }, ...] }`.
+2. `POST /api/sources` with `{ name, collection, description?, fields: [{ name, type, role?, enumValues?, referenceTo? }, ...] }` — see [§9](#9-examples--prompts-requests--responses) for a full example.
 3. The in-memory sources cache reloads automatically (`SourcesService.reloadCache()`); no restart needed.
 4. Test with an inquiry prompt first (cheapest/fastest LLM call) before trying dashboard/report.
 
@@ -605,9 +909,9 @@ Known `code` values (see `ERROR_CODES` in [`analytics/analytics.service.ts`](nes
 - The error body already includes `suggestedLimit` — for a personal connection, `PATCH /api/settings/token-limit`; for a shared agent, `PATCH /api/agent-config/token-limit` with `{ agentId, field: 'input'|'output'|'memory', value }`.
 
 **Tune prompt/system-prompt behavior**
-- Edit the relevant `skills/*/SKILL.md` file (loaded via `ai/skill-prompt.ts`'s `readMarkdownSection`/`readJsonSection`) rather than inlining prompt strings in TypeScript. `skills/aggregation/SKILL.md` also holds the `Pipeline Config` JSON block (`forbiddenStages`, `stageSemantics`) that `pipeline.service.ts` and `planner.ts` both read at import time.
+- Edit the relevant `skills/*/SKILL.md` file (loaded via `ai/skill-prompt.ts`'s `readMarkdownSection`/`readJsonSection`) rather than inlining prompt strings in TypeScript. `skills/aggregation/SKILL.md` also holds the `Pipeline Config` JSON block (`forbiddenStages`, `stageSemantics`) that `pipeline.service.ts` and `planner.ts` both read at import time. `skills/chart/SKILL.md` holds the full ECharts authoring contract described in [§6](#6-ai-pipeline-in-detail).
 
-## 19. Glossary
+## 20. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -618,24 +922,25 @@ Known `code` values (see `ERROR_CODES` in [`analytics/analytics.service.ts`](nes
 | **Agent** (in `agent-config`) | A shared, pre-configured AI provider connection (API key + provider + model + limits) that requests fall back to when the calling user has no personal key. Not to be confused with the Mastra `Agent` class instantiated per-LLM-call in `ai/model.ts`. |
 | **Session** | A conversation thread (`sessionId`), backed by LibSQL, holding recent user/assistant turns used as short-term memory for follow-up prompts. |
 | **Memory** (long-term) | Durable, per-user facts extracted from past conversations (opt-in via `MEMORY_EXTRACTION_ENABLED` / `PATCH /api/memory/config`), retrieved and injected into future prompts. Distinct from session memory. |
-| **Widget** | One chart/table/value entry inside a `DashboardSpec.widgets[]`, ready to render in ECharts on the frontend. |
+| **Widget** | One chart/table entry inside a `DashboardSpec.widgets[]` — either a free-form ECharts `option` object the LLM authored, or `{ type: "table", columns, rows }`. |
 | **Strategy** / **chartHint** | Planner-chosen hints (`standard`/`trend`/`comparison`/`anomaly`/`overview` and a free-form string like `ranking`/`distribution`) that steer, but don't dictate, what `ai/chart.ts` builds. |
 
-## 20. Troubleshooting
+## 21. Troubleshooting
 
 | Symptom | Likely cause / fix |
 |---|---|
-| `/health` returns `503 { sources: 0 }` | No data sources registered yet — `POST /api/sources` with at least one dataset. |
+| `/health` returns `503 { sources: 0 }` | No data sources registered yet — `POST /api/sources` with at least one dataset (see [§9](#9-examples--prompts-requests--responses)). |
 | `401 NO_ACTIVE_CONNECTION` | No personal API key saved for this `x-user-id`, and no active shared agent in `agent-config` (all disabled/expired/cooling down). Add one via `/api/settings` or fix an agent via `/api/agent-config`. |
 | `401 INVALID_API_KEY` | The configured key was rejected by the provider — re-validate via `POST /api/settings/validate`, or check `agent-config` for an agent stuck in `expired`. |
 | `429` with a retry time | Provider rate limit hit; if using the shared agent pool this should self-heal (next agent, or cooldown expiry) — check `logs/agent-health.log`. |
 | `422 TOKEN_LIMIT_TOO_LOW` / `INPUT_TOKEN_LIMIT_TOO_LOW` / `MEMORY_TOKEN_LIMIT_TOO_LOW` | Response, request, or memory context is larger than the configured limit — the error body includes `suggestedLimit`; raise it via `PATCH /api/settings/token-limit` or `PATCH /api/agent-config/token-limit`. |
 | Pipeline retried once then still failed with a MongoDB error | The planner produced an invalid stage or referenced an unregistered field — check the server log for the `PipelineService` retry hint; it usually names the exact bad field/operator. |
+| Dashboard response has `widgets: []` | No rows matched the filters (see [§9.8](#9-examples--prompts-requests--responses)) — broaden the prompt or check the data actually exists for that filter. |
 | Angular app not served at `/` in production | `client/dist/mind-ui/browser/index.html` doesn't exist yet — run `npm run build` in `client/` before starting the backend, then restart it (the check happens once at boot). |
 | Conversation memory resets after a restart/redeploy | `LIBSQL_URL` is pointing at a non-persistent path — mount `./data` as a volume, or point `LIBSQL_URL` at a durable location. |
 | Long-term memory never shows up in a prompt | `MEMORY_EXTRACTION_ENABLED` (or the runtime toggle via `PATCH /api/memory/config`) is off, or the previous response summary was ≤30 characters (`MIN_SUMMARY_LENGTH_FOR_MEMORY`) so nothing was extracted. |
 
-## 21. Contributing
+## 22. Contributing
 
 - **All backend changes go in `nest-app/`.** The root `src/` folder is a legacy prototype — do not add features there.
 - Match existing module conventions: a Nest module per feature area with `*.controller.ts` / `*.service.ts` / `*.repository.ts`, DTOs validated with `class-validator`, and a colocated `*.spec.ts` for service logic.
