@@ -10,20 +10,6 @@ import { log, logTrace } from '../common/logger/app.logger';
 import { buildInquiryMessage, buildReportMessage } from '../prompts';
 import type { TokenUsage } from './token';
 
-/**
- * writer.ts
- * ---------
- * The "writer" agent role, which actually covers two distinct skills sharing
- * one file because they're structurally identical (rows in, prose out) but
- * with different SKILL.md instructions and output shapes:
- *  - runInquirySkill: a short one-line answer to a direct question
- *  - runReportSkill: a multi-section written report
- *
- * Both are much simpler than chart.ts's runChart — there's no runtime
- * sanitization step here because the output is plain text, not a structured
- * ECharts option the frontend has to render safely.
- */
-
 const INQUIRY_INSTRUCTIONS = readMarkdownSection(
   skillFile('inquiry', 'SKILL.md'),
   'Runtime Prompt',
@@ -35,9 +21,7 @@ const REPORT_INSTRUCTIONS = readMarkdownSection(
 
 const INQUIRY_MAX_TOKENS = Number(process.env['INQUIRY_MAX_TOKENS'] ?? 400);
 const REPORT_MAX_TOKENS = Number(process.env['REPORT_MAX_TOKENS'] ?? 1_500);
-// Inquiry only ever shows the model a handful of rows (it's answering one
-// question, not analyzing a full dataset) — report gets the fuller
-// WRITER_MAX_CHARS budget below instead.
+
 const INQUIRY_MAX_ROWS = Number(process.env['INQUIRY_MAX_ROWS'] ?? 10);
 const WRITER_MAX_CHARS = Number(process.env['WRITER_MAX_CHARS'] ?? 8_000);
 
@@ -45,9 +29,6 @@ const summarySchema = z.object({
   summary: z.string(),
 });
 
-// 1-5 sections, each just a heading + a body paragraph — the report skill's
-// SKILL.md presumably guides what those sections should cover (trends,
-// context, recommendations), enforced only structurally here.
 const reportSectionsSchema = z.object({
   reportSections: z
     .array(
@@ -78,7 +59,6 @@ export interface WriterInput {
   maxTokens?: number;
 }
 
-/** Answers a direct question about the data with one short summary sentence. */
 export async function runInquirySkill({
   prompt,
   rows,

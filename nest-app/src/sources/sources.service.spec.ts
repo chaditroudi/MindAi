@@ -79,7 +79,7 @@ describe('SourcesService', () => {
         source,
         { upsert: true },
       );
-      expect(model.find).toHaveBeenCalled(); // reloadCache was triggered
+      expect(model.find).toHaveBeenCalled();
       expect(result).toEqual({ ok: true, loaded: 1 });
       expect(service.list()).toEqual([source]);
     });

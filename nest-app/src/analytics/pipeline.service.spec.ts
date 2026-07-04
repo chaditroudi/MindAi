@@ -9,19 +9,13 @@ import type { ChartResultsRepository } from '../ai/chart-results.repository';
 import type { DataSource } from '../types';
 import { patchConvert } from './pipeline.service';
 
-// PipelineService imports the LLM skills as values (for the aggregation
-// planner call), and those transitively pull in @mastra/core/agent, which
-// ships an ESM-only dependency ts-jest can't parse under node_modules. None
-// of that is exercised here — these tests only drive the pure pipeline
-// safety logic (resolvePipeline) — so stub the skill modules out entirely.
 jest.mock('../ai/planner', () => ({ runSupervisorPlan: jest.fn() }));
 jest.mock('../ai/chart', () => ({ runChart: jest.fn() }));
 jest.mock('../ai/writer', () => ({
   runReportSkill: jest.fn(),
   runInquirySkill: jest.fn(),
 }));
-// HistoryService itself imports session/memory.ts -> @mastra/memory, the
-// same ESM-parse problem as above — stub it out too.
+
 jest.mock('../history/history.service', () => ({ HistoryService: class {} }));
 
 const { PipelineService } =

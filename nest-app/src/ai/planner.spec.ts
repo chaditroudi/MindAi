@@ -5,10 +5,6 @@
    TS compiler's CommonJS emit and load the real (unmocked) module first. */
 import type { DataSource, TaskPlan, ExecutionSkillKind } from '../types';
 
-// planner.ts imports createSkillAgent/withRateLimitRetry from ./model,
-// which pulls in @mastra/core/agent -> an ESM-only dependency ts-jest can't
-// parse under node_modules. Stub the module out; runSupervisorPlan tests
-// below only assert on how planner.ts *calls* these, not their real behavior.
 interface GeneratedMessage {
   role: string;
   content: string;
@@ -29,11 +25,6 @@ const withRateLimitRetry = jest.fn(
 const freshSignal = jest.fn().mockReturnValue(undefined);
 const skillProviderOptions = jest.fn().mockReturnValue({});
 
-// createSkillAgent's return type (Agent) and skillProviderOptions' own real
-// return type (declared `any` in model.ts) make these mock pass-throughs
-// unavoidably untyped — this whole file only ever exercises the mocks, so
-// disable the unsafe-* checks for this narrow boundary rather than fighting
-// jest.fn()'s inference for values we never actually type-depend on.
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 jest.mock('./model', () => ({
   createSkillAgent: (

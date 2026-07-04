@@ -21,7 +21,6 @@ import type {
   IntentKind,
 } from '../types';
 
-
 const skillPath = skillFile('aggregation', 'SKILL.md');
 const AGGREGATION_PROMPT_BASE = readMarkdownSection(
   skillPath,
@@ -48,17 +47,6 @@ export const PLANNER_DEFAULT_STRATEGY = 'standard';
 const MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
 const STRATEGY_ENUM = z.enum([...PLANNER_STRATEGIES]);
 
-/**
- * Validates one element of the LLM-produced `pipeline` array. Doesn't check
- * WHAT the stage does (that's pipeline.service.ts's job, against the real
- * registered source schema) — only that it's SHAPED like a single valid
- * MongoDB stage: a non-empty object with exactly one `$operator` key. This
- * is the same shape check pipeline.service.ts's normalizePipelineStage does
- * again independently on the runtime side — duplicated deliberately so a
- * malformed plan is caught immediately as a Zod validation error (which
- * triggers the one-shot corrective retry below) rather than only being
- * caught later, deeper in the pipeline execution path.
- */
 const pipelineStageSchema = z.record(z.unknown()).superRefine((stage, ctx) => {
   const keys = Object.keys(stage);
   if (!keys.length) {
@@ -320,7 +308,6 @@ function strategySchema() {
     STRATEGY_ENUM,
   );
 }
-
 
 export function buildPlanSchema(intent: IntentKind) {
   const base = z.object({

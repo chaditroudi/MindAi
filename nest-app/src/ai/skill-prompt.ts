@@ -1,12 +1,9 @@
 import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 
-
-
 export function skillFile(...segments: string[]): string {
   return path.resolve(__dirname, '..', '..', '..', 'skills', ...segments);
 }
-
 
 export function readMarkdownSection(filePath: string, heading: string): string {
   const content = readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
@@ -14,13 +11,13 @@ export function readMarkdownSection(filePath: string, heading: string): string {
   const target = heading.trim().toLowerCase();
 
   let start = -1;
-  let level = 0; // how many '#' characters the matched heading had
+  let level = 0;
 
   for (let i = 0; i < lines.length; i += 1) {
     const match = /^(#{1,6})\s+(.*)$/.exec(lines[i].trim());
     if (!match) continue;
     if (match[2].trim().toLowerCase() !== target) continue;
-    start = i + 1; // content begins on the NEXT line, not the heading itself
+    start = i + 1;
     level = match[1].length;
     break;
   }
@@ -38,7 +35,6 @@ export function readMarkdownSection(filePath: string, heading: string): string {
 
   return collected.join('\n').trim();
 }
-
 
 export function readJsonSection<T>(filePath: string, heading: string): T {
   const section = readMarkdownSection(filePath, heading);

@@ -24,7 +24,6 @@ const TAG_COLORS: Record<string, string> = {
   sources: COLORS.gray,
 };
 
-// Singleton store — shared with RequestIdMiddleware
 export const requestContext = new AsyncLocalStorage<{ requestId: string }>();
 
 function ts() {

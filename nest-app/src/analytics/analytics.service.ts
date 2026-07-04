@@ -44,8 +44,6 @@ const promptSchema = z
   .min(1, 'Prompt is required')
   .max(1000, 'Prompt must be 1000 characters or fewer');
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-
 type ResolvedType = 'dashboard' | 'report' | 'inquiry';
 
 interface MemoryContextResult {
@@ -87,8 +85,6 @@ export interface AnalyticsResponse {
   inputLimitWarning?: LimitWarning;
   [key: string]: unknown;
 }
-
-// ── Error classification ───────────────────────────────────────────────────────
 
 const ERROR_CODES = {
   INVALID_API_KEY: 'INVALID_API_KEY',

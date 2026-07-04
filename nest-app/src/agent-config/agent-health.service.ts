@@ -10,15 +10,8 @@ import { AgentConfigService } from './agent-config.service';
 import { isCooldownActive } from './agent-config.utils';
 import { buildProviderValidationRequest } from '../ai/model';
 
-// How long to wait for a single provider health probe before giving up.
-// checkAllAgents() below probes agents one at a time (not in parallel), so
-// with N configured agents a single cron run can take up to N * this long in
-// the worst case (every provider slow/unresponsive).
 const PROBE_TIMEOUT_MS = 8_000;
 
-// A plain-text, append-only audit log separate from the structured app
-// logger — lets you `tail -f logs/agent-health.log` to watch agent status
-// changes in real time without the rest of the app's log noise.
 const LOG_DIR = path.join(process.cwd(), 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'agent-health.log');
 

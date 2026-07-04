@@ -1,8 +1,4 @@
-// user-settings.service.ts imports PROVIDERS/buildProviderValidationRequest
-// from ../ai/model, which imports Agent from @mastra/core/agent at the top
-// of the file — an ESM-only dependency ts-jest can't parse under
-// node_modules. Stub just that package out; the rest of model.ts (the real
-// PROVIDERS map and buildProviderValidationRequest) runs unmocked below.
+
 jest.mock('@mastra/core/agent', () => ({ Agent: class {} }));
 
 import { BadRequestException, HttpException } from '@nestjs/common';

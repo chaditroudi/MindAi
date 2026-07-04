@@ -4,11 +4,7 @@
    placed after the mocks — an ES import would be hoisted above them by the
    TS compiler's CommonJS emit and load the real (unmocked) module first. */
 
-// model.ts imports Agent from @mastra/core/agent at the top of the file,
-// which pulls in an ESM-only dependency ts-jest can't parse under
-// node_modules — regardless of which exported function is actually under
-// test. Stub the package out; createSkillAgent isn't exercised here.
-export {}; // force module scope so top-level consts don't collide across spec files
+export {};
 
 jest.mock('@mastra/core/agent', () => ({ Agent: class {} }));
 

@@ -25,7 +25,6 @@ export class HistoryService {
     return this.repo.findById(id);
   }
 
-  /** Used by PipelineService to persist aggregation results */
   save(entry: PipelineRunEntry): Promise<string> {
     return this.repo.save(entry);
   }

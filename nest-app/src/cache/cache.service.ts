@@ -25,7 +25,6 @@ export class PromptCache {
   @Prop({ type: Date, default: Date.now })
   lastHitAt: Date;
 
-  // TTL index: documents expire 7 days after creation
   @Prop({ type: Date, default: Date.now, expires: 7 * 24 * 3600 })
   createdAt: Date;
 }

@@ -4,10 +4,6 @@
    placed after the mocks — an ES import would be hoisted above them by the
    TS compiler's CommonJS emit and load the real (unmocked) module first. */
 
-// writer.ts imports createSkillAgent/withRateLimitRetry from ./model, which
-// pulls in @mastra/core/agent -> an ESM-only dependency ts-jest can't parse
-// under node_modules. Stub the module out; these tests only assert on how
-// writer.ts *calls* it, not its real behavior.
 interface GenerateResult {
   object: unknown;
   usage: { inputTokens?: number; outputTokens?: number };

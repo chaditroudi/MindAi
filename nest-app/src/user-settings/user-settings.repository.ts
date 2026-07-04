@@ -14,7 +14,6 @@ export class UserSettings {
   @Prop({ min: 1, default: 4_000 }) responseTokenLimit?: number;
   @Prop({ min: 1 }) inputTokenLimit?: number;
 
-  // Lifetime accumulated usage for this user's personal key
   @Prop({ min: 0, default: 0 }) inputTokensUsed!: number;
   @Prop({ min: 0, default: 0 }) outputTokensUsed!: number;
 }

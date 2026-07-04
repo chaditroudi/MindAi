@@ -5,35 +5,10 @@ import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 import { Agent } from '@mastra/core/agent';
 
-/**
- * model.ts
- * --------
- * The one place in the app that knows how to turn "a provider name + an API
- * key + a model id" into an actual callable LLM client. Every AI skill
- * (planner, chart, writer, memory) goes through createSkillAgent() here
- * rather than touching any @ai-sdk/* package directly.
- */
-
-// Which of the 4 fixed skill roles is calling — used for error messages
-// ("No API key configured for role 'chart'") and per-role request timeouts
-// (freshSignal below), not for choosing the model itself (that's driven by
-// the caller-supplied provider/model/key).
 export type AgentRole = 'supervisor' | 'writer' | 'chart' | 'memory';
 
 type ProviderName = keyof typeof PROVIDERS;
 
-// ── Provider registry ──────────────────────────────────────────────────────────
-// Maps provider slug → OpenAI-compatible Chat Completions base URL.
-// All non-Anthropic providers are accessed via the OpenAI-compat API.
-// Google's OpenAI-compat path requires the /openai suffix on the base URL.
-
-/**
- * Every provider this app knows how to talk to. Used in three places: (1)
- * resolveModel below, to build the actual SDK client; (2)
- * buildProviderValidationRequest, to know what URL to ping for key
- * validation; (3) UserSettingsService, to reject an unrecognized provider
- * name outright before ever trying to use it.
- */
 export const PROVIDERS: Record<string, string> = {
   groq: 'https://api.groq.com/openai/v1',
   openai: 'https://api.openai.com/v1',
@@ -44,17 +19,6 @@ export const PROVIDERS: Record<string, string> = {
   perplexity: 'https://api.perplexity.ai',
 };
 
-// ── Static model registry ──────────────────────────────────────────────────────
-// Curated per-provider model lists returned by GET/POST /api/settings/models.
-// No network call — add or remove entries here as providers release new models.
-
-/**
- * A hand-curated fallback list of known models per provider, shown in the
- * Settings UI's model picker. This is NOT what actually validates a chosen
- * model works — that's fetchProviderModels below, which hits the provider's
- * real live catalogue. This static list exists purely so the UI has
- * something reasonable to show before/without a live fetch.
- */
 export const PROVIDER_MODELS: Record<string, { id: string; label: string }[]> =
   {
     openai: [
@@ -119,17 +83,6 @@ export const PROVIDER_MODELS: Record<string, { id: string; label: string }[]> =
     ],
   };
 
-// ── Provider detection from API key prefix ────────────────────────────────────
-// Returns null when the key prefix doesn't match — no silent groq fallback.
-
-/**
- * Guesses which provider a key belongs to purely from its prefix, used when
- * the caller didn't explicitly say which provider they mean (e.g.
- * skillProviderOptions, called with just an apiKey during structured-output
- * option resolution). Deliberately returns null rather than guessing wrong —
- * an unrecognized prefix (custom/self-hosted key formats) means "don't know,"
- * not "assume groq."
- */
 function detectProvider(apiKey: string): ProviderName | null {
   if (apiKey.startsWith('gsk_')) return 'groq';
   if (apiKey.startsWith('sk-ant-')) return 'anthropic';
@@ -143,14 +96,6 @@ function normalizeProvider(provider?: string): string | undefined {
   return normalized || undefined;
 }
 
-/**
- * Builds the request (URL + headers) needed to ask a provider "is this API
- * key valid, and what models can it use" — each provider authenticates
- * these read-only endpoints differently. Shared by three very different
- * call sites: UserSettingsService (validating a user's own key on save),
- * AgentHealthService (the per-minute pooled-agent liveness probe), and
- * fetchProviderModels below (populating the Settings model picker live).
- */
 export function buildProviderValidationRequest(
   provider: string,
   apiKey: string,

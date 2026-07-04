@@ -17,24 +17,6 @@ import type {
   WidgetSpec,
 } from '../types';
 
-/**
- * chart.ts — the "chart" agent role
- * ----------------------------------
- * Unlike the planner (which produces a small structured plan) or the writer
- * (which produces plain prose), this skill asks the LLM to *author* a
- * complete ECharts `option` object per widget — real chart design, not a
- * template pick. Because of that, this file carries a lot more runtime
- * responsibility than the other skills: validating the shape is minimally
- * sane, injecting the real row data the model was never actually shown in
- * full, and dropping anything that wouldn't actually render.
- *
- * The model is NOT trusted to reconcile a chart hint against what the data
- * can actually support (e.g. asking for a scatter plot when there's only one
- * numeric field) — that reconciliation now lives in the chart skill's own
- * SKILL.md instructions instead of hardcoded TypeScript, so the model reasons
- * about it directly against the real column profile it's shown.
- */
-
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
@@ -68,15 +50,6 @@ export interface ChartResult {
   usage: TokenUsage;
 }
 
-/**
- * The structured-output contract the chart LLM call must satisfy. Note how
- * little this actually constrains: `option` is `z.record(z.unknown())` —
- * genuinely any object shape — because the model is authoring real ECharts
- * configuration, not filling in a fixed template. The one real structural
- * rule (superRefine below) is "every non-table widget must have a non-empty
- * option," which catches the one failure mode Zod's plain shape validation
- * can't: an empty `{}` that technically matches the type but renders nothing.
- */
 const widgetSchema = z
   .object({
     type: z.string().min(1),
@@ -112,14 +85,6 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/**
- * Deep-clones an arbitrary LLM-produced value into JSON-safe shape,
- * enforcing MAX_JSON_DEPTH/MAX_JSON_PROPERTIES as it goes. `undefined`
- * results (from exceeding a cap, or from a value type that isn't
- * JSON-representable) are dropped rather than propagated — an oversized or
- * malformed sub-tree quietly disappears from the option rather than making
- * the whole widget invalid.
- */
 function sanitizeJson(
   value: unknown,
   state: { count: number },
@@ -154,39 +119,26 @@ function sanitizeJson(
   return out;
 }
 
-/** Runs a widget's raw `option` through sanitizeJson and rejects it outright if nothing survived (empty object, or not a record at all). */
 function sanitizeOption(option: unknown): Record<string, unknown> | null {
   const sanitized = sanitizeJson(option, { count: 0 });
   if (!isPlainRecord(sanitized) || !Object.keys(sanitized).length) return null;
   return sanitized;
 }
 
-/** True if the option contains at least one key that ECharts would actually render something from. */
 function hasRenderableSignal(option: Record<string, unknown>): boolean {
   return Object.keys(option).some((key) => RENDERABLE_OPTION_KEYS.has(key));
 }
 
-/** True if any series entry already carries its own inline `data` array (as opposed to relying on `dataset`+`encode`). */
 function hasInlineSeriesData(series: unknown): boolean {
   if (!Array.isArray(series)) return false;
   return series.some((item) => isPlainRecord(item) && 'data' in item);
 }
 
-/** True if any series entry uses `encode` (the dataset-driven mapping style the SKILL.md instructions push the model toward). */
 function hasSeriesEncode(series: unknown): boolean {
   if (!Array.isArray(series)) return false;
   return series.some((item) => isPlainRecord(item) && 'encode' in item);
 }
 
-/**
- * Injects the REAL, full row data into an option's `dataset.source` unless
- * it's already there. The model is explicitly told in SKILL.md it may omit
- * `dataset.source` entirely and let the runtime fill it in — this is that
- * fill-in step. For an array-form dataset (ECharts supports multiple linked
- * datasets), only the FIRST entry lacking a `source` gets the real rows;
- * subsequent entries are left as authored (they're presumably transforms of
- * the first).
- */
 function normalizeDataset(
   dataset: unknown,
   rows: Record<string, unknown>[],
@@ -210,16 +162,6 @@ function normalizeDataset(
   return dataset;
 }
 
-/**
- * Decides whether/how to attach the real row data to an option that has no
- * `dataset` key at all (as opposed to normalizeDataset above, which handles
- * the case where `dataset` already exists but is missing `source`).
- * Only synthesizes a `dataset: { source: rows }` when the series looks like
- * it's expecting one — i.e. it uses `encode` OR doesn't already carry its
- * own inline `data` array. A series with genuine inline data (the model
- * deliberately hand-wrote small literal values, e.g. a fixed reference line)
- * is left completely alone.
- */
 function attachDatasetSource(
   option: Record<string, unknown>,
   rows: Record<string, unknown>[],
@@ -238,15 +180,6 @@ function attachDatasetSource(
   return option;
 }
 
-/**
- * A heatmap's color scale (`visualMap`) requires knowing the real min/max of
- * the value field being visualized — something the model can't reliably
- * compute itself from a handful of sample rows. If the widget is a heatmap
- * and doesn't already define a visualMap, this computes the actual min/max
- * across ALL rows (not just the sample the model saw) and synthesizes one.
- * Left untouched if the model already provided its own visualMap, or if
- * this isn't a heatmap at all, or if the value field can't be identified.
- */
 function ensureHeatmapVisualMap(
   option: Record<string, unknown>,
   rows: Record<string, unknown>[],
@@ -349,13 +282,6 @@ function collectEncodeRefs(
   return acc;
 }
 
-/**
- * Diagnostic-only check (never blocks or alters the widget): logs a warning
- * if any `encode` reference in the option doesn't correspond to either a
- * real row field or a declared dataset dimension — a sign the model
- * hallucinated a field name. Numeric-looking refs (encode can legitimately
- * reference a dataset column BY INDEX) are excluded from the "unknown" set.
- */
 function logUnknownRefs(
   option: Record<string, unknown>,
   rowKeys: Set<string>,
@@ -400,12 +326,6 @@ function buildTableWidget(
   };
 }
 
-/**
- * Converts one raw LLM widget into a final WidgetSpec (or null if it should
- * be dropped entirely), running it through the full sanitize → validate →
- * hydrate pipeline: JSON-safety, renderability, dataset/visualMap injection,
- * and the unknown-field diagnostic log.
- */
 function toWidgetSpec(
   widget: LlmWidget,
   rows: Record<string, unknown>[],
