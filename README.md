@@ -1280,15 +1280,21 @@ flowchart TD
     Probe --> R429{"HTTP 429?"}
     R429 -->|"Yes, quota-exhausted body"| Unhealthy["healthy = false"]
     R429 -->|"Yes, but just rate-limited"| Healthy1["healthy = true\n(429 alone isn't fatal here)"]
-    R429 -->|No| R4xx{"HTTP 4xx\n(400-499)?"}
+    R429 -->|No| R4xx{"HTTP 4xx\n(400-499, non-429)?"}
     R4xx -->|Yes| Unhealthy
-    R4xx -->|No| ModelCheck{"Is the configured\nmodel in the provider's\nreturned model list?"}
+    R4xx -->|No| Ok{"HTTP 2xx (res.ok)?"}
+    Ok -->|"No (5xx or other)"| Healthy3["healthy = true\n(fails OPEN — a provider-side\n5xx does not retire the agent)"]
+    Ok -->|Yes| HasModel{"Is a specific\nmodel configured?"}
+    HasModel -->|No| Healthy4["healthy = true\n(nothing to check further)"]
+    HasModel -->|Yes| ModelCheck{"Is that model in the\nprovider's returned\nmodel list?"}
     ModelCheck -->|"No — model retired/typo'd"| Unhealthy
-    ModelCheck -->|"Yes, or provider gave\nno usable model list"| Healthy2["healthy = true"]
+    ModelCheck -->|"Yes, or provider gave\nno parseable model list"| Healthy2["healthy = true"]
 
     Unhealthy --> SetExpired["status = 'expired'"]
     Healthy1 --> SetActive["status = 'active'\ncooldownUntil = null\nlastFailureReason = ''"]
     Healthy2 --> SetActive
+    Healthy3 --> SetActive
+    Healthy4 --> SetActive
 
     SetExpired --> NextAgent["next agent in loop"]
     SetActive --> NextAgent
