@@ -21,7 +21,21 @@ import type {
   IntentKind,
 } from '../types';
 
+/**
+ * planner.ts — the "supervisor" agent role
+ * -----------------------------------------
+ * Turns a user prompt into a TaskPlan: which skills to run (aggregation,
+ * chart, report, inquiry), a MongoDB aggregation pipeline, and a couple of
+ * presentation hints (strategy, chartHint). This is the ONLY place that
+ * decides *what data to fetch* — the pipeline it produces is later run
+ * through pipeline.service.ts's safety gate (forbidden-stage denylist +
+ * field validation) before it ever touches the real database.
+ */
+
 const skillPath = skillFile('aggregation', 'SKILL.md');
+// Three separate sections of the same SKILL.md: a shared base prompt, plus
+// intent-specific guidance swapped in depending on whether this is a
+// dashboard request or not (see buildPlannerPrompt below).
 const AGGREGATION_PROMPT_BASE = readMarkdownSection(
   skillPath,
   'Runtime Prompt',
@@ -35,6 +49,10 @@ const AGGREGATION_PROMPT_NONDASH = readMarkdownSection(
   'Runtime Prompt Non-Dashboard',
 );
 
+// The 5 allowed values for a dashboard's presentation "strategy" — purely a
+// display hint (e.g. emphasize trend-over-time vs. side-by-side comparison),
+// unrelated to the also-model-supplied "layout" field on the chart skill's
+// own output.
 export const PLANNER_STRATEGIES = [
   'standard',
   'trend',
@@ -47,6 +65,17 @@ export const PLANNER_DEFAULT_STRATEGY = 'standard';
 const MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
 const STRATEGY_ENUM = z.enum([...PLANNER_STRATEGIES]);
 
+/**
+ * Validates one element of the LLM-produced `pipeline` array. Doesn't check
+ * WHAT the stage does (that's pipeline.service.ts's job, against the real
+ * registered source schema) — only that it's SHAPED like a single valid
+ * MongoDB stage: a non-empty object with exactly one `$operator` key. This
+ * is the same shape check pipeline.service.ts's normalizePipelineStage does
+ * again independently on the runtime side — duplicated deliberately so a
+ * malformed plan is caught immediately as a Zod validation error (which
+ * triggers the one-shot corrective retry below) rather than only being
+ * caught later, deeper in the pipeline execution path.
+ */
 const pipelineStageSchema = z.record(z.unknown()).superRefine((stage, ctx) => {
   const keys = Object.keys(stage);
   if (!keys.length) {
@@ -75,6 +104,10 @@ const pipelineStageSchema = z.record(z.unknown()).superRefine((stage, ctx) => {
   }
 });
 
+// Some DataSourceField objects apparently carry a non-standard `desc` key
+// (older data?) alongside the typed `description` — this checks both so
+// neither older nor newer source records lose their description text in the
+// schema section shown to the planner LLM.
 function fieldDesc(f: DataSourceField): string | undefined {
   return (
     f.description ??
@@ -82,6 +115,17 @@ function fieldDesc(f: DataSourceField): string | undefined {
   );
 }
 
+/**
+ * Guesses whether a field is a foreign-key-style reference to ANOTHER
+ * registered source, so buildSchemaSection can surface a ready-to-copy
+ * $lookup template for the planner LLM instead of expecting it to invent
+ * join syntax from scratch. Three strategies, tried in order:
+ *  1. an explicit `referenceTo` on the field (most reliable — trust it outright)
+ *  2. the field's description mentioning "reference"/"id"/"ref " AND naming
+ *     another source by name/collection
+ *  3. a fuzzy name match: the field name is a prefix/suffix match against
+ *     another source's (singularized) name or collection
+ */
 function resolveReference(
   field: DataSourceField,
   sources: DataSource[],
@@ -102,6 +146,8 @@ function resolveReference(
     );
   if (byDesc) return byDesc;
   return sources.find((s) => {
+    // Strip a trailing 's' as a crude singularization before comparing —
+    // "regions" (collection) vs "region" (field name), etc.
     const col = s.collection.toLowerCase().replace(/s$/, '');
     const nm = s.name.toLowerCase().replace(/s$/, '');
     return (
@@ -113,6 +159,7 @@ function resolveReference(
   });
 }
 
+/** For a referenced source, which of its fields is the join target — an explicit `role: 'id'`/field named "id", or Mongo's own `_id` as the fallback. */
 function resolveReferenceForeignField(source: DataSource): string {
   return (
     source.fields.find((field) => field.role === 'id' || field.name === 'id')
@@ -120,6 +167,7 @@ function resolveReferenceForeignField(source: DataSource): string {
   );
 }
 
+/** Picks a human-readable "label" field on a joined source (e.g. a region's name, not its id) to suggest in the schema section's join hints. */
 function resolveReferenceLabelField(
   source: DataSource,
   foreignField: string,
@@ -133,6 +181,16 @@ function resolveReferenceLabelField(
   );
 }
 
+/**
+ * Renders every registered data source into a big plain-text schema block
+ * that gets embedded in the planner's prompt via {{DATABASE_SCHEMA}}. This
+ * is the single most important piece of context the planner LLM receives —
+ * it's explicitly told "every $fieldName in the pipeline MUST appear here,"
+ * and this function is what generates that authoritative field list, along
+ * with ready-to-use $lookup templates and a couple of common
+ * count-by/sum-by pipeline templates to bias the model toward
+ * dataset+encode-friendly shapes over ad-hoc queries.
+ */
 function buildSchemaSection(sources: DataSource[]): string {
   if (!sources.length) return '\nNo data sources — return needsData=false.';
 
@@ -146,6 +204,9 @@ function buildSchemaSection(sources: DataSource[]): string {
   ];
 
   for (const source of sources) {
+    // Precompute once per source: which fields look like references to
+    // another source, which are numeric measures, which look temporal
+    // (date/year/month/etc.), and which are plain string/enum dimensions.
     const refByField = new Map(
       source.fields.map((f) => [f, resolveReference(f, sources)]),
     );
@@ -176,6 +237,12 @@ function buildSchemaSection(sources: DataSource[]): string {
     if (source.description) lines.push(`  ${source.description}`);
     lines.push('  Fields:');
 
+    // One line per field: name + a tag list (type, measure/temporal/dimension,
+    // a "→ references X" note if it's a join target, plus its description).
+    // Enum fields get their allowed values spelled out explicitly (so the
+    // model can't invent a value outside the real set); free-text/number
+    // fields get a few real sample values instead, purely as a hint of what
+    // the data actually looks like.
     for (const field of source.fields) {
       const ref = refByField.get(field);
       const desc = fieldDesc(field);
@@ -210,9 +277,13 @@ function buildSchemaSection(sources: DataSource[]): string {
       as: string;
     }> = [];
 
+    // Explicit joins declared on the source itself always come first...
     for (const j of source.joins ?? []) {
       joins.push(j);
     }
+    // ...then fill in any reference fields resolveReference() found that
+    // AREN'T already covered by an explicit join, so the model still gets a
+    // usable $lookup template for auto-detected references.
     for (const field of source.fields) {
       const ref = refByField.get(field);
       if (!ref) continue;
@@ -231,6 +302,10 @@ function buildSchemaSection(sources: DataSource[]): string {
     }
 
     if (joins.length) {
+      // Spelled out as a literal, copy-pasteable $lookup + $unwind pair —
+      // deliberately prescriptive rather than just describing the
+      // relationship in prose, since a hand-written join is one of the more
+      // error-prone things to ask an LLM to generate freehand.
       lines.push('  Available joins (copy $lookup exactly as shown):');
       for (const j of joins) {
         const target = sources.find(
@@ -247,6 +322,10 @@ function buildSchemaSection(sources: DataSource[]): string {
       }
     }
 
+    // A couple of ready-made "count by X" / "sum Y by X" pipeline templates
+    // for the first non-reference dimension — nudges the model toward the
+    // dataset+encode-friendly {_id, value} label/value shape chart.ts's
+    // SKILL.md expects, rather than an arbitrary result shape.
     if (dims.length) {
       const groupableDim = dims.find((field) => !refByField.get(field));
       if (groupableDim) {
@@ -273,6 +352,7 @@ function buildSchemaSection(sources: DataSource[]): string {
   return lines.join('\n');
 }
 
+/** Assembles the final planner prompt: the shared base template with the schema section and intent-specific guidance filled in. */
 function buildPlannerPrompt(intent: IntentKind, sources: DataSource[]): string {
   return interpolateTemplate(AGGREGATION_PROMPT_BASE, {
     '{{DATABASE_SCHEMA}}': buildSchemaSection(sources),
@@ -284,6 +364,7 @@ function buildPlannerPrompt(intent: IntentKind, sources: DataSource[]): string {
   });
 }
 
+/** Normalizes a strategy value (trim + lowercase) before validating it against the fixed enum — so " Trend " and "trend" are treated the same. */
 function strategySchema() {
   return z.preprocess(
     (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value),
@@ -291,6 +372,11 @@ function strategySchema() {
   );
 }
 
+/**
+ * Builds the Zod schema the planner's structured output must conform to —
+ * shape differs by intent, since only a dashboard needs a presentation
+ * `strategy`/`chartHint`, and only a report has a `wantChart` toggle.
+ */
 export function buildPlanSchema(intent: IntentKind) {
   const base = z.object({
     needsData: z.boolean(),
@@ -325,6 +411,12 @@ export function buildPlanSchema(intent: IntentKind) {
   return base;
 }
 
+/**
+ * Calls the "supervisor" agent once and returns a fully finalized TaskPlan.
+ * Note this function itself does NOT contain a retry loop — the caller
+ * (pipeline.service.ts's runWithRetry) is what re-invokes this with a `hint`
+ * describing what went wrong on a previous attempt, up to twice total.
+ */
 export async function runSupervisorPlan({
   prompt,
   intent,
@@ -352,6 +444,10 @@ export async function runSupervisorPlan({
     `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length}${hint ? ' | retry' : ''} | prompt: "${prompt}"`,
   );
 
+  // On a retry, the previous failure's explanation is appended right after
+  // the actual question — kept as a distinct trailing block rather than
+  // rewriting the prompt, so the model sees both what was asked and
+  // specifically what went wrong last time.
   const userContent = hint
     ? `${JSON.stringify({ prompt, intent })}\n\nPREVIOUS ATTEMPT FAILED — ${hint}`
     : JSON.stringify({ prompt, intent });
@@ -387,6 +483,9 @@ export async function runSupervisorPlan({
     outputTokens: result.usage.outputTokens ?? 0,
   };
 
+  // The raw model output always goes through finalizeTaskPlan before it's
+  // considered a real TaskPlan — source-name resolution and execution-skill
+  // derivation aren't something the LLM is trusted to get right on its own.
   return {
     plan: finalizeTaskPlan({
       plan: object,
@@ -397,6 +496,21 @@ export async function runSupervisorPlan({
   };
 }
 
+/**
+ * Post-processes the raw LLM output into a plan pipeline.service.ts can
+ * safely act on. Three distinct corrections happen here:
+ *  1. sourceName gets normalized/resolved against the REAL registered
+ *     source list (case/whitespace-insensitive) — if nothing matches, the
+ *     raw value is kept as-is so the caller sees exactly what didn't match
+ *     rather than it silently becoming undefined.
+ *  2. a legacy quirk where the model sometimes nests `pipeline` inside
+ *     `query` instead of at the top level gets hoisted back to the top
+ *     level, but only if the top-level `pipeline` is actually empty — a
+ *     genuine top-level pipeline always wins over one accidentally left in
+ *     `query`.
+ *  3. `skills` (which skills actually get executed) is derived here, not
+ *     trusted from the model's own output at all.
+ */
 export function finalizeTaskPlan({
   plan,
   intent,
@@ -432,6 +546,9 @@ export function finalizeTaskPlan({
     ...plan,
     pipeline,
     query: {
+      // Prefer the REAL registered source's own name (correct casing) over
+      // whatever the model wrote — falls back to the model's raw value only
+      // if no registered source matched at all.
       sourceName: source?.name ?? plan.query.sourceName,
       limit: plan.query.limit,
     },
@@ -439,6 +556,14 @@ export function finalizeTaskPlan({
   };
 }
 
+/**
+ * The full decision table for which skills actually run, given the plan's
+ * own needsData/wantChart flags and the request's intent. This is
+ * deliberately NOT something the model decides directly — a wrong answer
+ * here means either skipping the data fetch entirely or silently not
+ * rendering a chart the user asked for, so it's kept as a small, fully
+ * deterministic function instead of trusting free-form LLM output.
+ */
 export function deriveExecutionSkills(
   plan: Pick<TaskPlan, 'needsData' | 'wantChart'>,
   intent: IntentKind,
