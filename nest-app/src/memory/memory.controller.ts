@@ -1,5 +1,6 @@
 import { Controller, Get, Delete, Patch, Body, Headers } from '@nestjs/common';
 import { IsBoolean } from 'class-validator';
+import { ApiTags } from '@nestjs/swagger';
 import { MemoryService } from './memory.service';
 import { requireUserId } from '../common/helpers/user-id';
 
@@ -8,6 +9,7 @@ class MemoryConfigDto {
   extractionEnabled!: boolean;
 }
 
+@ApiTags('memory')
 @Controller('api/memory')
 export class MemoryController {
   constructor(private readonly service: MemoryService) {}
