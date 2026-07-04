@@ -120,7 +120,6 @@ export interface SessionDetail {
   messages: ConversationMessage[];
 }
 
-// ─── Long-term memory ────────────────────────────────────────────────────────
 
 export type MemoryType = 'goal' | 'insight' | 'preference' | 'context' | 'decision' | 'entity' | 'correction';
 

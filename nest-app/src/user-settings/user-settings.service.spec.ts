@@ -1,4 +1,3 @@
-
 jest.mock('@mastra/core/agent', () => ({ Agent: class {} }));
 
 import { BadRequestException, HttpException } from '@nestjs/common';

@@ -26,7 +26,7 @@ const TIMEOUT_MS = 8_000;
 
 async function validateApiKey(apiKey: string, provider: string): Promise<void> {
   const request = buildProviderValidationRequest(provider, apiKey);
-  if (!request) return; 
+  if (!request) return;
 
   let res: Response;
   try {
@@ -56,7 +56,6 @@ function sanitizeSettings(dto: UserSettingsDto): UserSettingsDto {
     inputTokenLimit: responseTokenLimit,
   };
 }
-
 
 @Injectable()
 export class UserSettingsService {
