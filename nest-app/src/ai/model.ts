@@ -195,7 +195,6 @@ async function openAICompatFetch(
         init = { ...init, body: JSON.stringify(body) };
       }
     } catch {
-      // body not JSON — pass through unchanged
     }
   }
   return fetch(input, init);
