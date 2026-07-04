@@ -698,11 +698,13 @@ Five skill names are ever passed to `skillFile()` in the running code — verifi
 | `report/SKILL.md` | ✅ ACTIVE | `ai/writer.ts` (`runReportSkill`) | `writer` |
 | `inquiry/SKILL.md` | ✅ ACTIVE | `ai/writer.ts` (`runInquirySkill`) | `writer` |
 | `memory/SKILL.md` | ✅ ACTIVE | `ai/memory-skill.ts` | `memory` |
-| `writer/SKILL.md` | ❌ DEAD | *nothing* — no `skillFile('writer', ...)` call exists | — |
+| `writer/SKILL.md` | ❌ DEAD (superseded, not abandoned — see below) | *nothing* — no `skillFile('writer', ...)` call exists | — |
 | `analytics/SKILL.md` | ❌ DEAD | *nothing* | — |
 | `suggestions/SKILL.md` | ❌ DEAD | *nothing* | — |
 
 Notice `report` and `inquiry` both resolve to the **same** `role: 'writer'` when calling `createSkillAgent()` — "role" here just picks which per-role model/timeout defaults apply conceptually (there's actually only one `AgentRole` union with `supervisor | writer | chart | memory`), it is not a 1:1 mapping with skill-folder names. This is exactly the kind of naming mismatch that made the three dead folders easy to miss in the first place — `skills/writer/` *sounds* like it should be the one loaded for role `writer`, but it isn't; `report/SKILL.md` and `inquiry/SKILL.md` are.
+
+**Why `writer/SKILL.md` specifically is dead — it was split, not just forgotten.** Its own header reads `**Implementation:** src/ai/writer.ts` — the legacy prototype's path (root `src/`, not `nest-app/`), which dates it to before the NestJS rewrite. Its content is one combined prompt covering both "Inquiry Mode" and "Report Mode" in a single ~150-line document. `report/SKILL.md` and `inquiry/SKILL.md` cover the exact same two responsibilities, but as two separate, far more detailed prompts (explicit bold/bullet formatting rules, a full raw-value → plain-language translation table, per-question-type answer templates in English/Arabic/French, an anti-pattern checklist — none of which exist in `writer/SKILL.md`). The most likely sequence: the combined `writer` prompt was written for the old prototype, then split and substantially rewritten into `report`+`inquiry` for the NestJS rebuild, and `ai/writer.ts` was pointed at the two new files — the old combined one was just never deleted afterward.
 
 ## 7. Data Model — MongoDB Collections
 
