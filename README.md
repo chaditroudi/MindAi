@@ -493,6 +493,8 @@ Every LLM system prompt in this codebase lives in a `skills/<name>/SKILL.md` mar
 
 Because these reads happen once at module import (server boot), editing a `SKILL.md` file requires a server restart to take effect — there is no hot-reload.
 
+**Dead skill folders.** Grepping every `skillFile(...)` call site in `nest-app/src` turns up exactly five distinct skill names ever requested: `aggregation`, `chart`, `report`, `inquiry`, `memory`. Three of the eight folders under `skills/` — **`writer/`, `analytics/`, `suggestions/`** — are never referenced by any `skillFile()` call and are not loaded by the running application. They're either leftovers from the legacy `src/` prototype (which had its own, differently-organized skill usage) or drafts for functionality that was never wired in. Don't assume editing one of those three files changes any runtime behavior — verify with `grep -rn "skillFile(" nest-app/src` before relying on a skill file being live.
+
 ### Planner (`ai/planner.ts`) — LLM call #1
 
 Builds the *"YOUR DATABASE SCHEMA"* section of the system prompt from every registered `DataSource`: field names, types, roles, enum/sample values, detected foreign-key references (`resolveReference()` — matches an explicit `referenceTo`, a description hint, or a name/collection prefix match), and ready-to-copy `$lookup`/`$group`/count/sum pipeline templates per collection. The model must return a `TaskPlan`:
