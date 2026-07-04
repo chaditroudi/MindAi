@@ -171,7 +171,6 @@ export async function fetchProviderModels(
   type OAIModel = { id: string };
   const list: OAIModel[] =
     (json as { data?: OAIModel[] })?.data ??
-
     (Array.isArray(json) ? (json as OAIModel[]) : []);
   return list
     .filter((m) => m.id && typeof m.id === 'string')
@@ -194,8 +193,7 @@ async function openAICompatFetch(
         );
         init = { ...init, body: JSON.stringify(body) };
       }
-    } catch {
-    }
+    } catch {}
   }
   return fetch(input, init);
 }
@@ -242,7 +240,6 @@ function resolveModel(
     case 'groq':
       return createGroq({ apiKey: key, baseURL })(model);
     case 'openai':
-
       return createOpenAI({ apiKey: key, baseURL }).chat(model);
     case 'mistral':
     case 'together':
@@ -253,7 +250,6 @@ function resolveModel(
         fetch: openAICompatFetch,
       }).chat(model);
     default:
-
       if (!baseURL) {
         throw new Error(
           `Unsupported provider "${provider}". Supported: ${Object.keys(PROVIDERS).join(', ')}.`,

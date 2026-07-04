@@ -94,7 +94,6 @@ export async function extractMemories(
       outputTokens,
     };
   } catch (err) {
-
     log(
       'memory-skill',
       `extraction failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`,

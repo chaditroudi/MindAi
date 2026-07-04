@@ -71,7 +71,6 @@ export class CacheService {
     await this.model.updateOne(
       { key },
       {
-
         $setOnInsert: { key, createdAt: new Date() },
         $set: {
           prompt: prompt.trim(),

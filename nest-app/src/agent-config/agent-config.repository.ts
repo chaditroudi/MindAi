@@ -155,7 +155,6 @@ export class AgentConfigRepository {
     agentId: string,
     update: AgentRuntimeUpdate,
   ): Promise<void> {
-
     const normalized = Object.fromEntries(
       Object.entries(update).filter(([, value]) => value !== undefined),
     );

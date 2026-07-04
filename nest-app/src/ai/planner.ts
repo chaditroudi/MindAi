@@ -303,7 +303,6 @@ export function buildPlanSchema(intent: IntentKind) {
 
   if (intent === 'dashboard') {
     return base.extend({
-
       strategy: strategySchema().default(PLANNER_DEFAULT_STRATEGY),
 
       chartHint: z.string().min(1).default('distribution'),
@@ -426,7 +425,6 @@ export function finalizeTaskPlan({
     ...plan,
     pipeline,
     query: {
-
       sourceName: source?.name ?? plan.query.sourceName,
       limit: plan.query.limit,
     },

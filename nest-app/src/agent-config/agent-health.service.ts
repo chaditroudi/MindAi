@@ -21,8 +21,7 @@ function writeHealthLog(lines: string[]): void {
     const stamp = new Date().toISOString();
     const body = lines.map((line) => `[${stamp}] ${line}`).join('\n') + '\n';
     appendFileSync(LOG_FILE, body, 'utf8');
-  } catch {
-  }
+  } catch {}
 }
 
 const QUOTA_EXHAUSTED_PATTERNS = [
@@ -101,7 +100,6 @@ export class AgentHealthService {
     const changes: string[] = [];
 
     for (const agent of config.agents) {
-
       if (agent.status === 'disabled') {
         skipped++;
         continue;
@@ -219,7 +217,6 @@ export class AgentHealthService {
       });
 
       if (res.status === 429) {
-
         const body = await res.text().catch(() => '');
         return !isQuotaExhausted(body);
       }
@@ -248,7 +245,6 @@ export class AgentHealthService {
 
       return true;
     } catch {
-
       return true;
     }
   }
