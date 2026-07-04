@@ -11,6 +11,7 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { IsString, IsOptional, MaxLength, Allow } from 'class-validator';
+import { ApiTags } from '@nestjs/swagger';
 import { SavedResultsRepository } from './saved-results.repository';
 import { requireUserId } from '../common/helpers/user-id';
 
@@ -28,6 +29,7 @@ class SaveDto {
   @Allow() result: unknown;
 }
 
+@ApiTags('saved-results')
 @Controller('api/saved')
 export class SavedResultsController {
   constructor(private readonly service: SavedResultsRepository) {}

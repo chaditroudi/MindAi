@@ -1,6 +1,8 @@
 import { Controller, Get, Delete, Param } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { CacheService } from './cache.service';
 
+@ApiTags('cache')
 @Controller('api/cache')
 export class CacheController {
   constructor(private readonly cache: CacheService) {}
