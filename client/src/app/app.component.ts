@@ -121,13 +121,8 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly charts = inject(ChartRenderService);
   private readonly cdr     = inject(ChangeDetectorRef);
 
-  // Agent connection test state
   agentTestStatus: 'idle' | 'testing' | 'ok' | 'error' = 'idle';
   agentTestError = '';
-  // Bumped on every testAgentConnection() call so a stale in-flight response
-  // (e.g. from a previous click, or a request that lands out of order) can
-  // never overwrite the result of a newer one — was leaving the modal stuck
-  // on "Validating..." after the actual (later) response had already arrived.
   private agentTestRequestId = 0;
 
   // Agent config editing state
