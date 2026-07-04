@@ -632,7 +632,7 @@ Five skill names are ever passed to `skillFile()` in the running code — verifi
 | `analytics/SKILL.md` | ❌ DEAD | *nothing* | — |
 | `suggestions/SKILL.md` | ❌ DEAD | *nothing* | — |
 
-Notice `report` and `inquiry` both resolve to the **same** `role: 'writer'** when calling `createSkillAgent()` — "role" here just picks which per-role model/timeout defaults apply conceptually (there's actually only one `AgentRole` union with `supervisor | writer | chart | memory`), it is not a 1:1 mapping with skill-folder names. This is exactly the kind of naming mismatch that made the three dead folders easy to miss in the first place — `skills/writer/` *sounds* like it should be the one loaded for role `writer`, but it isn't; `report/SKILL.md` and `inquiry/SKILL.md` are.
+Notice `report` and `inquiry` both resolve to the **same** `role: 'writer'` when calling `createSkillAgent()` — "role" here just picks which per-role model/timeout defaults apply conceptually (there's actually only one `AgentRole` union with `supervisor | writer | chart | memory`), it is not a 1:1 mapping with skill-folder names. This is exactly the kind of naming mismatch that made the three dead folders easy to miss in the first place — `skills/writer/` *sounds* like it should be the one loaded for role `writer`, but it isn't; `report/SKILL.md` and `inquiry/SKILL.md` are.
 
 ## 7. Data Model — MongoDB Collections
 
