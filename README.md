@@ -1140,6 +1140,9 @@ CHART_STYLE_CONTEXT=           # override the default styling-guidance sentence 
 # Debugging
 TRACE=                        # set to "1" to enable ai/*.ts logTrace() verbose payload logging
 DEBUG=                        # set (any truthy value) to enable AppLogger.debug() output
+
+# API documentation
+DISABLE_SWAGGER=              # set to "true" to skip mounting /api/docs and /api/docs-json
 ```
 
 LLM provider credentials are **not** set as server env vars in normal operation — they come from per-user Settings (`/api/settings`) or the shared Agent Config pool (`/api/agent-config`), both stored in MongoDB. This is different from the legacy `src/` prototype, which read a single `GROQ_API_KEY` from the environment — do not port that pattern back in.
@@ -1185,6 +1188,7 @@ Read this before building anything that assumes real authentication — the curr
 - **CORS defaults to allow-all** (`origin: true`) when `ALLOWED_ORIGINS` is unset — fine for local dev, but set `ALLOWED_ORIGINS` explicitly before exposing a deployment publicly.
 - **`helmet()` is applied with CSP disabled** (`contentSecurityPolicy: false` in [`main.ts`](nest-app/src/main.ts)) since the app serves its own Angular bundle; re-enable/tune CSP if that changes.
 - Registering a data source (`POST /api/sources`) blocks Mongo system collections and `$`-prefixed names, but does **not** otherwise sandbox which collections can be exposed — only register collections that are meant to be queryable through prompts.
+- **`/api/docs` and `/api/docs-json` are intentionally public** (`PUBLIC_PREFIXES` in `ApiKeyGuard`) even when `API_KEY` is set — otherwise nobody could load the Swagger UI page to authenticate through it in the first place. This means the full route/DTO shape of the API (field names, types, validation rules) is visible to anyone who can reach the server, even without a valid `x-api-key`. Set `DISABLE_SWAGGER=true` if that shape itself is considered sensitive for a given deployment.
 - **No request rate limiting.** Unlike the legacy `src/` prototype (which used `express-rate-limit`), `nest-app` has no rate-limiting middleware at all — the only throttling in the system is reactive, per-provider (`withRateLimitRetry()` backing off *after* a 429). Anything that needs to survive abusive traffic patterns needs a rate limiter added in front of (or inside) `nest-app`.
 
 ## 16. Background Jobs
