@@ -574,6 +574,66 @@ Every request first tries the caller's personal API key (`UserSettingsService`, 
 - drops the oldest half of the conversation context and retries in-process (context length exceeded), or
 - returns a structured error with a suggested fix, e.g. a computed `suggestedLimit` (truncated output, token limit too low).
 
+The full decision tree for this is diagrammed in [§4.6](#4-architecture); the state machine an agent moves through is diagrammed in [§4.7](#4-architecture). The two subsections below go deeper on the two things every one of those decisions is actually gated on — tokens and agents — end to end.
+
+### Token accounting — the complete lifecycle
+
+"Tokens" show up in four different places in this codebase, and it's easy to confuse them. Here is every one, in the order they happen for a single request:
+
+```mermaid
+flowchart TD
+    A["1. PRE-FLIGHT ESTIMATE\nestimateMinimumInputTokens()\n= ceil(prompt.length/4) + ceil(memoryText.length/4) + 512 overhead"] --> B{"Estimate <=\nconnection.inputTokenLimit?"}
+    B -->|No| RejectIn(["422 INPUT_TOKEN_LIMIT_TOO_LOW\nbefore any LLM call happens"])
+    B -->|Yes| C{"Memory context tokens <=\nagent.memoryTokenLimit?\n(agent connections only)"}
+    C -->|No| RejectMem(["422 MEMORY_TOKEN_LIMIT_TOO_LOW\nbefore any LLM call happens"])
+    C -->|Yes| D["2. PLANNER CALL\nmaxOutputTokens = min(opts.maxTokens, PLANNER_MAX_TOKENS)\nprovider returns real usage.inputTokens/outputTokens"]
+    D --> E["3. WRITER/CHART CALL\nmaxOutputTokens = min(opts.maxTokens, CHART|REPORT|INQUIRY_MAX_TOKENS)\nprovider returns real usage.inputTokens/outputTokens"]
+    E --> F["4. USAGE ACCUMULATION\naddUsage(plannerUsage, writerUsage)\n= TokenUsage { inputTokens, outputTokens }"]
+    F --> G{"outputTokens >=\nconnection.outputTokenLimit?"}
+    G -->|Yes| RejectOut(["422 TOKEN_LIMIT_TOO_LOW\n+ suggestedLimit — response was likely cut off"])
+    G -->|No| H["5. PERSIST USAGE\npersonal key -> UserSettingsRepository.incrementUsage()\nagent pool  -> AgentConfigRepository.incrementUsage()\n+ setLastInputTokens() for next request's estimate"]
+    H --> I["6. RETURN TO CLIENT\nresponse.inputTokens / outputTokens\n(the real, provider-reported numbers — not the estimate)"]
+```
+
+Read left to right, the key distinction is: **steps 1–3 (checks) use an *estimate*** (character-count-based, not a real tokenizer — `Math.ceil(text.length / 4)`), while **steps 4–6 (accounting) use the *real* numbers** the provider returned in its response. This means a request can pass the pre-flight estimate check and still get rejected afterward at step 4 (`TOKEN_LIMIT_TOO_LOW`) if the model's actual output ran long — the estimate is a cheap early filter, not a guarantee.
+
+**Where each number is stored:**
+
+| Number | Lives on | Reset by |
+|---|---|---|
+| `inputTokenLimit` / `outputTokenLimit` | `user_settings.responseTokenLimit`/`inputTokenLimit` (personal) or `agent_config.agents[].inputTokenLimit`/`outputTokenLimit` (shared) | Only by an explicit `PATCH .../token-limit` call — never automatically |
+| `memoryTokenLimit` | `agent_config.agents[].memoryTokenLimit` only — **personal connections have no memory token limit check at all** | Only by an explicit `PATCH /api/agent-config/token-limit` call |
+| `inputTokensUsed` / `outputTokensUsed` (cumulative) | `user_settings` (personal) or `agent_config.agents[]` (shared) | The `resetMonthlyUsage()` cron, 1st of the month ([§16](#16-background-jobs)) — **personal (`user_settings`) usage counters are never reset by anything**, only the shared agent pool's are |
+| `lastInputTokens` (agent pool only) | `agent_config.agents[].lastInputTokens` | Overwritten every successful request; used as a *floor* for the next request's pre-flight estimate (`Math.max(minimumInputTokens, lastInputTokens)`) so a connection that's been fine for large prompts doesn't get a falsely-low estimate on the next one |
+
+This asymmetry is worth internalizing: **the monthly reset cron only touches the shared agent pool.** A personal `user_settings` connection accumulates `inputTokensUsed`/`outputTokensUsed` forever with no automatic reset — `DELETE /api/settings` (removing the connection) is currently the only way to zero it out.
+
+### Skills — the complete map (active, dead, and how a prompt becomes a skill call)
+
+```mermaid
+flowchart LR
+    File["skills/&lt;name&gt;/SKILL.md\n(markdown, checked into git)"] -->|"readMarkdownSection(path, heading)\nat module import / server boot"| Section["Extracted section string\n(e.g. 'Runtime Prompt')"]
+    Section -->|"interpolateTemplate(str, values)\nat request time"| Filled["Filled prompt\n({{PLACEHOLDER}} -> real schema/rows/prompt}"]
+    Filled -->|"instructions param"| Agent["createSkillAgent(role, instructions, apiKey, model, provider)\n(new Mastra Agent per call)"]
+    Agent -->|"agent.generate([...messages], {structuredOutput: zodSchema})"| LLM["External LLM provider"]
+    LLM --> Result["result.object\n(validated against the Zod schema)\n+ result.usage"]
+```
+
+Five skill names are ever passed to `skillFile()` in the running code — verified by grepping every call site, not by reading folder names:
+
+| Skill folder | Status | Loaded by | Role passed to `createSkillAgent()` |
+|---|---|---|---|
+| `aggregation/SKILL.md` | ✅ ACTIVE | `ai/planner.ts`, `analytics/pipeline.service.ts` | `supervisor` |
+| `chart/SKILL.md` | ✅ ACTIVE | `ai/chart.ts`, `prompts/index.ts` | `chart` |
+| `report/SKILL.md` | ✅ ACTIVE | `ai/writer.ts` (`runReportSkill`) | `writer` |
+| `inquiry/SKILL.md` | ✅ ACTIVE | `ai/writer.ts` (`runInquirySkill`) | `writer` |
+| `memory/SKILL.md` | ✅ ACTIVE | `ai/memory-skill.ts` | `memory` |
+| `writer/SKILL.md` | ❌ DEAD | *nothing* — no `skillFile('writer', ...)` call exists | — |
+| `analytics/SKILL.md` | ❌ DEAD | *nothing* | — |
+| `suggestions/SKILL.md` | ❌ DEAD | *nothing* | — |
+
+Notice `report` and `inquiry` both resolve to the **same** `role: 'writer'** when calling `createSkillAgent()` — "role" here just picks which per-role model/timeout defaults apply conceptually (there's actually only one `AgentRole` union with `supervisor | writer | chart | memory`), it is not a 1:1 mapping with skill-folder names. This is exactly the kind of naming mismatch that made the three dead folders easy to miss in the first place — `skills/writer/` *sounds* like it should be the one loaded for role `writer`, but it isn't; `report/SKILL.md` and `inquiry/SKILL.md` are.
+
 ## 7. Data Model — MongoDB Collections
 
 ### `sources` — registered datasets (`sources/sources.service.ts`)
