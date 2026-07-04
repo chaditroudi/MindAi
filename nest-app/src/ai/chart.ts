@@ -30,6 +30,7 @@ const MAX_TOKENS = Number(process.env['CHART_MAX_TOKENS'] ?? 2_000);
 const MAX_JSON_PROPERTIES = Number(
   process.env['CHART_JSON_MAX_PROPERTIES'] ?? 8_000,
 );
+const MAX_JSON_DEPTH = Number(process.env['CHART_JSON_MAX_DEPTH'] ?? 20);
 const MAX_TABLE_ROWS = Number(process.env['CHART_TABLE_MAX_ROWS'] ?? 100);
 const RENDERABLE_OPTION_KEYS = new Set([
   'series',
