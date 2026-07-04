@@ -272,9 +272,10 @@ function ensureHeatmapVisualMap(
   if (!heatmapSeries) return option;
 
   const encode = heatmapSeries['encode'];
-  const valueField = isPlainRecord(encode) && typeof encode['value'] === 'string'
-    ? encode['value']
-    : undefined;
+  const valueField =
+    isPlainRecord(encode) && typeof encode['value'] === 'string'
+      ? encode['value']
+      : undefined;
   if (!valueField) return option;
 
   const values = rows
@@ -448,7 +449,10 @@ function toWidgetSpec(
     return null;
   }
 
-  const hydrated = ensureHeatmapVisualMap(attachDatasetSource(option, rows), rows);
+  const hydrated = ensureHeatmapVisualMap(
+    attachDatasetSource(option, rows),
+    rows,
+  );
   logUnknownRefs(hydrated, rowKeys, widget.title);
 
   return {
@@ -507,7 +511,13 @@ export async function runChart(
     userProvider,
   );
 
-  const basePrompt = buildChartPrompt(rows, prompt, strategy, chartHint, source);
+  const basePrompt = buildChartPrompt(
+    rows,
+    prompt,
+    strategy,
+    chartHint,
+    source,
+  );
 
   let generateHint: string | undefined;
   let result: Awaited<ReturnType<typeof agent.generate>> | undefined;
