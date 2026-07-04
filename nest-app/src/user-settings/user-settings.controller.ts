@@ -17,6 +17,7 @@ import {
   MinLength,
   MaxLength,
 } from 'class-validator';
+import { ApiTags } from '@nestjs/swagger';
 import { UserSettingsService } from './user-settings.service';
 import { requireUserId } from '../common/helpers/user-id';
 import { PROVIDERS, PROVIDER_MODELS } from '../ai/model';
@@ -50,6 +51,7 @@ class SaveSettingsDto {
   inputTokenLimit?: number;
 }
 
+@ApiTags('settings')
 @Controller('api/settings')
 export class UserSettingsController {
   constructor(private readonly service: UserSettingsService) {}
