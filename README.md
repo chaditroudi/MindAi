@@ -41,7 +41,7 @@ Everything below this point is written for engineers, but nothing above it requi
 1. [What It Does](#1-what-it-does)
 2. [Repository Layout](#2-repository-layout)
 3. [Tech Stack](#3-tech-stack)
-4. [Architecture](#4-architecture)
+4. [Architecture](#4-architecture) — system context, module graph, request lifecycle, sequence diagrams, access-resolution & agent state flowcharts
 5. [Backend Modules (nest-app/src)](#5-backend-modules-nest-appsrc)
 6. [AI Pipeline in Detail](#6-ai-pipeline-in-detail)
 7. [Data Model — MongoDB Collections](#7-data-model--mongodb-collections)
@@ -348,6 +348,118 @@ sequenceDiagram
 ```
 
 Two LLM calls per request (planner + writer/chart) is the norm. The **prompt cache** (SHA-256 of `intent:prompt`, 7-day TTL) can skip both LLM calls entirely when there is no active conversation context — see [§7](#7-data-model--mongodb-collections) for the exact cache document shape.
+
+### 4.6 Access Resolution & Provider Fallback
+
+What `AnalyticsService.run()` actually does before, during, and after the two LLM calls — this is the part of the codebase with the most branching, so it earns its own flowchart. "Agent" here means an entry in the shared `agent_config` pool ([§7](#7-data-model--mongodb-collections)), not the Mastra `Agent` class.
+
+```mermaid
+flowchart TD
+    Start(["New /api/analytics request"]) --> HasKey{"User has a personal\nAPI key saved?"}
+    HasKey -->|Yes| UsePersonal["Use personal key\nconnection.source = 'personal'"]
+    HasKey -->|No| PickAgent["Pick an agent:\ncurrentAgentId first,\nelse next whose token limits fit"]
+    PickAgent --> HasAgent{"Any active agent\navailable?"}
+    HasAgent -->|No| Err401(["401 NO_ACTIVE_CONNECTION"])
+    HasAgent -->|Yes| CheckMem{"Memory context size <=\nagent.memoryTokenLimit?"}
+    CheckMem -->|No| Err422a(["422 MEMORY_TOKEN_LIMIT_TOO_LOW\n+ suggestedLimit"])
+    CheckMem -->|Yes| CheckInput{"Estimated request size <=\nconnection.inputTokenLimit?"}
+    CheckInput -->|No| Err422b(["422 INPUT_TOKEN_LIMIT_TOO_LOW\n+ suggestedLimit"])
+    CheckInput -->|Yes| CallLLM["Run planner + writer/chart\n(PipelineService.execute*)"]
+    UsePersonal --> CallLLM
+
+    CallLLM --> Outcome{"Outcome?"}
+    Outcome -->|"Success"| Respond["Build response,\ntrack token usage,\npersist turn + memory"]
+    Outcome -->|"Context too long"| DropCtx["Drop oldest half of\nconversation context"]
+    DropCtx --> CallLLM
+    Outcome -->|"Invalid key / rate limit /\nmodel not found"| UsingAgent{"Using the\nagent pool?"}
+    UsingAgent -->|"Yes"| MarkAgent["Mark this agent\nexpired / idle+cooldown,\nadd to triedAgentIds"]
+    MarkAgent --> PickAgent
+    UsingAgent -->|"No (personal key)"| ErrOut(["Return classified error\n(401 / 429 / 400)"])
+    Outcome -->|"Truncated output /\nunsupported structured output"| ErrOut2(["422 TOKEN_LIMIT_TOO_LOW or\n400 unsupported-output"])
+```
+
+This loop is why a shared agent pool is resilient to any single bad key or rate limit: a failure just removes that agent from consideration for *this* request (`triedAgentIds`) and tries the next one, without the caller ever seeing an error unless every agent is exhausted.
+
+### 4.7 Agent Health State Machine
+
+How one entry in the `agent_config.agents[]` array moves between `active` / `idle` / `expired` / `disabled` — driven by both the every-minute health-check cron ([§16](#16-background-jobs)) and live call outcomes inside the flow above.
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle: created via PUT /api/agent-config\n(default status)
+
+    idle --> active: health probe succeeds\n(checkAllAgents, every minute)
+    idle --> active: cooldown expires & probe succeeds
+
+    active --> idle: rate-limited (429, recoverable)\ncooldownUntil set ~5 min out
+    active --> expired: invalid API key
+    active --> expired: model not found / retired
+    active --> expired: free-tier quota exhausted\n(not just rate-limited)
+    active --> expired: health probe fails (4xx)
+
+    expired --> active: key/model fixed,\nnext probe succeeds
+
+    active --> disabled: admin sets status=disabled
+    idle --> disabled: admin sets status=disabled
+    expired --> disabled: admin sets status=disabled
+    disabled --> active: admin re-enables\n(probe succeeds on next check)
+
+    active --> [*]: removed from agents[] via PUT
+```
+
+`AgentConfigService.pickCurrentAgentId()` only ever considers an agent "current" if it's `active` and not in an active cooldown — everything else in `AnalyticsService`'s fallback loop ([§4.6](#4-architecture)) walks past `idle`/`expired`/`disabled` agents to find the next usable one.
+
+### 4.8 Planner Validation & Retry Flow
+
+What happens between the planner's raw LLM output and a MongoDB `aggregate()` call actually running — the single retry described in [§6](#6-ai-pipeline-in-detail), drawn as a flowchart.
+
+```mermaid
+flowchart TD
+    A(["runSupervisorPlan() — attempt 1"]) --> B{"Zod schema valid?\n(one $-operator/stage,\nenum values, etc.)"}
+    B -->|No| Hint1["Build hint: exact\nschema violation"]
+    B -->|Yes| C{"resolvePipeline():\nsource resolvable,\nno forbidden stages,\nall fields registered?"}
+    C -->|No| Hint2["Build hint: unknown\nfield / forbidden stage"]
+    C -->|Yes| D["db.aggregate(pipeline)"]
+    D --> E{"MongoDB\nexecution error?"}
+    E -->|Yes| Hint3["Build targeted hint from\nerror text — $convert,\n$project mixing, date-on-int, ..."]
+    E -->|No| F{"0 rows AND needsData\nAND $match used a\nstring literal?"}
+    F -->|Yes| Hint4["Hint: check enum\ncasing matches schema"]
+    F -->|No| Done(["Return {plan, rows}\nto PipelineService"])
+
+    Hint1 --> Retry["runSupervisorPlan() —\nattempt 2, with hint\nappended to the user message"]
+    Hint2 --> Retry
+    Hint3 --> Retry
+    Hint4 --> Retry
+    Retry --> B2{"Valid this time?"}
+    B2 -->|"No / fails again"| Throw(["Throw — surfaced as a\ngeneric 500 unless it matches\na classified error (§13)"])
+    B2 -->|"Yes"| Done
+```
+
+Only **one** retry ever happens — if attempt 2 still fails validation or execution, `PipelineService.aggregate()` throws unconditionally rather than looping further.
+
+### 4.9 Data Source Registration Flow
+
+How a team admin's `POST /api/sources` call becomes something the planner can immediately use, with no server restart:
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant SC as SourcesController
+    participant SS as SourcesService
+    participant DB as MongoDB (sources collection)
+    participant Cache as sources-cache.ts (in-memory array)
+
+    Admin->>SC: POST /api/sources {name, collection, fields[]}
+    SC->>SC: reject $-prefixed / system.* collection,\nreject $ or NUL in any field name
+    SC->>SS: register(source)
+    SS->>DB: replaceOne({collection}, source, {upsert:true})
+    SS->>DB: find({}) — reload every registered source
+    DB-->>SS: all source documents
+    SS->>Cache: setSourcesCache(docs)
+    SS-->>SC: {ok:true, loaded: N}
+    SC-->>Admin: 200 {ok:true, loaded: N}
+    Note over Cache: Every subsequent /api/analytics request calls\ngetSources() against this in-memory array — zero DB round-trips on the hot path
+```
 
 ## 5. Backend Modules (nest-app/src)
 
