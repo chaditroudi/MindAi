@@ -613,7 +613,7 @@ This asymmetry is worth internalizing: **the monthly reset cron only touches the
 ```mermaid
 flowchart LR
     File["skills/&lt;name&gt;/SKILL.md\n(markdown, checked into git)"] -->|"readMarkdownSection(path, heading)\nat module import / server boot"| Section["Extracted section string\n(e.g. 'Runtime Prompt')"]
-    Section -->|"interpolateTemplate(str, values)\nat request time"| Filled["Filled prompt\n({{PLACEHOLDER}} -> real schema/rows/prompt}"]
+    Section -->|"interpolateTemplate(str, values)\nat request time"| Filled["Filled prompt\ne.g. PLACEHOLDER tokens swapped for\nreal schema / sample rows / user prompt"]
     Filled -->|"instructions param"| Agent["createSkillAgent(role, instructions, apiKey, model, provider)\n(new Mastra Agent per call)"]
     Agent -->|"agent.generate([...messages], {structuredOutput: zodSchema})"| LLM["External LLM provider"]
     LLM --> Result["result.object\n(validated against the Zod schema)\n+ result.usage"]
