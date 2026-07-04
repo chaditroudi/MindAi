@@ -1262,6 +1262,46 @@ Read this before building anything that assumes real authentication — the curr
 
 Both jobs append a line to `nest-app/logs/agent-health.log` (created on demand) in addition to the NestJS logger, so you can audit agent status flips without digging through general server logs. `AgentHealthService.checkAllAgents()` is also invoked synchronously right after `PUT /api/agent-config` saves a new pool, so status is fresh immediately after an edit rather than waiting up to a minute.
 
+### What `checkAllAgents()` actually does, every 60 seconds
+
+```mermaid
+flowchart TD
+    Cron(["Cron fires\n(every minute)"]) --> Load["Load agent_config\n(single document, all agents)"]
+    Load --> Empty{"Any agents\nconfigured?"}
+    Empty -->|No| LogSkip["Log: 'run skipped — no agents configured'\nreturn"]
+    Empty -->|Yes| Loop["For each agent in agents[]"]
+
+    Loop --> IsDisabled{"status ==\n'disabled'?"}
+    IsDisabled -->|Yes| Skip1["Skip — count as 'skipped'"]
+    IsDisabled -->|No| IsCooling{"cooldownUntil\nin the future?"}
+    IsCooling -->|Yes| Skip2["Skip — count as 'skipped'\n(still rate-limited)"]
+    IsCooling -->|No| Probe["probeProvider(provider, apiKey, model)\n— GET the provider's 'list models' endpoint"]
+
+    Probe --> R429{"HTTP 429?"}
+    R429 -->|"Yes, quota-exhausted body"| Unhealthy["healthy = false"]
+    R429 -->|"Yes, but just rate-limited"| Healthy1["healthy = true\n(429 alone isn't fatal here)"]
+    R429 -->|No| R4xx{"HTTP 4xx\n(400-499)?"}
+    R4xx -->|Yes| Unhealthy
+    R4xx -->|No| ModelCheck{"Is the configured\nmodel in the provider's\nreturned model list?"}
+    ModelCheck -->|"No — model retired/typo'd"| Unhealthy
+    ModelCheck -->|"Yes, or provider gave\nno usable model list"| Healthy2["healthy = true"]
+
+    Unhealthy --> SetExpired["status = 'expired'"]
+    Healthy1 --> SetActive["status = 'active'\ncooldownUntil = null\nlastFailureReason = ''"]
+    Healthy2 --> SetActive
+
+    SetExpired --> NextAgent["next agent in loop"]
+    SetActive --> NextAgent
+    Skip1 --> NextAgent
+    Skip2 --> NextAgent
+
+    NextAgent --> Loop
+    Loop -->|"all agents done"| Sync["syncCurrentAgent()\n— re-pick currentAgentId if the\npreviously-current agent is no longer usable"]
+    Sync --> WriteLog["Append summary + any status changes\nto logs/agent-health.log"]
+```
+
+The health probe is deliberately lightweight (a provider's model-listing endpoint, not an actual completion call) — it costs no LLM tokens and takes well under the `PROBE_TIMEOUT_MS` (8s) budget, so running it every minute across an entire agent pool is cheap. Note that a network error talking to the provider (timeout, DNS failure, etc.) is treated as **healthy** (`catch { return true; }`) rather than unhealthy — the probe fails open, on the assumption that a transient network blip shouldn't retire a working agent. This means a genuinely broken agent whose failure mode is "the provider is unreachable" (rather than "the provider rejects the key/model") will not be caught by this cron job at all — it will only surface the next time a real request tries to use it and gets classified by `AnalyticsService`'s live-failure handling ([§4.6](#4-architecture)).
+
 ## 17. Logging & Observability
 
 All application logging goes through `nest-app/src/common/logger/app.logger.ts` — a hand-rolled, colorized console logger, not a structured logging library like `pino`/`winston`:
