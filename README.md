@@ -1093,6 +1093,7 @@ First-run checklist:
 2. Register at least one dataset: `POST /api/sources` with `{ name, collection, fields: [...] }` (it must already exist in MongoDB with data, or point at an empty collection you plan to seed) — see [§9.1](#9-examples--prompts-requests--responses) for a full example body.
 3. Configure an AI connection — either `POST /api/settings` with a personal key (per `x-user-id`), or `PUT /api/agent-config` for a connection shared by everyone with no personal key.
 4. Send a prompt: `POST /api/analytics { "prompt": "...", "intent": "inquiry" }` with headers `x-user-id: dev` — see [§9](#9-examples--prompts-requests--responses) for more prompt/response examples.
+5. Or skip steps 2–4 above and just open `http://localhost:3000/api/docs` — every route in [§8](#8-api-reference) is there, live, with a "Try it out" button and an "Authorize" lock icon for `x-api-key`/`x-user-id`.
 
 ## 12. Configuration Reference
 
