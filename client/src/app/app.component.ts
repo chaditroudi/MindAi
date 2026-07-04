@@ -125,7 +125,6 @@ export class AppComponent implements OnInit, OnDestroy {
   agentTestError = '';
   private agentTestRequestId = 0;
 
-  // Agent config editing state
   configSaving = false;
   configError  = '';
   agentDraft:  AgentEntry[] = [];
