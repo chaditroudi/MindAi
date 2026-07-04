@@ -821,6 +821,31 @@ Response (dashboard example — abbreviated; see [§9](#9-examples--prompts-requ
 ```
 Report/inquiry responses replace `chart` with `reportSections: [{heading, body}]` or `summary: string` respectively. See [§19](#19-error-response-format) for the error shape and possible `code`s.
 
+### Viewing the live Swagger UI
+
+1. Start the backend: `cd nest-app && npm run start:dev`.
+2. Open **`http://localhost:3000/api/docs`** in a browser. Every route in the table below is listed there, grouped by tag, with the exact request/response schema `@nestjs/swagger` inferred from each DTO.
+3. Click the **Authorize** button (top right) to set `x-api-key` and/or `x-user-id` once — they're then sent automatically on every "Try it out" call you make from the UI.
+4. Click any route → **Try it out** → fill in the body → **Execute** to fire a real request against your local server and see the real response, right in the browser.
+
+If `API_KEY` is set in `.env`, `/api/docs` still loads without it (it's on the guard's public-route allowlist — see [§15](#15-security-model--trust-boundaries)); you only need the key once you click **Execute** on a protected route.
+
+### Importing the API as a Postman / Insomnia collection
+
+The raw spec at `/api/docs-json` is a standard OpenAPI 3.0 document, which Postman and Insomnia can both import directly and turn into a full collection (one request per route, pre-filled with the schema) — no manual collection-building required.
+
+**Option A — import from the running server (always current):**
+1. Postman: **File → Import → Link**, paste `http://localhost:3000/api/docs-json`, import.
+2. Insomnia: **Application → Preferences → Data → Import Data → From URL**, same URL.
+
+**Option B — import the checked-in snapshot (works without a running server):** a generated copy is committed at [`nest-app/openapi.json`](nest-app/openapi.json) — in Postman/Insomnia, import that file instead of a URL. This snapshot was exported directly from a running instance (22 paths, 8 tags: `analytics`, `sources`, `history`, `cache`, `saved-results`, `settings`, `memory`, `agent-config`); regenerate it after any route/DTO change with:
+```powershell
+cd nest-app
+npm run start:dev &          # or start:prod once built
+curl http://localhost:3000/api/docs-json -o openapi.json
+```
+Real request/response JSON for every intent (dashboard/report/inquiry, follow-ups, errors) is in [§9](#9-examples--prompts-requests--responses) — the imported collection gives you the request *shape*; §9 gives you realistic *payloads* to paste in.
+
 ### Full route table
 
 | Method | Path | Auth | Purpose |
