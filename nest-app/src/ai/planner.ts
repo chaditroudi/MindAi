@@ -113,7 +113,6 @@ function resolveReference(
   });
 }
 
-/** For a referenced source, which of its fields is the join target — an explicit `role: 'id'`/field named "id", or Mongo's own `_id` as the fallback. */
 function resolveReferenceForeignField(source: DataSource): string {
   return (
     source.fields.find((field) => field.role === 'id' || field.name === 'id')
@@ -121,7 +120,6 @@ function resolveReferenceForeignField(source: DataSource): string {
   );
 }
 
-/** Picks a human-readable "label" field on a joined source (e.g. a region's name, not its id) to suggest in the schema section's join hints. */
 function resolveReferenceLabelField(
   source: DataSource,
   foreignField: string,
@@ -135,16 +133,6 @@ function resolveReferenceLabelField(
   );
 }
 
-/**
- * Renders every registered data source into a big plain-text schema block
- * that gets embedded in the planner's prompt via {{DATABASE_SCHEMA}}. This
- * is the single most important piece of context the planner LLM receives —
- * it's explicitly told "every $fieldName in the pipeline MUST appear here,"
- * and this function is what generates that authoritative field list, along
- * with ready-to-use $lookup templates and a couple of common
- * count-by/sum-by pipeline templates to bias the model toward
- * dataset+encode-friendly shapes over ad-hoc queries.
- */
 function buildSchemaSection(sources: DataSource[]): string {
   if (!sources.length) return '\nNo data sources — return needsData=false.';
 
@@ -214,7 +202,6 @@ function buildSchemaSection(sources: DataSource[]): string {
       }
     }
 
-    // Build available joins from explicit source.joins + auto-detected field references
     const joins: Array<{
       from: string;
       localField: string;
@@ -222,7 +209,6 @@ function buildSchemaSection(sources: DataSource[]): string {
       as: string;
     }> = [];
 
-    // Explicit joins declared on the source itself always come first...
     for (const j of source.joins ?? []) {
       joins.push(j);
     }
@@ -286,7 +272,6 @@ function buildSchemaSection(sources: DataSource[]): string {
   return lines.join('\n');
 }
 
-/** Assembles the final planner prompt: the shared base template with the schema section and intent-specific guidance filled in. */
 function buildPlannerPrompt(intent: IntentKind, sources: DataSource[]): string {
   return interpolateTemplate(AGGREGATION_PROMPT_BASE, {
     '{{DATABASE_SCHEMA}}': buildSchemaSection(sources),
@@ -298,7 +283,6 @@ function buildPlannerPrompt(intent: IntentKind, sources: DataSource[]): string {
   });
 }
 
-/** Normalizes a strategy value (trim + lowercase) before validating it against the fixed enum — so " Trend " and "trend" are treated the same. */
 function strategySchema() {
   return z.preprocess(
     (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value),
@@ -319,12 +303,9 @@ export function buildPlanSchema(intent: IntentKind) {
 
   if (intent === 'dashboard') {
     return base.extend({
-      // No .catch() here: an invalid strategy must surface as a validation
-      // error so runWithRetry() can correct it, not silently become 'standard'.
+
       strategy: strategySchema().default(PLANNER_DEFAULT_STRATEGY),
-      // chartHint is intentionally open-ended per SKILL.md ("use any value
-      // that best captures what the user wants") — only require it be a
-      // non-empty string; the model's actual wording is preserved as-is.
+
       chartHint: z.string().min(1).default('distribution'),
     });
   }
@@ -340,12 +321,6 @@ export function buildPlanSchema(intent: IntentKind) {
   return base;
 }
 
-/**
- * Calls the "supervisor" agent once and returns a fully finalized TaskPlan.
- * Note this function itself does NOT contain a retry loop — the caller
- * (pipeline.service.ts's runWithRetry) is what re-invokes this with a `hint`
- * describing what went wrong on a previous attempt, up to twice total.
- */
 export async function runSupervisorPlan({
   prompt,
   intent,
@@ -373,10 +348,6 @@ export async function runSupervisorPlan({
     `LLM call | intent: ${intent} | sources: ${sources.length} | context: ${context.length}${hint ? ' | retry' : ''} | prompt: "${prompt}"`,
   );
 
-  // On a retry, the previous failure's explanation is appended right after
-  // the actual question — kept as a distinct trailing block rather than
-  // rewriting the prompt, so the model sees both what was asked and
-  // specifically what went wrong last time.
   const userContent = hint
     ? `${JSON.stringify({ prompt, intent })}\n\nPREVIOUS ATTEMPT FAILED — ${hint}`
     : JSON.stringify({ prompt, intent });
@@ -412,9 +383,6 @@ export async function runSupervisorPlan({
     outputTokens: result.usage.outputTokens ?? 0,
   };
 
-  // The raw model output always goes through finalizeTaskPlan before it's
-  // considered a real TaskPlan — source-name resolution and execution-skill
-  // derivation aren't something the LLM is trusted to get right on its own.
   return {
     plan: finalizeTaskPlan({
       plan: object,
@@ -425,21 +393,6 @@ export async function runSupervisorPlan({
   };
 }
 
-/**
- * Post-processes the raw LLM output into a plan pipeline.service.ts can
- * safely act on. Three distinct corrections happen here:
- *  1. sourceName gets normalized/resolved against the REAL registered
- *     source list (case/whitespace-insensitive) — if nothing matches, the
- *     raw value is kept as-is so the caller sees exactly what didn't match
- *     rather than it silently becoming undefined.
- *  2. a legacy quirk where the model sometimes nests `pipeline` inside
- *     `query` instead of at the top level gets hoisted back to the top
- *     level, but only if the top-level `pipeline` is actually empty — a
- *     genuine top-level pipeline always wins over one accidentally left in
- *     `query`.
- *  3. `skills` (which skills actually get executed) is derived here, not
- *     trusted from the model's own output at all.
- */
 export function finalizeTaskPlan({
   plan,
   intent,
@@ -456,8 +409,6 @@ export function finalizeTaskPlan({
       normalizeToken(s.collection) === token,
   );
 
-  // The model sometimes puts pipeline inside query (per old docs) instead of at root level.
-  // Hoist it to root so resolvePipeline can find it.
   const queryPipeline = (plan.query as { pipeline?: Record<string, unknown>[] })
     .pipeline;
   const pipeline = plan.pipeline?.length
@@ -475,9 +426,7 @@ export function finalizeTaskPlan({
     ...plan,
     pipeline,
     query: {
-      // Prefer the REAL registered source's own name (correct casing) over
-      // whatever the model wrote — falls back to the model's raw value only
-      // if no registered source matched at all.
+
       sourceName: source?.name ?? plan.query.sourceName,
       limit: plan.query.limit,
     },
@@ -485,14 +434,6 @@ export function finalizeTaskPlan({
   };
 }
 
-/**
- * The full decision table for which skills actually run, given the plan's
- * own needsData/wantChart flags and the request's intent. This is
- * deliberately NOT something the model decides directly — a wrong answer
- * here means either skipping the data fetch entirely or silently not
- * rendering a chart the user asked for, so it's kept as a small, fully
- * deterministic function instead of trusting free-form LLM output.
- */
 export function deriveExecutionSkills(
   plan: Pick<TaskPlan, 'needsData' | 'wantChart'>,
   intent: IntentKind,

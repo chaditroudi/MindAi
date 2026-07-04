@@ -368,12 +368,6 @@ function toWidgetSpec(
   };
 }
 
-/**
- * The chart skill's entry point: rows + prompt + presentation hints in,
- * a fully-hydrated DashboardSpec out. Retries the LLM call once with an
- * explicit correction if the first structured-output attempt fails
- * validation (the same one-shot-retry pattern used by the planner).
- */
 export async function runChart(
   rows: Record<string, unknown>[],
   prompt: string,

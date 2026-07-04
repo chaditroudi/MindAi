@@ -46,7 +46,6 @@ function emit(tag: string, msg: string, data?: unknown): void {
   }
 }
 
-// Standalone functions — used by non-injectable code (repositories, services)
 export function log(tag: string, msg: string, data?: unknown): void {
   emit(tag, msg, data);
 }
@@ -56,7 +55,6 @@ export function logTrace(tag: string, msg: string, data?: unknown): void {
   emit(tag, `[TRACE] ${msg}`, data);
 }
 
-// Injectable NestJS logger — used by NestFactory and modules
 @Injectable()
 export class AppLogger implements LoggerService {
   log(message: string, context?: string) {

@@ -87,9 +87,7 @@ export async function runInquirySkill({
         [
           {
             role: 'user',
-            // buildInquiryMessage caps both row count (INQUIRY_MAX_ROWS) and
-            // total character size (WRITER_MAX_CHARS) so a huge result set
-            // never blows the model's context window.
+
             content: buildInquiryMessage(
               prompt,
               rows,
@@ -126,7 +124,6 @@ export async function runInquirySkill({
   return { result: object, usage };
 }
 
-/** Writes a multi-section analytical report over the given rows. */
 export async function runReportSkill({
   prompt,
   rows,
@@ -156,9 +153,7 @@ export async function runReportSkill({
         [
           {
             role: 'user',
-            // `withChart` tells buildReportMessage to instruct the model NOT
-            // to restate distributions/rankings in prose — a chart widget
-            // will already be shown alongside this report for that.
+
             content: buildReportMessage(
               prompt,
               rows,

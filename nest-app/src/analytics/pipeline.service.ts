@@ -569,7 +569,6 @@ export class PipelineService {
     const chartMaxTokens = clampStageTokens(maxTokens, CHART_MAX_TOKENS);
     const inquiryMaxTokens = clampStageTokens(maxTokens, INQUIRY_MAX_TOKENS);
 
-    // Chart-only (dashboard intent, or auto-routed without a report narrative)
     if (plan.skills.includes('chart') && !plan.skills.includes('report')) {
       if (!rows.length)
         throw new Error(
@@ -594,7 +593,6 @@ export class PipelineService {
       return { result: chart, usage: addUsage(aggUsage, usage) };
     }
 
-    // Report — optionally accompanied by a chart when wantChart=true
     if (plan.skills.includes('report') && rows.length) {
       const withChart = plan.skills.includes('chart') && rows.length >= 2;
       const { result: rep, usage: repUsage } = await runReportSkill({
@@ -640,7 +638,6 @@ export class PipelineService {
       };
     }
 
-    // Inquiry
     if (plan.skills.includes('inquiry') && rows.length) {
       this.logger.log(`inquiry | rows: ${rows.length}`);
       const { result, usage } = await runInquirySkill({

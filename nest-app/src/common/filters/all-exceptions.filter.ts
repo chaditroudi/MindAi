@@ -65,9 +65,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const body: Record<string, unknown> = { error: errorMsg };
     if (errorCode) body['code'] = errorCode;
 
-    // Pass through any extra payload fields the service attached
-    // (e.g. currentLimit, suggestedLimit, agentApiKey) so the frontend
-    // can act on structured error responses rather than falling back to defaults.
     if (exception instanceof HttpException) {
       const raw = exception.getResponse();
       if (typeof raw === 'object' && raw !== null) {

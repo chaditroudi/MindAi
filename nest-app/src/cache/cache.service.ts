@@ -71,7 +71,7 @@ export class CacheService {
     await this.model.updateOne(
       { key },
       {
-        // Only set createdAt on first insert so the TTL index clock is never reset
+
         $setOnInsert: { key, createdAt: new Date() },
         $set: {
           prompt: prompt.trim(),

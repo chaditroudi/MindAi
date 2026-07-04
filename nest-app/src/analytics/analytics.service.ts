@@ -512,7 +512,7 @@ export class AnalyticsService {
               );
               continue agentLoop;
             }
-            // Personal key — no failover possible
+
             const retryIn = extractRetryDelay(err);
             const msg = exhausted
               ? `The current quota for ${access.provider ?? 'this provider'} is exhausted. ` +
@@ -551,14 +551,13 @@ export class AnalyticsService {
       `done in ${durationMs}ms | in:${inputTokens} out:${outputTokens}`,
     );
 
-    // Persist token usage (fire-and-forget) — agent budget or personal-key counter
     if (access.agentId) {
       void this.agentConfig.trackUsage(
         access.agentId,
         inputTokens,
         outputTokens,
       );
-      // Record actual token cost so the next pre-flight check uses real data
+
       void this.agentConfig.updateLastInputTokens(access.agentId, inputTokens);
     } else {
       void this.userSettings.incrementUsage(
@@ -947,7 +946,7 @@ export class AnalyticsService {
         params.model,
         params.provider,
       );
-      // Credit memory tokens against whichever budget is active
+
       if (params.agentId) {
         void this.agentConfig.trackUsage(
           params.agentId,

@@ -106,12 +106,6 @@ export class AgentConfigRepository {
     );
   }
 
-  /**
-   * Adds to (never replaces) the running usage counters after a request
-   * completes. `$inc` is atomic at the database level, so concurrent
-   * requests against the same agent can't clobber each other's counts the
-   * way a read-modify-write in application code could.
-   */
   async incrementUsage(
     agentId: string,
     inputTokens: number,
@@ -134,7 +128,6 @@ export class AgentConfigRepository {
       .lean();
   }
 
-  /** Records the size of the most recently completed request against this agent. */
   async setLastInputTokens(
     agentId: string,
     inputTokens: number,
@@ -146,12 +139,6 @@ export class AgentConfigRepository {
     );
   }
 
-  /**
-   * Monthly cron entry point (AgentHealthService.resetMonthlyUsage). Note the
-   * unfiltered `agents.$[]` positional operator here — unlike every other
-   * write in this file, this one intentionally touches EVERY agent in the
-   * array at once, not a single filtered one.
-   */
   async resetAllUsage(): Promise<void> {
     await this.model.updateOne(
       {},
@@ -164,28 +151,17 @@ export class AgentConfigRepository {
     );
   }
 
-  /**
-   * Applies a runtime-state change (status/cooldown/failure-reason) to one
-   * agent, as a side effect of a request or health-probe outcome — distinct
-   * from an admin's deliberate config edit.
-   */
   async updateRuntime(
     agentId: string,
     update: AgentRuntimeUpdate,
   ): Promise<void> {
-    // Callers (AgentConfigService.updateRuntime, AgentHealthService) often
-    // build this object with some fields deliberately omitted rather than
-    // set to a specific value — strip anything `undefined` so we don't
-    // accidentally $set a field to `undefined` in the update payload.
+
     const normalized = Object.fromEntries(
       Object.entries(update).filter(([, value]) => value !== undefined),
     );
-    // Nothing left to write (e.g. caller passed an empty update) — skip the
-    // round-trip to Mongo entirely.
+
     if (!Object.keys(normalized).length) return;
 
-    // Rewrite each key as `agents.$[agent].<key>` so the positional filter
-    // below applies to all of them in one update.
     const setPayload = Object.fromEntries(
       Object.entries(normalized).map(([key, value]) => [
         `agents.$[agent].${key}`,
