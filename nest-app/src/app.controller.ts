@@ -1,8 +1,10 @@
 import { Controller, Get, Res } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import mongoose from 'mongoose';
 import type { Response } from 'express';
 import { getSources } from './sources/sources-cache';
 
+@ApiTags('health')
 @Controller()
 export class AppController {
   @Get('health')

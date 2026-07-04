@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 
 const PUBLIC_EXACT = new Set(['/api/provider', '/api/meta', '/health']);
-const PUBLIC_PREFIXES = ['/api/key'];
+const PUBLIC_PREFIXES = ['/api/key', '/api/docs'];
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
