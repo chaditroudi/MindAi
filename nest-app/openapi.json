@@ -1,0 +1,859 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "AppController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/meta": {
+      "get": {
+        "operationId": "SourcesController_getMeta",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/api/sources": {
+      "get": {
+        "operationId": "SourcesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "sources"
+        ]
+      },
+      "post": {
+        "operationId": "SourcesController_register",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/api/sources/{collection}": {
+      "delete": {
+        "operationId": "SourcesController_remove",
+        "parameters": [
+          {
+            "name": "collection",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/api/history/results": {
+      "get": {
+        "operationId": "HistoryController_listResults",
+        "parameters": [
+          {
+            "name": "intent",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "history"
+        ]
+      }
+    },
+    "/api/history/results/{id}": {
+      "get": {
+        "operationId": "HistoryController_getResult",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "history"
+        ]
+      }
+    },
+    "/api/history/sessions": {
+      "get": {
+        "operationId": "HistoryController_listSessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "history"
+        ]
+      }
+    },
+    "/api/history/sessions/{sessionId}": {
+      "get": {
+        "operationId": "HistoryController_getSession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "history"
+        ]
+      },
+      "delete": {
+        "operationId": "HistoryController_deleteSession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "history"
+        ]
+      }
+    },
+    "/api/cache": {
+      "get": {
+        "operationId": "CacheController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cache"
+        ]
+      },
+      "delete": {
+        "operationId": "CacheController_clearAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cache"
+        ]
+      }
+    },
+    "/api/cache/{key}": {
+      "delete": {
+        "operationId": "CacheController_deleteOne",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cache"
+        ]
+      }
+    },
+    "/api/saved": {
+      "get": {
+        "operationId": "SavedResultsController_list",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "saved-results"
+        ]
+      },
+      "post": {
+        "operationId": "SavedResultsController_save",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "saved-results"
+        ]
+      }
+    },
+    "/api/saved/{id}": {
+      "get": {
+        "operationId": "SavedResultsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "saved-results"
+        ]
+      },
+      "delete": {
+        "operationId": "SavedResultsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "saved-results"
+        ]
+      }
+    },
+    "/api/settings/models": {
+      "post": {
+        "operationId": "UserSettingsController_listModels",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/validate": {
+      "post": {
+        "operationId": "UserSettingsController_validate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings": {
+      "post": {
+        "operationId": "UserSettingsController_save",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "settings"
+        ]
+      },
+      "get": {
+        "operationId": "UserSettingsController_get",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "settings"
+        ]
+      },
+      "delete": {
+        "operationId": "UserSettingsController_remove",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/token-limit": {
+      "patch": {
+        "operationId": "UserSettingsController_patchTokenLimit",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/provider": {
+      "get": {
+        "operationId": "AnalyticsController_getProvider",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Static provider placeholder (kept for frontend compatibility)",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/analytics": {
+      "post": {
+        "description": "Plans a MongoDB aggregation, executes it against a registered data source, and formats the result as a dashboard, report, or inquiry answer depending on intent.",
+        "operationId": "AnalyticsController_runAnalytics",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "description": "Caller identity used to scope settings, memory, and saved results. Not authenticated — see README §15.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Run a natural-language analytics prompt",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/memory/config": {
+      "get": {
+        "operationId": "MemoryController_getConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "memory"
+        ]
+      },
+      "patch": {
+        "operationId": "MemoryController_setConfig",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory": {
+      "get": {
+        "operationId": "MemoryController_list",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "memory"
+        ]
+      },
+      "delete": {
+        "operationId": "MemoryController_clear",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/agent-config": {
+      "get": {
+        "operationId": "AgentConfigController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config"
+        ]
+      },
+      "put": {
+        "operationId": "AgentConfigController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAgentConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config"
+        ]
+      }
+    },
+    "/api/agent-config/token-limit": {
+      "patch": {
+        "operationId": "AgentConfigController_updateTokenLimit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTokenLimitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "agent-config"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "MindAi API",
+    "description": "Natural-language analytics API — turns a prompt into a dashboard, report, or inquiry answer over registered MongoDB data sources. See README.md for the full architecture and worked examples.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "analytics",
+      "description": "Main AI query endpoint"
+    },
+    {
+      "name": "sources",
+      "description": "Registered dataset schemas"
+    },
+    {
+      "name": "history",
+      "description": "Past pipeline runs and conversation sessions"
+    },
+    {
+      "name": "cache",
+      "description": "Prompt-result cache"
+    },
+    {
+      "name": "saved-results",
+      "description": "User-pinned dashboards/reports/inquiries"
+    },
+    {
+      "name": "settings",
+      "description": "Per-user AI connection settings"
+    },
+    {
+      "name": "memory",
+      "description": "Long-term memory"
+    },
+    {
+      "name": "agent-config",
+      "description": "Shared fallback AI connection pool"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      },
+      "userId": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-user-id"
+      }
+    },
+    "schemas": {
+      "SaveDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SaveSettingsDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AnalyticsDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "MemoryConfigDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SaveAgentConfigDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateTokenLimitDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}
