@@ -696,6 +696,8 @@ Report/inquiry responses replace `chart` with `reportSections: [{heading, body}]
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | `GET` | `/health` | — | Mongo ping + registered source count (`503` if Mongo is down or 0 sources) |
+| `GET` | `/api/docs` | — (public route) | Live Swagger UI — browse and try every endpoint interactively |
+| `GET` | `/api/docs-json` | — (public route) | Raw OpenAPI 3 spec, e.g. for generating a typed client |
 | `POST` | `/api/analytics` | ✓ + `x-user-id` | Main AI query — see above |
 | `GET` | `/api/provider` | — | Static placeholder (`{ provider: '', hasGlobalKey: false }`) |
 | `GET` | `/api/sources` | ✓ | List registered datasets |
