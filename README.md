@@ -153,6 +153,46 @@ MindAi/
 
 ## 4. Architecture
 
+This section is the single place meant to bring a new team member — engineer or not — to a working mental model of the whole system: who talks to whom, in what order, under what failure modes, and where the state lives. Read it top to bottom the first time; use it as a reference afterward.
+
+### 4.1 System Context — who talks to whom
+
+The outermost view: the actors around the system and the external services it depends on. Nothing here is internal implementation — just the boundary of the system and what crosses it.
+
+```mermaid
+flowchart TD
+    subgraph Actors["People"]
+        EndUser["End User\n(asks questions)"]
+        TeamAdmin["Team Admin\n(registers data sources,\nconfigures AI connections)"]
+    end
+
+    subgraph MindAi["MindAi System"]
+        Angular["Angular UI\n(client/)"]
+        Nest["NestJS API\n(nest-app/)"]
+    end
+
+    subgraph DataStores["Data Stores"]
+        Mongo[("MongoDB\nsources, cache, history,\nsettings, memory, agents")]
+        LibSQL[("LibSQL / SQLite file\nconversation sessions")]
+    end
+
+    subgraph External["External Services"]
+        LLM["LLM Providers\nOpenAI · Anthropic · Google ·\nGroq · Mistral · Together · Perplexity"]
+    end
+
+    EndUser -->|"types a prompt"| Angular
+    TeamAdmin -->|"POST /api/sources,\nPUT /api/agent-config"| Angular
+    Angular -->|"REST over HTTP(S)\n/api/*"| Nest
+    Nest -->|"aggregate() / find() / update()"| Mongo
+    Nest -->|"read/write threads & messages"| LibSQL
+    Nest -->|"HTTPS — structured-output\ncompletion requests"| LLM
+    LLM -.->|"JSON responses\n(TaskPlan / DashboardSpec / text)"| Nest
+```
+
+**Reading this diagram:** everything the system *decides* (which fields to query, what chart to draw, what the report says) is produced by the boxed **LLM Providers** — MindAi itself contributes no model, only orchestration, validation, and safety rails around those external calls. Both data stores are owned and run by the team (MongoDB for almost everything durable, a small local SQLite file only for short-term conversation memory) — no data leaves the system except the prompt/schema/row-sample text sent to whichever LLM provider is configured.
+
+### 4.2 Component Architecture — inside the NestJS process
+
 ```mermaid
 flowchart TD
     U[Client / Angular UI] -->|POST /api/analytics| AC[AnalyticsController]
@@ -176,7 +216,62 @@ flowchart TD
     US --> MDB
 ```
 
-### Request sequence — dashboard, cache miss
+### 4.3 NestJS Module Dependency Graph
+
+What actually imports what, straight from every `*.module.ts` — useful when deciding where a new feature belongs or what a change might ripple into.
+
+```mermaid
+flowchart TD
+    App["AppModule\n(app.module.ts)"]
+
+    App --> ConfigMod["ConfigModule\n(global, .env loader)"]
+    App --> ScheduleMod["ScheduleModule\n(cron jobs)"]
+    App --> MongoRoot["MongooseModule.forRootAsync\n(root DB connection)"]
+    App --> SourcesMod["SourcesModule"]
+    App --> HistoryMod["HistoryModule"]
+    App --> CacheMod["CacheModule"]
+    App --> SavedMod["SavedResultsModule"]
+    App --> SettingsMod["UserSettingsModule"]
+    App --> AnalyticsMod["AnalyticsModule"]
+    App --> AgentCfgMod["AgentConfigModule"]
+    App -.->|"only registered if\nclient/dist/.../index.html exists"| StaticMod["ServeStaticModule"]
+
+    AnalyticsMod --> CacheMod
+    AnalyticsMod --> HistoryMod
+    AnalyticsMod --> MemoryMod["MemoryModule"]
+    AnalyticsMod --> SettingsMod
+    AnalyticsMod --> AgentCfgMod
+
+    style MemoryMod fill:#00000000,stroke-dasharray: 4 3
+```
+
+**Notable, easy-to-miss detail:** `MemoryModule` is **not** imported directly by `AppModule` — it's only reachable through `AnalyticsModule`. Every other feature module (`SourcesModule`, `HistoryModule`, `CacheModule`, `SavedResultsModule`, `UserSettingsModule`, `AgentConfigModule`) is self-contained: no feature module imports another feature module except `AnalyticsModule`, which is the one place that composes everything else into a single request flow. `SourcesModule` and `SavedResultsModule` are the only two modules with **no** module-to-module dependencies at all — they only depend on their own Mongoose model.
+
+### 4.4 Request Lifecycle — middleware, guards, and pipes in order
+
+The exact order every incoming HTTP request passes through, from `main.ts` bootstrap and `AppModule.configure()`:
+
+```mermaid
+flowchart LR
+    Req["Incoming HTTP request"] --> Helmet["helmet()\nsecurity headers\n(CSP disabled)"]
+    Helmet --> CORS["CORS check\nALLOWED_ORIGINS allow-list\nor allow-all if unset"]
+    CORS --> ReqId["RequestIdMiddleware\napplies to '*' routes —\nassigns a UUID via\nAsyncLocalStorage"]
+    ReqId --> Guard["ApiKeyGuard (APP_GUARD)\nchecks x-api-key\nonly if API_KEY env is set;\nskips /health, /api/meta,\n/api/provider, /api/key*"]
+    Guard --> Pipe["ValidationPipe\nwhitelist:true, transform:true\n— strips unknown fields,\nruns class-validator"]
+    Pipe --> Ctrl["Route Controller"]
+    Ctrl --> Svc["Service / business logic"]
+    Svc -->|throws| Filter["AllExceptionsFilter (APP_FILTER)\nnormalizes every error to\n{ error, code?, ...extra }"]
+    Svc -->|resolves| Res["JSON response"]
+    Filter --> Res
+```
+
+A request that fails the `ApiKeyGuard` or `ValidationPipe` never reaches a controller method at all — both are registered globally (`APP_GUARD` in `app.module.ts`, `ValidationPipe` in `main.ts`), so every route gets the same treatment without each controller repeating the logic.
+
+### 4.5 Request Sequences by Intent
+
+The three concrete request flows a `POST /api/analytics` call can take, depending on `intent` and whether the prompt cache has a hit.
+
+#### Dashboard, cache miss
 
 ```mermaid
 sequenceDiagram
@@ -206,7 +301,7 @@ sequenceDiagram
     AS-->>C: {intent:"dashboard", chart, sessionId, messageId, inputTokens, outputTokens}
 ```
 
-### Request sequence — report, with chart
+#### Report, with chart
 
 ```mermaid
 sequenceDiagram
@@ -234,7 +329,7 @@ sequenceDiagram
     AS-->>C: {intent:"report", reportSections[], chart?}
 ```
 
-### Request sequence — inquiry, prompt-cache hit
+#### Inquiry, prompt-cache hit
 
 ```mermaid
 sequenceDiagram
