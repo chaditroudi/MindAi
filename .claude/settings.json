@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python -c ' *)",
-      "PowerShell($f = \"C:\\\\Users\\\\DELL\\\\Downloads\\\\MindAi-main\\\\MindAi-main\\\\MindAi_NestApp_Codebase.pdf\"; $size = \\(Get-Item $f\\).Length; Write-Host \"File: $f\"; Write-Host \"Size: $\\([math]::Round\\($size/1KB, 1\\)\\) KB\"; Start-Process $f)"
-    ]
-  }
-}
