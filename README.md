@@ -524,6 +524,76 @@ Builds the *"YOUR DATABASE SCHEMA"* section of the system prompt from every regi
 
 If both attempts fail, `aggregate()` throws — the analytics layer surfaces this as a generic 500 unless it matches one of the classified error types in [§13](#13-error-handling--resilience).
 
+### Worked examples — exactly how a prompt becomes a pipeline
+
+Everything above described the mechanism in the abstract. Here is the planner skill actually doing its job, step by step, using the same `Projects` source from [§9](#9-examples--prompts-requests--responses) plus one more registered source (`Municipalities`) to show a join:
+
+```jsonc
+// A second registered source, used only in Example D below
+{
+  "name": "Municipalities",
+  "collection": "municipalities",
+  "fields": [
+    { "name": "id",   "type": "string", "role": "id" },
+    { "name": "name", "type": "string", "role": "dimension" }
+  ]
+}
+// ...and Projects gains one more field:
+{ "name": "municipalityId", "type": "string", "referenceTo": "Municipalities" }
+```
+
+```mermaid
+flowchart LR
+    Sources[("Registered\nDataSource[]")] -->|"buildSchemaSection()"| Schema["Schema block:\nfields, types, roles,\njoin & pipeline templates"]
+    Schema -->|"{{DATABASE_SCHEMA}}"| Template["skills/aggregation/SKILL.md\n'Runtime Prompt' + dashboard/non-dashboard guidance"]
+    Template -->|"interpolateTemplate()"| SystemPrompt["Final system prompt\n(instructions param to the Agent)"]
+    UserPrompt["User prompt + intent\n(JSON user message)"] --> LLMCall["agent.generate()\nstructuredOutput: TaskPlan schema\ntemperature: 0"]
+    SystemPrompt --> LLMCall
+    LLMCall --> Plan["TaskPlan\n{needsData, query, pipeline, strategy?, chartHint?}"]
+    Plan -->|"finalizeTaskPlan()"| Final["Normalized plan +\nskills[] derived"]
+```
+
+**Example A — ranking (dashboard)**
+
+| Step | Content |
+|---|---|
+| User prompt | *"top 5 projects by budget"*, `intent: "dashboard"` |
+| Schema excerpt injected | `Collection: "projects" → query.sourceName = "Projects"` · fields `title (string\|dimension)`, `status (enum\|dimension, allowed: planned\|active\|completed)`, `region (string\|dimension)`, `budget (number\|measure)`, `year (integer\|temporal)` · template: `Sum "budget" by "status": [{"$group":...}]` |
+| Model's `TaskPlan` | `{"needsData":true,"query":{"sourceName":"Projects"},"pipeline":[{"$sort":{"budget":-1}},{"$limit":5},{"$project":{"_id":0,"label":"$title","value":"$budget"}}],"strategy":"standard","chartHint":"ranking"}` |
+| After `finalizeTaskPlan()` | `skills: ["aggregation","chart"]` derived (dashboard + needsData) |
+| Result | Executed against `projects`, 5 rows → passed to `ai/chart.ts` → the bar chart in [§9.1](#9-examples--prompts-requests--responses) |
+
+**Example B — grouped composition (dashboard)**
+
+| Step | Content |
+|---|---|
+| User prompt | *"breakdown of projects by status"*, `intent: "dashboard"` |
+| Model's `TaskPlan` | `{"needsData":true,"query":{"sourceName":"Projects"},"pipeline":[{"$group":{"_id":"$status","value":{"$sum":1}}},{"$sort":{"value":-1}},{"$project":{"_id":0,"label":"$_id","value":1}}],"strategy":"overview","chartHint":"distribution"}` |
+| Why the model wrote it this way | The schema's "Count by ⟨dimension⟩" template ([§6](#6-ai-pipeline-in-detail) schema section) is copied almost verbatim — `status` was picked because it's the only ungrouped `enum`/dimension field with a bounded set of allowed values |
+| Result | 3 rows (`planned`/`active`/`completed` counts) → the donut chart in [§9.2](#9-examples--prompts-requests--responses) |
+
+**Example C — temporal trend (inquiry, not dashboard)**
+
+| Step | Content |
+|---|---|
+| User prompt | *"how has total project budget changed by year?"*, `intent` omitted (routed generically) |
+| Model's `TaskPlan` | `{"needsData":true,"query":{"sourceName":"Projects"},"pipeline":[{"$group":{"_id":"$year","value":{"$sum":"$budget"}}},{"$sort":{"_id":1}},{"$project":{"_id":0,"label":"$_id","value":1}}]}` |
+| Why no date operators appear | `year` is schema-typed `integer` with `role: temporal` — the schema section explicitly warns "$year/$dateToString/etc. must never be used on integer/number fields," so the model groups directly on the raw integer instead of trying to convert it to a `Date` |
+| After `finalizeTaskPlan()` | `skills: ["aggregation","inquiry"]` (no explicit intent → `deriveExecutionSkills()` falls back to the `general_question` branch) |
+| Result | Rows fed to `ai/writer.ts` → `{ "summary": "Budget grew from $8.1M in 2022 to $18.2M in 2025, with the steepest increase between 2023 and 2024." }` |
+
+**Example D — join across two sources (report)**
+
+| Step | Content |
+|---|---|
+| User prompt | *"which municipality has the most active projects?"*, `intent: "report"` |
+| Schema join hint injected | Because `Projects.municipalityId` has `referenceTo: "Municipalities"`, `buildSchemaSection()` emits: `{ "$lookup": { "from": "municipalities", "localField": "municipalityId", "foreignField": "id", "as": "Municipalities" } }` → then `{ "$unwind": "$Municipalities" }` → access as `"Municipalities.fieldName"`, plus `common joined labels: "Municipalities.name"` |
+| Model's `TaskPlan` | `{"needsData":true,"query":{"sourceName":"Projects"},"pipeline":[{"$match":{"status":"active"}},{"$lookup":{"from":"municipalities","localField":"municipalityId","foreignField":"id","as":"Municipalities"}},{"$unwind":"$Municipalities"},{"$group":{"_id":"$Municipalities.name","value":{"$sum":1}}},{"$sort":{"value":-1}},{"$limit":1},{"$project":{"_id":0,"label":"$_id","value":1}}],"wantChart":false}` |
+| What `validatePipelineFields()` checks | `$lookup.localField` (`municipalityId`) must be a real field on `Projects` ✓; the `$lookup.as` value (`Municipalities`) is added to the "computed fields" set so `$group`'s later reference to `$Municipalities.name` isn't flagged as an unknown field ✓ |
+| Result | One row (the top municipality) → `ai/writer.ts` produces a short report; no chart since `wantChart: false` |
+
+The pattern across all four: **the model never invents structure** — every field name, join, and grouping key it uses was already handed to it verbatim in the schema section built from the registered `DataSource[]`. When a prompt asks for something the schema can't support (e.g. a field that doesn't exist, or a join that wasn't detected), the model is instructed to set `needsData: false` rather than guess — which short-circuits straight to an inquiry-style "can't be answered from available sources" response with zero pipeline execution.
+
 ### Chart builder (`ai/chart.ts` + `prompts/index.ts`) — LLM call #2 (dashboard, and report when `wantChart`)
 
 Unlike the planner, the chart LLM is **not** filling in a fixed template — per `skills/chart/SKILL.md` it is instructed to author a *complete, arbitrary ECharts `option` object* (bar/line/area/scatter/pie/funnel/radar/heatmap, stacked/dual-axis/multi-series, `dataset`+`encode`, `visualMap`, `markLine`, etc.), or to fall back to `type: "table"` with a `columns[]` list when a raw table is clearly better than a chart.
