@@ -6,9 +6,6 @@ import { extractMemories } from '../ai/memory-skill';
 export class MemoryService implements OnModuleInit {
   private readonly logger = new Logger(MemoryService.name);
 
-  // Defaults to true; set MEMORY_EXTRACTION_ENABLED=false to disable at startup.
-  // Overridden below by the persisted value (if any) once the module initializes,
-  // so a user's toggle survives process restarts instead of resetting to this default.
   private extractionEnabled: boolean = (() => {
     const v = process.env['MEMORY_EXTRACTION_ENABLED']?.toLowerCase().trim();
     return v !== 'false' && v !== '0' && v !== 'no';

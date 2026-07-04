@@ -405,9 +405,6 @@ export async function getSessionDetail(
     });
     if (!thread) return null;
 
-    // Use getContext with a high lastMessages cap to fetch the full stored history.
-    // recall() without a vector store configured can silently return 0 messages;
-    // getContext() is confirmed to work and supports per-call lastMessages override.
     const { messages } = await memory.getContext({
       threadId,
       resourceId: RESOURCE_ID,

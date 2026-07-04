@@ -46,7 +46,6 @@ export function patchConvert(value: unknown): unknown {
 type Row = Record<string, unknown>;
 type ResolvedPipeline = { pipeline: Row[]; collection: string };
 
-// Bundles the LLM call parameters shared across all skill dispatches.
 export interface LlmOpts {
   apiKey?: string;
   model?: string;
@@ -87,7 +86,6 @@ export interface ExecuteResult<T> {
   usage: TokenUsage;
 }
 
-// ── Pipeline config — loaded from skills/aggregation/SKILL.md ─────────────────
 
 interface StageBehavior {
   validateKeys: boolean;
@@ -161,7 +159,6 @@ export class PipelineService {
     private readonly chartRepo: ChartResultsRepository,
   ) {}
 
-  // ── Core aggregation ────────────────────────────────────────────────────────
 
   async aggregate(
     prompt: string,
@@ -181,8 +178,6 @@ export class PipelineService {
         this.logger.log(
           `cache hit | intent: ${intent} | rows: ${cached.rows.length}`,
         );
-        // Older cache entries were written before `usage` was cached alongside
-        // { plan, rows } — default it so downstream addUsage() never sees undefined.
         return { ...cached, usage: cached.usage ?? zeroUsage() };
       }
     }
@@ -242,9 +237,6 @@ export class PipelineService {
           maxTokens: plannerMaxTokens,
         }));
       } catch (err) {
-        // Strict schema rejected the model's output (e.g. `strategy` outside
-        // the 5 allowed values) — retry once with a corrective hint instead of
-        // silently coercing to a default, so a wrong plan never ships unnoticed.
         const msg = err instanceof Error ? err.message : String(err);
         if (attempt === 0) {
           hint =
@@ -562,9 +554,6 @@ export class PipelineService {
     );
   }
 
-  // ── Skill dispatcher ────────────────────────────────────────────────────────
-  // Single place that maps plan.skills → the right skill function(s).
-  // Callers handle caching and intent-specific early-exits before delegating here.
 
   private async dispatchSkills(
     plan: TaskPlan,
@@ -677,8 +666,6 @@ export class PipelineService {
       usage: aggUsage,
     };
   }
-
-  // ── Feature executors ───────────────────────────────────────────────────────
 
   async executeDashboard(
     prompt: string,

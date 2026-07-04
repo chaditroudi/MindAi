@@ -24,13 +24,9 @@ export interface ValidationResult {
 
 const TIMEOUT_MS = 8_000;
 
-// ── Generic validator ──────────────────────────────────────────────────────────
-// Uses the PROVIDERS registry from model.ts — same baseURL, no duplication.
-// Every provider that exposes GET /models (all OpenAI-compatible ones) works here.
-
 async function validateApiKey(apiKey: string, provider: string): Promise<void> {
   const request = buildProviderValidationRequest(provider, apiKey);
-  if (!request) return; // unknown provider → skip, first real request surfaces errors
+  if (!request) return; 
 
   let res: Response;
   try {
@@ -45,10 +41,6 @@ async function validateApiKey(apiKey: string, provider: string): Promise<void> {
     );
   }
 
-  // 429 = rate-limited but key is valid → allow save.
-  // Any other 4xx means the provider rejected this exact key/request (wrong
-  // key format for this provider, bad key, etc.) — reject it. Only 5xx /
-  // network errors are ambiguous ("provider temporarily down") and pass through.
   if (res.status !== 429 && res.status >= 400 && res.status < 500) {
     throw new BadRequestException(`Invalid ${provider} API key.`);
   }
@@ -65,7 +57,6 @@ function sanitizeSettings(dto: UserSettingsDto): UserSettingsDto {
   };
 }
 
-// ── Service ────────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class UserSettingsService {

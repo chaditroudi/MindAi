@@ -41,8 +41,6 @@ export const MemoryItemSchema = SchemaFactory.createForClass(MemoryItem);
 MemoryItemSchema.index({ userId: 1, importance: -1, createdAt: -1 });
 MemoryItemSchema.index({ userId: 1, tags: 1 });
 
-// Single-document collection holding the global memory-extraction toggle,
-// so it survives process restarts instead of resetting to the env default.
 @Schema({ collection: 'memory_settings', versionKey: false })
 export class MemorySettings {
   @Prop({ type: Boolean, required: true }) extractionEnabled!: boolean;
