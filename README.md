@@ -19,6 +19,13 @@ MindAi turns a plain-language question into a MongoDB query and a finished answe
 11. [Configuration Reference](#11-configuration-reference)
 12. [Error Handling & Resilience](#12-error-handling--resilience)
 13. [Testing](#13-testing)
+14. [Security Model & Trust Boundaries](#14-security-model--trust-boundaries)
+15. [Background Jobs](#15-background-jobs)
+16. [Deployment](#16-deployment)
+17. [Error Response Format](#17-error-response-format)
+18. [Glossary](#18-glossary)
+19. [Troubleshooting](#19-troubleshooting)
+20. [Contributing](#20-contributing)
 
 ---
 
@@ -291,3 +298,100 @@ npm run test:e2e    # end-to-end (test/jest-e2e.json)
 ```
 
 Existing spec coverage: `common/helpers/user-id`, `analytics/pipeline.service`, `analytics/analytics.service`, `sources/sources.service`, `user-settings/user-settings.service`, `agent-config/agent-config.service`, `ai/model`, `ai/planner`, `ai/writer`.
+
+## 14. Security Model & Trust Boundaries
+
+Read this before building anything that assumes real authentication — the current model is deliberately lightweight and has gaps the team should be aware of.
+
+- **`x-api-key` is a single shared secret, not per-user auth.** `ApiKeyGuard` ([`common/guards/api-key.guard.ts`](nest-app/src/common/guards/api-key.guard.ts)) only activates if the `API_KEY` env var is set; when unset, **every route is open**. It gates access to the whole API, not to any particular user's data.
+- **`x-user-id` is client-supplied and unverified.** `requireUserId()` ([`common/helpers/user-id.ts`](nest-app/src/common/helpers/user-id.ts)) only checks that the header is non-empty — there is no session, token, or lookup that proves the caller actually owns that ID. Any caller who knows or guesses another user's ID can read/modify their saved results, settings, and memory. Treat `x-user-id` as a **tenant/namespace key, not an authentication credential** — if you need real auth (login, JWT, OAuth), it has to be added in front of this layer (e.g. an API gateway, or a new Nest guard that derives the trusted ID from a verified session instead of trusting the header).
+- **API keys are stored in MongoDB in plaintext** (`user-settings`, `agent-config` collections) — there is no encryption-at-rest for provider keys in this codebase. Anyone with DB access can read every configured key. Lock down MongoDB network access and backups accordingly.
+- **CORS defaults to allow-all** (`origin: true`) when `ALLOWED_ORIGINS` is unset — fine for local dev, but set `ALLOWED_ORIGINS` explicitly before exposing a deployment publicly.
+- **`helmet()` is applied with CSP disabled** (`contentSecurityPolicy: false` in [`main.ts`](nest-app/src/main.ts)) since the app serves its own Angular bundle; re-enable/tune CSP if that changes.
+- Registering a data source (`POST /api/sources`) blocks Mongo system collections and `$`-prefixed names, but does **not** otherwise sandbox which collections can be exposed — only register collections that are meant to be queryable through prompts.
+
+## 15. Background Jobs
+
+`AgentHealthService` ([`agent-config/agent-health.service.ts`](nest-app/src/agent-config/agent-health.service.ts)) runs two `@nestjs/schedule` cron jobs:
+
+| Schedule | Job | What it does |
+|---|---|---|
+| Every minute | `checkAllAgents()` | Probes every non-disabled, non-cooldown agent's provider (a lightweight "list models" call) and flips its status between `active`/`expired`; re-syncs which agent is "current" if the active one changed. |
+| `0 0 1 * *` (1st of month, midnight) | `resetMonthlyUsage()` | Resets all agents' tracked input/output token usage counters back to zero. |
+
+Both jobs append a line to `nest-app/logs/agent-health.log` (created on demand) in addition to the NestJS logger, so you can audit agent status flips without digging through general server logs.
+
+## 16. Deployment
+
+The backend can serve the built Angular app directly, so a single NestJS process can be the whole deployment:
+
+```powershell
+# From the client/ directory — build the Angular app
+cd client
+npm run build            # outputs to client/dist/mind-ui/browser
+
+# From nest-app/ — build and start the API
+cd ../nest-app
+npm run build             # nest build → nest-app/dist
+npm run start:prod        # node dist/main
+```
+
+`AppModule` ([`app.module.ts`](nest-app/src/app.module.ts)) checks at boot whether `client/dist/mind-ui/browser/index.html` exists; if it does, it registers `ServeStaticModule` to serve the Angular bundle for every route that isn't `/api/*` or `/health`. If the Angular build is missing, the backend still runs as an API-only server — this is expected in split-deployment setups (e.g. API on one host, static frontend on a CDN).
+
+Production checklist:
+- Set `MONGODB_URI`, `API_KEY`, and `ALLOWED_ORIGINS` explicitly.
+- Point `LIBSQL_URL` at a persistent volume (the default `file:./data/memory.db` is local disk — it will not survive a container redeploy unless that path is mounted).
+- Configure at least one working AI connection via `PUT /api/agent-config` (shared) so the app isn't dependent on every user bringing their own key.
+- `app.enableShutdownHooks()` is already wired up — NestJS will close Mongo connections cleanly on `SIGTERM`; make sure your process manager/orchestrator sends that signal and waits up to `SHUTDOWN_TIMEOUT_MS`.
+
+## 17. Error Response Format
+
+Every error response (validation, guards, unhandled exceptions) is normalized by `AllExceptionsFilter` ([`common/filters/all-exceptions.filter.ts`](nest-app/src/common/filters/all-exceptions.filter.ts)) to a single shape:
+
+```jsonc
+{
+  "error": "Human-readable message",
+  "code": "INVALID_API_KEY",       // optional, only present for a subset of known error types
+  // any additional fields the throwing site attached, e.g.:
+  "currentLimit": 4000,
+  "suggestedLimit": 6000
+}
+```
+
+Known `code` values (see `ERROR_CODES` in [`analytics/analytics.service.ts`](nest-app/src/analytics/analytics.service.ts)): `INVALID_API_KEY`, `LLM_RATE_LIMIT`, `MEMORY_TOKEN_LIMIT_TOO_LOW`, `TOKEN_LIMIT_TOO_LOW`, `INPUT_TOKEN_LIMIT_TOO_LOW`, `NO_ACTIVE_CONNECTION`. Frontend code should switch on `code` rather than parsing `error` text, since the message wording can change.
+
+5xx errors are logged server-side with a stack trace; 4xx errors are not (they're expected client mistakes, not bugs).
+
+## 18. Glossary
+
+| Term | Meaning |
+|---|---|
+| **Intent** | Which of the three output shapes a prompt should produce: `dashboard`, `report`, or `inquiry`. Either passed explicitly by the client or inferred. |
+| **Source** (data source) | A registered MongoDB collection + field schema that the planner is allowed to query. Not the same as a MongoDB collection itself — a source is the *description* of one. |
+| **Plan** (`TaskPlan`) | The structured output of the planner LLM call: which source to query, the aggregation pipeline, and (for dashboards) a chart strategy/hint. |
+| **Skill** | A `skills/*/SKILL.md` markdown file holding the system-prompt text for one LLM role (aggregation, chart, writer, inquiry, report, memory, suggestions, analytics). Loaded via `ai/skill-prompt.ts`, not hardcoded in TypeScript. |
+| **Agent** (in `agent-config`) | A shared, pre-configured AI provider connection (API key + provider + model + limits) that requests fall back to when the calling user has no personal key. Not to be confused with the Mastra `Agent` class used per-LLM-call in `ai/model.ts`. |
+| **Session** | A conversation thread (`sessionId`), backed by LibSQL, holding recent user/assistant turns used as short-term memory for follow-up prompts. |
+| **Memory** (long-term) | Durable, per-user facts extracted from past conversations (opt-in via `MEMORY_EXTRACTION_ENABLED` / `PATCH /api/memory/config`), retrieved and injected into future prompts. Distinct from session memory. |
+| **Widget** | One chart/table/value entry inside a `DashboardSpec.widgets[]`, ready to render in ECharts on the frontend. |
+
+## 19. Troubleshooting
+
+| Symptom | Likely cause / fix |
+|---|---|
+| `/health` returns `503 { sources: 0 }` | No data sources registered yet — `POST /api/sources` with at least one dataset. |
+| `401 NO_ACTIVE_CONNECTION` | No personal API key saved for this `x-user-id`, and no active shared agent in `agent-config` (all disabled/expired/cooling down). Add one via `/api/settings` or fix an agent via `/api/agent-config`. |
+| `401 INVALID_API_KEY` | The configured key was rejected by the provider — re-validate via `POST /api/settings/validate`, or check `agent-config` for an agent stuck in `expired`. |
+| `429` with a retry time | Provider rate limit hit; if using the shared agent pool this should self-heal (next agent, or cooldown expiry) — check `logs/agent-health.log`. |
+| `422 TOKEN_LIMIT_TOO_LOW` / `INPUT_TOKEN_LIMIT_TOO_LOW` | Response or request is larger than the configured limit — the error body includes `suggestedLimit`; raise it via `PATCH /api/settings/token-limit` or `PATCH /api/agent-config/token-limit`. |
+| Pipeline retried once then still failed with a MongoDB error | The planner produced an invalid stage or referenced an unregistered field — check the server log for the `PipelineService` retry hint; it usually names the exact bad field/operator. |
+| Angular app not served at `/` in production | `client/dist/mind-ui/browser/index.html` doesn't exist yet — run `npm run build` in `client/` before starting the backend, then restart it (the check happens once at boot). |
+| Conversation memory resets after a restart/redeploy | `LIBSQL_URL` is pointing at a non-persistent path — mount `./data` as a volume, or point `LIBSQL_URL` at a durable location. |
+
+## 20. Contributing
+
+- **All backend changes go in `nest-app/`.** The root `src/` folder is a legacy prototype — do not add features there.
+- Match existing module conventions: a Nest module per feature area with `*.controller.ts` / `*.service.ts` / `*.repository.ts`, DTOs validated with `class-validator`, and a colocated `*.spec.ts` for service logic.
+- Run `npm run lint` and `npm run test` in `nest-app/` before opening a PR; `npm run format` (Prettier) keeps diffs clean.
+- If you change planner/chart/writer prompt behavior, edit the relevant `skills/*/SKILL.md` file rather than inlining prompt strings in TypeScript — that's the pattern `ai/skill-prompt.ts` expects.
+- Keep `README.md` (this file) in sync when you add a module, route, or env var — it's the primary onboarding doc for the team.
