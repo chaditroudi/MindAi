@@ -386,6 +386,11 @@ export class PipelineService {
         rowCount: rows.length,
         durationMs,
       })
+      .then((id) =>
+        this.logger.log(
+          `history saved | id: ${id} | collection: ${collection} | pipeline stages: ${plan.pipeline?.length ?? 0} | rows: ${rows.length}`,
+        ),
+      )
       .catch((err) => this.logger.error(`history save failed: ${err}`));
   }
 
