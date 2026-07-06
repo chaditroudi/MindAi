@@ -174,6 +174,25 @@ function attachDatasetSource(
   return { dataset: { source: rows }, ...option };
 }
 
+// ---------------------------------------------------------------------------
+// Category aggregation safety net
+//
+// Why this exists: the chart LLM is asked (see skills/chart/SKILL.md) to
+// group record-level rows itself before charting them "by category". It
+// usually does, but not always — a model can map a bar/pie series straight
+// onto ungrouped rows, producing a chart whose bars/slices are individual
+// records instead of category totals (wrong numbers, duplicate axis labels).
+// A better prompt lowers how often that happens; it can never make it
+// impossible, since prompt-following is probabilistic, not guaranteed.
+//
+// This block is the deterministic correction underneath the prompt: it reads
+// whichever fields the model chose to encode (no hardcoded field names), and
+// only steps in if it finds more than one row per category — i.e. it is a
+// mathematically exact no-op whenever the model (or an upstream $group
+// stage) already produced correctly aggregated data. It never overrides a
+// correct chart; it only fixes an incorrect one.
+// ---------------------------------------------------------------------------
+
 function extractCategoryValueFields(series: unknown): {
   categoryField: string | null;
   valueFields: Set<string>;
