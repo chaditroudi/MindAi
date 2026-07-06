@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Delete, Param, Body, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   IsString,
   IsOptional,
@@ -110,13 +119,15 @@ function assertSafeNames(source: RegisterSourceDto): void {
     source.collection.startsWith('$') ||
     /^system\./i.test(source.collection)
   ) {
-    throw new NotFoundException('collection name is not allowed');
+    throw new BadRequestException('collection name is not allowed');
   }
   const badField = source.fields.find(
     (f) => f.name.startsWith('$') || f.name.includes('\0'),
   );
   if (badField) {
-    throw new NotFoundException(`field name "${badField.name}" is not allowed`);
+    throw new BadRequestException(
+      `field name "${badField.name}" is not allowed`,
+    );
   }
 }
 
