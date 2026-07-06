@@ -17,7 +17,7 @@ import { WidgetGridComponent } from './widget-grid.component';
 import type {
   ModeKey, PromptExample,
   AnalyticsResponse, DashboardResponse, InquiryResponse, ReportResponse,
-  ConversationMessage, MessageResult, SavedResultSummary,
+  ConversationMessage, MessageResult, SavedResultSummary, SessionSummary,
   AgentConfigResponse, AgentEntry, AgentStatus, ConnectionInfo,
 } from './app.types';
 
@@ -608,6 +608,31 @@ export class AppComponent implements OnInit, OnDestroy {
         this.st.setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
       }
     }
+  }
+
+  groupSessions(sessions: SessionSummary[]): { label: string; sessions: SessionSummary[] }[] {
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const today     = startOfDay(new Date());
+    const yesterday = today - 86_400_000;
+    const weekAgo   = today - 7 * 86_400_000;
+
+    const buckets: Record<'today' | 'yesterday' | 'week' | 'older', SessionSummary[]> = {
+      today: [], yesterday: [], week: [], older: [],
+    };
+    for (const sess of sessions) {
+      const day = startOfDay(new Date(sess.updatedAt));
+      if (day === today)          buckets.today.push(sess);
+      else if (day === yesterday) buckets.yesterday.push(sess);
+      else if (day >= weekAgo)    buckets.week.push(sess);
+      else                        buckets.older.push(sess);
+    }
+
+    return [
+      { label: 'Today',     sessions: buckets.today },
+      { label: 'Yesterday', sessions: buckets.yesterday },
+      { label: 'This week', sessions: buckets.week },
+      { label: 'Older',     sessions: buckets.older },
+    ].filter(g => g.sessions.length);
   }
 
   formatDate(date: string | Date): string {

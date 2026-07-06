@@ -91,25 +91,28 @@
           @if (!s.sessions.length) {
             <div class="session-empty">No history yet</div>
           }
-          @for (sess of s.sessions; track sess.sessionId) {
-            <div class="session-item"
-              [class.session-item--active]="sess.sessionId === s.sessionId"
-              (click)="loadSession(sess.sessionId)">
-              <div class="session-item-body">
-                <span class="session-intent-badge intent--{{ sess.intent }}">
-                  {{ intentLabel(sess.intent) }}
-                </span>
-                <p class="session-title">{{ sess.title }}</p>
-                <span class="session-meta">
-                  {{ formatDate(sess.updatedAt) }} · {{ sess.messageCount }} msg
-                </span>
+          @for (group of groupSessions(s.sessions); track group.label) {
+            <div class="session-group-label">{{ group.label }}</div>
+            @for (sess of group.sessions; track sess.sessionId) {
+              <div class="session-item"
+                [class.session-item--active]="sess.sessionId === s.sessionId"
+                (click)="loadSession(sess.sessionId)">
+                <div class="session-item-body">
+                  <span class="session-intent-badge intent--{{ sess.intent }}">
+                    {{ intentLabel(sess.intent) }}
+                  </span>
+                  <p class="session-title">{{ sess.title }}</p>
+                  <span class="session-meta">
+                    {{ formatDate(sess.updatedAt) }} · {{ sess.messageCount }} msg
+                  </span>
+                </div>
+                <button class="session-delete" (click)="deleteSession(sess.sessionId, $event)" title="Delete">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
               </div>
-              <button class="session-delete" (click)="deleteSession(sess.sessionId, $event)" title="Delete">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
+            }
           }
         </div>
       }
