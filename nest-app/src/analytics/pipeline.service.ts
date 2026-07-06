@@ -364,14 +364,20 @@ export class PipelineService {
     durationMs: number,
     usage: TokenUsage,
     hasContext: boolean,
+    userId: string | undefined,
   ): void {
     if (rows.length && !hasContext) {
       this.cache
         .setCached(intent, prompt, { plan, rows, usage })
         .catch((err) => this.logger.error(`cache write failed: ${err}`));
     }
+    if (!userId) {
+      this.logger.warn('history save skipped — no userId on this request');
+      return;
+    }
     this.history
       .save({
+        userId,
         prompt,
         intent,
         collection,

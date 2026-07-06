@@ -439,6 +439,7 @@ export class AnalyticsService {
             model: access.model,
             provider: access.provider,
             maxTokens: access.maxTokens,
+            userId: req.userId,
           });
           result = executed.result;
           inputTokens = executed.usage.inputTokens;
