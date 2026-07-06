@@ -33,6 +33,8 @@ export interface LlmOpts {
   model?: string;
   provider?: string;
   maxTokens?: number;
+  /** Caller identity, attached to persisted results_history entries. */
+  userId?: string;
 }
 
 export interface AggregationResult {
@@ -147,6 +149,7 @@ export class PipelineService {
         durationMs,
         usage,
         context.length > 0,
+        opts.userId,
       );
     return { plan, rows, usage };
   }
