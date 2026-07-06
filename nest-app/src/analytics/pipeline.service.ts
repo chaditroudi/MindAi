@@ -18,52 +18,33 @@ import type {
   DashboardSpec,
   ReportSection,
 } from '../types';
-import { readJsonSection, skillFile } from '../ai/skill-prompt';
+import {
+  clampStageTokens,
+  hasStringMatch,
+  normalizePipelineStage,
+  patchConvert,
+} from './pipeline/pipeline-transforms';
+import type { ResolvedPipeline, Row } from './pipeline/pipeline-transforms';
+import {
+  assertNoForbiddenStages,
+  validatePipelineFields,
+} from './pipeline/pipeline-validation';
+import {
+  buildEmptyResultHint,
+  buildPlannerOutputHint,
+  buildPlanValidationHint,
+  buildRetryHint,
+} from './pipeline/retry-hints';
 
-export function patchConvert(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(patchConvert);
-  if (value !== null && typeof value === 'object') {
-    const obj = value as Record<string, unknown>;
-    if (
-      '$convert' in obj &&
-      obj['$convert'] !== null &&
-      typeof obj['$convert'] === 'object'
-    ) {
-      const conv = { ...(obj['$convert'] as Record<string, unknown>) };
-      if (conv['to'] === 'date' || conv['to'] === 4) {
-        if (!('onError' in conv)) conv['onError'] = null;
-        if (!('onNull' in conv)) conv['onNull'] = null;
-      }
-      return { ...obj, $convert: conv };
-    }
-    return Object.fromEntries(
-      Object.entries(obj).map(([k, v]) => [k, patchConvert(v)]),
-    );
-  }
-  return value;
-}
+// Re-exported so existing consumers importing from this module keep working.
+export { patchConvert };
 
-type Row = Record<string, unknown>;
-type ResolvedPipeline = { pipeline: Row[]; collection: string };
-
+/** Options forwarded to every LLM stage (planner, chart, writer). */
 export interface LlmOpts {
   apiKey?: string;
   model?: string;
   provider?: string;
   maxTokens?: number;
-}
-
-const PLANNER_MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
-const CHART_MAX_TOKENS = Number(process.env['CHART_MAX_TOKENS'] ?? 2_000);
-const INQUIRY_MAX_TOKENS = Number(process.env['INQUIRY_MAX_TOKENS'] ?? 400);
-
-function clampStageTokens(
-  limit: number | undefined,
-  fallback: number,
-): number | undefined {
-  if (!Number.isFinite(fallback) || fallback <= 0) return limit;
-  if (!Number.isFinite(limit) || (limit as number) <= 0) return fallback;
-  return Math.min(Math.round(limit as number), Math.round(fallback));
 }
 
 export interface AggregationResult {
@@ -86,66 +67,37 @@ export interface ExecuteResult<T> {
   usage: TokenUsage;
 }
 
-interface StageBehavior {
-  validateKeys: boolean;
-  walkValues: boolean;
-  computeKeys: boolean;
-  skipIdKey: boolean;
-  special?: string;
-}
+// Per-stage output ceilings, overridable via environment. Read once at boot.
+const PLANNER_MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
+const CHART_MAX_TOKENS = Number(process.env['CHART_MAX_TOKENS'] ?? 2_000);
+const INQUIRY_MAX_TOKENS = Number(process.env['INQUIRY_MAX_TOKENS'] ?? 400);
 
-interface PipelineConfig {
-  forbiddenStages: string[];
-  stageSemantics: Record<string, StageBehavior>;
-}
-
-const pipelineCfg = readJsonSection<PipelineConfig>(
-  skillFile('aggregation', 'SKILL.md'),
-  'Pipeline Config',
-);
-const FORBIDDEN_STAGES = new Set(pipelineCfg.forbiddenStages);
-const STAGE_BEHAVIORS = pipelineCfg.stageSemantics;
+/** Cache key namespace for a fully rendered dashboard (plan + rows + chart). */
 const DASHBOARD_FULL_INTENT = 'dashboard:full';
+/** Cache key namespace for a fully rendered report. */
+const REPORT_FULL_INTENT = 'report:full';
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+/** One planning attempt plus one hint-guided retry. */
+const MAX_PLAN_ATTEMPTS = 2;
 
-function normalizePipelineStage(
-  stage: unknown,
-  index: number,
-): { stage: Row; strippedKeys: string[] } {
-  if (!isPlainRecord(stage)) {
-    throw new Error(`Pipeline stage ${index + 1} must be a plain object.`);
-  }
+const DEFAULT_PIPELINE_TIMEOUT_MS = 30_000;
 
-  const keys = Object.keys(stage);
-  if (!keys.length) {
-    throw new Error(`Pipeline stage ${index + 1} must not be empty.`);
-  }
-
-  const operatorKeys = keys.filter((key) => key.startsWith('$'));
-  if (!operatorKeys.length) {
-    throw new Error(
-      `Pipeline stage ${index + 1} must include exactly one MongoDB operator key starting with "$". ` +
-        `Found keys: ${keys.join(', ')}.`,
-    );
-  }
-
-  if (operatorKeys.length > 1) {
-    throw new Error(
-      `Pipeline stage ${index + 1} must contain exactly one MongoDB operator key. ` +
-        `Found operators: ${operatorKeys.join(', ')}.`,
-    );
-  }
-
-  const op = operatorKeys[0];
-  return {
-    stage: { [op]: stage[op] },
-    strippedKeys: keys.filter((key) => key !== op),
-  };
-}
-
+/**
+ * Orchestrates the prompt → plan → MongoDB aggregation → rendering flow.
+ *
+ * Lifecycle of a request:
+ *   1. `aggregate()` — cache lookup, then a plan/execute loop with one
+ *      hint-guided retry (`runWithRetry`). Pipelines are normalized,
+ *      checked against forbidden stages, and field-validated against the
+ *      registered source schema before touching MongoDB.
+ *   2. `dispatchSkills()` — routes the resulting rows to the chart, report,
+ *      or inquiry renderer depending on the plan's declared skills.
+ *   3. The `execute*` entry points wrap 1+2 with per-intent caching and
+ *      empty-state fallbacks.
+ *
+ * Caching rule: results are only read/written when there is no conversation
+ * context, since context changes what the same prompt means.
+ */
 @Injectable()
 export class PipelineService {
   private readonly logger = new Logger(PipelineService.name);
@@ -158,6 +110,11 @@ export class PipelineService {
     private readonly chartRepo: ChartResultsRepository,
   ) {}
 
+  /**
+   * Plans and runs a MongoDB aggregation for the given prompt.
+   * Serves from cache when possible; otherwise persists the outcome
+   * (fire-and-forget) to cache and history.
+   */
   async aggregate(
     prompt: string,
     intent: IntentKind,
@@ -165,7 +122,7 @@ export class PipelineService {
     opts: LlmOpts = {},
   ): Promise<AggregationResult> {
     const sources = getSources();
-    const dateNow = Date.now();
+    const startedAt = Date.now();
 
     if (!context.length) {
       const cached = await this.cache.getCached<AggregationResult>(
@@ -187,7 +144,7 @@ export class PipelineService {
       context,
       opts,
     );
-    const durationMs = Date.now() - dateNow;
+    const durationMs = Date.now() - startedAt;
     this.logger.log(
       `result | collection: ${collection ?? '—'} | rows: ${rows.length} | ${durationMs}ms`,
     );
@@ -206,6 +163,17 @@ export class PipelineService {
     return { plan, rows, usage };
   }
 
+  /**
+   * The plan → validate → execute loop. Each failure class on the first
+   * attempt is converted into a corrective hint (see ./pipeline/retry-hints)
+   * and fed back to the planner exactly once; a second failure propagates.
+   *
+   * Failure classes handled:
+   *  - planner output schema violations
+   *  - pipeline structure / unknown-field validation errors
+   *  - recognized MongoDB execution errors (date coercion, projection mix, …)
+   *  - zero rows from a string-valued $match (likely enum casing mismatch)
+   */
   private async runWithRetry(
     prompt: string,
     intent: IntentKind,
@@ -228,7 +196,10 @@ export class PipelineService {
     let plannerUsage: TokenUsage = zeroUsage();
     const plannerMaxTokens = clampStageTokens(maxTokens, PLANNER_MAX_TOKENS);
 
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < MAX_PLAN_ATTEMPTS; attempt++) {
+      const isFirstAttempt = attempt === 0;
+
+      // 1. Ask the planner for a task plan (optionally with a retry hint).
       let plan: TaskPlan;
       let usage: TokenUsage;
       try {
@@ -245,11 +216,8 @@ export class PipelineService {
         }));
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (attempt === 0) {
-          hint =
-            `Your previous response failed output validation: ${msg}. ` +
-            `Re-read the required output shape and enum values exactly — ` +
-            `"strategy" must be exactly one of: standard, trend, comparison, anomaly, overview.`;
+        if (isFirstAttempt) {
+          hint = buildPlannerOutputHint(msg);
           continue;
         }
         throw err;
@@ -259,21 +227,24 @@ export class PipelineService {
         `plan [${attempt + 1}] | skills: [${plan.skills.join(', ')}] | needsData: ${plan.needsData} | source: ${plan.query.sourceName ?? '—'} | stages: ${plan.pipeline?.length ?? 0}`,
       );
 
+      // 2. Normalize + validate the pipeline against the registered schema.
       let resolved: ResolvedPipeline | null;
       try {
         resolved = this.resolvePipeline(plan, sources);
         if (resolved) plan.pipeline = resolved.pipeline;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (attempt === 0) {
-          hint = this.buildPlanValidationHint(msg);
+        if (isFirstAttempt) {
+          hint = buildPlanValidationHint(msg);
           continue;
         }
         throw err;
       }
 
+      // No pipeline to run (e.g. the plan needs no data): return early.
       if (!resolved) return { plan, rows: [], usage: plannerUsage };
 
+      // 3. Execute against MongoDB.
       let rows: Row[];
       try {
         rows = await this.runAggregation(
@@ -282,23 +253,24 @@ export class PipelineService {
         );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        const lower = msg.toLowerCase();
-        if (attempt === 0) {
-          hint = this.buildRetryHint(msg, lower, resolved, sources);
+        if (isFirstAttempt) {
+          hint = buildRetryHint(msg, msg.toLowerCase(), resolved, sources, (log) =>
+            this.logger.warn(log),
+          );
           if (hint) continue;
         }
         throw err;
       }
 
+      // 4. Empty result on a string $match usually means bad enum casing —
+      //    worth exactly one replanning attempt.
       if (
         rows.length === 0 &&
         plan.needsData &&
-        attempt === 0 &&
-        this.hasStringMatch(resolved.pipeline)
+        isFirstAttempt &&
+        hasStringMatch(resolved.pipeline)
       ) {
-        hint =
-          `The pipeline returned 0 rows: ${JSON.stringify(resolved.pipeline)}. ` +
-          `The $match filter values may not match actual data — check enum values use exact casing from schema allowed values.`;
+        hint = buildEmptyResultHint(resolved.pipeline);
         continue;
       }
 
@@ -315,88 +287,13 @@ export class PipelineService {
     );
   }
 
-  private buildRetryHint(
-    msg: string,
-    lower: string,
-    resolved: ResolvedPipeline,
-    sources: DataSource[],
-  ): string | undefined {
-    if (
-      lower.includes('pipeline stage') &&
-      (lower.includes('exactly one') ||
-        lower.includes('operator key') ||
-        lower.includes('non-empty'))
-    ) {
-      return `Pipeline structure error: "${msg}". Each pipeline item must be exactly one MongoDB stage object like { "$match": { ... } }. Do not merge multiple stages into one object, and do not add commentary keys beside the stage operator.`;
-    }
-
-    if (lower.includes('unsupported conversion')) {
-      return `MongoDB aggregation error: "${msg}". When converting integer/string fields to dates, always use $convert with onError: null and onNull: null, e.g. { $convert: { input: "$field", to: "date", onError: null, onNull: null } }.`;
-    }
-
-    if (lower.includes('exclusion') && lower.includes('inclusion projection')) {
-      this.logger.warn(`retrying after MongoDB projection mix error`);
-      return `MongoDB aggregation error: "${msg}". In a $project that includes fields (field: 1), you CANNOT also exclude nested fields like "<join>._id": 0 — MongoDB forbids mixing exclusion and inclusion except for the root "_id". Instead, add a separate $unset stage BEFORE $project to remove the joined _id: { "$unset": "<joinAlias>._id" }. Then $project only lists the fields you want (never exclude joined _id there).`;
-    }
-
-    if (
-      lower.includes('only supports date') ||
-      lower.includes('arguments to $date') ||
-      lower.includes('coercible to date') ||
-      (lower.includes('bson type') && lower.includes('date')) ||
-      (lower.includes('convert') && lower.includes('to date'))
-    ) {
-      const src = sources.find(
-        (s) =>
-          s.collection === resolved.collection ||
-          s.name === resolved.collection,
-      );
-      const intTemporalFields = (src?.fields ?? [])
-        .filter(
-          (f) =>
-            (f.type === 'integer' || f.type === 'number') &&
-            (f.role === 'temporal' ||
-              ['year', 'month', 'date', 'day'].some((t) =>
-                f.name.toLowerCase().includes(t),
-              )),
-        )
-        .map((f) => `"${f.name}" (stored as ${f.type}, NOT a Date)`)
-        .join(', ');
-      this.logger.warn(`retrying after MongoDB date-type error: ${msg}`);
-      return (
-        `MongoDB aggregation error: "${msg}". ` +
-        (intTemporalFields
-          ? `The temporal fields ${intTemporalFields} are plain integers, NOT Date objects. `
-          : '') +
-        `Do NOT use date extraction operators ($year, $month, $dayOfMonth, $dateToString, $dateToParts, $toDate, etc.) on integer or number fields. ` +
-        `Instead, reference them directly as numbers: e.g., group by year using "$startYear" as the _id value.`
-      );
-    }
-
-    return undefined;
-  }
-
-  private buildPlanValidationHint(msg: string): string {
-    const lower = msg.toLowerCase();
-    if (
-      lower.includes('pipeline stage') &&
-      (lower.includes('exactly one') ||
-        lower.includes('operator key') ||
-        lower.includes('non-empty'))
-    ) {
-      return `Pipeline structure failed: ${msg}. Each item in pipeline must be a single MongoDB stage object like { "$match": { ... } }. Do not combine multiple stages or attach extra descriptive keys.`;
-    }
-    return `Field validation failed: ${msg}. Use only the exact field names listed in the schema — check casing carefully.`;
-  }
-
-  private hasStringMatch(pipeline: Row[]): boolean {
-    return pipeline.some((stage) => {
-      const match = stage['$match'] as Record<string, unknown> | undefined;
-      if (!match) return false;
-      return Object.values(match).some((v) => typeof v === 'string');
-    });
-  }
-
+  /**
+   * Binds the plan's pipeline to a registered data source and runs all
+   * safety checks (stage normalization, forbidden stages, field validation).
+   *
+   * @returns `null` when the plan has no aggregation work to do.
+   * @throws  When the named source is unregistered or validation fails.
+   */
   private resolvePipeline(
     plan: TaskPlan,
     sources: DataSource[],
@@ -434,83 +331,16 @@ export class PipelineService {
       return normalized.stage;
     });
 
-    for (const stage of normalizedPipeline) {
-      const op = Object.keys(stage)[0];
-      if (op && FORBIDDEN_STAGES.has(op)) {
-        throw new Error(`Pipeline stage "${op}" is not permitted`);
-      }
-    }
+    assertNoForbiddenStages(normalizedPipeline);
 
     if (source?.fields?.length) {
-      this.validatePipelineFields(normalizedPipeline, source);
+      validatePipelineFields(normalizedPipeline, source);
     }
 
     return { pipeline: normalizedPipeline, collection };
   }
 
-  private validatePipelineFields(pipeline: Row[], source: DataSource): void {
-    const known = new Set([
-      '_id',
-      ...source.fields
-        .filter((f) => !f.name.startsWith('$'))
-        .map((f) => f.name),
-    ]);
-    const computed = new Set<string>();
-    const bad: string[] = [];
-
-    const addBad = (name: string) => {
-      if (name && !known.has(name) && !computed.has(name)) bad.push(name);
-    };
-
-    const walkRefs = (v: unknown): void => {
-      if (typeof v === 'string') {
-        if (v.startsWith('$') && !v.startsWith('$$')) {
-          addBad(v.slice(1).split('.')[0]);
-        }
-      } else if (Array.isArray(v)) {
-        v.forEach(walkRefs);
-      } else if (v && typeof v === 'object') {
-        for (const val of Object.values(v as Record<string, unknown>))
-          walkRefs(val);
-      }
-    };
-
-    for (const stage of pipeline) {
-      const op = Object.keys(stage)[0];
-      const content = stage[op] as Record<string, unknown> | undefined;
-      if (!op || !content) continue;
-
-      const behavior = STAGE_BEHAVIORS[op];
-      if (!behavior) {
-        walkRefs(content);
-      } else {
-        if (behavior.validateKeys) {
-          for (const k of Object.keys(content))
-            if (!k.startsWith('$')) addBad(k.split('.')[0]);
-        }
-        if (behavior.walkValues) walkRefs(content);
-        if (behavior.computeKeys) {
-          for (const k of Object.keys(content))
-            if (!behavior.skipIdKey || k !== '_id') computed.add(k);
-        }
-        if (behavior.special === 'lookup') {
-          if (typeof content['localField'] === 'string')
-            addBad(content['localField'].split('.')[0]);
-          if (typeof content['as'] === 'string') computed.add(content['as']);
-        }
-      }
-    }
-
-    const unknown = [...new Set(bad)];
-    if (!unknown.length) return;
-
-    throw new Error(
-      `Pipeline references field(s) not registered for "${source.name}": ` +
-        `${unknown.map((f) => `"${f}"`).join(', ')}. ` +
-        `Registered fields: ${[...known].map((f) => `"${f}"`).join(', ')}.`,
-    );
-  }
-
+  /** Runs a validated pipeline with disk spill enabled and a hard timeout. */
   private async runAggregation(
     collection: string,
     pipeline: unknown[],
@@ -518,7 +348,8 @@ export class PipelineService {
     const db = this.connection.db;
     if (!db) throw new Error('MongoDB connection not ready');
     const timeoutMs =
-      Number(process.env['MONGODB_PIPELINE_TIMEOUT_MS']) || 30_000;
+      Number(process.env['MONGODB_PIPELINE_TIMEOUT_MS']) ||
+      DEFAULT_PIPELINE_TIMEOUT_MS;
     return db
       .collection(collection)
       .aggregate(pipeline as Row[], {
@@ -528,6 +359,11 @@ export class PipelineService {
       .toArray();
   }
 
+  /**
+   * Fire-and-forget persistence after a successful aggregation:
+   * cache (only for context-free prompts with results) and history (always).
+   * Failures are logged, never surfaced to the caller.
+   */
   private flush(
     intent: IntentKind,
     prompt: string,
@@ -562,6 +398,14 @@ export class PipelineService {
     );
   }
 
+  /**
+   * Routes aggregation output to the renderer(s) declared in the plan:
+   *
+   *  - chart only            → dashboard spec (persisted for reuse)
+   *  - report (± chart)      → report sections, chart attached best-effort
+   *  - inquiry               → short textual summary
+   *  - none of the above     → generic "could not answer" summary
+   */
   private async dispatchSkills(
     plan: TaskPlan,
     rows: Row[],
@@ -604,6 +448,7 @@ export class PipelineService {
     }
 
     if (plan.skills.includes('report') && rows.length) {
+      // A chart needs at least two data points to be meaningful.
       const withChart = plan.skills.includes('chart') && rows.length >= 2;
       const { result: rep, usage: repUsage } = await runReportSkill({
         rows,
@@ -621,6 +466,7 @@ export class PipelineService {
       if (!withChart)
         return { result: rep, usage: addUsage(aggUsage, repUsage) };
 
+      // Chart generation is best-effort: a failure degrades to report-only.
       const fallback = {
         layout: 'operational' as const,
         title: prompt,
@@ -671,6 +517,11 @@ export class PipelineService {
     };
   }
 
+  /**
+   * Prompt → dashboard. Falls back to an inquiry when the plan produced no
+   * chart skill, and returns an explanatory empty dashboard when the
+   * aggregation matched no rows.
+   */
   async executeDashboard(
     prompt: string,
     context: CoreMessage[] = [],
@@ -730,6 +581,10 @@ export class PipelineService {
     return dispatched as ExecuteResult<DashboardSpec | InquiryResult>;
   }
 
+  /**
+   * Prompt → written report (optionally with an embedded chart). Returns a
+   * "No Data" section when the plan lacks the report skill or nothing matched.
+   */
   async executeReport(
     prompt: string,
     context: CoreMessage[] = [],
@@ -737,7 +592,7 @@ export class PipelineService {
   ): Promise<ExecuteResult<ReportResult>> {
     if (!context.length) {
       const cached = await this.cache.getCached<ReportResult>(
-        'report:full',
+        REPORT_FULL_INTENT,
         prompt,
       );
       if (cached) {
@@ -789,11 +644,12 @@ export class PipelineService {
     );
     if (!context.length)
       this.cache
-        .setCached('report:full', prompt, dispatched.result)
+        .setCached(REPORT_FULL_INTENT, prompt, dispatched.result)
         .catch(() => undefined);
     return dispatched as ExecuteResult<ReportResult>;
   }
 
+  /** Prompt → short textual answer. */
   async executeInquiry(
     prompt: string,
     context: CoreMessage[] = [],
@@ -809,6 +665,7 @@ export class PipelineService {
     >;
   }
 
+  /** Generic entry point: lets the plan decide which renderer applies. */
   async execute(
     prompt: string,
     context: CoreMessage[] = [],
