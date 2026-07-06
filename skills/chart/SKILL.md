@@ -145,9 +145,15 @@ VISUALIZATION CONTRACT
 
 DESIGN GUIDANCE
 
-- If the data is already aggregated, design directly from the rows you see.
-- If the rows still represent record-level data, use `dataset` + `encode`, or
-  ECharts transforms, instead of assuming the runtime will regroup data for you.
+- If the data is already aggregated (one row per category/bucket), design
+  directly from the rows you see — plain `encode` is correct here.
+- If the rows are still record-level (more than one row can share the same
+  category value) and the chart needs one bar/slice per category, you must
+  compute that grouping yourself before writing `option` — see "AGGREGATING
+  RECORD-LEVEL DATA" below. Do not `encode` a bar/pie series directly against
+  ungrouped rows, and do not rely on an ECharts dataset transform for this —
+  transforms require registering a JavaScript function, which OUTPUT RULES
+  forbids.
 - For long category labels, use horizontal layouts, axisLabel rotation, grid
   spacing, or legends positioned for readability.
 - For multi-series designs, make the comparison logic obvious through legend,
