@@ -8,16 +8,10 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { requireUserId } from '../common/helpers/user-id';
-
-class AnalyticsDto {
-  @IsString() @MinLength(1) @MaxLength(1000) prompt!: string;
-  @IsOptional() @IsString() intent?: string;
-  @IsOptional() @IsString() sessionId?: string | null;
-}
+import { RunAnalyticsDto } from './run-analytics.dto';
 
 @ApiTags('analytics')
 @Controller('api')
@@ -26,6 +20,11 @@ export class AnalyticsController {
 
   constructor(private readonly analytics: AnalyticsService) {}
 
+  /**
+   * Legacy endpoint retained so older frontend builds don't 404.
+   * Provider selection now happens per-user server-side; this always
+   * reports "no global provider configured".
+   */
   @ApiOperation({
     summary: 'Static provider placeholder (kept for frontend compatibility)',
   })
@@ -48,7 +47,7 @@ export class AnalyticsController {
   })
   @Post('analytics')
   async runAnalytics(
-    @Body() dto: AnalyticsDto,
+    @Body() dto: RunAnalyticsDto,
     @Headers('x-user-id') rawUserId: string,
   ) {
     const userId = requireUserId(rawUserId);
@@ -61,7 +60,10 @@ export class AnalyticsController {
         userId,
       });
     } catch (err) {
+      // Intentional HTTP errors (4xx from deeper layers) pass through as-is.
       if (err instanceof HttpException) throw err;
+
+      
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(msg, err instanceof Error ? err.stack : undefined);
       throw new HttpException({ error: msg }, HttpStatus.INTERNAL_SERVER_ERROR);
