@@ -131,7 +131,6 @@ export class MemoryRepository {
   ): Promise<RawDoc[]> {
     const allDocs = (await this.model
       .find({ userId })
-      .select('-embedding')
       .sort({ importance: -1, createdAt: -1 })
       .limit(100)
       .lean()) as RawDoc[];
@@ -161,7 +160,6 @@ export class MemoryRepository {
   async listByUser(userId: string, limit = 50): Promise<RawDoc[]> {
     return this.model
       .find({ userId })
-      .select('-embedding')
       .sort({ importance: -1, createdAt: -1 })
       .limit(limit)
       .lean();
