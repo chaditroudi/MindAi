@@ -903,6 +903,7 @@ export class AnalyticsService {
 
   private async persistTurn(params: {
     sessionId: string;
+    userId: string;
     prompt: string;
     displayIntent: SessionIntent;
     assistantMessage: ConversationMessage & {
@@ -913,6 +914,7 @@ export class AnalyticsService {
     try {
       await saveConversationTurn({
         threadId: params.sessionId,
+        userId: params.userId,
         prompt: params.prompt,
         intent: params.displayIntent,
         assistant: params.assistantMessage,

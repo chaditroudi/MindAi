@@ -29,15 +29,15 @@ export class HistoryService {
     return this.repo.save(entry);
   }
 
-  listSessions() {
-    return listSessions();
+  listSessions(userId: string) {
+    return listSessions(userId);
   }
 
-  getSessionDetail(sessionId: string) {
-    return getSessionDetail(sessionId);
+  getSessionDetail(sessionId: string, userId: string) {
+    return getSessionDetail(sessionId, userId);
   }
 
-  deleteSession(sessionId: string) {
-    return deleteSession(sessionId);
+  deleteSession(sessionId: string, userId: string) {
+    return deleteSession(sessionId, userId);
   }
 }
