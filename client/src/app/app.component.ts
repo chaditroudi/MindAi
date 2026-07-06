@@ -797,10 +797,18 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async retryAgent(index: number): Promise<void> {
-    this.agentDraft = this.agentDraft.map((a, i) =>
-      i === index ? { ...a, status: 'active' as AgentStatus } : a,
-    );
-    await this.saveAgentCard(index);
+    const agent = this.agentDraft[index];
+    if (!agent?.id) return;
+    this.configSaving = true;
+    this.configError  = '';
+    try {
+      const saved = await this.api.retryAgentConnection(agent.id);
+      this.applySavedAgentConfig(saved);
+    } catch (err) {
+      this.configError = err instanceof Error && err.message ? err.message : 'Failed to retry AI connection.';
+    } finally {
+      this.configSaving = false;
+    }
   }
 
   async saveAgentConfig(): Promise<void> {
