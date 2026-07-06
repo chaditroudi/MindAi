@@ -111,16 +111,19 @@ export class AnalyticsApiService {
     return this.req(this.http.patch<{ ok: boolean }>('/api/agent-config/token-limit', { agentId, field, value }));
   }
 
-  listSessions(): Promise<SessionSummary[]> {
-    return this.req(this.http.get<SessionSummary[]>('/api/history/sessions'));
+  listSessions(userId: string): Promise<SessionSummary[]> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.get<SessionSummary[]>('/api/history/sessions', { headers }));
   }
 
-  getSession(sessionId: string): Promise<SessionDetail> {
-    return this.req(this.http.get<SessionDetail>(`/api/history/sessions/${sessionId}`));
+  getSession(sessionId: string, userId: string): Promise<SessionDetail> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.get<SessionDetail>(`/api/history/sessions/${sessionId}`, { headers }));
   }
 
-  deleteSession(sessionId: string): Promise<{ ok: boolean }> {
-    return this.req(this.http.delete<{ ok: boolean }>(`/api/history/sessions/${sessionId}`));
+  deleteSession(sessionId: string, userId: string): Promise<{ ok: boolean }> {
+    const headers = new HttpHeaders({ 'X-User-Id': userId });
+    return this.req(this.http.delete<{ ok: boolean }>(`/api/history/sessions/${sessionId}`, { headers }));
   }
 
   private req<T>(stream: Observable<T>, timeoutMs = 480_000): Promise<T> {

@@ -352,7 +352,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async loadSession(sessionId: string): Promise<void> {
     if (this.st.snap.phase === 'loading') return;
     try {
-      const { messages } = await this.api.getSession(sessionId);
+      const { messages } = await this.api.getSession(sessionId, this.st.snap.userId);
       this.charts.disposeAll();
       const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
       this.st.patch({
@@ -376,7 +376,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async deleteSession(sessionId: string, event: Event): Promise<void> {
     event.stopPropagation();
     try {
-      await this.api.deleteSession(sessionId);
+      await this.api.deleteSession(sessionId, this.st.snap.userId);
       const sessions = this.st.snap.sessions.filter(s => s.sessionId !== sessionId);
       this.st.patch({ sessions });
       if (this.st.snap.sessionId === sessionId) this.newSession();
@@ -1024,7 +1024,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private async loadSessions(): Promise<void> {
     try {
-      const sessions = await this.api.listSessions();
+      const sessions = await this.api.listSessions(this.st.snap.userId);
       this.st.patch({ sessions });
     } catch { /* non-critical */ }
   }
