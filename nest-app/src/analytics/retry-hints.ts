@@ -1,15 +1,7 @@
-/**
- * Translators from raw MongoDB / validation errors into corrective prompts
- * ("hints") that are fed back to the planner LLM on retry.
- *
- * ⚠️  These strings are effectively prompts. They have been tuned against
- * real model behavior — treat any wording change as a behavior change and
- * re-verify retry success rates before shipping.
- */
+
 import type { DataSource } from '../types';
 import { ResolvedPipeline } from './pipeline.transform';
 
-/** Names commonly embedded in integer fields that actually encode time. */
 const TEMPORAL_NAME_TOKENS = ['year', 'month', 'date', 'day'];
 
 function isStageStructureError(lower: string): boolean {
@@ -31,15 +23,7 @@ function isDateCoercionError(lower: string): boolean {
   );
 }
 
-/**
- * Builds a retry hint for a MongoDB *execution* failure, or `undefined`
- * when the error is not one we know how to coach the model through
- * (in which case the caller rethrows).
- *
- * @param onKnownError Invoked with a log line when a recognized-and-retryable
- *                     error class is hit, so the service can emit its
- *                     existing warn logs without this module owning a Logger.
- */
+
 export function buildRetryHint(
   msg: string,
   lower: string,
