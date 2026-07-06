@@ -70,6 +70,41 @@ type RawDoc = {
   createdAt?: Date;
 };
 
+// Two memories with the same userId+type are treated as "the same goal
+// restated" when their significant words overlap at least this much
+// (Jaccard similarity). Chosen from real examples: "show budget vs duration
+// for all projects" vs "...for projects" share 3/3 words (1.0); vs "...for
+// projects of 4 municipalities" share 3/4 (0.75); vs an unrelated "list all
+// cancelled projects" share only 1/4 (0.25) — 0.5 cleanly separates the two.
+const DEDUPE_SIMILARITY_THRESHOLD = Number(
+  process.env['MEMORY_DEDUPE_SIMILARITY_THRESHOLD'] ?? 0.5,
+);
+
+// Common words that carry no topical meaning for similarity comparison —
+// filtering them out is what lets "show X for all Y" and "list X for Y"
+// match on the words that actually matter (X, Y).
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'for', 'of', 'to', 'and', 'or', 'in', 'on', 'at', 'is',
+  'are', 'was', 'were', 'all', 'show', 'list', 'give', 'me', 'please',
+]);
+
+function significantWords(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word.length > 2 && !STOPWORDS.has(word)),
+  );
+}
+
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  let intersection = 0;
+  for (const word of a) if (b.has(word)) intersection += 1;
+  const union = a.size + b.size - intersection;
+  return union ? intersection / union : 0;
+}
+
 @Injectable()
 export class MemoryRepository {
   constructor(
@@ -94,21 +129,29 @@ export class MemoryRepository {
 
   async upsert(items: MemoryPayload[]): Promise<void> {
     for (const item of items) {
-      const fingerprint = item.content
-        .slice(0, 60)
-        .toLowerCase()
-        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const existing = await this.model
-        .findOne({
-          userId: item.userId,
-          type: item.type,
-          content: { $regex: fingerprint, $options: 'i' },
-        })
+      const candidates = await this.model
+        .find({ userId: item.userId, type: item.type })
+        .select('content')
+        .limit(100)
         .lean();
 
-      if (existing) {
+      const newWords = significantWords(item.content);
+      let bestMatch: { _id: Types.ObjectId } | null = null;
+      let bestScore = 0;
+      for (const candidate of candidates) {
+        const score = jaccardSimilarity(
+          newWords,
+          significantWords(candidate.content),
+        );
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = candidate as { _id: Types.ObjectId };
+        }
+      }
+
+      if (bestMatch && bestScore >= DEDUPE_SIMILARITY_THRESHOLD) {
         await this.model.updateOne(
-          { _id: (existing as { _id: Types.ObjectId })._id },
+          { _id: bestMatch._id },
           {
             $set: {
               content: item.content,
