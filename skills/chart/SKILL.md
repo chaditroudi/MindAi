@@ -170,6 +170,50 @@ COMPATIBILITY RULES
 - Avoid decorative-only options that contain no actual visualization content.
 - Do not rely on custom browser code or runtime functions.
 
+AGGREGATING RECORD-LEVEL DATA
+
+If SAMPLE ROWS / DATA ROWS are record-level (e.g. one row per project, per
+transaction, per event) and the chart should show one bar or slice per group
+(by status, category, region, or whatever grouping the request implies), you
+must compute the per-group totals yourself and author the small result as an
+explicit `dataset.source`. The field names below are illustrative only —
+always group by and sum whichever real fields fit the request, using the
+exact names from COLUMNS.
+
+WRONG — encoding a bar/pie series straight onto ungrouped rows (here, many
+individual records that happen to share a few repeated category values):
+```json
+{
+  "dataset": {},
+  "series": [{ "type": "bar", "encode": { "x": "category", "y": "budget" } }]
+}
+```
+This puts one bar per *row*, not one bar per category, since nothing sums
+the values that share a category — the bars and any pie slices built this
+way will not reflect real per-category totals.
+
+CORRECT — group by the field you're summarizing, sum the numeric measure per
+group, and author only that small grouped result as `dataset.source`:
+```json
+{
+  "dataset": {
+    "source": [
+      { "category": "transport", "budget": 277.3 },
+      { "category": "infrastructure", "budget": 64.7 },
+      { "category": "health", "budget": 182.9 }
+    ]
+  },
+  "series": [{ "type": "bar", "encode": { "x": "category", "y": "budget" } }]
+}
+```
+If you want a count per group instead of a sum (e.g. "how many records per
+status"), compute that count yourself the same way — group first, then
+author the small per-group array.
+
+Note: the runtime does detect and correct exactly this mistake as a last
+resort, but do not rely on that — get the grouping right yourself so the
+chart you design is the chart that renders.
+
 GOOD DEFAULT PATTERN
 
 When a standard chart fits, prefer a concise option like:
