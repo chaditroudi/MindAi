@@ -18,18 +18,24 @@ export class HistoryController {
 
   @Get('results')
   async listResults(
+    @Headers('x-user-id') rawUserId: string,
     @Query('intent') intent?: string,
     @Query('skip') rawSkip?: string,
     @Query('limit') rawLimit?: string,
   ) {
+    const userId = requireUserId(rawUserId);
     const skip = Math.max(0, Number(rawSkip) || 0);
     const limit = Math.min(Number(rawLimit) || 20, 100);
-    return this.history.listResults({ intent, skip, limit });
+    return this.history.listResults({ userId, intent, skip, limit });
   }
 
   @Get('results/:id')
-  async getResult(@Param('id') id: string) {
-    const doc = await this.history.findResultById(id);
+  async getResult(
+    @Param('id') id: string,
+    @Headers('x-user-id') rawUserId: string,
+  ) {
+    const userId = requireUserId(rawUserId);
+    const doc = await this.history.findResultById(id, userId);
     if (!doc) throw new NotFoundException('not found');
     return doc;
   }
