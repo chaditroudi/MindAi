@@ -307,6 +307,56 @@ export class AnalyticsService {
     promise.catch((err) => this.logger.warn(`${label} failed: ${err}`));
   }
 
+  // Classifies an LLM call failure and records it on the agent's health
+  // state. Every call site that can fail against an agent-pool connection
+  // (the main dashboard/report/inquiry path, memory extraction, or any
+  // future one) must funnel through here — otherwise the health/cooldown
+  // system only ever learns about failures discovered by whichever call
+  // happened to hit them first, and stays wrong for everyone else.
+  private recordAgentFailure(agentId: string | undefined, err: unknown): void {
+    if (!agentId) return;
+
+    if (isModelNotFoundError(err)) {
+      this.fireAndForget(
+        this.agentConfig.updateRuntime(agentId, {
+          status: 'expired',
+          cooldownUntil: null,
+          lastFailureReason:
+            'Configured model is no longer available for this provider.',
+        }),
+        'agentConfig.updateRuntime',
+      );
+      return;
+    }
+
+    if (isInvalidKeyError(err)) {
+      this.fireAndForget(
+        this.agentConfig.updateRuntime(agentId, {
+          status: 'expired',
+          cooldownUntil: null,
+          lastFailureReason: 'Authentication failed for this API key.',
+        }),
+        'agentConfig.updateRuntime',
+      );
+      return;
+    }
+
+    if (isProviderRateLimitError(err)) {
+      const exhausted = isFreeTierExhausted(err);
+      const retryDelayMs = extractRetryDelayMs(err) ?? 5 * 60_000;
+      this.fireAndForget(
+        this.agentConfig.updateRuntime(agentId, {
+          status: exhausted ? 'expired' : 'idle',
+          cooldownUntil: new Date(Date.now() + retryDelayMs),
+          lastFailureReason: exhausted
+            ? 'Provider quota is exhausted for this connection.'
+            : 'Provider rate limit reached. Waiting before retry.',
+        }),
+        'agentConfig.updateRuntime',
+      );
+    }
+  }
+
   private async executeByIntent(
     intent: string | undefined,
     prompt: string,
