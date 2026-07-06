@@ -1,6 +1,17 @@
 /// <reference types="node" />
 import 'dotenv/config';
-import { getMongo, closeMongo } from '../src/db/mongo.client.js';
+import { MongoClient } from 'mongodb';
+
+async function getMongo() {
+  const uri = process.env['MONGODB_URI'] ?? process.env['DB_URL'];
+  const dbName = process.env['MONGODB_DB'];
+  if (!uri) throw new Error('MONGODB_URI (or DB_URL) is not set');
+  if (!dbName) throw new Error('MONGODB_DB is not set');
+
+  const client = new MongoClient(uri);
+  await client.connect();
+  return { client, db: client.db(dbName) };
+}
 
 const municipalities = [
   { id: 'MUN-001', name: 'Greenfield',  region: 'North',   population: 142_000, area: 285, budget: 48.5  },
@@ -153,7 +164,7 @@ const sources = [
 ];
 
 async function seed() {
-  const { db } = await getMongo();
+  const { client, db } = await getMongo();
 
   await db.collection('municipalities').drop().catch(() => {});
   await db.collection('municipalities').insertMany(municipalities);
@@ -171,7 +182,7 @@ async function seed() {
   const deleted = await db.collection('prompt_cache').deleteMany({});
   console.log(`prompt_cache: cleared ${deleted.deletedCount} stale entries`);
 
-  await closeMongo();
+  await client.close();
 }
 
 seed().catch(err => {
