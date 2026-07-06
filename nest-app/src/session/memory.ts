@@ -246,11 +246,14 @@ function buildSessionSummary(
   };
 }
 
-export async function sessionExists(threadId: string): Promise<boolean> {
+export async function sessionExists(
+  threadId: string,
+  userId: string,
+): Promise<boolean> {
   try {
     const thread = await memory.getThreadById({
       threadId,
-      resourceId: RESOURCE_ID,
+      resourceId: userId,
     });
     return Boolean(thread);
   } catch (err) {
@@ -262,12 +265,13 @@ export async function sessionExists(threadId: string): Promise<boolean> {
 export async function ensureThread(
   threadId: string,
   title: string,
+  userId: string,
   intent?: SessionIntent,
 ): Promise<void> {
   try {
     const existing = await memory.getThreadById({
       threadId,
-      resourceId: RESOURCE_ID,
+      resourceId: userId,
     });
 
     if (existing) {
@@ -292,7 +296,7 @@ export async function ensureThread(
     await memory.saveThread({
       thread: {
         id: threadId,
-        resourceId: RESOURCE_ID,
+        resourceId: userId,
         title: trimTitle(title),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -307,11 +311,12 @@ export async function ensureThread(
 
 export async function getMemoryContext(
   threadId: string,
+  userId: string,
 ): Promise<CoreMessage[]> {
   try {
     const { messages } = await memory.getContext({
       threadId,
-      resourceId: RESOURCE_ID,
+      resourceId: userId,
     });
     if (!messages.length) return [];
     return convertMessages(messages).to('AIV4.Core') as CoreMessage[];
@@ -323,6 +328,7 @@ export async function getMemoryContext(
 
 export async function saveConversationTurn({
   threadId,
+  userId,
   prompt,
   intent,
   assistant,
@@ -349,7 +355,7 @@ export async function saveConversationTurn({
         role: 'user',
         createdAt: now,
         threadId,
-        resourceId: RESOURCE_ID,
+        resourceId: userId,
         content: {
           format: 2,
           parts: [{ type: 'text', text: prompt }],
@@ -361,7 +367,7 @@ export async function saveConversationTurn({
         role: 'assistant',
         createdAt: new Date(now.getTime() + 1),
         threadId,
-        resourceId: RESOURCE_ID,
+        resourceId: userId,
         content: {
           format: 2,
           parts: [{ type: 'text', text: assistantSummary(assistant.result) }],
@@ -377,16 +383,16 @@ export async function saveConversationTurn({
   }
 }
 
-export async function listSessions(): Promise<SessionSummary[]> {
+export async function listSessions(userId: string): Promise<SessionSummary[]> {
   const { threads } = await memory.listThreads({
-    filter: { resourceId: RESOURCE_ID },
+    filter: { resourceId: userId },
     perPage: false,
     orderBy: { field: 'updatedAt', direction: 'DESC' },
   });
 
   const summaries = await Promise.all(
     threads.map(async (thread) => {
-      const detail = await getSessionDetail(thread.id);
+      const detail = await getSessionDetail(thread.id, userId);
       return detail?.session ?? buildSessionSummary(thread, []);
     }),
   );
@@ -396,17 +402,18 @@ export async function listSessions(): Promise<SessionSummary[]> {
 
 export async function getSessionDetail(
   threadId: string,
+  userId: string,
 ): Promise<SessionDetail | null> {
   try {
     const thread = await memory.getThreadById({
       threadId,
-      resourceId: RESOURCE_ID,
+      resourceId: userId,
     });
     if (!thread) return null;
 
     const { messages } = await memory.getContext({
       threadId,
-      resourceId: RESOURCE_ID,
+      resourceId: userId,
       memoryConfig: { lastMessages: 10_000 },
     });
 
@@ -429,8 +436,11 @@ export async function getSessionDetail(
   }
 }
 
-export async function deleteSession(threadId: string): Promise<boolean> {
-  const exists = await sessionExists(threadId);
+export async function deleteSession(
+  threadId: string,
+  userId: string,
+): Promise<boolean> {
+  const exists = await sessionExists(threadId, userId);
   if (!exists) return false;
   await memory.deleteThread(threadId);
   return true;

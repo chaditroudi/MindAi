@@ -678,8 +678,10 @@ export class AnalyticsService {
         ? req.sessionId.trim()
         : null;
     const sessionId =
-      requested && (await sessionExists(requested)) ? requested : randomUUID();
-    await ensureThread(sessionId, req.prompt, displayIntent);
+      requested && (await sessionExists(requested, req.userId))
+        ? requested
+        : randomUUID();
+    await ensureThread(sessionId, req.prompt, req.userId, displayIntent);
     return { sessionId, displayIntent };
   }
 
@@ -695,7 +697,7 @@ export class AnalyticsService {
     prompt: string,
     memoryItemLimit: number,
   ): Promise<MemoryContextResult> {
-    const sessionContext = await getMemoryContext(sessionId);
+    const sessionContext = await getMemoryContext(sessionId, userId);
     const longTerm = await this.memory.getRelevantContext(
       userId,
       prompt,
@@ -846,6 +848,7 @@ export class AnalyticsService {
 
     void this.persistTurn({
       sessionId,
+      userId,
       prompt,
       displayIntent,
       assistantMessage,
