@@ -281,7 +281,6 @@ function aggregateByCategory(
   });
 }
 
-
 function aggregateCategoricalSeriesData(
   option: Record<string, unknown>,
   widgetTitle: string,
@@ -426,7 +425,13 @@ function logUnknownRefs(
     ...rowKeys,
     ...collectDatasetDimensions(option['dataset']),
   ]);
-  const refs = [...collectEncodeRefs(option)];
+
+  // `encode` only ever appears in chart config (series/visualMap), never
+  // inside literal data values, so skip `dataset` entirely here — otherwise
+  // this diagnostic-only scan would walk every field of every row just to
+  // confirm what collectDatasetDimensions already told us above.
+  const { dataset: _dataset, ...configOnly } = option;
+  const refs = [...collectEncodeRefs(configOnly)];
   const unknown = refs.filter(
     (ref) => !allowed.has(ref) && Number.isNaN(Number(ref)),
   );
