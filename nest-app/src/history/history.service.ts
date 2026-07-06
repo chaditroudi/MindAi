@@ -13,16 +13,21 @@ import {
 export class HistoryService {
   constructor(private readonly repo: ResultsHistoryRepository) {}
 
-  async listResults(filter: { intent?: string; skip: number; limit: number }) {
+  async listResults(filter: {
+    userId: string;
+    intent?: string;
+    skip: number;
+    limit: number;
+  }) {
     const [items, total] = await Promise.all([
       this.repo.list(filter),
-      this.repo.count({ intent: filter.intent }),
+      this.repo.count({ userId: filter.userId, intent: filter.intent }),
     ]);
     return { total, skip: filter.skip, limit: filter.limit, items };
   }
 
-  findResultById(id: string) {
-    return this.repo.findById(id);
+  findResultById(id: string, userId: string) {
+    return this.repo.findById(id, userId);
   }
 
   save(entry: PipelineRunEntry): Promise<string> {

@@ -12,6 +12,9 @@ import { Model } from 'mongoose';
 })
 export class PipelineRun {
   @Prop({ required: true, index: true })
+  userId: string;
+
+  @Prop({ required: true, index: true })
   prompt: string;
 
   @Prop({ required: true, index: true })
@@ -37,6 +40,7 @@ export type PipelineRunDocument = HydratedDocument<PipelineRun>;
 export const PipelineRunSchema = SchemaFactory.createForClass(PipelineRun);
 
 export interface PipelineRunEntry {
+  userId: string;
   prompt: string;
   intent: string;
   collection: string;
@@ -67,8 +71,15 @@ export class ResultsHistoryRepository {
     }
   }
 
-  async list(filter: { intent?: string; skip?: number; limit?: number }) {
-    const query = filter.intent ? { intent: filter.intent } : {};
+  async list(filter: {
+    userId: string;
+    intent?: string;
+    skip?: number;
+    limit?: number;
+  }) {
+    const query = filter.intent
+      ? { userId: filter.userId, intent: filter.intent }
+      : { userId: filter.userId };
     return this.model
       .find(query)
       .sort({ createdAt: -1 })
@@ -77,13 +88,15 @@ export class ResultsHistoryRepository {
       .lean();
   }
 
-  async findById(id: string) {
+  async findById(id: string, userId: string) {
     if (!/^[a-f\d]{24}$/i.test(id)) return null;
-    return this.model.findById(id).lean();
+    return this.model.findOne({ _id: id, userId }).lean();
   }
 
-  async count(filter: { intent?: string }): Promise<number> {
-    const query = filter.intent ? { intent: filter.intent } : {};
+  async count(filter: { userId: string; intent?: string }): Promise<number> {
+    const query = filter.intent
+      ? { userId: filter.userId, intent: filter.intent }
+      : { userId: filter.userId };
     return this.model.countDocuments(query);
   }
 
