@@ -297,6 +297,15 @@ export class AnalyticsService {
     private readonly agentConfig: AgentConfigService,
   ) {}
 
+  // Runs a background write (usage tracking, runtime status) without making
+  // the caller wait for it. `void somePromise()` alone is not enough here —
+  // the repository layer does not catch its own errors, so an un-awaited
+  // rejection (e.g. a transient Mongo write failure) would surface as an
+  // unhandled promise rejection and can crash the process.
+  private fireAndForget(promise: Promise<unknown>, label: string): void {
+    promise.catch((err) => this.logger.warn(`${label} failed: ${err}`));
+  }
+
   private async executeByIntent(
     intent: string | undefined,
     prompt: string,
@@ -435,11 +444,14 @@ export class AnalyticsService {
           inputTokens = executed.usage.inputTokens;
           outputTokens = executed.usage.outputTokens;
           if (access.agentId) {
-            void this.agentConfig.updateRuntime(access.agentId, {
-              status: 'active',
-              cooldownUntil: null,
-              lastFailureReason: '',
-            });
+            this.fireAndForget(
+              this.agentConfig.updateRuntime(access.agentId, {
+                status: 'active',
+                cooldownUntil: null,
+                lastFailureReason: '',
+              }),
+              'agentConfig.updateRuntime',
+            );
           }
           break agentLoop;
         } catch (err) {
@@ -459,12 +471,15 @@ export class AnalyticsService {
           }
           if (isModelNotFoundError(err)) {
             if (access.agentId) {
-              void this.agentConfig.updateRuntime(access.agentId, {
-                status: 'expired',
-                cooldownUntil: null,
-                lastFailureReason:
-                  'Configured model is no longer available for this provider.',
-              });
+              this.fireAndForget(
+                this.agentConfig.updateRuntime(access.agentId, {
+                  status: 'expired',
+                  cooldownUntil: null,
+                  lastFailureReason:
+                    'Configured model is no longer available for this provider.',
+                }),
+                'agentConfig.updateRuntime',
+              );
               triedAgentIds.push(access.agentId);
               this.logger.warn(
                 `agent [${access.provider}/${access.model}] model not found — trying next agent`,
@@ -477,11 +492,14 @@ export class AnalyticsService {
           }
           if (isInvalidKeyError(err)) {
             if (access.agentId) {
-              void this.agentConfig.updateRuntime(access.agentId, {
-                status: 'expired',
-                cooldownUntil: null,
-                lastFailureReason: 'Authentication failed for this API key.',
-              });
+              this.fireAndForget(
+                this.agentConfig.updateRuntime(access.agentId, {
+                  status: 'expired',
+                  cooldownUntil: null,
+                  lastFailureReason: 'Authentication failed for this API key.',
+                }),
+                'agentConfig.updateRuntime',
+              );
               triedAgentIds.push(access.agentId);
               this.logger.warn(
                 `agent [${access.provider}/${access.model}] invalid key — trying next agent`,
