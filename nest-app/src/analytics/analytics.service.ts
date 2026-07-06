@@ -1031,6 +1031,7 @@ export class AnalyticsService {
       }
     } catch (err) {
       this.logger.warn(`memory.extractAndSave failed: ${err}`);
+      this.recordAgentFailure(params.agentId, err);
     }
   }
 }
