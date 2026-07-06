@@ -681,6 +681,19 @@ flowchart TD
 
 Read left to right, the key distinction is: **steps 1–3 (checks) use an *estimate*** (character-count-based, not a real tokenizer — `Math.ceil(text.length / 4)`), while **steps 4–6 (accounting) use the *real* numbers** the provider returned in its response. This means a request can pass the pre-flight estimate check and still get rejected afterward at step 4 (`TOKEN_LIMIT_TOO_LOW`) if the model's actual output ran long — the estimate is a cheap early filter, not a guarantee.
 
+> ### ⚠️ Important: why `inputTokens`/`outputTokens` look way bigger than your prompt
+>
+> A dashboard request for a 6-word prompt like `"show total budget by region"` can come back with `inputTokens: 8222`. That is **not** a bug and it is **not** the token count of your prompt — it is the **sum of two separate LLM calls**, per step 4 above (`addUsage(plannerUsage, writerUsage)`):
+>
+> 1. 🧠 **Planner call** ([`ai/planner.ts`](nest-app/src/ai/planner.ts)) — turns your prompt into a MongoDB aggregation pipeline. Its input includes a large system prompt (dataset schema, field descriptions, pipeline-generation instructions, few-shot examples) plus any memory/session context. This is almost always the bigger half of the total.
+> 2. 📊 **Chart/writer call** ([`ai/chart.ts`](nest-app/src/ai/chart.ts) or `ai/writer.ts`) — turns the resulting rows into the ECharts widget JSON (or report/inquiry text) actually returned to you.
+>
+> So `response.inputTokens` = planner's input + chart's input, and `response.outputTokens` = planner's output (the JSON pipeline it emitted) + chart's output (the JSON chart spec it emitted). Neither number is ever just "your prompt, tokenized."
+>
+> 🔎 **How to see the split yourself:** the server log line `[chart:llm] done ... in:X out:Y` shows *only* the chart call's usage; subtract that from the final `[AnalyticsService] done ... in:A out:B` log line for the same request to get the planner call's share.
+>
+> 💡 **Why it matters:** this combined number is what gets persisted to `inputTokensUsed`/`outputTokensUsed` (cumulative, see the table below) and what future `inputTokenLimit` pre-flight checks compare against via `lastInputTokens` — so a connection's token limit needs headroom for *both* calls, not just your literal prompt.
+
 **Where each number is stored:**
 
 | Number | Lives on | Reset by |
