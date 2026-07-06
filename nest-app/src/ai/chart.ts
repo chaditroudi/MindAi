@@ -171,11 +171,6 @@ function attachDatasetSource(
     return { ...option, dataset: normalizeDataset(option['dataset'], rows) };
   }
 
-  // Always ground the option with the real rows, even when the series
-  // carries its own inline `data` (e.g. a hand-authored pie/funnel widget).
-  // ECharts ignores `dataset` for a series that sets its own `data`, so this
-  // is a no-op for rendering — it just ensures the real query results are
-  // always attached rather than only the LLM-authored numbers.
   return { dataset: { source: rows }, ...option };
 }
 
@@ -223,13 +218,6 @@ function hasDuplicateCategoryValues(
   return false;
 }
 
-/**
- * Groups record-level rows by `categoryField` and, for each value field,
- * sums it when the field holds real numbers, or falls back to a row count
- * when it doesn't (e.g. the model encoded a "count" field that only ever
- * exists in pre-aggregated data). A no-op when the data is already one row
- * per category — grouping a single-row group just returns that row's value.
- */
 function aggregateByCategory(
   source: Record<string, unknown>[],
   categoryField: string,
@@ -274,14 +262,7 @@ function aggregateByCategory(
   });
 }
 
-/**
- * Guarantees bar/pie widgets show correct per-category totals regardless of
- * what the model authored. If the dataset backing a bar/pie series has more
- * than one row per encoded category (record-level data plotted directly),
- * this replaces it with a properly summed/counted array grouped by that
- * category — deterministically, without relying on the model to aggregate
- * correctly itself.
- */
+
 function aggregateCategoricalSeriesData(
   option: Record<string, unknown>,
   widgetTitle: string,
