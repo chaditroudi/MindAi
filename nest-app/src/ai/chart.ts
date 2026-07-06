@@ -171,14 +171,12 @@ function attachDatasetSource(
     return { ...option, dataset: normalizeDataset(option['dataset'], rows) };
   }
 
-  if (
-    hasSeriesEncode(option['series']) ||
-    !hasInlineSeriesData(option['series'])
-  ) {
-    return { dataset: { source: rows }, ...option };
-  }
-
-  return option;
+  // Always ground the option with the real rows, even when the series
+  // carries its own inline `data` (e.g. a hand-authored pie/funnel widget).
+  // ECharts ignores `dataset` for a series that sets its own `data`, so this
+  // is a no-op for rendering — it just ensures the real query results are
+  // always attached rather than only the LLM-authored numbers.
+  return { dataset: { source: rows }, ...option };
 }
 
 function ensureHeatmapVisualMap(
@@ -352,6 +350,17 @@ function toWidgetSpec(
       `dropped widget "${widget.title}" — option has no renderable ECharts content`,
     );
     return null;
+  }
+
+  if (
+    !hasSeriesEncode(option['series']) &&
+    hasInlineSeriesData(option['series'])
+  ) {
+    log(
+      'chart',
+      `widget "${widget.title}" authored inline series data with no dataset/encode — ` +
+        `these values come from the LLM directly and are not verified against the query rows`,
+    );
   }
 
   const hydrated = ensureHeatmapVisualMap(
