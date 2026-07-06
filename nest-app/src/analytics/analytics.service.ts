@@ -602,6 +602,11 @@ export class AnalyticsService {
         model: userModel,
         provider: userProvider,
         maxTokens: userTokenLimit ?? 4_000,
+        // user_settings mirrors inputTokenLimit onto the same configured value
+        // as responseTokenLimit (see UserSettingsService.sanitizeSettings) — wire
+        // it through so the pre-flight INPUT_TOKEN_LIMIT_TOO_LOW check below
+        // actually runs for personal connections, not just the agent pool.
+        inputTokenLimit: userTokenLimit,
         source: 'personal',
       };
     }
