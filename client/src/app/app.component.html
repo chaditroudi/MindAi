@@ -4,7 +4,7 @@
   <!-- ── Top bar ──────────────────────────────────────────────────────────── -->
   <header class="topbar">
     <button class="sidebar-toggle" (click)="toggleSidebar()"
-      [title]="s.sidebarOpen ? 'Hide history' : 'Show history'">
+      [title]="s.sidebarOpen ? 'Hide sessions' : 'Show sessions'">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
       </svg>
@@ -58,7 +58,7 @@
       <div class="sidebar-head">
         <div class="sidebar-tabs">
           <button class="sidebar-tab" [class.sidebar-tab--active]="s.sidebarTab === 'history'"
-            (click)="st.patch({ sidebarTab: 'history' })">History</button>
+            (click)="st.patch({ sidebarTab: 'history' })">Sessions</button>
           <button class="sidebar-tab" [class.sidebar-tab--active]="s.sidebarTab === 'saved'"
             (click)="st.patch({ sidebarTab: 'saved' })">
             Saved
@@ -89,7 +89,7 @@
       @if (s.sidebarTab === 'history') {
         <div class="session-list">
           @if (!s.sessions.length) {
-            <div class="session-empty">No history yet</div>
+            <div class="session-empty">No sessions yet</div>
           }
           @for (group of groupSessions(s.sessions); track group.label) {
             <div class="session-group-label">{{ group.label }}</div>
