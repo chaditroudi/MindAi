@@ -47,6 +47,38 @@ export const PLANNER_DEFAULT_STRATEGY = 'standard';
 const MAX_TOKENS = Number(process.env['PLANNER_MAX_TOKENS'] ?? 600);
 const STRATEGY_ENUM = z.enum([...PLANNER_STRATEGIES]);
 
+// How many temporal-sounding words to check a field's name against when the
+// source didn't explicitly tag it `role: 'temporal'` or `type: 'date'`.
+// Deployment-specific vocabulary (e.g. "admitted", "discharged" for a
+// healthcare dataset) can be added without a code change.
+const TEMPORAL_KEYWORDS = (
+  process.env['PLANNER_TEMPORAL_KEYWORDS'] ?? 'year,month,quarter,date'
+)
+  .split(',')
+  .map((keyword) => keyword.trim().toLowerCase())
+  .filter(Boolean);
+
+// Fallback pattern for spotting a foreign-key-like field from its
+// description when the source didn't set `referenceTo` explicitly.
+// Overridable per deployment/language via env var.
+const REFERENCE_HINT_PATTERN = (() => {
+  const raw = process.env['PLANNER_REFERENCE_HINT_PATTERN'];
+  if (!raw) return /reference| id|ref /;
+  try {
+    return new RegExp(raw, 'i');
+  } catch {
+    log(
+      'planner',
+      `invalid PLANNER_REFERENCE_HINT_PATTERN "${raw}" — using default`,
+    );
+    return /reference| id|ref /;
+  }
+})();
+
+// How many groupable dimensions to show a worked pipeline template for, per
+// source, so wide schemas don't balloon the prompt.
+const MAX_TEMPLATE_DIMS = Number(process.env['PLANNER_MAX_TEMPLATE_DIMS'] ?? 5);
+
 const pipelineStageSchema = z.record(z.unknown()).superRefine((stage, ctx) => {
   const keys = Object.keys(stage);
   if (!keys.length) {
