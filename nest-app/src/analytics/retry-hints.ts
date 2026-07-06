@@ -90,11 +90,7 @@ export function buildRetryHint(
   return undefined;
 }
 
-/**
- * Builds a retry hint for a plan *validation* failure (bad structure or
- * unknown field references). Unlike execution errors, this always returns
- * a hint — validation failures are always worth one retry.
- */
+
 export function buildPlanValidationHint(msg: string): string {
   const lower = msg.toLowerCase();
   if (isStageStructureError(lower)) {
@@ -103,7 +99,6 @@ export function buildPlanValidationHint(msg: string): string {
   return `Field validation failed: ${msg}. Use only the exact field names listed in the schema — check casing carefully.`;
 }
 
-/** Hint used when a syntactically valid pipeline matched zero rows. */
 export function buildEmptyResultHint(pipeline: unknown[]): string {
   return (
     `The pipeline returned 0 rows: ${JSON.stringify(pipeline)}. ` +
@@ -111,7 +106,6 @@ export function buildEmptyResultHint(pipeline: unknown[]): string {
   );
 }
 
-/** Hint used when the planner's structured output failed schema validation. */
 export function buildPlannerOutputHint(msg: string): string {
   return (
     `Your previous response failed output validation: ${msg}. ` +
