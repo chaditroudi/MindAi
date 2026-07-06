@@ -191,6 +191,16 @@
   font-size: 0.82rem;
 }
 
+.session-group-label {
+  padding: 0.6rem 0.6rem 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+}
+.session-group-label:first-child { padding-top: 0.25rem; }
+
 .session-item {
   display: flex;
   align-items: flex-start;
