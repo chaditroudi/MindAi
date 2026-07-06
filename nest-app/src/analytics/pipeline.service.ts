@@ -193,7 +193,16 @@ export class PipelineService {
     );
 
     if (collection)
-      this.flush(intent, prompt, plan, collection, rows, durationMs, usage);
+      this.flush(
+        intent,
+        prompt,
+        plan,
+        collection,
+        rows,
+        durationMs,
+        usage,
+        context.length > 0,
+      );
     return { plan, rows, usage };
   }
 
@@ -527,8 +536,9 @@ export class PipelineService {
     rows: Row[],
     durationMs: number,
     usage: TokenUsage,
+    hasContext: boolean,
   ): void {
-    if (rows.length) {
+    if (rows.length && !hasContext) {
       this.cache
         .setCached(intent, prompt, { plan, rows, usage })
         .catch((err) => this.logger.error(`cache write failed: ${err}`));
