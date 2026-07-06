@@ -166,6 +166,8 @@ export interface AgentEntry {
   memoryTokenLimit: number;  // max tokens memory context can contribute
   inputTokensUsed:  number;  // accumulated input tokens consumed
   outputTokensUsed: number;  // accumulated output tokens consumed
+  cooldownUntil?:   string | null;  // ISO timestamp; agent is unusable until this time passes
+  lastFailureReason?: string;       // why the agent went idle/expired
 }
 
 export interface AgentConfigResponse {

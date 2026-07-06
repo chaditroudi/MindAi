@@ -91,6 +91,12 @@ export class AgentConfigController {
     return this.service.getConfig();
   }
 
+  @Post(':id/retry')
+  async retry(@Param('id') id: string) {
+    await this.health.probeAndUpdateAgent(id);
+    return this.service.getConfig();
+  }
+
   @Patch('token-limit')
   async updateTokenLimit(@Body() dto: UpdateTokenLimitDto) {
     const field =

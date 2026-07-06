@@ -111,6 +111,10 @@ export class AnalyticsApiService {
     return this.req(this.http.patch<{ ok: boolean }>('/api/agent-config/token-limit', { agentId, field, value }));
   }
 
+  retryAgentConnection(agentId: string): Promise<AgentConfigResponse> {
+    return this.req(this.http.post<AgentConfigResponse>(`/api/agent-config/${agentId}/retry`, {}));
+  }
+
   listSessions(userId: string): Promise<SessionSummary[]> {
     const headers = new HttpHeaders({ 'X-User-Id': userId });
     return this.req(this.http.get<SessionSummary[]>('/api/history/sessions', { headers }));
