@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Patch, Body } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Post, Body, Param } from '@nestjs/common';
 import {
   IsString,
   IsInt,
