@@ -43,6 +43,7 @@ export interface SessionDetail {
 
 interface SaveConversationTurnInput {
   threadId: string;
+  userId: string;
   prompt: string;
   intent: SessionIntent;
   assistant: ConversationMessage & { role: 'assistant'; result: MessageResult };
@@ -59,8 +60,6 @@ export const memory = new Memory({
   storage: libsql,
   options: { lastMessages: 6 },
 });
-
-const RESOURCE_ID = 'mindai';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
