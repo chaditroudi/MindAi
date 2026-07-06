@@ -1288,6 +1288,7 @@ API_KEY=                                          # enables the x-api-key guard 
 LIBSQL_URL=file:./data/memory.db
 MEMORY_EXTRACTION_ENABLED=true                    # long-term memory toggle default at boot
 MEMORY_MAX_TOKENS=400                             # max output tokens for the memory-extraction LLM call
+MEMORY_DEDUPE_SIMILARITY_THRESHOLD=0.5            # word-overlap score (0-1) above which a new memory updates an existing one instead of duplicating it
 
 # Planner / writer token budgets (all optional, shown with defaults)
 PLANNER_MAX_TOKENS=600
