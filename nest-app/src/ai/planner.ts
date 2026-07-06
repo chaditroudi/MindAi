@@ -126,7 +126,7 @@ function resolveReference(
     );
   }
   const byDesc =
-    /reference| id|ref /.test(desc) &&
+    REFERENCE_HINT_PATTERN.test(desc) &&
     sources.find(
       (s) =>
         desc.includes(s.name.toLowerCase()) ||
@@ -189,8 +189,8 @@ function buildSchemaSection(sources: DataSource[]): string {
         f.type === 'date' ||
         f.type === 'datetime' ||
         f.role === 'temporal' ||
-        ['year', 'month', 'quarter', 'date'].some((t) =>
-          f.name.toLowerCase().includes(t),
+        TEMPORAL_KEYWORDS.some((keyword) =>
+          f.name.toLowerCase().includes(keyword),
         ),
     );
     const dims = source.fields.filter(
@@ -278,17 +278,19 @@ function buildSchemaSection(sources: DataSource[]): string {
       }
     }
 
-    if (dims.length) {
-      const groupableDim = dims.find((field) => !refByField.get(field));
-      if (groupableDim) {
-        lines.push('  Useful pipeline templates:');
+    const groupableDims = dims
+      .filter((field) => !refByField.get(field))
+      .slice(0, MAX_TEMPLATE_DIMS);
+    if (groupableDims.length) {
+      lines.push('  Useful pipeline templates:');
+      for (const dim of groupableDims) {
         lines.push(
-          `    Count by "${groupableDim.name}": [{ "$group": { "_id": "$${groupableDim.name}", "value": { "$sum": 1 } } }, { "$sort": { "value": -1 } }, { "$project": { "_id": 0, "label": "$_id", "value": 1 } }]`,
+          `    Count by "${dim.name}": [{ "$group": { "_id": "$${dim.name}", "value": { "$sum": 1 } } }, { "$sort": { "value": -1 } }, { "$project": { "_id": 0, "label": "$_id", "value": 1 } }]`,
         );
         if (metrics.length) {
           const metric = metrics[0].name;
           lines.push(
-            `    Sum "${metric}" by "${groupableDim.name}": [{ "$group": { "_id": "$${groupableDim.name}", "value": { "$sum": "$${metric}" } } }, { "$sort": { "value": -1 } }, { "$project": { "_id": 0, "label": "$_id", "value": 1 } }]`,
+            `    Sum "${metric}" by "${dim.name}": [{ "$group": { "_id": "$${dim.name}", "value": { "$sum": "$${metric}" } } }, { "$sort": { "value": -1 } }, { "$project": { "_id": 0, "label": "$_id", "value": 1 } }]`,
           );
         }
       }
