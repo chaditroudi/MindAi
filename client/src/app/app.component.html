@@ -220,11 +220,17 @@
                     <button class="agent-action-btn agent-action-btn--primary" (click)="setAgentStatus(i, 'active'); saveAgentCard(i)">Enable</button>
                   }
                   @if (agent.status === 'expired') {
-                    <span class="agent-status-hint">Key invalid or quota exhausted —</span>
+                    <span class="agent-status-hint">
+                      {{ agentFailureReason(agent) }}
+                      @if (cooldownRemainingLabel(agent)) { — {{ cooldownRemainingLabel(agent) }} }
+                    </span>
                     <button class="agent-action-btn agent-action-btn--primary" (click)="retryAgent(i)">Retry</button>
                   }
                   @if (agent.status === 'idle') {
-                    <span class="agent-status-hint">Rate limited — auto-recovering…</span>
+                    <span class="agent-status-hint">
+                      {{ agentFailureReason(agent) }}
+                      @if (cooldownRemainingLabel(agent)) { ({{ cooldownRemainingLabel(agent) }}) }
+                    </span>
                   }
                 </div>
 

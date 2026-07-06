@@ -928,6 +928,22 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.st.snap.agentConfig?.currentAgentId === agent.id;
   }
 
+  agentFailureReason(agent: AgentEntry): string {
+    if (agent.lastFailureReason) return agent.lastFailureReason;
+    return agent.status === 'expired'
+      ? 'Key invalid or quota exhausted.'
+      : 'Rate limited — auto-recovering…';
+  }
+
+  cooldownRemainingLabel(agent: AgentEntry): string {
+    if (!agent.cooldownUntil) return '';
+    const remainingMs = new Date(agent.cooldownUntil).getTime() - Date.now();
+    if (remainingMs <= 0) return '';
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+    if (totalSeconds < 60) return `resumes in ${totalSeconds}s`;
+    return `resumes in ${Math.ceil(totalSeconds / 60)}m`;
+  }
+
   private activeAgent(): AgentEntry | undefined {
     return this.configuredAgent();
   }
