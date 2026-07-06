@@ -179,6 +179,142 @@ function attachDatasetSource(
   return { dataset: { source: rows }, ...option };
 }
 
+function extractCategoryValueFields(series: unknown): {
+  categoryField: string | null;
+  valueFields: Set<string>;
+} {
+  const categoryFields: string[] = [];
+  const valueFields = new Set<string>();
+  if (!Array.isArray(series)) return { categoryField: null, valueFields };
+
+  for (const item of series) {
+    if (!isPlainRecord(item)) continue;
+    const type = typeof item['type'] === 'string' ? item['type'] : '';
+    if (type !== 'bar' && type !== 'pie') continue;
+    const encode = item['encode'];
+    if (!isPlainRecord(encode)) continue;
+
+    const category = type === 'pie' ? encode['itemName'] : encode['x'];
+    const value = type === 'pie' ? encode['value'] : encode['y'];
+
+    if (typeof category === 'string' && category.trim()) {
+      categoryFields.push(category);
+    }
+    if (typeof value === 'string' && value.trim()) {
+      valueFields.add(value);
+    } else if (Array.isArray(value)) {
+      for (const v of value) if (typeof v === 'string') valueFields.add(v);
+    }
+  }
+
+  return { categoryField: categoryFields[0] ?? null, valueFields };
+}
+
+function hasDuplicateCategoryValues(
+  source: Record<string, unknown>[],
+  categoryField: string,
+): boolean {
+  const seen = new Set<string>();
+  for (const row of source) {
+    const key = String(row[categoryField]);
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
+}
+
+/**
+ * Groups record-level rows by `categoryField` and, for each value field,
+ * sums it when the field holds real numbers, or falls back to a row count
+ * when it doesn't (e.g. the model encoded a "count" field that only ever
+ * exists in pre-aggregated data). A no-op when the data is already one row
+ * per category — grouping a single-row group just returns that row's value.
+ */
+function aggregateByCategory(
+  source: Record<string, unknown>[],
+  categoryField: string,
+  valueFields: Set<string>,
+): Record<string, unknown>[] {
+  const groups = new Map<
+    string,
+    {
+      category: unknown;
+      count: number;
+      sums: Map<string, number>;
+      hasNumeric: Map<string, boolean>;
+    }
+  >();
+
+  for (const row of source) {
+    const category = row[categoryField];
+    const key = String(category);
+    let group = groups.get(key);
+    if (!group) {
+      group = { category, count: 0, sums: new Map(), hasNumeric: new Map() };
+      groups.set(key, group);
+    }
+    group.count += 1;
+    for (const field of valueFields) {
+      const raw = row[field];
+      if (typeof raw === 'number' && Number.isFinite(raw)) {
+        group.sums.set(field, (group.sums.get(field) ?? 0) + raw);
+        group.hasNumeric.set(field, true);
+      }
+    }
+  }
+
+  return [...groups.values()].map((group) => {
+    const out: Record<string, unknown> = { [categoryField]: group.category };
+    for (const field of valueFields) {
+      out[field] = group.hasNumeric.get(field)
+        ? (group.sums.get(field) ?? 0)
+        : group.count;
+    }
+    return out;
+  });
+}
+
+/**
+ * Guarantees bar/pie widgets show correct per-category totals regardless of
+ * what the model authored. If the dataset backing a bar/pie series has more
+ * than one row per encoded category (record-level data plotted directly),
+ * this replaces it with a properly summed/counted array grouped by that
+ * category — deterministically, without relying on the model to aggregate
+ * correctly itself.
+ */
+function aggregateCategoricalSeriesData(
+  option: Record<string, unknown>,
+  widgetTitle: string,
+): Record<string, unknown> {
+  const dataset = option['dataset'];
+  const source = isPlainRecord(dataset) ? dataset['source'] : undefined;
+  if (!Array.isArray(source) || !source.every(isPlainRecord)) return option;
+
+  const { categoryField, valueFields } = extractCategoryValueFields(
+    option['series'],
+  );
+  if (!categoryField || !valueFields.size) return option;
+  if (!hasDuplicateCategoryValues(source, categoryField)) return option;
+
+  const grouped = aggregateByCategory(
+    source as Record<string, unknown>[],
+    categoryField,
+    valueFields,
+  );
+
+  log(
+    'chart',
+    `widget "${widgetTitle}" — grouped ${source.length} row(s) into ` +
+      `${grouped.length} categor${grouped.length === 1 ? 'y' : 'ies'} by ` +
+      `"${categoryField}" for correct bar/pie totals`,
+  );
+
+  return {
+    ...option,
+    dataset: { ...(dataset as Record<string, unknown>), source: grouped },
+  };
+}
+
 function ensureHeatmapVisualMap(
   option: Record<string, unknown>,
   rows: Record<string, unknown>[],
@@ -364,7 +500,10 @@ function toWidgetSpec(
   }
 
   const hydrated = ensureHeatmapVisualMap(
-    attachDatasetSource(option, rows),
+    aggregateCategoricalSeriesData(
+      attachDatasetSource(option, rows),
+      widget.title,
+    ),
     rows,
   );
   logUnknownRefs(hydrated, rowKeys, widget.title);
