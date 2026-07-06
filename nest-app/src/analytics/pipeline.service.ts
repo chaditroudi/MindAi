@@ -386,11 +386,15 @@ export class PipelineService {
         rowCount: rows.length,
         durationMs,
       })
-      .then((id) =>
+      .then((id) => {
         this.logger.log(
           `history saved | id: ${id} | collection: ${collection} | pipeline stages: ${plan.pipeline?.length ?? 0} | rows: ${rows.length}`,
-        ),
-      )
+        );
+        const preview = rows.slice(0, 10);
+        this.logger.log(
+          `history data${rows.length > preview.length ? ` (first ${preview.length}/${rows.length})` : ''}: ${JSON.stringify(preview)}`,
+        );
+      })
       .catch((err) => this.logger.error(`history save failed: ${err}`));
   }
 
