@@ -84,15 +84,17 @@ export class UserSettingsController {
     const userId = requireUserId(rawUserId);
     const settings = await this.service.findByUser(userId);
     if (!settings) return { configured: false };
+    // responseTokenLimit and inputTokenLimit are always kept in sync (see
+    // UserSettingsService.sanitizeSettings) — one fallback chain covers both.
+    const tokenLimit =
+      settings.responseTokenLimit ?? settings.inputTokenLimit ?? 4_000;
     return {
       configured: true,
       provider: settings.provider,
       model: settings.model,
       keyPreview: `${settings.apiKey.slice(0, 6)}...${settings.apiKey.slice(-4)}`,
-      responseTokenLimit:
-        settings.responseTokenLimit ?? settings.inputTokenLimit ?? 4_000,
-      inputTokenLimit:
-        settings.responseTokenLimit ?? settings.inputTokenLimit ?? 4_000,
+      responseTokenLimit: tokenLimit,
+      inputTokenLimit: tokenLimit,
       inputTokensUsed: settings.inputTokensUsed ?? 0,
       outputTokensUsed: settings.outputTokensUsed ?? 0,
     };

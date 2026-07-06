@@ -517,13 +517,16 @@ export class AnalyticsService {
             const exhausted = isFreeTierExhausted(err);
             if (access.agentId) {
               const retryDelayMs = extractRetryDelayMs(err) ?? 5 * 60_000;
-              void this.agentConfig.updateRuntime(access.agentId, {
-                status: exhausted ? 'expired' : 'idle',
-                cooldownUntil: new Date(Date.now() + retryDelayMs),
-                lastFailureReason: exhausted
-                  ? 'Provider quota is exhausted for this connection.'
-                  : 'Provider rate limit reached. Waiting before retry.',
-              });
+              this.fireAndForget(
+                this.agentConfig.updateRuntime(access.agentId, {
+                  status: exhausted ? 'expired' : 'idle',
+                  cooldownUntil: new Date(Date.now() + retryDelayMs),
+                  lastFailureReason: exhausted
+                    ? 'Provider quota is exhausted for this connection.'
+                    : 'Provider rate limit reached. Waiting before retry.',
+                }),
+                'agentConfig.updateRuntime',
+              );
               triedAgentIds.push(access.agentId);
               this.logger.warn(
                 `agent [${access.provider}/${access.model}] rate-limited — trying next agent`,
@@ -570,18 +573,22 @@ export class AnalyticsService {
     );
 
     if (access.agentId) {
-      void this.agentConfig.trackUsage(
-        access.agentId,
-        inputTokens,
-        outputTokens,
+      this.fireAndForget(
+        this.agentConfig.trackUsage(access.agentId, inputTokens, outputTokens),
+        'agentConfig.trackUsage',
       );
-
-      void this.agentConfig.updateLastInputTokens(access.agentId, inputTokens);
+      this.fireAndForget(
+        this.agentConfig.updateLastInputTokens(access.agentId, inputTokens),
+        'agentConfig.updateLastInputTokens',
+      );
     } else {
-      void this.userSettings.incrementUsage(
-        req.userId,
-        inputTokens,
-        outputTokens,
+      this.fireAndForget(
+        this.userSettings.incrementUsage(
+          req.userId,
+          inputTokens,
+          outputTokens,
+        ),
+        'userSettings.incrementUsage',
       );
     }
 
@@ -976,13 +983,13 @@ export class AnalyticsService {
       );
 
       if (params.agentId) {
-        void this.agentConfig.trackUsage(
+        await this.agentConfig.trackUsage(
           params.agentId,
           inputTokens,
           outputTokens,
         );
       } else {
-        void this.userSettings.incrementUsage(
+        await this.userSettings.incrementUsage(
           params.userId,
           inputTokens,
           outputTokens,
