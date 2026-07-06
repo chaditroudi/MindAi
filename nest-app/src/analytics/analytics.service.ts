@@ -523,15 +523,7 @@ export class AnalyticsService {
           }
           if (isModelNotFoundError(err)) {
             if (access.agentId) {
-              this.fireAndForget(
-                this.agentConfig.updateRuntime(access.agentId, {
-                  status: 'expired',
-                  cooldownUntil: null,
-                  lastFailureReason:
-                    'Configured model is no longer available for this provider.',
-                }),
-                'agentConfig.updateRuntime',
-              );
+              this.recordAgentFailure(access.agentId, err);
               triedAgentIds.push(access.agentId);
               this.logger.warn(
                 `agent [${access.provider}/${access.model}] model not found — trying next agent`,
@@ -544,14 +536,7 @@ export class AnalyticsService {
           }
           if (isInvalidKeyError(err)) {
             if (access.agentId) {
-              this.fireAndForget(
-                this.agentConfig.updateRuntime(access.agentId, {
-                  status: 'expired',
-                  cooldownUntil: null,
-                  lastFailureReason: 'Authentication failed for this API key.',
-                }),
-                'agentConfig.updateRuntime',
-              );
+              this.recordAgentFailure(access.agentId, err);
               triedAgentIds.push(access.agentId);
               this.logger.warn(
                 `agent [${access.provider}/${access.model}] invalid key — trying next agent`,
@@ -568,17 +553,7 @@ export class AnalyticsService {
           if (isProviderRateLimitError(err)) {
             const exhausted = isFreeTierExhausted(err);
             if (access.agentId) {
-              const retryDelayMs = extractRetryDelayMs(err) ?? 5 * 60_000;
-              this.fireAndForget(
-                this.agentConfig.updateRuntime(access.agentId, {
-                  status: exhausted ? 'expired' : 'idle',
-                  cooldownUntil: new Date(Date.now() + retryDelayMs),
-                  lastFailureReason: exhausted
-                    ? 'Provider quota is exhausted for this connection.'
-                    : 'Provider rate limit reached. Waiting before retry.',
-                }),
-                'agentConfig.updateRuntime',
-              );
+              this.recordAgentFailure(access.agentId, err);
               triedAgentIds.push(access.agentId);
               this.logger.warn(
                 `agent [${access.provider}/${access.model}] rate-limited — trying next agent`,
