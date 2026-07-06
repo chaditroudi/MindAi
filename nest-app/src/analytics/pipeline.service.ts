@@ -18,23 +18,11 @@ import type {
   DashboardSpec,
   ReportSection,
 } from '../types';
-import {
-  clampStageTokens,
-  hasStringMatch,
-  normalizePipelineStage,
-  patchConvert,
-} from './pipeline/pipeline-transforms';
-import type { ResolvedPipeline, Row } from './pipeline/pipeline-transforms';
-import {
-  assertNoForbiddenStages,
-  validatePipelineFields,
-} from './pipeline/pipeline-validation';
-import {
-  buildEmptyResultHint,
-  buildPlannerOutputHint,
-  buildPlanValidationHint,
-  buildRetryHint,
-} from './pipeline/retry-hints';
+import { clampStageTokens, hasStringMatch, normalizePipelineStage, patchConvert, ResolvedPipeline, Row } from './pipeline.transform';
+import { assertNoForbiddenStages, validatePipelineFields } from './pipeline.validation';
+import { buildPlannerOutputHint, buildPlanValidationHint, buildRetryHint, buildEmptyResultHint } from './retry-hints';
+
+
 
 // Re-exported so existing consumers importing from this module keep working.
 export { patchConvert };

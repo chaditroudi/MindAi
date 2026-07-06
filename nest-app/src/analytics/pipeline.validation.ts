@@ -9,7 +9,7 @@
  */
 import type { DataSource } from '../types';
 import { readJsonSection, skillFile } from '../ai/skill-prompt';
-import type { Row } from './pipeline-transforms';
+import { Row } from './pipeline.transform';
 
 /** How field references inside one pipeline stage should be interpreted. */
 interface StageBehavior {
