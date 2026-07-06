@@ -101,9 +101,16 @@ export class AgentConfigService {
   constructor(private readonly repo: AgentConfigRepository) {}
 
   private canBeCurrentAgent(agent: AgentEntry, now = Date.now()): boolean {
-    return (
-      agent.status === 'active' && !isCooldownActive(agent.cooldownUntil, now)
-    );
+    if (agent.status === 'disabled') return false;
+    if (agent.status === 'active') {
+      return !isCooldownActive(agent.cooldownUntil, now);
+    }
+    // idle/expired agents that were given a concrete backoff (rate limits)
+    // become usable again as soon as that cooldown elapses, instead of
+    // waiting for the once-a-minute health-check cron to re-probe them.
+    // Agents with no cooldownUntil (bad key/model) stay excluded until the
+    // cron actively re-verifies them.
+    return agent.cooldownUntil != null && !isCooldownActive(agent.cooldownUntil, now);
   }
 
   private pickCurrentAgentId(

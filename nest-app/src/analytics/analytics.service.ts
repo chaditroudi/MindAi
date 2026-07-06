@@ -17,6 +17,7 @@ import {
   AgentConfigService,
   type ResolvedConfig,
 } from '../agent-config/agent-config.service';
+import { isCooldownActive } from '../agent-config/agent-config.utils';
 import type { ExecuteResult, LlmOpts } from './pipeline.service';
 
 interface AccessResult {
@@ -637,9 +638,16 @@ export class AnalyticsService {
       };
     }
 
-    const activeAgents = agentCfg.agents.filter(
-      (a) => a.status === 'active' && !excludeAgentIds.includes(a.id),
-    );
+    const activeAgents = agentCfg.agents.filter((a) => {
+      if (excludeAgentIds.includes(a.id) || a.status === 'disabled') {
+        return false;
+      }
+      if (a.status === 'active') return !isCooldownActive(a.cooldownUntil);
+      // idle/expired agents with an elapsed cooldown (rate-limit backoffs)
+      // are usable again right away — don't make this request wait for the
+      // next once-a-minute health-check cron tick to re-activate them.
+      return a.cooldownUntil != null && !isCooldownActive(a.cooldownUntil);
+    });
     const orderedAgents = agentCfg.currentAgentId
       ? [
           ...activeAgents.filter(
